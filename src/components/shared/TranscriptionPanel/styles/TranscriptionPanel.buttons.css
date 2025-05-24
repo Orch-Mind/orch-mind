@@ -150,6 +150,7 @@
 }
 
 .orchos-quantum-btn {
+  margin-top: -5px; /* Ajuste fino para alinhamento */
   position: relative;
   width: 48px;
   height: 48px;
@@ -274,52 +275,10 @@
   opacity: 0.7;
 }
 
-.orchos-quantum-btn[data-active="true"]::after,
-.orchos-quantum-btn[data-active="true"]::before,
-.orchos-quantum-btn[data-active="true"] .orchos-quantum-particles::before,
-.orchos-quantum-btn[data-active="true"] .orchos-quantum-particles::after {
-  animation: neuralParticleActive 3s ease-in-out infinite;
-  opacity: 1;
-  width: 3px;
-  height: 3px;
-  background: var(--quantum-record-active);
-  box-shadow: 
-    0 0 8px var(--quantum-record-active),
-    0 0 16px var(--quantum-record-active);
-}
-
 /* Record Button Specific */
 
 .orchos-quantum-btn.orchos-btn-record {
   --active-color: var(--quantum-record-primary);
-}
-
-.orchos-quantum-btn.orchos-btn-record[data-active="true"] {
-  border-color: var(--quantum-record-active);
-  animation: recordingPulse 1.5s ease-in-out infinite;
-  background: rgba(30, 14, 34, 0.9);
-}
-
-.orchos-quantum-btn.orchos-btn-record[data-active="true"] .orchos-quantum-icon {
-  filter: drop-shadow(0 0 8px var(--quantum-record-active));
-}
-
-.orchos-quantum-btn.orchos-btn-record[data-active="true"] .orchos-neural-ring {
-  background: radial-gradient(circle at center,
-    transparent 0%,
-    transparent 40%,
-    rgba(255, 77, 210, 0.3) 50%,
-    transparent 60%
-  );
-}
-
-.orchos-quantum-btn.orchos-btn-record[data-active="true"]::before {
-  background: linear-gradient(135deg, 
-    #ff4dd2 0%, 
-    #ff80ab 50%, 
-    #ff4dd2 100%
-  );
-  opacity: 1;
 }
 
 .orchos-quantum-btn.orchos-btn-send:hover {
@@ -441,16 +400,6 @@
 /* Record Button - Converging Neural Waves */
 
 /* Send Button - Diverging Neural Waves */
-
-.orchos-btn-record[data-active="true"] .neural-wave {
-  animation-duration: 3s;
-  stroke-width: 2px;
-  opacity: 0.9;
-}
-
-.orchos-btn-record[data-active="true"] .neural-core-record {
-  animation: activeRecordPulse 1.5s ease-in-out infinite;
-}
 
 /* Quantum Ripple Effect */
 

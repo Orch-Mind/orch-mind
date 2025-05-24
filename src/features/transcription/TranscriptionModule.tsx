@@ -9,7 +9,6 @@ import {
 } from '../../components/context';
 import { ConnectionState } from '../../components/context/deepgram/interfaces/deepgram/IDeepgramService';
 import TranscriptionPanel from '../../components/shared/TranscriptionPanel/TranscriptionPanel';
-import styles from './TranscriptionModule.module.css';
 
 /**
  * Main transcription module that encapsulates all transcription-related functionality
@@ -93,10 +92,11 @@ export const TranscriptionModule: React.FC = () => {
   }, []);
 
   return (
-    <div className={styles.transcriptionPanel}>
+    <div style={{height: '100%', width: '100%', overflow: 'hidden'}}>
       <TranscriptionPanel
         onClose={() => {}} // No close functionality needed
         width="100%"
+        height="100%"
       />
     </div>
   );

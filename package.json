@@ -8,7 +8,9 @@
     "build": "npx vite",
     "deploy": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder",
     "build:electron:app": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false NODE_ENV=production rimraf dist dist-electron && vite build && tsc -p tsconfig.electron.json && electron-builder",
-    "test": "jest"
+    "test": "jest",
+    "purge-css": "node scripts/purge-css.js",
+    "optimize": "npm run purge-css"
   },
   "build": {
     "appId": "com.ferrari.orch-os",

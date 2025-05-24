@@ -22,7 +22,7 @@
   --orchos-anim-wave: #00F0FF44;
 }
 
-html, body, #root {
+ body, #root {
   background: var(--orchos-bg) !important;
   color: var(--orchos-text-main);
   font-family: 'Inter', 'Roboto', 'Segoe UI', Arial, sans-serif;
@@ -60,63 +60,6 @@ html, body, #root {
   font-weight: 700;
   letter-spacing: 0.02em;
   font-size: 1.35rem;
-}
-
-.orchos-divider {
-  border: none;
-  border-top: 1.5px solid var(--orchos-divider);
-  margin: 1.2rem 0;
-}
-
-.orchos-btn-primary {
-  background: var(--orchos-gradient);
-  color: var(--orchos-white);
-  border: none;
-  border-radius: 10px;
-  padding: 0.7em 1.3em;
-  font-weight: 600;
-  box-shadow: 0 2px 8px 0 var(--orchos-anim-wave);
-  transition: background 0.3s, box-shadow 0.3s;
-}
-.orchos-btn-primary:hover, .orchos-btn-primary:focus {
-  background: var(--orchos-primary);
-  color: var(--orchos-bg);
-  box-shadow: 0 4px 16px 0 var(--orchos-anim-wave);
-}
-
-.orchos-label {
-  color: var(--orchos-gold);
-  font-size: 0.99rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 8px var(--orchos-secondary), 0 0 2px var(--orchos-primary);
-}
-
-.orchos-text-main {
-  color: var(--orchos-text-main) !important;
-}
-
-.orchos-text-muted {
-  color: var(--orchos-text-muted) !important;
-}
-
-.orchos-synapse-line {
-  stroke: var(--orchos-primary);
-  stroke-width: 2.5;
-  opacity: 0.44;
-  filter: drop-shadow(0px 0px 6px var(--orchos-secondary));
-}
-
-
-.orchos-anim-bg {
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  z-index: -10;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 60% 40%, #00F0FF22 0%, transparent 75%),
-              radial-gradient(ellipse at 30% 70%, #8F00FF22 0%, transparent 80%);
-  animation: orchos-bg-wave 16s linear infinite alternate;
 }
 
 @keyframes orchos-bg-wave {

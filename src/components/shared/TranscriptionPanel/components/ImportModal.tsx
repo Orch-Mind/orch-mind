@@ -3,7 +3,6 @@
 
 import React from "react";
 import { ImportModalProps } from "../types/interfaces";
-import styles from "../TranscriptionPanel.module.css";
 
 const ImportModal: React.FC<ImportModalProps> = ({
   show,

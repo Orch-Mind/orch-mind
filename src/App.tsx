@@ -81,7 +81,7 @@ const App: React.FC = () => {
 
 
   return (
-    <div ref={containerRef} className="min-h-0">
+    <div ref={containerRef} className="h-screen w-full overflow-hidden">
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <TranscriptionProvider>

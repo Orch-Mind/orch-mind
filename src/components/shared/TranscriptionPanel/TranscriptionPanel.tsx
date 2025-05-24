@@ -8,8 +8,7 @@ declare global {
   }
 }
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCognitionLog } from '../../context/CognitionLogContext';
 import { TranscriptionPanelProps } from "./types/interfaces";
 import { useTranscriptionManager } from "./hooks/useTranscriptionManager";
@@ -18,7 +17,6 @@ import LanguageSelector from "./components/LanguageSelector";
 import AudioControls from "./components/AudioControls";
 import TextEditor from "./components/TextEditor";
 import CognitionLogSection from "./components/CognitionLogSection";
-import RecordingControl from "./components/RecordingControl";
 import ConnectionDiagnostics from "./components/ConnectionDiagnostics";
 import ImportModal from "./components/ImportModal";
 import { useChatGptImport } from "./hooks/useChatGptImport";
@@ -31,7 +29,6 @@ import './styles/TranscriptionPanel.layout.css';    // Layout, grid e estrutura 
 import './styles/TranscriptionPanel.visual.css';    // Efeitos visuais e glassmorfismo
 import './styles/TranscriptionPanel.buttons.css';   // Botões e controles interativos
 import './styles/TranscriptionPanel.animations.css'; // Animações e keyframes
-import './styles/TranscriptionPanel.status.css';    // Indicadores de estado
 import './styles/TranscriptionPanel.settings.css';  // Componentes de configuração
 import './styles/TranscriptionPanel.tooltip.css';   // Tooltips e ajudas contextuais
 // Quantum consciousness visualization import
@@ -140,7 +137,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
 
   // --- Render ---
   return (
-    <>
+    <div style={{height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
       {/* Panel Header - Now positioned absolutely */}
       <PanelHeader
         onClose={() => {
@@ -182,7 +179,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
       )}
 
       {/* Main Quantum Dashboard Layout */}
-      <div className="orchos-quantum-dashboard">
+      <div className="orchos-quantum-dashboard" style={{flex: '1 1 auto'}}>
         {/* Quantum Visualization Zone - Left Panel with Golden Ratio */}
         <div className="quantum-visualization-zone">
           <QuantumVisualizationContainer 
@@ -195,7 +192,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
         </div>
 
         {/* Neural Control Grid - Right Panel */}
-        <div className="neural-control-grid">
+        <div className="neural-control-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '0.75rem', height: '100%', width: '100%'}}>
           {/* Top-left: Temporary Context */}
           <CollapsibleCard 
             title="Context" 
@@ -279,7 +276,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
               </div>
             }
           >
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col">
               <TextEditor
                 label=""
                 value={texts.transcription}
@@ -290,7 +287,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
                 forwardedRef={transcriptionRef as React.RefObject<HTMLTextAreaElement>}
                 readOnly={true}
               />
-              <div className="flex flex-col items-center justify-center gap-1 mt-1">
+              <div style={{marginTop: '-4px', marginBottom: '0'}} className="flex flex-col items-center justify-center gap-0">
                 <div className="flex flex-row items-center justify-center gap-4">
                   {/* Quantum Recording Button */}
                   <button
@@ -460,7 +457,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
           handleCloseImportModal={handleCloseImportModal}
         />
       )}
-    </>
+    </div>
   );
 
   // ...

@@ -3,7 +3,6 @@
 
 import React from 'react';
 import TextControls from './TextControls';
-import styles from '../TranscriptionPanel.module.css';
 
 
 interface TextEditorProps {
@@ -35,7 +34,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
   readOnly = false
 }) => {
 
-  const commonClasses = `w-full p-3 rounded bg-black/40 text-white leading-relaxed font-medium shadow-inner ${styles.letterSpacing}`;
+  const commonClasses = `w-full p-3 rounded bg-black/40 text-white leading-relaxed font-medium shadow-inner`;
 
   return (
     <div className="mb-4">
