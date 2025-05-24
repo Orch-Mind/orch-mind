@@ -24,23 +24,21 @@ const CognitionLogSection: React.FC<CognitionLogSectionProps> = ({
       {/* Button row - padrão CollapsibleCard/TextControls */}
       <div className="flex justify-end items-center gap-3 py-2 mb-2">
         <button
-          className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2.5 py-1.5 flex items-center justify-center`}
+          className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}
           onClick={() => exportEvents('Export cognitive log (JSON)')}
           title="Export as JSON"
         >
-          <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><ellipse cx="8.5" cy="8.5" rx="7.5" ry="5.5" stroke="#00faff" strokeWidth="1.3"/><circle cx="8.5" cy="8.5" r="2.5" fill="#00faff" fillOpacity=".9"/></svg>
-          <span className="hidden md:inline ml-1 align-middle">Export JSON</span>
+          <span className="align-middle">JSON</span>
         </button>
         <button
-          className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2.5 py-1.5 flex items-center justify-center`}
+          className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}
           onClick={() => exportEvents('Export cognitive log (TXT)')}
           title="Export as TXT"
         >
-          <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><ellipse cx="8.5" cy="8.5" rx="7.5" ry="5.5" stroke="#00faff" strokeWidth="1.3"/><circle cx="8.5" cy="8.5" r="2.5" fill="#00faff" fillOpacity=".9"/></svg>
-          <span className="hidden md:inline ml-1 align-middle">Export TXT</span>
+          <span className="align-middle">TXT</span>
         </button>
         <button
-          className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2.5 py-1.5 flex items-center justify-center`}
+          className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}
           onClick={clearEvents}
           title="Clear all logs"
         >

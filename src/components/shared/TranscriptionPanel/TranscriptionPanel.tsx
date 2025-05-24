@@ -8,7 +8,8 @@ declare global {
   }
 }
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useCognitionLog } from '../../context/CognitionLogContext';
 import { TranscriptionPanelProps } from "./types/interfaces";
 import { useTranscriptionManager } from "./hooks/useTranscriptionManager";
@@ -27,8 +28,7 @@ import CollapsibleCard from "../CollapsibleCard/CollapsibleCard";
 import './TranscriptionPanel.css';
 // Quantum consciousness visualization import
 import { QuantumVisualizationContainer } from '../QuantumVisualization/QuantumVisualizationContainer';
-
-
+import { MicrophoneState } from '../../context';
 // Brain visualization is now handled in a separate module
 
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width }) => {
@@ -96,9 +96,31 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
 
   // Brain visualization components have been moved to BrainVisualization module
 
-  // --- Settings Popover for Audio/Language Controls ---
+  // --- Configurações simples para Audio/Language Controls ---
   const [showSettings, setShowSettings] = useState(false);
-  const settingsBtnRef = useRef(null);
+  const settingsContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Função para alternar a visibilidade das configurações
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
+  };
+  
+  // Fechar configurações ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsContainerRef.current && !settingsContainerRef.current.contains(event.target as Node)) {
+        setShowSettings(false);
+      }
+    };
+    
+    if (showSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettings]);
 
   // Prevent body scroll when dashboard is active
   useEffect(() => {
@@ -168,7 +190,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
         <div className="neural-control-grid">
           {/* Top-left: Temporary Context */}
           <CollapsibleCard 
-            title="Temporary Context" 
+            title="Context" 
             defaultOpen={true} 
             type="context" 
             icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#ffe066" strokeWidth="2"/><path d="M10 5v5l3 3" stroke="#ffe066" strokeWidth="2" strokeLinecap="round"/></svg>}
@@ -185,66 +207,65 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
 
           {/* Top-right: Transcription */}
           <CollapsibleCard
-            title="Transcription"
+            title="Transcribe"
             defaultOpen={true}
             type="transcription"
             icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 10h16" stroke="#00faff" strokeWidth="2"/><path d="M6 6c2-2 6-2 8 0" stroke="#00faff" strokeWidth="2"/><path d="M6 14c2 2 6 2 8 0" stroke="#00faff" strokeWidth="2"/></svg>}
             headerActions={
-              <div className="relative">
+              <div className="settings-container relative" ref={settingsContainerRef}>
                 <button
-                  ref={settingsBtnRef}
-                  className="orchos-btn-circle mr-2"
-                  onClick={() => setShowSettings((v) => !v)}
-                  aria-label="Settings"
-                  title="Settings"
+                  className="settings-btn orchos-btn-circular"
+                  onClick={toggleSettings}
+                  aria-label="Neural Settings"
+                  title="Neural Settings"
                   type="button"
                 >
-                  {/* Modern glassy gear icon with glowing effect */}
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="orchos-btn-icon orchos-icon-glow">
-    <circle cx="14" cy="14" r="12" fill="rgba(0,255,255,0.10)" stroke="#00faff" strokeWidth="2.2" />
-    <circle cx="14" cy="14" r="5.2" stroke="#00faff" strokeWidth="1.5" fill="rgba(0,255,255,0.14)" />
-    <g filter="url(#settings-glow)">
-      <g>
-        <line x1="14" y1="3.5" x2="14" y2="7.5" stroke="#00faff" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="14" y1="20.5" x2="14" y2="24.5" stroke="#00faff" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="3.5" y1="14" x2="7.5" y2="14" stroke="#00faff" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="20.5" y1="14" x2="24.5" y2="14" stroke="#00faff" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="7.8" y1="7.8" x2="10.5" y2="10.5" stroke="#00faff" strokeWidth="1.1" strokeLinecap="round" />
-        <line x1="17.5" y1="17.5" x2="20.2" y2="20.2" stroke="#00faff" strokeWidth="1.1" strokeLinecap="round" />
-        <line x1="17.5" y1="10.5" x2="20.2" y2="7.8" stroke="#00faff" strokeWidth="1.1" strokeLinecap="round" />
-        <line x1="7.8" y1="20.2" x2="10.5" y2="17.5" stroke="#00faff" strokeWidth="1.1" strokeLinecap="round" />
-      </g>
-      <circle cx="14" cy="14" r="2.8" fill="#00faff" fillOpacity="0.6" />
-    </g>
-    <defs>
-      <filter id="settings-glow" x="-2" y="-2" width="32" height="32" filterUnits="userSpaceOnUse">
-        <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-        <feMerge>
-          <feMergeNode in="coloredBlur"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-    </defs>
-  </svg>
+                  {/* Ícone Neural Q-Node */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    {/* Centralizar no botão */}
+                    <g transform="translate(2, 2)">
+                      {/* Círculo central quântico */}
+                      <circle cx="10" cy="10" r="3" stroke="#00faff" strokeWidth="1.5" fill="rgba(0, 250, 255, 0.2)" />
+                      
+                      {/* Orbitais */}
+                      <circle cx="10" cy="10" r="8" stroke="#00faff" strokeWidth="1" strokeDasharray="2 2" fill="none" />
+                      
+                      {/* Pontos de conexão */}
+                      <circle cx="10" cy="2" r="1.5" fill="#00faff" />
+                      <circle cx="10" cy="18" r="1.5" fill="#00faff" />
+                      <circle cx="2" cy="10" r="1.5" fill="#00faff" />
+                      <circle cx="18" cy="10" r="1.5" fill="#00faff" />
+                    </g>
+                  </svg>
                 </button>
+                
+                {/* Popup de configurações */}
                 {showSettings && (
-                  <div className="absolute z-50 right-0 top-full mt-3 orchos-settings-popup flex flex-col gap-5 orchos-min-width-220">
-                    <div className="mb-2 border-b pb-2">
-                      <h3 className="orchos-title">Settings</h3>
+                  <div className="neural-settings-popup">
+                    <div className="mb-2 border-b border-cyan-500/30 pb-2">
+                      <h3 className="orchos-title flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00faff" strokeWidth="2">
+                          <circle cx="12" cy="12" r="3"></circle>
+                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        Neural Settings
+                      </h3>
                     </div>
-                    <LanguageSelector
-                      language={language}
-                      setLanguage={setLanguage}
-                    />
-                    <AudioControls
-                      isMicrophoneOn={isMicrophoneOn}
-                      setIsMicrophoneOn={setIsMicrophoneOn}
-                      isSystemAudioOn={isSystemAudioOn}
-                      setIsSystemAudioOn={setIsSystemAudioOn}
-                      audioDevices={audioDevices}
-                      selectedDevices={selectedDevices}
-                      handleDeviceChange={handleDeviceChange}
-                    />
+                    <div className="flex flex-col gap-4 px-1">
+                      <LanguageSelector
+                        language={language}
+                        setLanguage={setLanguage}
+                      />
+                      <AudioControls
+                        isMicrophoneOn={isMicrophoneOn}
+                        setIsMicrophoneOn={setIsMicrophoneOn}
+                        isSystemAudioOn={isSystemAudioOn}
+                        setIsSystemAudioOn={setIsSystemAudioOn}
+                        audioDevices={audioDevices}
+                        selectedDevices={selectedDevices}
+                        handleDeviceChange={handleDeviceChange}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -261,49 +282,130 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
                 forwardedRef={transcriptionRef as React.RefObject<HTMLTextAreaElement>}
                 readOnly={true}
               />
-              <div className="flex gap-2 mt-2">
-                <RecordingControl
-                  microphoneState={microphoneState}
-                  toggleRecording={toggleRecording}
-                />
-                <button
-                  className="orchos-btn-circular orchos-btn-fab orchos-btn-glass orchos-btn-ripple w-full flex items-center justify-center gap-2 text-white font-bold text-lg shadow-lg transition-all duration-200 hover:scale-105 focus:scale-105 focus:ring-4 focus:ring-cyan-400/60 animate-pulse"
-                  onClick={e => {
-                    const btn = e.currentTarget;
-                    const ripple = document.createElement('span');
-                    ripple.className = 'ripple';
-                    ripple.style.left = `${e.nativeEvent.offsetX}px`;
-                    ripple.style.top = `${e.nativeEvent.offsetY}px`;
-                    btn.appendChild(ripple);
-                    setTimeout(() => ripple.remove(), 600);
-                    handleSendPrompt();
-                  }}
-                  aria-label="Send Neural Signal"
-                  type="button"
-                  style={{
-                    background: "rgba(24,24,40,0.82)",
-                    border: "3px solid #00faff",
-                    boxShadow: "0 0 24px 8px #00faff33, 0 0 0 0 #fff0"
-                  }}
-                >
-                  <span className="mr-2 flex items-center">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                      <ellipse cx="14" cy="14" rx="10" ry="7" stroke="#00faff" strokeWidth="2"/>
-                      <circle cx="11" cy="14" r="2" fill="#00faff"/>
-                      <circle cx="17" cy="14" r="2" fill="#00faff"/>
-                      <path d="M13 14 Q14 17 15 14" stroke="#00faff" strokeWidth="1.3" fill="none"/>
-                      <path d="M14 7 L14 2" stroke="#00faff" strokeWidth="2" strokeLinecap="round"/>
-                      <circle cx="14" cy="2" r="1" fill="#00faff"/>
-                    </svg>
-                  </span>
-                  <span>Send Neural Signal</span>
-                </button>
+              <div className="flex flex-col items-center justify-center gap-1 mt-1">
+                <div className="flex flex-row items-center justify-center gap-4">
+                  {/* Quantum Recording Button */}
+                  <button
+                    className={`orchos-quantum-btn orchos-btn-record orchos-btn-lg${microphoneState === MicrophoneState.Open ? ' orchos-btn-recording' : ''}`}
+                    onClick={toggleRecording}
+                    aria-label={microphoneState === MicrophoneState.Open ? 'Parar gravação' : 'Gravar'}
+                    type="button"
+                    data-active={microphoneState === MicrophoneState.Open}
+                  >
+                    <div className="orchos-quantum-btn-inner">
+                      {/* Quantum Particles Background */}
+                      <div className="orchos-quantum-particles"></div>
+                      {/* Neural Glow Ring */}
+                      <div className="orchos-neural-ring"></div>
+                      {/* Neural Wave Pattern - Record (Converging Waves) */}
+                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="orchos-quantum-icon" aria-hidden="true">
+                        <g filter="url(#neural-record-glow)">
+                          {/* Central focal point - symbol of recording consciousness */}
+                          <circle cx="16" cy="16" r="5" fill="url(#gradient-record)" className="neural-core-record" />
+                          
+                          {/* Neural wave patterns - converging onto consciousness center */}
+                          <path className="neural-wave wave-1" d="M16 16 C10 14, 8 18, 5 16" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-2" d="M16 16 C10 18, 8 14, 5 18" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-3" d="M16 16 C22 14, 24 18, 27 16" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-4" d="M16 16 C22 18, 24 14, 27 18" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-5" d="M16 16 C14 10, 18 8, 16 5" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-6" d="M16 16 C18 10, 14 8, 18 5" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-7" d="M16 16 C14 22, 18 24, 16 27" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-wave wave-8" d="M16 16 C18 22, 14 24, 18 27" stroke="url(#gradient-neural)" strokeWidth="1.5" strokeLinecap="round" />
+                          
+                          {/* Circle guide - helps identify as record button */}
+                          <circle cx="16" cy="16" r="11" stroke="url(#gradient-neural)" strokeWidth="1" strokeOpacity="0.7" strokeDasharray="1 2" />
+                        </g>
+                        <defs>
+                          <linearGradient id="gradient-neural" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#ff4dd2" />
+                            <stop offset="50%" stopColor="#00faff" />
+                            <stop offset="100%" stopColor="#7c4dff" />
+                          </linearGradient>
+                          <linearGradient id="gradient-record" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#ff4dd2" />
+                            <stop offset="100%" stopColor="#ff80ab" />
+                          </linearGradient>
+                          <filter id="neural-record-glow">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                            <feMerge>
+                              <feMergeNode in="coloredBlur"/>
+                              <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                          </filter>
+                        </defs>
+                      </svg>
+                    </div>
+                    {/* Tooltip flutuante glassmorphism */}
+                    <span className="orchos-tooltip">{microphoneState === MicrophoneState.Open ? 'Parar gravação' : 'Gravar'}</span>
+                  </button>
+                  {/* Quantum Send Button */}
+                  <button
+                    className="orchos-quantum-btn orchos-btn-send"
+                    onClick={e => {
+                      const btn = e.currentTarget;
+                      const ripple = document.createElement('span');
+                      ripple.className = 'orchos-quantum-ripple';
+                      ripple.style.left = `${e.nativeEvent.offsetX}px`;
+                      ripple.style.top = `${e.nativeEvent.offsetY}px`;
+                      btn.appendChild(ripple);
+                      setTimeout(() => ripple.remove(), 1000);
+                      handleSendPrompt();
+                    }}
+                    aria-label="Enviar prompt"
+                    type="button"
+                  >
+                    <div className="orchos-quantum-btn-inner">
+                      {/* Quantum Particles Background */}
+                      <div className="orchos-quantum-particles"></div>
+                      {/* Neural Glow Ring */}
+                      <div className="orchos-neural-ring"></div>
+                      {/* Neural Wave Pattern - Send (Diverging Waves) */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="orchos-quantum-icon" aria-hidden="true">
+                        <g filter="url(#send-glow)">
+                          {/* Central origin point - symbol of thought emergence */}
+                          <circle cx="8" cy="12" r="3" fill="url(#gradient-send)" className="neural-core-send" />
+                          
+                          {/* Neural wave patterns - diverging from consciousness center to right (sending) */}
+                          <path className="neural-send-wave wave-1" d="M8 12 C14 10, 16 14, 20 12" stroke="url(#gradient-send)" strokeWidth="1.5" strokeLinecap="round" />
+                          <path className="neural-send-wave wave-2" d="M8 12 C14 14, 16 10, 20 14" stroke="url(#gradient-send)" strokeWidth="1.5" strokeLinecap="round" />
+                          
+                          {/* Directional indicator - subtle arrow form */}
+                          <path d="M17 9 L21 12 L17 15" stroke="url(#gradient-send)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="neural-send-arrow" />
+                          
+                          {/* Additional neural patterns */}
+                          <path className="neural-send-wave wave-3" d="M8 12 C10 8, 12 7, 10 4" stroke="url(#gradient-send)" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.6" />
+                          <path className="neural-send-wave wave-4" d="M8 12 C6 8, 4 7, 6 4" stroke="url(#gradient-send)" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.6" />
+                          <path className="neural-send-wave wave-5" d="M8 12 C10 16, 12 17, 10 20" stroke="url(#gradient-send)" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.6" />
+                          <path className="neural-send-wave wave-6" d="M8 12 C6 16, 4 17, 6 20" stroke="url(#gradient-send)" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.6" />
+                        </g>
+                        <defs>
+                          <linearGradient id="gradient-send" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#00faff" />
+                            <stop offset="50%" stopColor="#7c4dff" />
+                            <stop offset="100%" stopColor="rgba(0, 250, 255, 0.7)" />
+                          </linearGradient>
+                          <filter id="send-glow">
+                            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                            <feMerge>
+                              <feMergeNode in="coloredBlur"/>
+                              <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                          </filter>
+                        </defs>
+                      </svg>
+                    </div>
+                    {/* Tooltip flutuante glassmorphism */}
+                    <span className="orchos-tooltip">Enviar prompt</span>
+                  </button>
+                </div>
+
               </div>
             </div>
           </CollapsibleCard>
 
           {/* Bottom-left: Cognition Log */}
-          <CollapsibleCard title="Cognition Log" defaultOpen={true} type="cognition" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>}>
+          <CollapsibleCard title="Cognition" defaultOpen={true} type="cognition" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>}>
             <CognitionLogSection
               cognitionEvents={cognitionEvents}
               exporters={exporters}
@@ -313,7 +415,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
           </CollapsibleCard>
 
           {/* Bottom-right: AI Suggested Response */}
-          <CollapsibleCard title="AI Suggested Response" defaultOpen={true} type="ai" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="4" stroke="#ff80ab" strokeWidth="2"/><circle cx="10" cy="10" r="2" fill="#ff80ab"/></svg>}>
+          <CollapsibleCard title="Orch-OS Reply" defaultOpen={true} type="ai" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="4" stroke="#ff80ab" strokeWidth="2"/><circle cx="10" cy="10" r="2" fill="#ff80ab"/></svg>}>
             <TextEditor
               label={""}
               value={texts.aiResponse}

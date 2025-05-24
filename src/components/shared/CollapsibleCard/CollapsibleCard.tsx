@@ -40,48 +40,29 @@ const ICONS: Record<string, React.ReactNode> = {
   )
 };
 
-const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ title, defaultOpen = false, children, debugBorder, type, icon, headerActions = undefined }) => {
-  // Estado de expansão do módulo cortical
-  const [open, setOpen] = useState(defaultOpen);
-  
-  // Handler unificado para toggle
-  const handleToggle = () => setOpen(!open);
-  
-  // Gera ID estável para o conteúdo (usado para acessibilidade)
-  const contentId = `neural-content-${title.replace(/\\s+/g, '-').toLowerCase()}`;
-  
+const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ title, children, debugBorder, type, icon, headerActions = undefined }) => {
+  // Sempre aberto: não há mais estado de expansão
+  const open = true;
+  const contentId = `neural-content-${title.replace(/\s+/g, '-').toLowerCase()}`;
   // Componente final com estrutura semântica e acessível
   return (
     <div
-      className={`orchos-card transcription-card-collapsible${open ? " open" : ""}`}
-      data-state={open ? "expanded" : "collapsed"}
+      className={`orchos-card transcription-card-collapsible open`}
+      data-state={"expanded"}
       data-debugborder={debugBorder ? "true" : undefined}
       data-type={type}
     >
       <div className="transcription-card-header flex items-center gap-2 rounded-[1.3rem] text-left focus:outline-none group w-full justify-between">
-        <button
-          type="button"
-          className="orchos-btn-toggle"
-          title={open ? `Collapse ${title}` : `Expand ${title}`}
-          onClick={handleToggle}
-          aria-expanded={open ? "true" : "false"}
-          aria-controls={contentId}
-        >
-          <span
-            className={`transcription-card-chevron chevron-icon transition-transform duration-200 ${open ? "rotate-90" : "rotate-0"} chevron-icon-center`}
-            aria-hidden="true"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M7 8l3 3 3-3" stroke="#00faff" strokeWidth="2" fill="none"/>
-            </svg>
-          </span>
-        </button>
+
         {type && ICONS[type] && (
           <span className="transcription-card-icon" aria-hidden="true">
             {ICONS[type]}
           </span>
         )}
-        <span className="transcription-card-title flex-1 text-lg font-bold tracking-wide truncate">
+        <span 
+          className="transcription-card-title flex-1 text-lg font-bold tracking-wide truncate" 
+          title={title} // Adiciona tooltip nativo para mostrar o texto completo no hover
+        >
           {title}
         </span>
         {headerActions && (

@@ -19,6 +19,12 @@
   box-sizing: border-box;
 }
 
+/* Corrige o foco em botões para não afetar o card pai */
+.orchos-card button:focus {
+  outline: 2px solid #00faff;
+  box-shadow: 0 0 8px #00faff77;
+}
+
 .transcription-panel-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
