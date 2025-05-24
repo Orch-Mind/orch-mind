@@ -1,0 +1,97 @@
+.settings-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  margin-right: -4px;
+}
+
+.settings-btn {
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--theme-cyan) !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+  background-color: rgba(0, 15, 30, 0.7) !important;
+  border: 2px solid rgba(0, 250, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(0, 250, 255, 0.4), inset 0 0 10px rgba(0, 250, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+.settings-btn:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 40, 70, 0.9) !important;
+  box-shadow: 0 0 15px rgba(0, 250, 255, 0.7), inset 0 0 12px rgba(0, 250, 255, 0.2) !important;
+  border-color: rgba(0, 250, 255, 0.8) !important;
+}
+
+.settings-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+  filter: drop-shadow(0 0 3px rgba(0, 250, 255, 0.6)) !important;
+}
+
+.neural-settings-popup {
+  background-color: rgba(0, 15, 30, 0.95);
+  border: 2px solid rgba(0, 250, 255, 0.5);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 250, 255, 0.3);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  min-width: 250px;
+  z-index: 100;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  padding: 14px 16px;
+  
+
+/* Usando display: flex em vez de block para permitir alinhamento vertical */
+
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-top: 0;
+}
+
+.settings-btn {
+  background-color: rgba(0, 15, 30, 0.7) !important;
+  border: 2px solid rgba(0, 250, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(0, 250, 255, 0.4), inset 0 0 10px rgba(0, 250, 255, 0.1) !important;
+}
+
+.settings-btn:hover {
+  background-color: rgba(0, 30, 60, 0.9) !important;
+  border-color: rgba(0, 250, 255, 0.8) !important;
+  box-shadow: 0 0 15px rgba(0, 250, 255, 0.7), inset 0 0 12px rgba(0, 250, 255, 0.2) !important;
+}
+
+.settings-btn svg {
+  filter: drop-shadow(0 0 3px #00faff);
+}
+
+.settings-btn:hover svg circle:nth-of-type(1) {
+  animation: qNodePulse 2s infinite alternate ease-in-out;
+}
+
+.settings-btn:hover svg circle:nth-of-type(2) {
+  animation: orbitalSpin 8s infinite linear;
+}
+
+.settings-btn:hover svg circle:nth-of-type(3),
+.settings-btn:hover svg circle:nth-of-type(4),
+.settings-btn:hover svg circle:nth-of-type(5),
+.settings-btn:hover svg circle:nth-of-type(6) {
+  animation: connectionPulse 3s infinite alternate ease-in-out;
+}
+
+.neural-settings-popup {
+  animation: settingsPopupReveal 0.3s ease-out forwards;
+  transform-origin: top right;
+}

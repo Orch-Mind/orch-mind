@@ -25,7 +25,15 @@ import { useChatGptImport } from "./hooks/useChatGptImport";
 import { useToast } from "../../../App";
 // Módulo cortical para cards expansíveis/colapsáveis
 import CollapsibleCard from "../CollapsibleCard/CollapsibleCard";
-import './TranscriptionPanel.css';
+// Importação dos arquivos CSS modulares - estrutura neural-simbólica
+import './styles/TranscriptionPanel.variables.css'; // Variáveis globais e propriedades customizadas
+import './styles/TranscriptionPanel.layout.css';    // Layout, grid e estrutura espacial
+import './styles/TranscriptionPanel.visual.css';    // Efeitos visuais e glassmorfismo
+import './styles/TranscriptionPanel.buttons.css';   // Botões e controles interativos
+import './styles/TranscriptionPanel.animations.css'; // Animações e keyframes
+import './styles/TranscriptionPanel.status.css';    // Indicadores de estado
+import './styles/TranscriptionPanel.settings.css';  // Componentes de configuração
+import './styles/TranscriptionPanel.tooltip.css';   // Tooltips e ajudas contextuais
 // Quantum consciousness visualization import
 import { QuantumVisualizationContainer } from '../QuantumVisualization/QuantumVisualizationContainer';
 import { MicrophoneState } from '../../context';

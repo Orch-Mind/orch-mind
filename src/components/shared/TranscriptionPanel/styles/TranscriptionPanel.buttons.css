@@ -1,0 +1,497 @@
+.orchos-btn-circular, .orchos-btn-fab, .orchos-btn-glass {
+  border-radius: 999px !important;
+}
+
+.orchos-btn-fab {
+  background: rgba(24,24,40,0.82);
+  border: 3px solid #00faff;
+  box-shadow: 0 0 24px 8px #00faff33, 0 0 0 0 #fff0;
+  color: #00faff;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: box-shadow 0.22s, background 0.22s, border-color 0.22s;
+}
+
+.orchos-btn-fab:focus, .orchos-btn-fab:hover {
+  background: rgba(0, 245, 255, 0.12);
+  box-shadow: 0 0 36px 12px #00faff77, 0 0 0 3px #00faff55;
+  border-color: #00faff;
+}
+
+.orchos-btn-circular {
+  background: rgba(24, 24, 40, 0.60);
+  border: 2px solid #00faff;
+  box-shadow: 0 2px 16px 0 rgba(0,245,255,0.12);
+  color: #00faff;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.18s, background 0.18s, border-color 0.18s;
+}
+
+.orchos-btn-circular:focus, .orchos-btn-circular:hover {
+  background: rgba(0, 245, 255, 0.12);
+  box-shadow: 0 0 16px 4px #00faff77;
+  border-color: #00faff;
+}
+
+/* Header button styling */
+
+/* Enhanced Button Styles - Quantum Theme */
+
+.neural-control-grid button {
+  padding: 0.32rem 0.9rem !important;
+  font-size: 0.74rem !important;
+  min-height: 1.7rem !important;
+  height: auto !important;
+  background: 
+    linear-gradient(
+      135deg, 
+      rgba(255, 255, 255, 0.03) 0%, 
+      rgba(255, 255, 255, 0.01) 100%
+    );
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  transform-style: preserve-3d;
+}
+
+.neural-control-grid button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 250, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.neural-control-grid button:hover {
+  background: linear-gradient(135deg, rgba(0, 250, 255, 0.2) 0%, rgba(0, 250, 255, 0.1) 100%);
+  border-color: rgba(0, 250, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 250, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.neural-control-grid button:hover::before {
+  left: 100%;
+}
+
+/* Recording button special styling */
+
+/* Transcription card button layout */
+
+/* Microinteractions - Click Ripple Effect */
+
+.neural-control-grid button {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 250, 255, 0.3) 0%, transparent 70%);
+  transform: scale(0);
+  animation: rippleEffect 0.6s ease-out;
+  pointer-events: none;
+}
+
+.neural-control-grid button:focus,
+.neural-control-grid input:focus,
+.neural-control-grid textarea:focus {
+  outline: none;
+  box-shadow: 
+    0 0 0 2px rgba(0, 250, 255, 0.3),
+    0 0 20px rgba(0, 250, 255, 0.2);
+}
+
+@media (max-height: 800px) {
+  .orchos-quantum-dashboard {
+    padding: 0.2rem;
+    gap: 0.2rem;
+    height: calc(100vh - 2.5rem);
+    padding-top: 2.5rem;
+  }
+  
+  .neural-control-grid {
+    gap: 0.2rem;
+  }
+  
+  .neural-control-grid button {
+    padding: 0.15rem 0.4rem !important;
+    font-size: 0.65rem !important;
+    min-height: 1.4rem !important;
+  }
+}
+
+/* Quantum Action Buttons - LEGENDARY */
+
+.orchos-quantum-btn:hover .orchos-tooltip,
+.orchos-quantum-btn:focus .orchos-tooltip,
+.orchos-quantum-btn:focus-visible .orchos-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  pointer-events: auto;
+  box-shadow: 
+    0 8px 32px 0 rgba(0,250,255,0.15), 
+    0 2px 8px 0 rgba(124,77,255,0.15),
+    inset 0 0 8px 0 rgba(0,250,255,0.1);
+}
+
+.orchos-quantum-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  background: var(--quantum-bg-dark);
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s var(--quantum-cubic);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 
+    0 0 30px rgba(0, 250, 255, 0.2),
+    inset 0 0 20px rgba(0, 250, 255, 0.1),
+    0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: neuralBreathing 6s ease-in-out infinite;
+}
+
+.orchos-quantum-btn:hover {
+  animation: none;
+  transform: scale(1.08) translateZ(var(--quantum-depth-2));
+  box-shadow: 
+    0 0 50px rgba(0, 250, 255, 0.4),
+    inset 0 0 30px rgba(0, 250, 255, 0.2),
+    0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.orchos-quantum-btn:active {
+  transform: scale(0.92);
+  transition: all 0.1s var(--quantum-cubic);
+}
+
+.orchos-quantum-btn::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, 
+    #ff4dd2 0%, 
+    #00faff 33%, 
+    #7c4dff 66%, 
+    #ff4dd2 100%
+  );
+  
+
+/* Cross-browser mask support */
+
+
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0.7;
+  animation: quantumBorderRotate 4s linear infinite;
+}
+
+.orchos-quantum-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 0 50px rgba(0, 250, 255, 0.4),
+    inset 0 0 30px rgba(0, 250, 255, 0.2),
+    0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.orchos-quantum-btn:active {
+  transform: scale(0.95);
+}
+
+.orchos-quantum-btn-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.orchos-quantum-btn::after {
+  content: '';
+  position: absolute;
+  top: 60%;
+  left: 15%;
+  width: 2px;
+  height: 2px;
+  background: var(--active-color, #00faff);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 4px var(--active-color, #00faff),
+    0 0 8px var(--active-color, #00faff);
+  animation: quantumFloat 4.5s ease-in-out infinite;
+  animation-delay: 1s;
+  z-index: 2;
+  opacity: 0.7;
+}
+
+.orchos-quantum-btn:hover::after {
+  width: 3px;
+  height: 3px;
+  opacity: 1;
+}
+
+.orchos-quantum-btn::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  right: 25%;
+  width: 2px;
+  height: 2px;
+  background: var(--active-color, #00faff);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 4px var(--active-color, #00faff),
+    0 0 8px var(--active-color, #00faff);
+  animation: quantumFloat 5s ease-in-out infinite;
+  animation-delay: 2.5s;
+  z-index: 2;
+  opacity: 0.7;
+}
+
+.orchos-quantum-btn[data-active="true"]::after,
+.orchos-quantum-btn[data-active="true"]::before,
+.orchos-quantum-btn[data-active="true"] .orchos-quantum-particles::before,
+.orchos-quantum-btn[data-active="true"] .orchos-quantum-particles::after {
+  animation: neuralParticleActive 3s ease-in-out infinite;
+  opacity: 1;
+  width: 3px;
+  height: 3px;
+  background: var(--quantum-record-active);
+  box-shadow: 
+    0 0 8px var(--quantum-record-active),
+    0 0 16px var(--quantum-record-active);
+}
+
+/* Record Button Specific */
+
+.orchos-quantum-btn.orchos-btn-record {
+  --active-color: var(--quantum-record-primary);
+}
+
+.orchos-quantum-btn.orchos-btn-record[data-active="true"] {
+  border-color: var(--quantum-record-active);
+  animation: recordingPulse 1.5s ease-in-out infinite;
+  background: rgba(30, 14, 34, 0.9);
+}
+
+.orchos-quantum-btn.orchos-btn-record[data-active="true"] .orchos-quantum-icon {
+  filter: drop-shadow(0 0 8px var(--quantum-record-active));
+}
+
+.orchos-quantum-btn.orchos-btn-record[data-active="true"] .orchos-neural-ring {
+  background: radial-gradient(circle at center,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 77, 210, 0.3) 50%,
+    transparent 60%
+  );
+}
+
+.orchos-quantum-btn.orchos-btn-record[data-active="true"]::before {
+  background: linear-gradient(135deg, 
+    #ff4dd2 0%, 
+    #ff80ab 50%, 
+    #ff4dd2 100%
+  );
+  opacity: 1;
+}
+
+.orchos-quantum-btn.orchos-btn-send:hover {
+  box-shadow: 
+    0 0 40px rgba(0, 250, 255, 0.5),
+    inset 0 0 25px rgba(0, 250, 255, 0.3),
+    0 8px 25px rgba(0, 0, 0, 0.6);
+}
+
+.orchos-quantum-btn.orchos-btn-record:hover {
+  box-shadow: 
+    0 0 40px rgba(255, 77, 210, 0.5),
+    inset 0 0 25px rgba(255, 77, 210, 0.3),
+    0 8px 25px rgba(0, 0, 0, 0.6);
+}
+
+.orchos-quantum-btn:active::after,
+.orchos-quantum-btn:active::before {
+  animation: synapticBurst 0.5s ease-out forwards;
+}
+
+/* Send Button Specific */
+
+.orchos-quantum-btn.orchos-btn-send {
+  --active-color: var(--quantum-send-primary);
+}
+
+.orchos-quantum-btn.orchos-btn-send:hover .orchos-quantum-icon {
+  filter: drop-shadow(0 0 8px var(--quantum-send-active));
+  transform: translateX(2px);
+  transition: transform 0.3s var(--quantum-cubic);
+}
+
+.orchos-btn-record:hover .neural-wave {
+  animation-duration: 4s;
+  opacity: 0.9;
+}
+
+.orchos-btn-send:hover .neural-send-wave {
+  animation-duration: 3s;
+  opacity: 0.9;
+}
+
+.orchos-btn-send:hover .neural-send-arrow {
+  animation-duration: 1.5s;
+  opacity: 1;
+}
+
+.settings-btn {
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--theme-cyan) !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+  background-color: rgba(0, 15, 30, 0.7) !important;
+  border: 2px solid rgba(0, 250, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(0, 250, 255, 0.4), inset 0 0 10px rgba(0, 250, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+.settings-btn:hover {
+  transform: scale(1.05);
+  background-color: rgba(0, 40, 70, 0.9) !important;
+  box-shadow: 0 0 15px rgba(0, 250, 255, 0.7), inset 0 0 12px rgba(0, 250, 255, 0.2) !important;
+  border-color: rgba(0, 250, 255, 0.8) !important;
+}
+
+.settings-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+  filter: drop-shadow(0 0 3px rgba(0, 250, 255, 0.6)) !important;
+}
+
+.settings-btn {
+  background-color: rgba(0, 15, 30, 0.7) !important;
+  border: 2px solid rgba(0, 250, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(0, 250, 255, 0.4), inset 0 0 10px rgba(0, 250, 255, 0.1) !important;
+}
+
+.settings-btn:hover {
+  background-color: rgba(0, 30, 60, 0.9) !important;
+  border-color: rgba(0, 250, 255, 0.8) !important;
+  box-shadow: 0 0 15px rgba(0, 250, 255, 0.7), inset 0 0 12px rgba(0, 250, 255, 0.2) !important;
+}
+
+.settings-btn svg {
+  filter: drop-shadow(0 0 3px #00faff);
+}
+
+.settings-btn:hover svg circle:nth-of-type(1) {
+  animation: qNodePulse 2s infinite alternate ease-in-out;
+}
+
+.settings-btn:hover svg circle:nth-of-type(2) {
+  animation: orbitalSpin 8s infinite linear;
+}
+
+.settings-btn:hover svg circle:nth-of-type(3),
+.settings-btn:hover svg circle:nth-of-type(4),
+.settings-btn:hover svg circle:nth-of-type(5),
+.settings-btn:hover svg circle:nth-of-type(6) {
+  animation: connectionPulse 3s infinite alternate ease-in-out;
+}
+
+.orchos-quantum-btn {
+  margin: 0 3px;
+}
+
+.orchos-btn-circle {
+  box-sizing: border-box;
+}
+
+/* Record Button - Converging Neural Waves */
+
+/* Send Button - Diverging Neural Waves */
+
+.orchos-btn-record[data-active="true"] .neural-wave {
+  animation-duration: 3s;
+  stroke-width: 2px;
+  opacity: 0.9;
+}
+
+.orchos-btn-record[data-active="true"] .neural-core-record {
+  animation: activeRecordPulse 1.5s ease-in-out infinite;
+}
+
+/* Quantum Ripple Effect */
+
+.orchos-quantum-ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, 
+    rgba(0, 250, 255, 0.4) 0%, 
+    rgba(124, 77, 255, 0.2) 50%, 
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: quantumRippleExpand 1s ease-out forwards;
+}
+
+.orchos-quantum-btn:focus {
+  outline: none;
+  box-shadow: 
+    0 0 50px rgba(0, 250, 255, 0.5),
+    inset 0 0 30px rgba(0, 250, 255, 0.2),
+    0 8px 30px rgba(0, 0, 0, 0.6),
+    0 0 0 3px rgba(0, 250, 255, 0.3);
+}
+
+.orchos-quantum-btn:focus-visible {
+  outline: 2px solid #00faff;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orchos-quantum-btn,
+  .orchos-quantum-btn::before,
+  .orchos-neural-ring,
+  .orchos-quantum-particles::before,
+  .orchos-quantum-particles::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .orchos-quantum-btn {
+    transition: transform 0.2s ease;
+  }
+}

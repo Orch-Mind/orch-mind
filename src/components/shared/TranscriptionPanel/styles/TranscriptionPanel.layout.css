@@ -1,0 +1,428 @@
+/* SPDX-License-Identifier: MIT OR Apache-2.0
+ * Copyright (c) 2025 Guilherme Ferrari Brescia
+ */
+
+/* Neural text inputs with rounded borders */
+
+textarea.orchos-textarea-neural,
+.orchos-textarea-neural {
+  border-radius: 1.1rem !important;
+  background: rgba(10, 20, 40, 0.88);
+  border: 2px solid #00faff33;
+  color: #e3f6ff;
+  font-size: 1.08rem;
+  padding: 1.1rem 1.2rem;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 12px 0 #00faff22;
+  outline: none;
+  resize: none;
+}
+
+.orchos-textarea-neural:focus {
+  border-color: #00faff;
+  box-shadow: 0 0 0 2px #00faff44;
+}
+
+.orchos-btn-circular {
+  background: rgba(24, 24, 40, 0.60);
+  border: 2px solid #00faff;
+  box-shadow: 0 2px 16px 0 rgba(0,245,255,0.12);
+  color: #00faff;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.18s, background 0.18s, border-color 0.18s;
+}
+
+/* Quantum Dashboard Layout - Enhanced */
+
+.orchos-quantum-dashboard {
+  display: grid;
+  grid-template-columns: 1.618fr 1fr; 
+
+/* Golden ratio split */
+
+
+  gap: 0.75rem;
+  height: 100vh;
+  padding: 0.5rem;
+  padding-top: 0.5rem;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(0, 250, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(255, 0, 128, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at center, #0a0f1a 0%, #000511 100%);
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.orchos-quantum-dashboard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(0, 250, 255, 0.1) 0%, transparent 2%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 128, 0.08) 0%, transparent 2%),
+    radial-gradient(circle at 40% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 2%);
+  background-size: 400px 400px;
+  animation: quantumDrift 20s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Quantum Visualization Zone - Holographic Container */
+
+.quantum-visualization-zone {
+  position: relative;
+  background: 
+    linear-gradient(135deg, rgba(0,20,40,0.2) 0%, transparent 40%),
+    radial-gradient(circle at center, rgba(0,20,40,0.4) 0%, transparent 70%);
+  border-radius: 1rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(0,250,255,0.2);
+  box-shadow: 
+    inset 0 0 40px rgba(0,250,255,0.08),
+    0 0 60px rgba(0,250,255,0.05),
+    0 8px 32px rgba(0,0,0,0.4);
+  height: 100%;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Neural Control Grid - Advanced Glassmorphism */
+
+.neural-control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 0;
+}
+
+/* Enhanced Glassmorphic Cards */
+
+/* Card hover state - elevated glassmorphism */
+
+/* Card headers - futuristic design */
+
+/* Add scanning line effect to headers */
+
+/* Card body - improved spacing */
+
+/* Custom scrollbar - quantum style */
+
+/* Ensure main body doesn't scroll */
+
+body.orchos-active {
+  overflow: hidden;
+}
+
+/* Header positioning - ultra compact */
+
+/* Header title with glow */
+
+/* Header button styling */
+
+.neural-control-grid button {
+  padding: 0.32rem 0.9rem !important;
+  font-size: 0.74rem !important;
+  min-height: 1.7rem !important;
+  height: auto !important;
+  background: 
+    linear-gradient(
+      135deg, 
+      rgba(255, 255, 255, 0.03) 0%, 
+      rgba(255, 255, 255, 0.01) 100%
+    );
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  transform-style: preserve-3d;
+}
+
+.neural-control-grid button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 250, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.neural-control-grid button:hover {
+  background: linear-gradient(135deg, rgba(0, 250, 255, 0.2) 0%, rgba(0, 250, 255, 0.1) 100%);
+  border-color: rgba(0, 250, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 250, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.neural-control-grid button:hover::before {
+  left: 100%;
+}
+
+/* Typography Enhancements */
+
+.neural-control-grid .text-sm {
+  font-size: 0.8rem !important;
+  line-height: 1.4 !important;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.neural-control-grid .text-xs {
+  font-size: 0.7rem !important;
+  line-height: 1.3 !important;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* Input and Textarea Styling */
+
+.neural-control-grid textarea,
+.neural-control-grid input {
+  font-size: 0.8rem !important;
+  line-height: 1.4 !important;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 250, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+.neural-control-grid textarea:focus,
+.neural-control-grid input:focus {
+  outline: none;
+  border-color: rgba(0, 250, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.1);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Legacy grid - keeping for backwards compatibility */
+
+/* Ensure quantum visualization takes full space */
+
+.quantum-visualization-zone > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Recording control inside card */
+
+/* Transcription card button layout */
+
+/* Data Visualization Elements */
+
+.neural-control-grid button {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Enhanced Focus States */
+
+.neural-control-grid button:focus,
+.neural-control-grid input:focus,
+.neural-control-grid textarea:focus {
+  outline: none;
+  box-shadow: 
+    0 0 0 2px rgba(0, 250, 255, 0.3),
+    0 0 20px rgba(0, 250, 255, 0.2);
+}
+
+/* Loading States */
+
+/* Ensure cards use all available space */
+
+.neural-control-grid > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Responsive adjustments */
+
+@media (max-height: 800px) {
+  .orchos-quantum-dashboard {
+    padding: 0.2rem;
+    gap: 0.2rem;
+    height: calc(100vh - 2.5rem);
+    padding-top: 2.5rem;
+  }
+  
+  .neural-control-grid {
+    gap: 0.2rem;
+  }
+  
+  .neural-control-grid button {
+    padding: 0.15rem 0.4rem !important;
+    font-size: 0.65rem !important;
+    min-height: 1.4rem !important;
+  }
+}
+
+/* ============================= */
+
+/* ============================= */
+
+/* Sistema Neural-Quântico de Profundidade */
+
+.orchos-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 110%;
+  transform: translateX(-50%) scale(0.95);
+  min-width: 80px;
+  max-width: 140px;
+  background: rgba(18, 24, 38, 0.85);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  text-align: center;
+  padding: 0.4em 1em;
+  border-radius: 1.2em;
+  box-shadow: 0 4px 24px 0 rgba(0,250,255,0.10), 0 1.5px 4px 0 rgba(124,77,255,0.09);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.3s var(--quantum-cubic), transform 0.3s var(--quantum-cubic);
+  white-space: pre-line;
+  border: 1px solid rgba(124, 77, 255, 0.2);
+  letter-spacing: 0.03em;
+}
+
+/* Sistema Neural Biomimético - Respiração */
+
+/* Interação Neural-Magnética */
+
+.orchos-quantum-btn-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* Sistema Neural de Partículas Quânticas */
+
+/* Adiciona 6 partículas quânticas com posições e animações variadas */
+
+/* Geração de partículas neurais adicionais */
+
+/* Duplica as partículas em hover */
+
+/* Animação para partículas neurais ativas */
+
+/* Aplicar animação mais intensa quando gravando */
+
+/* Efeito neural para botão de envio (hover/focus) */
+
+/* Efeito neural para botão de gravação (hover/focus) */
+
+/* Efeito sináptico ao clicar */
+
+/* Hover Animations for Neural Wave Patterns */
+
+/* Container do botão de configurações */
+
+.settings-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  margin-right: -4px;
+}
+
+/* Estilos para o botão de configurações neural-quântico */
+
+.settings-btn {
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--theme-cyan) !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+  background-color: rgba(0, 15, 30, 0.7) !important;
+  border: 2px solid rgba(0, 250, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(0, 250, 255, 0.4), inset 0 0 10px rgba(0, 250, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+/* Estilização para o popup de configurações neural-quântico */
+
+.neural-settings-popup {
+  background-color: rgba(0, 15, 30, 0.95);
+  border: 2px solid rgba(0, 250, 255, 0.5);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 250, 255, 0.3);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  min-width: 250px;
+  z-index: 100;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  padding: 14px 16px;
+  
+
+/* Usando display: flex em vez de block para permitir alinhamento vertical */
+
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-top: 0;
+}
+
+/* Animações do botão de configurações */
+
+/* Animação do círculo central */
+
+/* Animação do orbital */
+
+/* Animação dos pontos de conexão */
+
+/* Efeito de abertura do popup */
+
+/* Estilos de controle para o posicionamento do popover de configurações */
+
+/* Refinamentos para posicionamento global dos botões quantum */
+
+/* Garantir que o botão de configurações não desloque o layout */
+
+/* Icon Animations */
+
+/* Neural Wave Pattern Animations */
+
+/* Neural Core Animations */
+
+/* Active State Enhanced Animations */
+
+/* Focus States */
+
+/* Reduced Motion */

@@ -1,0 +1,74 @@
+.orchos-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 110%;
+  transform: translateX(-50%) scale(0.95);
+  min-width: 80px;
+  max-width: 140px;
+  background: rgba(18, 24, 38, 0.85);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  text-align: center;
+  padding: 0.4em 1em;
+  border-radius: 1.2em;
+  box-shadow: 0 4px 24px 0 rgba(0,250,255,0.10), 0 1.5px 4px 0 rgba(124,77,255,0.09);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.3s var(--quantum-cubic), transform 0.3s var(--quantum-cubic);
+  white-space: pre-line;
+  border: 1px solid rgba(124, 77, 255, 0.2);
+  letter-spacing: 0.03em;
+}
+
+/* Animação Neural da Tooltip */
+
+.orchos-tooltip::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, 
+    rgba(255, 77, 210, 0.1) 0%, 
+    rgba(0, 250, 255, 0.1) 50%,
+    rgba(124, 77, 255, 0.1) 100%);
+  opacity: 0;
+  z-index: -1;
+  animation: neuralGradient 8s ease-in-out infinite;
+}
+
+.orchos-quantum-btn:hover .orchos-tooltip,
+.orchos-quantum-btn:focus .orchos-tooltip,
+.orchos-quantum-btn:focus-visible .orchos-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  pointer-events: auto;
+  box-shadow: 
+    0 8px 32px 0 rgba(0,250,255,0.15), 
+    0 2px 8px 0 rgba(124,77,255,0.15),
+    inset 0 0 8px 0 rgba(0,250,255,0.1);
+}
+
+/* Tooltip Arrow */
+
+.orchos-tooltip::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  -webkit-backdrop-filter: inherit;
+  backdrop-filter: inherit;
+  border-right: 1px solid rgba(124, 77, 255, 0.2);
+  border-bottom: 1px solid rgba(124, 77, 255, 0.2);
+  z-index: -1;
+}
