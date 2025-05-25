@@ -17,13 +17,54 @@
   min-width: 350px;
   max-width: 600px;
   max-height: 92vh;
-  background: rgba(24,24,40,0.95);
+  background: linear-gradient(135deg, rgba(24,24,40,0.97) 70%, rgba(124,77,255,0.08) 100%);
   border-radius: 1.3rem;
-  box-shadow: 0 10px 40px 0 #7c4dff33, 0 0 0 2px #7c4dff99;
-  border: 2px solid #7c4dff99;
+  box-shadow: 0 12px 48px 0 #7c4dff33, 0 0 0 2.5px #7c4dffcc, 0 0 48px 6px #7c4dff44;
+  border: 2.5px solid #7c4dffcc;
   padding: 1.5rem 1.5rem 1.2rem 1.5rem;
   overflow: hidden;
   position: relative;
+  animation: modalFadeIn 0.33s cubic-bezier(.33,1.4,.44,1) both;
+}
+
+@keyframes modalFadeIn {
+  0% { opacity: 0; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.orchos-cognition-logs-header button {
+  box-shadow: 0 0 8px #7c4dff88, 0 0 0 2px #7c4dff44;
+  transition: box-shadow 0.18s, background 0.18s;
+}
+.orchos-cognition-logs-header button:hover {
+  background: #7c4dff22;
+  box-shadow: 0 0 16px #7c4dffcc, 0 0 0 3px #7c4dff88;
+}
+
+.orchos-cognition-logs-buttons button {
+  position: relative;
+  overflow: hidden;
+}
+.orchos-cognition-logs-buttons button::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, #00fff7bb 0%, #7c4dff44 80%, transparent 100%);
+  opacity: 0.34;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  transition: width 0.28s cubic-bezier(.33,1.4,.44,1), height 0.28s cubic-bezier(.33,1.4,.44,1), opacity 0.22s;
+  pointer-events: none;
+}
+.orchos-cognition-logs-buttons button:active::after {
+  width: 180%;
+  height: 180%;
+  opacity: 0.17;
+  transition: width 0.12s, height 0.12s, opacity 0.12s;
 }
 
 @media (max-width: 800px) {
@@ -55,10 +96,12 @@
   max-height: 60vh;
   overflow-y: auto;
   padding: 1.2rem 0.7rem 0.2rem 0.7rem;
-  background: rgba(30,28,48,0.52);
+  background: transparent;
   border-radius: 0.9rem;
-  box-shadow: 0 0 5px #7c4dff22 inset;
-  border: 1.5px solid #7c4dff33;
+  box-shadow: none;
+  border: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 @media (max-width: 600px) {
