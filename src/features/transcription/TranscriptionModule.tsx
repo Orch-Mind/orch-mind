@@ -96,7 +96,6 @@ export const TranscriptionModule: React.FC = () => {
       <TranscriptionPanel
         onClose={() => {}} // No close functionality needed
         width="100%"
-        height="100%"
       />
     </div>
   );

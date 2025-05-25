@@ -288,8 +288,8 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
                 readOnly={true}
               />
               {/* Container para botões posicionados na parte inferior */}
-              <div className="flex flex-col items-center justify-center" style={{ marginTop: 'auto' }}>
-                <div className="flex flex-row items-center justify-center gap-4">
+              <div className="flex flex-col" style={{ height: '100%', maxHeight: '100%', overflow: 'hidden', justifyContent: 'space-between' }}>
+                <div className="flex flex-row items-center justify-center gap-4" style={{ padding: '6px 12px' }}>
                   {/* Quantum Recording Button */}
                   <button
                     className={`orchos-quantum-btn orchos-btn-record orchos-btn-lg${microphoneState === MicrophoneState.Open ? ' orchos-btn-recording' : ''}`}

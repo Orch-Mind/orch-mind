@@ -24,13 +24,12 @@ const TextEditor: React.FC<TextEditorProps> = ({
   value,
   onChange,
   onClear,
-
   rows = 5,
   placeholder = '',
   isExpanded,
   toggleExpand,
   forwardedRef,
-  useAutosize = false,
+  useAutosize = true,
   readOnly = false
 }) => {
 

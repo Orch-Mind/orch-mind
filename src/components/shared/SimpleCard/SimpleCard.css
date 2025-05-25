@@ -4,12 +4,14 @@
 
 /* Neural card container - base styling */
 .orchos-card {
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%; /* Preenche altura disponível */
   width: 100%; /* Preenche largura disponível */
-  padding: clamp(0.75rem, 4%, 1.25rem); /* Padding responsivo que se adapta ao tamanho */
-  border-radius: 1.3rem;
+  padding: clamp(0.45rem, 2vw, 0.7rem); /* Padding menor */
+  border-radius: 0.85rem;               /* Raio menor */
   border: 3px solid var(--neural-accent-color, #00faff);
   background: rgba(24,24,40,0.88);
   box-shadow: 0 8px 40px 0 #000b, 0 0 32px 4px rgba(var(--neural-accent-rgb, 0, 250, 255), 0.2) inset;
@@ -26,16 +28,18 @@
 
 /* Classes para o conteúdo do card */
 .transcription-card-content {
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: clamp(0.5rem, 3%, 1rem); /* Gap responsivo */
+  gap: clamp(0.18rem, 1vw, 0.35rem); /* Gap menor */
   padding: 0;
-  margin: clamp(0.25rem, 2%, 0.5rem) 0 clamp(0.5rem, 3%, 1rem) 0; /* Margens responsivas */
+  margin: clamp(0.1rem, 1vw, 0.25rem) 0 clamp(0.25rem, 2vw, 0.5rem) 0;
   position: relative;
   z-index: 1;
-  flex: 1 1 auto; /* Cresce para preencher espaço disponível */
-  min-height: 0; /* Permite encolher quando necessário */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Estilo para áreas de texto dentro dos cards */
@@ -61,7 +65,7 @@ textarea.orchos-textarea-neural,
 .orchos-textarea-neural {
   height: auto !important; /* Força altura automática */
   min-height: min(30vh, 150px) !important; /* Altura mínima responsível */
-  max-height: unset !important; /* Remove limite de altura */
+  max-height: 100% !important; /* Nunca ultrapassa o card */
   flex: 1 1 auto !important; /* Prioriza crescimento */
   overflow-y: auto !important; /* Scroll vertical quando necessário */
   box-sizing: border-box !important;

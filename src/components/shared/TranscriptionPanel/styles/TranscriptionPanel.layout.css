@@ -258,6 +258,9 @@ body.orchos-active {
 
 .neural-control-grid > * {
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  min-height: 0;
   overflow: hidden;
 }
 
