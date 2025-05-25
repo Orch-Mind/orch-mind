@@ -6,9 +6,9 @@
 .orchos-card {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
-  padding: 1rem 1rem 1.25rem 1rem;
+  height: 100%; /* Preenche altura disponível */
+  width: 100%; /* Preenche largura disponível */
+  padding: clamp(0.75rem, 4%, 1.25rem); /* Padding responsivo que se adapta ao tamanho */
   border-radius: 1.3rem;
   border: 3px solid var(--neural-accent-color, #00faff);
   background: rgba(24,24,40,0.88);
@@ -21,6 +21,7 @@
   max-width: 100%;
   box-sizing: border-box;
   margin: 0;
+  transition: box-shadow 0.3s ease;
 }
 
 /* Classes para o conteúdo do card */
@@ -28,10 +29,89 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 0.7rem;
+  gap: clamp(0.5rem, 3%, 1rem); /* Gap responsivo */
   padding: 0;
-  margin: 0 0 0.5rem 0;
-  /* overflow, height e min-height REMOVIDOS para evitar corte */
+  margin: clamp(0.25rem, 2%, 0.5rem) 0 clamp(0.5rem, 3%, 1rem) 0; /* Margens responsivas */
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto; /* Cresce para preencher espaço disponível */
+  min-height: 0; /* Permite encolher quando necessário */
+}
+
+/* Estilo para áreas de texto dentro dos cards */
+.transcription-card-content textarea,
+.transcription-card-content .text-area-container {
+  border: 0.5px solid rgba(var(--neural-accent-rgb), 0.2);
+  border-radius: 0.75rem;
+  background-color: rgba(24,24,40,0.5);
+  transition: border-color 0.2s ease, height 0.2s ease;
+  width: 100%; /* Preenche toda a largura disponível */
+  flex: 1 1 auto; /* Cresce para preencher espaço disponível */
+  min-height: 0; /* Permite encolher quando necessário */
+  resize: none; /* Remove resize handle para layout mais limpo */
+  display: flex; /* Para conteúdo interno */
+  flex-direction: column; /* Organiza conteúdo */
+  height: auto !important; /* Força altura automática, substituindo inline styles */
+  min-height: min(120px, 25vh) !important; /* Altura mínima responsiva */
+  max-height: 100% !important; /* Nunca ultrapassa o container */
+}
+
+/* Textarea específico - componente TextEditor */
+textarea.orchos-textarea-neural,
+.orchos-textarea-neural {
+  height: auto !important; /* Força altura automática */
+  min-height: min(30vh, 150px) !important; /* Altura mínima responsível */
+  max-height: unset !important; /* Remove limite de altura */
+  flex: 1 1 auto !important; /* Prioriza crescimento */
+  overflow-y: auto !important; /* Scroll vertical quando necessário */
+  box-sizing: border-box !important;
+  padding: clamp(0.75rem, 2.5vw, 1rem) !important;
+  font-size: clamp(0.9rem, 1.5vw, 1rem) !important;
+  line-height: 1.5 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Seletores específicos para sobrescrever estilos inline */
+textarea[style*="height"],
+div[style*="height"] textarea {
+  height: auto !important;
+  min-height: min(30vh, 150px) !important;
+}
+
+/* Para conteúdo maior, adiciona scroll interno ao invés de crescer indefinidamente */
+.transcription-card-content textarea[rows],
+.transcription-card-content textarea.orchos-textarea-neural {
+  overflow-y: auto !important;
+  max-height: 100% !important;
+}
+
+/* Container para TextEditor */
+.flex-1.flex.flex-col.min-h-0 {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.transcription-card-content textarea:focus,
+.transcription-card-content .text-area-container:focus-within {
+  border-color: var(--neural-accent-color);
+  box-shadow: 0 0 8px rgba(var(--neural-accent-rgb), 0.2);
+}
+
+/* Estilos para mensagens dentro dos cards */
+.message-container {
+  padding: clamp(0.5rem, 2.5%, 0.75rem);
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  margin: clamp(0.25rem, 2%, 0.5rem) 0;
+  border-left: 2px solid var(--neural-accent-color, #00faff);
+  width: 100%; /* Preenche toda a largura disponível */
+  box-sizing: border-box;
+  overflow-wrap: break-word; /* Quebra palavras longas */
+  word-break: break-word; /* Ajuda em nomes de arquivos */
 }
 
 /* Cabeçalho do card */
@@ -39,21 +119,26 @@
   --neural-accent-color: inherit; /* Garante herança da cor do card pai */
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  min-height: 30px;
+  gap: clamp(0.5rem, 2%, 0.75rem); /* Gap responsivo */
+  margin-bottom: clamp(0.5rem, 3%, 1rem); /* Margem responsiva */
+  min-height: 32px; /* Altura mínima para garantir visibilidade */
   flex-wrap: wrap;
+  position: relative;
+  z-index: 2; /* Garante que fique acima do conteúdo */
+  width: 100%; /* Preenche toda a largura disponível */
 }
 
 /* Título do card */
 .transcription-card-title {
   color: var(--neural-accent-color, #00faff) !important; /* Força prioridade da cor simbólica */
-  font-size: 1.1rem;
+  font-size: 1.15rem; /* Ligeiramente aumentado */
   font-weight: 600;
-  letter-spacing: 0.02rem;
-  color: var(--neural-accent-color, #00faff);
+  letter-spacing: 0.025rem; /* Aumentado para melhor legibilidade */
   margin: 0;
   padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Ícone do card */
@@ -61,15 +146,22 @@
   color: var(--neural-accent-color, #00faff) !important;
   fill: var(--neural-accent-color, #00faff) !important;
   stroke: var(--neural-accent-color, #00faff) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px; /* Tamanho fixo para consistência */
+  width: 24px; /* Tamanho fixo para consistência */
 }
 
-/* Corrige o espaçamento para botões */
+/* Ações do cabeçalho do card */
 .transcription-card-header-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: clamp(0.35rem, 2%, 0.75rem); /* Gap responsivo */
   margin-left: auto;
   align-items: center;
+  min-height: 32px; /* Altura mínima consistente */
+  justify-content: flex-end; /* Alinha à direita */
 }
 
 /* Estilos para tipos específicos de cards */
@@ -102,15 +194,42 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: auto;
-  padding-top: 0.5rem;
+  gap: clamp(0.35rem, 2%, 0.75rem); /* Gap responsivo */
+  margin-top: auto; /* Empurra para o final do card */
+  padding-top: clamp(0.5rem, 2%, 0.75rem); /* Padding responsivo */
+  border-top: 1px solid rgba(var(--neural-accent-rgb), 0.1); /* Separador sutil */
+  position: relative;
+  z-index: 2;
+  width: 100%; /* Preenche toda a largura disponível */
+  flex-wrap: wrap; /* Permite quebra em telas menores */
+}
+
+/* Estilo para botões dentro dos cards */
+.orchos-card button {
+  min-height: 28px; /* Altura mínima consistente */
+  padding: clamp(0.15rem, 1%, 0.25rem) clamp(0.5rem, 2%, 0.75rem); /* Padding responsivo */
+  border-radius: 0.5rem; /* Arredondamento consistente */
+  transition: all 0.2s ease; /* Transição suave */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.25rem, 1.5%, 0.5rem);
+  flex-shrink: 0; /* Evita encolhimento excessivo */
+  white-space: nowrap; /* Evita quebra de texto */
+  overflow: hidden; /* Esconde overflow */
+  text-overflow: ellipsis; /* Mostra elipses (...) quando necessário */
 }
 
 /* Corrige o foco em botões para não afetar o card pai */
 .orchos-card button:focus {
-  outline: 2px solid #00faff;
-  box-shadow: 0 0 8px #00faff77;
+  outline: 2px solid var(--neural-accent-color, #00faff);
+  box-shadow: 0 0 8px rgba(var(--neural-accent-rgb), 0.5);
+}
+
+/* Hover state para botões */
+.orchos-card button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(var(--neural-accent-rgb), 0.3);
 }
 
 .transcription-panel-grid {

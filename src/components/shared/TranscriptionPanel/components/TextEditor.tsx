@@ -34,10 +34,11 @@ const TextEditor: React.FC<TextEditorProps> = ({
   readOnly = false
 }) => {
 
-  const commonClasses = `w-full p-4 rounded-xl bg-black/40 text-white leading-relaxed font-medium shadow-inner`;
+  // Classes comuns para todos os textareas, adaptando-se ao contexto neural
+  const commonClasses = `w-full p-4 rounded-xl bg-black/40 text-white leading-relaxed font-medium shadow-inner neural-adaptive-container`;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 neural-text-container">
       <TextControls
         label={label}
         onClear={onClear}

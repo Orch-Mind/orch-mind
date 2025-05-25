@@ -276,7 +276,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
               </div>
             }
           >
-            <div className="flex flex-col">
+            <div className="transcription-flex-container">
               <TextEditor
                 label=""
                 value={texts.transcription}
@@ -287,7 +287,8 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
                 forwardedRef={transcriptionRef as React.RefObject<HTMLTextAreaElement>}
                 readOnly={true}
               />
-              <div style={{marginTop: '-4px', marginBottom: '0'}} className="flex flex-col items-center justify-center gap-0">
+              {/* Container para botões posicionados na parte inferior */}
+              <div className="flex flex-col items-center justify-center" style={{ marginTop: 'auto' }}>
                 <div className="flex flex-row items-center justify-center gap-4">
                   {/* Quantum Recording Button */}
                   <button
@@ -428,8 +429,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
                 setTexts(prev => ({ ...prev, aiResponse: value }));
               }}
               onClear={clearAiResponse}
-              toggleExpand={toggleExpand}
-              isExpanded={isExpanded}
               useAutosize={true}
               readOnly={true}
             />
