@@ -69,12 +69,13 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* Botão Logs */}
         <button
           title="Cognition Logs"
+          aria-label="Open Cognition Logs"
           onClick={onShowLogsModal}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-purple-400 via-purple-700 to-cyan-400 shadow-[0_0_24px_4px_rgba(124,77,255,0.18)] hover:shadow-purple-400/80 hover:scale-105 transition-all duration-200 ring-2 ring-purple-400/30 backdrop-blur text-white focus:outline-none focus:ring-4 focus:ring-purple-400/60 h-10"
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400 via-blue-700 to-purple-600 shadow-[0_0_24px_4px_rgba(0,240,255,0.25)] hover:shadow-cyan-400/80 hover:scale-105 transition-all duration-200 ring-2 ring-cyan-400/30 backdrop-blur text-white focus:outline-none focus:ring-4 focus:ring-cyan-400/60 h-10"
         >
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle' }}>
-            <ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/>
-            <circle cx="10" cy="10" r="3" fill="#7c4dff"/>
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle', filter: 'drop-shadow(0 0 4px #00faff88)' }}>
+            <ellipse cx="10" cy="10" rx="8" ry="6" stroke="#00F0FF" strokeWidth="2"/>
+            <circle cx="10" cy="10" r="3" fill="#8F00FF"/>
           </svg>
           Logs
         </button>
