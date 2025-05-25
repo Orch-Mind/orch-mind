@@ -493,26 +493,26 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
 
       {/* Modal de Logs de Cognição */}
       {showLogsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#181828]/95 rounded-2xl p-6 shadow-2xl border-2 border-[#7c4dff99] min-w-[350px] max-w-[96vw] max-h-[92vh] overflow-y-auto relative" style={{ minWidth: 350, maxWidth: '96vw', maxHeight: '92vh' }}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-[#7c4dff] flex items-center gap-2">
-                <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>
-                Cognition Logs
-              </h2>
-              <button className="ml-2 px-2 py-1 rounded-full hover:bg-[#7c4dff22] transition" onClick={() => setShowLogsModal(false)} aria-label="Close logs modal">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="#7c4dff" strokeWidth="2" strokeLinecap="round"/></svg>
-              </button>
-            </div>
-            <CognitionLogSection
-              cognitionEvents={cognitionEvents}
-              exporters={exporters}
-              exportEvents={exportEvents}
-              clearEvents={clearEvents}
-            />
-          </div>
-        </div>
-      )}
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="orchos-cognition-logs-modal">
+      <div className="orchos-cognition-logs-header">
+        <h2 className="text-xl font-bold text-[#7c4dff] flex items-center gap-2">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>
+          Cognition Logs
+        </h2>
+        <button className="ml-2 px-2 py-1 rounded-full hover:bg-[#7c4dff22] transition" onClick={() => setShowLogsModal(false)} aria-label="Close logs modal">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="#7c4dff" strokeWidth="2" strokeLinecap="round"/></svg>
+        </button>
+      </div>
+      <CognitionLogSection
+        cognitionEvents={cognitionEvents}
+        exporters={exporters}
+        exportEvents={exportEvents}
+        clearEvents={clearEvents}
+      />
+    </div>
+  </div>
+)}
     </div>
   );
 

@@ -8,6 +8,71 @@
   /* Não usar transform/filter/opacidade < 1 para evitar stacking context */
 }
 
+
+/* Modal de Logs de Cognição - layout robusto e responsivo */
+.orchos-cognition-logs-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 350px;
+  max-width: 600px;
+  max-height: 92vh;
+  background: rgba(24,24,40,0.95);
+  border-radius: 1.3rem;
+  box-shadow: 0 10px 40px 0 #7c4dff33, 0 0 0 2px #7c4dff99;
+  border: 2px solid #7c4dff99;
+  padding: 1.5rem 1.5rem 1.2rem 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (max-width: 800px) {
+  .orchos-cognition-logs-modal {
+    max-width: 96vw;
+    padding: 1.1rem 0.7rem 1rem 0.7rem;
+  }
+}
+
+
+.orchos-cognition-logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.orchos-cognition-logs-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.3rem;
+}
+
+.orchos-cognition-logs-list {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 1.2rem 0.7rem 0.2rem 0.7rem;
+  background: rgba(30,28,48,0.52);
+  border-radius: 0.9rem;
+  box-shadow: 0 0 5px #7c4dff22 inset;
+  border: 1.5px solid #7c4dff33;
+}
+
+@media (max-width: 600px) {
+  .orchos-cognition-logs-modal {
+    padding: 1.1rem 0.7rem 1rem 0.7rem;
+    min-width: 0;
+    max-width: 99vw;
+  }
+  .orchos-cognition-logs-list {
+    padding: 0.5rem 0.1rem 0.1rem 0.1rem;
+    max-height: 46vh;
+  }
+}
+
 /* Neural text inputs with rounded borders */
 
 textarea.orchos-textarea-neural,
