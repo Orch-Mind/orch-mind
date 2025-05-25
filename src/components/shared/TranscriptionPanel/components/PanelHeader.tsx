@@ -36,10 +36,10 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onReconnect
 }) => {
   return (
-    <div className="flex justify-between items-center mb-4 h-14 px-4">
+    <div className="orchos-header-glass flex justify-between items-center mb-4 h-14 px-4">
       {/* Logo e Título */}
-      <h3 className="font-bold text-xl tracking-wider flex items-center ml-2" style={{ fontFamily: 'Orbitron, Inter, sans-serif', background: 'linear-gradient(90deg, #00F0FF, #8F00FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 15px rgba(0,240,255,0.3)' }}>
-        <span className="mr-2" style={{ fontSize: '0.8em' }}>
+      <h3 className="orchos-title font-bold text-xl tracking-wider flex items-center ml-2 orchos-header-gradient-text">
+        <span className="mr-2 text-base">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <circle cx="10" cy="10" r="8" stroke="#00F0FF" strokeWidth="1.5" />
             <circle cx="10" cy="10" r="3" fill="#8F00FF" />

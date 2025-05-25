@@ -10,6 +10,29 @@
   --orchos-font-ui: 'Inter', 'SF Pro Text', 'Roboto', Arial, sans-serif;
 }
 
+body, .orchos-app-root {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(0,240,255,0.07) 0%, transparent 70%),
+    linear-gradient(180deg, #0a0a23 0%, #181828 60%, #101026 100%) !important;
+  background-attachment: fixed;
+}
+
+.orchos-header-glass {
+  background: linear-gradient(180deg, rgba(10,10,35,0.82) 0%, rgba(10,10,35,0.58) 85%, rgba(10,10,35,0.40) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 1px 12px 0 #00faff0a;
+}
+
+.orchos-header-gradient-text {
+  background: linear-gradient(90deg, #00F0FF, #8F00FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 15px rgba(0,240,255,0.3);
+}
+
 body, .orchos-card, .orchos-btn, .orchos-text, input, textarea, select {
   font-family: 'Inter', Arial, sans-serif;
   font-feature-settings: 'ss01' on, 'cv01' on, 'cv02' on;

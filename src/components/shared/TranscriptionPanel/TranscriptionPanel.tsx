@@ -282,7 +282,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
       zIndex: 1000
     }}
   >
-    <div className="mb-2 border-b border-cyan-500/30 pb-2">
+    <div className="mb-2 pb-2">
       <h3 className="orchos-title flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00faff" strokeWidth="2">
           <circle cx="12" cy="12" r="3"></circle>
