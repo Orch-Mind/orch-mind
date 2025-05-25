@@ -34,10 +34,10 @@ const TextEditor: React.FC<TextEditorProps> = ({
   readOnly = false
 }) => {
 
-  const commonClasses = `w-full p-3 rounded bg-black/40 text-white leading-relaxed font-medium shadow-inner`;
+  const commonClasses = `w-full p-4 rounded-xl bg-black/40 text-white leading-relaxed font-medium shadow-inner`;
 
   return (
-    <div className="mb-4">
+    <div className="flex-1 flex flex-col min-h-0">
       <TextControls
         label={label}
         onClear={onClear}
@@ -46,7 +46,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
       
       {useAutosize ? (
         <textarea
-          className={`${commonClasses} orchos-textarea-neural resize-none ${isExpanded ? 'max-h-96' : 'max-h-60'} overflow-y-auto`}
+          className={`${commonClasses} orchos-textarea-neural resize-none flex-1 h-full min-h-0 ${isExpanded ? 'max-h-96' : ''} overflow-y-auto`}
           value={value}
           onChange={(e) => { if (!readOnly) onChange(e.target.value); }}
           readOnly={readOnly}
@@ -55,10 +55,11 @@ const TextEditor: React.FC<TextEditorProps> = ({
           placeholder={placeholder}
           title={readOnly ? "Transcription text (read-only)" : label}
           aria-label={readOnly ? "Transcription text (read-only)" : label}
+          style={{ height: '100%', minHeight: '60px' }}
         />
       ) : (
         <textarea
-          className={`${commonClasses} orchos-textarea-neural resize-none`}
+          className={`${commonClasses} orchos-textarea-neural resize-none flex-1 h-full min-h-0`}
           value={value}
           onChange={(e) => { if (!readOnly) onChange(e.target.value); }}
           readOnly={readOnly}
@@ -67,6 +68,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
           placeholder={placeholder}
           title={readOnly ? "Transcription text (read-only)" : label}
           aria-label={readOnly ? "Transcription text (read-only)" : label}
+          style={{ height: '100%', minHeight: '60px' }}
         />
       )}
     </div>

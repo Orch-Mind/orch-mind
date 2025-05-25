@@ -192,13 +192,13 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
         </div>
 
         {/* Neural Control Grid - Right Panel */}
-        <div className="neural-control-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '0.75rem', height: '100%', width: '100%'}}>
+        <div className="neural-control-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '2rem', height: '100%', width: '100%', padding: '1rem'}}>
           {/* Top-left: Temporary Context */}
           <SimpleCard 
             title="Context" 
             defaultOpen={true} 
             type="context" 
-            icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#ffe066" strokeWidth="2"/><path d="M10 5v5l3 3" stroke="#ffe066" strokeWidth="2" strokeLinecap="round"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2"/><path d="M10 5v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
           >
             <TextEditor
               label=""
@@ -215,7 +215,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
             title="Transcribe"
             defaultOpen={true}
             type="transcription"
-            icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 10h16" stroke="#00faff" strokeWidth="2"/><path d="M6 6c2-2 6-2 8 0" stroke="#00faff" strokeWidth="2"/><path d="M6 14c2 2 6 2 8 0" stroke="#00faff" strokeWidth="2"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 10h16" stroke="currentColor" strokeWidth="2"/><path d="M6 6c2-2 6-2 8 0" stroke="currentColor" strokeWidth="2"/><path d="M6 14c2 2 6 2 8 0" stroke="currentColor" strokeWidth="2"/></svg>}
             headerActions={
               <div className="settings-container relative" ref={settingsContainerRef}>
                 <button

@@ -20,13 +20,14 @@ const CognitionLogSection: React.FC<CognitionLogSectionProps> = ({
   clearEvents
 }) => {
   return (
-    <div className="pb-6">
+    <div className="flex flex-col h-full">
       {/* Button row - padrão SimpleCard/TextControls */}
-      <div className="flex justify-end items-center gap-3 py-2 mb-2">
+      <div className="flex justify-end items-center gap-2 mb-3 flex-wrap" style={{ position: 'relative', zIndex: 10 }}>
         <button
           className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}
           onClick={() => exportEvents('Export cognitive log (JSON)')}
           title="Export as JSON"
+          style={{ minWidth: '60px', height: '28px', fontSize: '0.8rem' }}
         >
           <span className="align-middle">JSON</span>
         </button>
@@ -34,6 +35,7 @@ const CognitionLogSection: React.FC<CognitionLogSectionProps> = ({
           className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}
           onClick={() => exportEvents('Export cognitive log (TXT)')}
           title="Export as TXT"
+          style={{ minWidth: '60px', height: '28px', fontSize: '0.8rem' }}
         >
           <span className="align-middle">TXT</span>
         </button>
@@ -41,6 +43,7 @@ const CognitionLogSection: React.FC<CognitionLogSectionProps> = ({
           className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}
           onClick={clearEvents}
           title="Clear all logs"
+          style={{ minWidth: '60px', height: '28px', fontSize: '0.8rem' }}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="8" rx="6.5" ry="4.5" stroke="#ff4dd2" strokeWidth="1.2"/><path d="M6 6l4 4M10 6l-4 4" stroke="#ff4dd2" strokeWidth="1.3" strokeLinecap="round"/></svg>
           <span className="hidden md:inline ml-1 align-middle">Clear</span>

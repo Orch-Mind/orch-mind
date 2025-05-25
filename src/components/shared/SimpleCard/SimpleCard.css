@@ -2,21 +2,109 @@
  * Copyright (c) 2025 Guilherme Ferrari Brescia
  */
 
+/* Neural card container - base styling */
 .orchos-card {
-  margin-bottom: 0.5rem;
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding: 1rem 1rem 1.25rem 1rem;
   border-radius: 1.3rem;
-  border: 3px solid #00faff;
+  border: 3px solid var(--neural-accent-color, #00faff);
   background: rgba(24,24,40,0.88);
-  box-shadow: 0 8px 40px 0 #000b, 0 0 32px 4px #00faff33 inset;
+  box-shadow: 0 8px 40px 0 #000b, 0 0 32px 4px rgba(var(--neural-accent-rgb, 0, 250, 255), 0.2) inset;
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
   backdrop-filter: blur(12px) saturate(1.2);
   position: relative;
   overflow: hidden;
-  width: 100%;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  margin: 0;
+}
+
+/* Classes para o conteúdo do card */
+.transcription-card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  padding: 0;
+  margin: 0 0 0.5rem 0;
+  /* overflow, height e min-height REMOVIDOS para evitar corte */
+}
+
+/* Cabeçalho do card */
+.transcription-card-header {
+  --neural-accent-color: inherit; /* Garante herança da cor do card pai */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  min-height: 30px;
+  flex-wrap: wrap;
+}
+
+/* Título do card */
+.transcription-card-title {
+  color: var(--neural-accent-color, #00faff) !important; /* Força prioridade da cor simbólica */
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.02rem;
+  color: var(--neural-accent-color, #00faff);
+  margin: 0;
+  padding: 0;
+}
+
+/* Ícone do card */
+.transcription-card-icon {
+  color: var(--neural-accent-color, #00faff) !important;
+  fill: var(--neural-accent-color, #00faff) !important;
+  stroke: var(--neural-accent-color, #00faff) !important;
+}
+
+/* Corrige o espaçamento para botões */
+.transcription-card-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+/* Estilos para tipos específicos de cards */
+[data-type="context"] {
+  --neural-accent-color: #00faff;
+  --neural-accent-rgb: 0, 250, 255;
+  border-color: #00faff;
+}
+
+[data-type="transcription"] {
+  --neural-accent-color: #ff416c;
+  --neural-accent-rgb: 255, 65, 108;
+  border-color: #ff416c;
+}
+
+[data-type="cognition"] {
+  --neural-accent-color: #7c4dff;
+  --neural-accent-rgb: 124, 77, 255;
+  border-color: #7c4dff;
+}
+
+[data-type="ai"] {
+  --neural-accent-color: #ff80ab;
+  --neural-accent-rgb: 255, 128, 171;
+  border-color: #ff80ab;
+}
+
+/* Rodapé do card */
+.orchos-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 /* Corrige o foco em botões para não afetar o card pai */

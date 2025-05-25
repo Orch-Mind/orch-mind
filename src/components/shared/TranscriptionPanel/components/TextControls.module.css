@@ -23,12 +23,12 @@
 
 .orchos-btn-action {
   font-weight: 500;
-  font-size: 1rem;
+  font-size: 0.9rem;
   border-radius: 999px !important;
-  padding-left: 1.1em;
-  padding-right: 1.1em;
-  min-height: 36px;
-  min-width: 36px;
+  padding-left: 0.9em;
+  padding-right: 0.9em;
+  min-height: 32px;
+  min-width: 32px;
   display: flex;
   align-items: center;
   justify-content: center;

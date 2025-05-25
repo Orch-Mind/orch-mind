@@ -12,9 +12,9 @@ interface TextControlsProps {
 }
 
 const TextControls: React.FC<TextControlsProps> = ({ label, onClear, onExpand, isExpanded }) => (
-  <div className="flex justify-between items-center py-2 mb-2">
+  <div className="flex justify-between items-center py-1 mb-2 flex-wrap">
     <h4 className="text-sm font-medium">{label}</h4>
-    <div className="flex gap-3">
+    <div className="flex gap-2 flex-wrap">
 
       {onExpand && (
         <button
