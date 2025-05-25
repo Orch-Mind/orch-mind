@@ -8,32 +8,32 @@ declare global {
   }
 }
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useToast } from "../../../App";
 import { useCognitionLog } from '../../context/CognitionLogContext';
-import { TranscriptionPanelProps } from "./types/interfaces";
-import { useTranscriptionManager } from "./hooks/useTranscriptionManager";
-import PanelHeader from "./components/PanelHeader";
-import LanguageSelector from "./components/LanguageSelector";
 import AudioControls from "./components/AudioControls";
-import TextEditor from "./components/TextEditor";
 import CognitionLogSection from "./components/CognitionLogSection";
 import ConnectionDiagnostics from "./components/ConnectionDiagnostics";
 import ImportModal from "./components/ImportModal";
+import LanguageSelector from "./components/LanguageSelector";
+import PanelHeader from "./components/PanelHeader";
+import TextEditor from "./components/TextEditor";
 import { useChatGptImport } from "./hooks/useChatGptImport";
-import { useToast } from "../../../App";
-// Módulo cortical para cards expansíveis/colapsáveis
-import CollapsibleCard from "../CollapsibleCard/CollapsibleCard";
+import { useTranscriptionManager } from "./hooks/useTranscriptionManager";
+import { TranscriptionPanelProps } from "./types/interfaces";
+// Módulo cortical para cards simples
+import SimpleCard from "../SimpleCard/SimpleCard";
 // Importação dos arquivos CSS modulares - estrutura neural-simbólica
-import './styles/TranscriptionPanel.variables.css'; // Variáveis globais e propriedades customizadas
-import './styles/TranscriptionPanel.layout.css';    // Layout, grid e estrutura espacial
-import './styles/TranscriptionPanel.visual.css';    // Efeitos visuais e glassmorfismo
-import './styles/TranscriptionPanel.buttons.css';   // Botões e controles interativos
 import './styles/TranscriptionPanel.animations.css'; // Animações e keyframes
-import './styles/TranscriptionPanel.settings.css';  // Componentes de configuração
-import './styles/TranscriptionPanel.tooltip.css';   // Tooltips e ajudas contextuais
+import './styles/TranscriptionPanel.buttons.css'; // Botões e controles interativos
+import './styles/TranscriptionPanel.layout.css'; // Layout, grid e estrutura espacial
+import './styles/TranscriptionPanel.settings.css'; // Componentes de configuração
+import './styles/TranscriptionPanel.tooltip.css'; // Tooltips e ajudas contextuais
+import './styles/TranscriptionPanel.variables.css'; // Variáveis globais e propriedades customizadas
+import './styles/TranscriptionPanel.visual.css'; // Efeitos visuais e glassmorfismo
 // Quantum consciousness visualization import
-import { QuantumVisualizationContainer } from '../QuantumVisualization/QuantumVisualizationContainer';
 import { MicrophoneState } from '../../context';
+import { QuantumVisualizationContainer } from '../QuantumVisualization/QuantumVisualizationContainer';
 // Brain visualization is now handled in a separate module
 
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width }) => {
@@ -194,7 +194,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
         {/* Neural Control Grid - Right Panel */}
         <div className="neural-control-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '0.75rem', height: '100%', width: '100%'}}>
           {/* Top-left: Temporary Context */}
-          <CollapsibleCard 
+          <SimpleCard 
             title="Context" 
             defaultOpen={true} 
             type="context" 
@@ -208,10 +208,10 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
               rows={3}
               placeholder="Add situational context (e.g., 'I'm in a neural session' or 'Help me stay focused')"
             />
-          </CollapsibleCard>
+          </SimpleCard>
 
           {/* Top-right: Transcription */}
-          <CollapsibleCard
+          <SimpleCard
             title="Transcribe"
             defaultOpen={true}
             type="transcription"
@@ -407,20 +407,20 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
 
               </div>
             </div>
-          </CollapsibleCard>
+          </SimpleCard>
 
           {/* Bottom-left: Cognition Log */}
-          <CollapsibleCard title="Cognition" defaultOpen={true} type="cognition" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>}>
+          <SimpleCard title="Cognition" defaultOpen={true} type="cognition" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>}>
             <CognitionLogSection
               cognitionEvents={cognitionEvents}
               exporters={exporters}
               exportEvents={exportEvents}
               clearEvents={clearEvents}
             />
-          </CollapsibleCard>
+          </SimpleCard>
 
           {/* Bottom-right: AI Suggested Response */}
-          <CollapsibleCard title="Orch-OS Reply" defaultOpen={true} type="ai" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="4" stroke="#ff80ab" strokeWidth="2"/><circle cx="10" cy="10" r="2" fill="#ff80ab"/></svg>}>
+          <SimpleCard title="Orch-OS Reply" defaultOpen={true} type="ai" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="4" stroke="#ff80ab" strokeWidth="2"/><circle cx="10" cy="10" r="2" fill="#ff80ab"/></svg>}>
             <TextEditor
               label={""}
               value={texts.aiResponse}
@@ -433,7 +433,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
               useAutosize={true}
               readOnly={true}
             />
-          </CollapsibleCard>
+          </SimpleCard>
         </div>
       </div>
 

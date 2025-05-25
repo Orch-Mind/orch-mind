@@ -2,17 +2,17 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
-import { CollapsibleModuleProps } from "../../../domain/core/interfaces/components/CollapsibleModule";
+import { SimpleModuleProps } from "../../../domain/core/interfaces/components/SimpleModule";
 
 /**
- * CollapsibleCard — Implementação concreta de um córtex modular expansível/colapsável.
+ * SimpleCard — Implementação concreta de um córtex modular simples.
  * 
  * Intent simbólico: Neurônio de interface que permite colapso/expansão cognitiva, permitindo
  * aos usuários gerenciar a densidade de informação e focar em áreas específicas do córtex interface.
  * 
  * Linhagem neural: Interface -> Módulos Cognitivos -> Adaptação Dinâmica
  */
-export type CollapsibleCardProps = CollapsibleModuleProps & {
+export type SimpleCardProps = SimpleModuleProps & {
   /** Symbolic type for color/glow (context, transcription, cognition, ai) */
   type?: 'context' | 'transcription' | 'cognition' | 'ai';
   /** Optional icon (JSX.Element) to show in header */
@@ -40,14 +40,14 @@ const ICONS: Record<string, React.ReactNode> = {
   )
 };
 
-const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ title, children, debugBorder, type, icon, headerActions = undefined }) => {
+const SimpleCard: React.FC<SimpleCardProps> = ({ title, children, debugBorder, type, icon, headerActions = undefined }) => {
   // Sempre aberto: não há mais estado de expansão
   const open = true;
   const contentId = `neural-content-${title.replace(/\s+/g, '-').toLowerCase()}`;
   // Componente final com estrutura semântica e acessível
   return (
     <div
-      className={`orchos-card transcription-card-collapsible open`}
+      className={`orchos-card transcription-card-simple open`}
       data-state={"expanded"}
       data-debugborder={debugBorder ? "true" : undefined}
       data-type={type}
@@ -82,4 +82,4 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ title, children, debu
   );
 };
 
-export default CollapsibleCard;
+export default SimpleCard;

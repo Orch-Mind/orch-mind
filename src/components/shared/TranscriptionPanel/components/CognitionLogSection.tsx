@@ -21,7 +21,7 @@ const CognitionLogSection: React.FC<CognitionLogSectionProps> = ({
 }) => {
   return (
     <div className="pb-6">
-      {/* Button row - padrão CollapsibleCard/TextControls */}
+      {/* Button row - padrão SimpleCard/TextControls */}
       <div className="flex justify-end items-center gap-3 py-2 mb-2">
         <button
           className={`${styles['orchos-btn-glass']} ${styles['orchos-btn-glow']} ${styles['orchos-btn-action']} px-2 py-1 flex items-center justify-center`}

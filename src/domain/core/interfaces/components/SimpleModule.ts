@@ -4,14 +4,14 @@
 /**
  * Orch-OS Neural-Symbolic Interface Specification
  * 
- * CollapsibleModule - Interface para módulos de UI colapsáveis/expansíveis.
+ * SimpleModule - Interface para módulos de UI colapsáveis/expansíveis.
  * Intenção simbólica: Representa um córtex neuralmente adaptável que pode
  * expandir ou colapsar para otimizar a densidade cognitiva da interface.
  */
 
 import { ReactNode } from 'react';
 
-export interface CollapsibleModuleProps {
+export interface SimpleModuleProps {
   /** Título do módulo cortical */
   title: string;
   
@@ -25,7 +25,7 @@ export interface CollapsibleModuleProps {
   debugBorder?: boolean;
 }
 
-export interface CollapsibleModuleState {
+export interface SimpleModuleState {
   /** Estado atual (expandido/colapsado) */
   isExpanded: boolean;
   
