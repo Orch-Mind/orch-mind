@@ -14,6 +14,7 @@ interface PanelHeaderProps {
   onClose: () => void;
   onToggleDiagnostics: () => void;
   onShowImportModal: () => void;
+  onShowLogsModal: () => void; // Abre o modal de logs de cognição
   onMinimize?: () => void;
   connectionState: ConnectionState;
   microphoneState: MicrophoneState;
@@ -26,6 +27,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onClose,
   onToggleDiagnostics,
   onShowImportModal,
+  onShowLogsModal,
   onMinimize,
   connectionState,
   microphoneState,
@@ -62,6 +64,19 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             <path d="M10 6v5m0 0l2.5-2.5M10 11l-2.5-2.5" stroke="#8F00FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Import Neural Data
+        </button>
+        
+        {/* Botão Logs */}
+        <button
+          title="Cognition Logs"
+          onClick={onShowLogsModal}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-purple-400 via-purple-700 to-cyan-400 shadow-[0_0_24px_4px_rgba(124,77,255,0.18)] hover:shadow-purple-400/80 hover:scale-105 transition-all duration-200 ring-2 ring-purple-400/30 backdrop-blur text-white focus:outline-none focus:ring-4 focus:ring-purple-400/60 h-10"
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle' }}>
+            <ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/>
+            <circle cx="10" cy="10" r="3" fill="#7c4dff"/>
+          </svg>
+          Logs
         </button>
         
         {/* Indicador WiFi */}

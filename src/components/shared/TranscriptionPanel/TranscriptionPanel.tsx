@@ -8,7 +8,8 @@ declare global {
   }
 }
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef, useEffect } from "react";
+import ReactDOM from "react-dom";
 import { useToast } from "../../../App";
 import { useCognitionLog } from '../../context/CognitionLogContext';
 import AudioControls from "./components/AudioControls";
@@ -104,6 +105,9 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
   // --- Configurações simples para Audio/Language Controls ---
   const [showSettings, setShowSettings] = useState(false);
   const settingsContainerRef = useRef<HTMLDivElement>(null);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [settingsPopupPosition, setSettingsPopupPosition] = useState({ top: 0, left: 0 });
   
   // Função para alternar a visibilidade das configurações
   const toggleSettings = () => {
@@ -112,19 +116,36 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
   
   // Fechar configurações ao clicar fora
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (settingsContainerRef.current && !settingsContainerRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        settingsBtnRef.current &&
+        !settingsBtnRef.current.contains(event.target as Node) &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target as Node)
+      ) {
         setShowSettings(false);
       }
-    };
-    
+    }
     if (showSettings) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, [showSettings]);
+
+  useEffect(() => {
+    if (showSettings && settingsBtnRef.current) {
+      const rect = settingsBtnRef.current.getBoundingClientRect();
+      const POPUP_WIDTH = 350;
+      let left = rect.right + window.scrollX - POPUP_WIDTH;
+      // Garante que não vaze para fora da viewport
+      left = Math.max(8, Math.min(left, window.innerWidth - POPUP_WIDTH - 8));
+      setSettingsPopupPosition({
+        top: rect.bottom + window.scrollY + 8,
+        left,
+      });
+    }
   }, [showSettings]);
 
   // Prevent body scroll when dashboard is active
@@ -135,33 +156,37 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
     };
   }, []);
 
+  // Estado para modal de logs
+  const [showLogsModal, setShowLogsModal] = useState(false);
+
   // --- Render ---
   return (
-    <div style={{height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+    <div style={{height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: '100vh', maxWidth: '100vw'}}>
       {/* Panel Header - Now positioned absolutely */}
-      <PanelHeader
-        onClose={() => {
-          if (window?.electronAPI?.closeWindow) {
-            window.electronAPI.closeWindow();
-          } else if (onClose) {
-            onClose();
-          }
-        }}
-        onToggleDiagnostics={() => setShowDetailedDiagnostics(!showDetailedDiagnostics)}
-        onShowImportModal={() => setShowImportModal(true)}
-        onMinimize={() => {
-          if (window?.electronAPI?.minimizeWindow) {
-            window.electronAPI.minimizeWindow();
-          } else if (toggleExpand) {
-            toggleExpand();
-          }
-        }}
-        connectionState={connectionState}
-        microphoneState={microphoneState}
-        hasActiveConnection={hasActiveConnection}
-        onDisconnect={disconnectFromDeepgram}
-        onReconnect={connectToDeepgram}
-      />
+       <PanelHeader
+         onClose={() => {
+           if (window?.electronAPI?.closeWindow) {
+             window.electronAPI.closeWindow();
+           } else if (onClose) {
+             onClose();
+           }
+         }}
+         onToggleDiagnostics={() => setShowDetailedDiagnostics(!showDetailedDiagnostics)}
+         onShowImportModal={() => setShowImportModal(true)}
+         onShowLogsModal={() => setShowLogsModal(true)}
+         onMinimize={() => {
+           if (window?.electronAPI?.minimizeWindow) {
+             window.electronAPI.minimizeWindow();
+           } else if (toggleExpand) {
+             toggleExpand();
+           }
+         }}
+         connectionState={connectionState}
+         microphoneState={microphoneState}
+         hasActiveConnection={hasActiveConnection}
+         onDisconnect={disconnectFromDeepgram}
+         onReconnect={connectToDeepgram}
+       />
 
       {/* Connection Diagnostics - Now overlayed */}
       {showDetailedDiagnostics && (
@@ -192,7 +217,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
         </div>
 
         {/* Neural Control Grid - Right Panel */}
-        <div className="neural-control-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '2rem', height: '100%', width: '100%', padding: '1rem'}}>
+        <div className="neural-control-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '1.2rem', height: '100%', width: '100%', padding: '0'}}>
           {/* Top-left: Temporary Context */}
           <SimpleCard 
             title="Context" 
@@ -219,13 +244,14 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
             headerActions={
               <div className="settings-container relative" ref={settingsContainerRef}>
                 <button
-                  className="settings-btn orchos-btn-circular"
-                  onClick={toggleSettings}
-                  aria-label="Neural Settings"
+                  ref={settingsBtnRef}
+                  className={"orchos-settings-btn" + (showSettings ? " active" : "")}
                   title="Neural Settings"
-                  type="button"
-                >
-                  {/* Ícone Neural Q-Node */}
+                  aria-label="Neural Settings"
+                  onClick={() => setShowSettings((v) => !v)}
+                  tabIndex={0}
+                  style={{ zIndex: 101 }}
+                >  {/* Ícone Neural Q-Node */}
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
                     {/* Centralizar no botão */}
                     <g transform="translate(2, 2)">
@@ -245,34 +271,44 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
                 </button>
                 
                 {/* Popup de configurações */}
-                {showSettings && (
-                  <div className="neural-settings-popup">
-                    <div className="mb-2 border-b border-cyan-500/30 pb-2">
-                      <h3 className="orchos-title flex items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00faff" strokeWidth="2">
-                          <circle cx="12" cy="12" r="3"></circle>
-                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
-                        Neural Settings
-                      </h3>
-                    </div>
-                    <div className="flex flex-col gap-4 px-1">
-                      <LanguageSelector
-                        language={language}
-                        setLanguage={setLanguage}
-                      />
-                      <AudioControls
-                        isMicrophoneOn={isMicrophoneOn}
-                        setIsMicrophoneOn={setIsMicrophoneOn}
-                        isSystemAudioOn={isSystemAudioOn}
-                        setIsSystemAudioOn={setIsSystemAudioOn}
-                        audioDevices={audioDevices}
-                        selectedDevices={selectedDevices}
-                        handleDeviceChange={handleDeviceChange}
-                      />
-                    </div>
-                  </div>
-                )}
+                {showSettings && ReactDOM.createPortal(
+  <div
+    ref={popupRef}
+    className="neural-settings-popup"
+    style={{
+      position: "absolute",
+      top: settingsPopupPosition.top,
+      left: settingsPopupPosition.left,
+      zIndex: 1000
+    }}
+  >
+    <div className="mb-2 border-b border-cyan-500/30 pb-2">
+      <h3 className="orchos-title flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00faff" strokeWidth="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Neural Settings
+      </h3>
+    </div>
+    <div className="flex flex-col gap-4 px-1">
+      <LanguageSelector
+        language={language}
+        setLanguage={setLanguage}
+      />
+      <AudioControls
+        isMicrophoneOn={isMicrophoneOn}
+        setIsMicrophoneOn={setIsMicrophoneOn}
+        isSystemAudioOn={isSystemAudioOn}
+        setIsSystemAudioOn={setIsSystemAudioOn}
+        audioDevices={audioDevices}
+        selectedDevices={selectedDevices}
+        handleDeviceChange={handleDeviceChange}
+      />
+    </div>
+  </div>,
+  document.body
+)}
               </div>
             }
           >
@@ -410,18 +446,16 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
             </div>
           </SimpleCard>
 
-          {/* Bottom-left: Cognition Log */}
-          <SimpleCard title="Cognition" defaultOpen={true} type="cognition" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>}>
-            <CognitionLogSection
-              cognitionEvents={cognitionEvents}
-              exporters={exporters}
-              exportEvents={exportEvents}
-              clearEvents={clearEvents}
-            />
-          </SimpleCard>
+          {/* Bottom-left: Cognition Log REMOVIDO - agora acessível via modal */}
+          {/* (O espaço do grid ficará vazio, os outros cards permanecem) */}
 
-          {/* Bottom-right: AI Suggested Response */}
-          <SimpleCard title="Orch-OS Reply" defaultOpen={true} type="ai" icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="4" stroke="#ff80ab" strokeWidth="2"/><circle cx="10" cy="10" r="2" fill="#ff80ab"/></svg>}>
+          {/* Orch-OS Reply ocupa toda a linha de baixo */}
+          <SimpleCard 
+            title="Orch-OS Reply" 
+            defaultOpen={true} 
+            type="ai" 
+            icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="4" stroke="#ff80ab" strokeWidth="2"/><circle cx="10" cy="10" r="2" fill="#ff80ab"/></svg>}
+          >
             <TextEditor
               label={""}
               value={texts.aiResponse}
@@ -455,6 +489,29 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
           handleStartImport={handleStartImport}
           handleCloseImportModal={handleCloseImportModal}
         />
+      )}
+
+      {/* Modal de Logs de Cognição */}
+      {showLogsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-[#181828]/95 rounded-2xl p-6 shadow-2xl border-2 border-[#7c4dff99] min-w-[350px] max-w-[96vw] max-h-[92vh] overflow-y-auto relative" style={{ minWidth: 350, maxWidth: '96vw', maxHeight: '92vh' }}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-[#7c4dff] flex items-center gap-2">
+                <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><ellipse cx="10" cy="10" rx="8" ry="6" stroke="#7c4dff" strokeWidth="2"/><circle cx="10" cy="10" r="3" fill="#7c4dff"/></svg>
+                Cognition Logs
+              </h2>
+              <button className="ml-2 px-2 py-1 rounded-full hover:bg-[#7c4dff22] transition" onClick={() => setShowLogsModal(false)} aria-label="Close logs modal">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="#7c4dff" strokeWidth="2" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+            <CognitionLogSection
+              cognitionEvents={cognitionEvents}
+              exporters={exporters}
+              exportEvents={exportEvents}
+              clearEvents={clearEvents}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

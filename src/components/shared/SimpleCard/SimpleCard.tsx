@@ -44,8 +44,7 @@ const SimpleCard: React.FC<SimpleCardProps> = ({
   type, 
   icon, 
   headerActions = undefined,
-  footerActions = undefined,
-  defaultOpen = true // parâmetro mantido para compatibilidade, mas não utilizado
+  footerActions = undefined
 }) => {
   const contentId = `neural-content-${title.replace(/\s+/g, '-').toLowerCase()}`;
   

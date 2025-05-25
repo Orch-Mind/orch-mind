@@ -2,6 +2,30 @@
  * Copyright (c) 2025 Guilherme Ferrari Brescia
  */
 
+@import url('https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Orbitron:700&display=swap');
+
+:root {
+  --orchos-font-title: 'Orbitron', 'SF Pro Display', 'Inter', 'Roboto', Arial, sans-serif;
+  --orchos-font-ui: 'Inter', 'SF Pro Text', 'Roboto', Arial, sans-serif;
+}
+
+body, .orchos-card, .orchos-btn, .orchos-text, input, textarea, select {
+  font-family: 'Inter', Arial, sans-serif;
+  font-feature-settings: 'ss01' on, 'cv01' on, 'cv02' on;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  color: var(--orchos-text-main);
+}
+
+.orchos-title, h1, h2, h3, h4, h5, h6 {
+  font-family: 'Orbitron', Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--orchos-primary);
+}
+
+
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap');
 
 :root {
@@ -42,15 +66,12 @@
   color: var(--orchos-text-main);
 }
 /* Efeito apenas no hover direto do card, sem roxo e sem focus-within */
-.orchos-card:hover {
+.orchos-card:hover,
+.orchos-card:active,
+.orchos-card:focus-visible {
   box-shadow: 0 8px 32px 0 var(--orchos-primary), 0 0 0 2px var(--orchos-primary);
   border-color: var(--orchos-primary);
-}
-
-/* Desabilitar efeitos em focus-within para evitar problemas */
-.orchos-card:focus-within {
-  box-shadow: var(--orchos-card-shadow);
-  border-color: var(--orchos-border);
+  outline: none;
 }
 
 

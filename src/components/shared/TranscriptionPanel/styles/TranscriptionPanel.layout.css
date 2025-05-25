@@ -102,6 +102,12 @@ textarea.orchos-textarea-neural,
   backdrop-filter: blur(10px);
 }
 
+/* Card horizontal para resposta AI (ocupa duas colunas do grid) */
+.neural-control-grid [data-type="ai"] {
+  grid-column: 1 / span 2;
+  width: 100%;
+}
+
 /* Neural Control Grid - Advanced Glassmorphism */
 
 .neural-control-grid {
@@ -394,17 +400,16 @@ body.orchos-active {
   top: calc(100% + 10px);
   right: 0;
   padding: 14px 16px;
-  
+  max-height: 60vh;
+  overflow-y: auto;
 
-/* Usando display: flex em vez de block para permitir alinhamento vertical */
-
-
+  /* Usando display: flex em vez de block para permitir alinhamento vertical */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   border-radius: 12px;
   margin-top: 0;
 }
+
 
 /* Animações do botão de configurações */
 
