@@ -2,6 +2,12 @@
  * Copyright (c) 2025 Guilherme Ferrari Brescia
  */
 
+.orchos-header-glass {
+  position: relative;
+  z-index: 30;
+  /* Não usar transform/filter/opacidade < 1 para evitar stacking context */
+}
+
 /* Neural text inputs with rounded borders */
 
 textarea.orchos-textarea-neural,
