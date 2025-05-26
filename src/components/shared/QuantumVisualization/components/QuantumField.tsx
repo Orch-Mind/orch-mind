@@ -3,6 +3,7 @@
 
 /* eslint-disable react/no-unknown-property */
 import { useQuantumVisualization, QuantumFrequencyBand } from '../QuantumVisualizationContext';
+import { QUANTUM_PHENOMENA } from '../QuantumLegend';
 import { QuantumSuperposition } from './QuantumSuperposition';
 import { WaveCollapse } from './WaveCollapse';
 import { QuantumEntanglement } from './QuantumEntanglement';
@@ -28,7 +29,8 @@ export function QuantumField() {
     objectiveReductions,
     consciousStates,
     tubulinCoherenceLevel,
-    clearAllEffects
+    clearAllEffects,
+    activeVisualFilter
   } = useQuantumVisualization();
 
   // Timers de referência  // Ref para gerenciar timers de ciclo quântico
@@ -96,6 +98,32 @@ export function QuantumField() {
     quantumEntanglements.length > 1 || // permitir 1 entanglement em estado basal
     objectiveReductions.length > 0 || // CORREÇÃO: NÃO deve haver reduções objetivas em estado basal (teoria Orch-OR)
     consciousStates.length > 0;      // consciousStates só existem sob estímulo
+    
+  // Filter visibility based on activeVisualFilter
+  const shouldShowComponent = (componentType: string): boolean => {
+    // If no filter is active, show all components
+    if (!activeVisualFilter) return true;
+    
+    // Otherwise, only show components of the selected type
+    switch (activeVisualFilter) {
+      case QUANTUM_PHENOMENA.SUPERPOSITION.id:
+        return componentType === 'superposition';
+      case QUANTUM_PHENOMENA.REDUCTION.id:
+        return componentType === 'reduction';
+      case QUANTUM_PHENOMENA.ENTANGLEMENT.id:
+        return componentType === 'entanglement';
+      case QUANTUM_PHENOMENA.CONSCIOUS.id:
+        return componentType === 'conscious';
+      case QUANTUM_PHENOMENA.COHERENCE.id:
+        return componentType === 'coherence';
+      case QUANTUM_PHENOMENA.ORCHESTRATION.id:
+        return componentType === 'orchestration';
+      case QUANTUM_PHENOMENA.OBSERVER.id:
+        return componentType === 'observer';
+      default:
+        return true;
+    }
+  };
 
   // Se não houver estímulo, mostrar a atividade quântica basal
   // Baseado na teoria Orch-OR de Penrose-Hameroff que prevê oscilações quânticas constantes nos microtúbulos
@@ -103,32 +131,44 @@ export function QuantumField() {
     return (
       <group>
         {/* Campos de probabilidade quântica - representação de atividade base constante */}
-        <ProbabilityFields particleCount={60} />
+        {shouldShowComponent('coherence') && (
+          <ProbabilityFields particleCount={60} />
+        )}
         
         {/* Padrões de interferência quântica - sempre presentes em nível basal */}
-        <InterferencePatterns />
+        {shouldShowComponent('orchestration') && (
+          <InterferencePatterns />
+        )}
         
         {/* Superposições quânticas em nível basal - oscilações Fröhlich (8MHz) */}
-        <group position={[0, 0, 0]}>
-          <QuantumSuperposition amount={2} />
-        </group>
-        <group position={[1.5, 0.5, -0.5]}>
-          <QuantumSuperposition amount={1} />
-        </group>
+        {shouldShowComponent('superposition') && (
+          <>
+            <group position={[0, 0, 0]}>
+              <QuantumSuperposition amount={2} />
+            </group>
+            <group position={[1.5, 0.5, -0.5]}>
+              <QuantumSuperposition amount={1} />
+            </group>
+          </>
+        )}
         
         {/* Entanglement quântico em nível basal - coerência quântica fundamental */}
-        <group position={[-1, 0.2, 0]}>
-          <QuantumEntanglement pairs={1} />
-        </group>
+        {shouldShowComponent('entanglement') && (
+          <group position={[-1, 0.2, 0]}>
+            <QuantumEntanglement pairs={1} />
+          </group>
+        )}
         
         {/* Redução objetiva em nível basal - eventos OR espontâneos de baixo nível */}
-        <group position={[0, 0.2, -1]}>
-          <WaveCollapse 
-            active={true} 
-            isNonComputable={false}
-            color="#00B4D8"
-          />
-        </group>
+        {shouldShowComponent('reduction') && (
+          <group position={[0, 0.2, -1]}>
+            <WaveCollapse 
+              active={true} 
+              isNonComputable={false}
+              color="#00B4D8"
+            />
+          </group>
+        )}
       </group>
     );
   }
@@ -136,7 +176,7 @@ export function QuantumField() {
   return (
     <group>
       {/* Probability fields - representam campos quânticos em microtúbulos */}
-      {quantumEntanglements.map((effect) => {
+      {shouldShowComponent('coherence') && quantumEntanglements.map((effect) => {
         // O número de partículas representa a intensidade da coerência quântica
         // Em Orch OR, a coerência entre tubulinas é essencial para a consciência
         // Em repouso, mantenha apenas 10 partículas. Em alta amplitude, aumente suavemente.
@@ -157,7 +197,7 @@ export function QuantumField() {
       })}
       
       {/* Superposições quânticas na estrutura microtubular */}
-      {quantumSuperpositions.slice(0, 13).map((effect) => {
+      {shouldShowComponent('superposition') && quantumSuperpositions.slice(0, 13).map((effect) => {
         // Nível de coerência quântica afeta a quantidade de elementos
         // Isso representa os dímeros de tubulina em estado de superposição
         // Limite científico: máximo de 13 elementos de superposição, conforme número de protofilamentos/microtúbulo na teoria Orch-OR
@@ -177,8 +217,39 @@ export function QuantumField() {
         );
       })}
       
+      {/* Entanglement quântico - representação dos pares emaranhados */}
+      {shouldShowComponent('entanglement') && quantumEntanglements.map((effect) => {
+        // O número de pares emaranhados representa a intensidade da interconexão quântica
+        // Em Orch OR, o emaranhamento conecta regiões do cérebro através de microtuábulos
+        const minPairs = 1;
+        const maxPairs = 5;
+        const pairs = Math.max(minPairs, Math.round(minPairs + ((effect.amplitude ?? 0) * (maxPairs - minPairs))));
+        return (
+          <group key={effect.id} position={getCorePosition(effect.core)}>
+            <QuantumEntanglement 
+              pairs={pairs} 
+              coherence={effect.phaseCoherence ?? 0.5}
+              collapseActive={objectiveReductions.length > 0}
+            />
+          </group>
+        );
+      })}
+      
+      {/* Padrões de interferência - sempre presentes */}
+      {shouldShowComponent('orchestration') && (
+        <InterferencePatterns 
+          coherence={tubulinCoherenceLevel} 
+          collapseActive={objectiveReductions.length > 0}
+        />
+      )}
+      
+      {/* Observer - representa o papel do observador na teoria quântica */}
+      {shouldShowComponent('observer') && consciousStates.length > 0 && (
+        <Observer active={true} />
+      )}
+      
       {/* Reduções objetivas (OR) - momentos de consciência segundo Orch OR */}
-      {objectiveReductions.map((effect) => {
+      {shouldShowComponent('reduction') && objectiveReductions.map((effect) => {
         // Na teoria Orch OR, a redução objetiva (OR) causa momentos de consciência
         // quando a auto-energia gravitacional atinge um limiar crítico
         // O aspecto "não-computável" é central na teoria de Penrose

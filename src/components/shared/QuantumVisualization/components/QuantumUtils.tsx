@@ -49,14 +49,20 @@ export function getCorePosition(core: QuantumCore): [number, number, number] {
  * Na teoria de Penrose-Hameroff, o observador é um aspecto importante
  * da redução objetiva (OR) que leva à consciência
  */
-export function Observer() {
+interface ObserverProps {
+  active?: boolean;
+}
+
+export function Observer({ active = true }: ObserverProps) {
   const ref = useRef<THREE.Mesh>(null);
   
   // Pulso suave do "observador"
   useFrame(({ clock }) => {
     if (ref.current) {
       const t = clock.getElapsedTime();
-      ref.current.scale.setScalar(1 + 0.1 * Math.sin(t * 1.5));
+      // Intensify the pulse when active
+      const pulseIntensity = active ? 0.15 : 0.1;
+      ref.current.scale.setScalar(1 + pulseIntensity * Math.sin(t * 1.5));
       // Rotação lenta
       ref.current.rotation.y = t * 0.1;
       ref.current.rotation.z = t * 0.05;

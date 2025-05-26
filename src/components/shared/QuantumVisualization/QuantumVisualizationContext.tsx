@@ -69,6 +69,10 @@ export interface QuantumVisualizationContextType {
   setOrchestrationIntensity: (intensity: number) => void; // Setter for orchestration intensity
   setPlanckScaleFeedback: (active: boolean) => void;
   
+  // Visual filtering for legend interaction
+  activeVisualFilter: string | null;      // ID of the active filter (null means show all)
+  setActiveVisualFilter: (filterId: string | null) => void; // Set active visual filter
+  
   // Effect management
   clearAllEffects: (preserveBasalState?: boolean, resetLevel?: number) => void;
 }
@@ -95,9 +99,13 @@ export const QuantumVisualizationProvider: React.FC<QuantumVisualizationProvider
   const [orchestrationIntensity, setOrchestrationIntensity] = useState<number>(0);
   const [planckScaleFeedback, setPlanckScaleFeedback] = useState<boolean>(false);
   
+  // Visual filtering state
+  const [activeVisualFilter, _setActiveVisualFilter] = useState<string | null>(null);
+  
   // Memoized state updaters
   const setObserverState = useCallback((state: 'active' | 'inactive') => _setObserverState(state), []);
   const setActiveRegion = useCallback((region: QuantumCore | null) => _setActiveRegion(region), []);
+  const setActiveVisualFilter = useCallback((filterId: string | null) => _setActiveVisualFilter(filterId), []);
 
   // No automatic clearing interval to avoid update depth exceeded errors
   // We'll manage lifetime of effects more carefully through add/clear functions
@@ -444,6 +452,10 @@ export const QuantumVisualizationProvider: React.FC<QuantumVisualizationProvider
         orchestrationIntensity,
         setOrchestrationIntensity: (intensity: number) => setOrchestrationIntensity(intensity),
         setPlanckScaleFeedback: (active: boolean) => setPlanckScaleFeedback(active),
+        
+        // Visual filtering for legend interaction
+        activeVisualFilter,
+        setActiveVisualFilter,
         
         // Effect management
         clearAllEffects

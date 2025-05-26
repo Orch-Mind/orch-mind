@@ -37,6 +37,25 @@
   min-height: 280px;
 }
 
+/* Quantum Matrix Title */
+.quantum-matrix-title {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 10px rgba(157, 106, 255, 0.6);
+  z-index: 10;
+  pointer-events: none;
+  text-transform: uppercase;
+  margin: 0;
+}
+
 /* Styles for quantum legend - Reposicionada seguindo boas práticas UI/UX */
 .quantum-legend {
   position: absolute;
@@ -70,8 +89,15 @@
   color: rgba(255, 255, 255, 0.8);
   transition: all 0.3s ease;
   opacity: 0.7;
-  padding: 4px 0; /* Espaçamento vertical para melhor leitura */
-  border-radius: 4px; /* Leve arredondamento para cada item */
+  padding: 6px 8px; /* Espaçamento para melhor clickabilidade */
+  border-radius: 6px; /* Leve arredondamento para cada item */
+  position: relative;
+  cursor: pointer;
+}
+
+.quantum-legend-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(2px);
 }
 
 .quantum-legend-item.active {
@@ -79,17 +105,90 @@
   opacity: 1;
 }
 
+.quantum-legend-item.selected {
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
 .quantum-legend-indicator {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: 8px;
   transition: all 0.3s ease;
   box-shadow: 0 0 0 rgba(255, 255, 255, 0);
 }
 
 .quantum-legend-item.active .quantum-legend-indicator {
   box-shadow: 0 0 8px currentColor;
+}
+
+.quantum-legend-item.selected .quantum-legend-indicator {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px currentColor;
+}
+
+/* Tooltip for legend items */
+.quantum-legend-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-left: 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  animation: fadeIn 0.2s forwards;
+  border: 1px solid;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  color: #FFFFFF;
+}
+
+/* Tooltip colors for each phenomenon */
+.tooltip-color-quantum-superposition {
+  background-color: rgba(157, 106, 255, 0.15);
+  border-color: #9D6AFF;
+}
+
+.tooltip-color-objective-reduction {
+  background-color: rgba(0, 180, 216, 0.15);
+  border-color: #00B4D8;
+}
+
+.tooltip-color-quantum-entanglement {
+  background-color: rgba(230, 59, 122, 0.15);
+  border-color: #E63B7A;
+}
+
+.tooltip-color-conscious-state {
+  background-color: rgba(59, 230, 105, 0.15);
+  border-color: #3BE669;
+}
+
+.tooltip-color-tubulin-coherence {
+  background-color: rgba(255, 209, 102, 0.15);
+  border-color: #FFD166;
+}
+
+.tooltip-color-orchestration {
+  background-color: rgba(0, 203, 209, 0.15);
+  border-color: #00CBD1;
+}
+
+.tooltip-color-observer {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: #FFFFFF;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(10px, -50%); }
+  to { opacity: 1; transform: translate(0, -50%); }
 }
 
 /* Specific colors for each quantum phenomenon - scientifically based on the frequencies and phenomena they represent */
