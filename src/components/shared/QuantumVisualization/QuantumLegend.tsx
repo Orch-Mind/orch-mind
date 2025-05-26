@@ -43,6 +43,18 @@ export const QUANTUM_PHENOMENA = {
     color: '#00CBD1',
     description: 'Synchronization of quantum processes across neural architectures.'
   },
+  DECOHERENCE: {
+    id: 'quantum-decoherence',
+    label: 'Quantum Decoherence',
+    color: '#FF5500', // Laranja mais vivo para melhor visibilidade
+    description: 'Process by which quantum states lose coherence due to environmental interaction, a key challenge in Orch-OR.'
+  },
+  ISOLATION: {
+    id: 'quantum-isolation',
+    label: 'Quantum Isolation',
+    color: '#00CCFF', // Azul mais brilhante para melhor visibilidade
+    description: 'Protective mechanisms that shield microtubules from decoherence, enabling quantum effects at body temperature.'
+  },
   OBSERVER: {
     id: 'observer',
     label: 'Observer',
@@ -58,7 +70,7 @@ interface LegendItemProps {
   active?: boolean;
   selected?: boolean;
   description: string;
-  onClick: (id: string) => void;
+  onClick: (id: string, multiSelect: boolean) => void;
 }
 
 const LegendItem: React.FC<LegendItemProps> = ({ 
@@ -72,12 +84,19 @@ const LegendItem: React.FC<LegendItemProps> = ({
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   
+  // Handler para detectar clique com Command (Mac) ou Ctrl (Windows/Linux) pressionado
+  const handleClick = (e: React.MouseEvent) => {
+    // Se Command ou Ctrl está pressionado, permitir seleção múltipla
+    onClick(id, e.metaKey || e.ctrlKey); // metaKey = Command no Mac, ctrlKey = Ctrl em outras plataformas
+  };
+  
   return (
     <div 
       className={`quantum-legend-item ${active ? 'active' : ''} ${selected ? 'selected' : ''}`} 
-      onClick={() => onClick(id)}
+      onClick={handleClick}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
+      title={`${label}${selected ? ' (selected)' : ''} - ⌘/Ctrl+Click for multiple selection`}
     >
       <div 
         className={`quantum-legend-indicator quantum-color-${id}`} 
@@ -87,6 +106,10 @@ const LegendItem: React.FC<LegendItemProps> = ({
       {showTooltip && (
         <div className={`quantum-legend-tooltip tooltip-color-${id}`}>
           {description}
+          {selected ? " (selected)" : ""}
+          <div className="tooltip-hint">
+            ⌘/Ctrl+Click for multiple selection
+          </div>
         </div>
       )}
     </div>
@@ -104,7 +127,7 @@ export const QuantumLegend: React.FC = () => {
     quantumEntanglements,
     consciousStates,
     observerState,
-    activeVisualFilter,
+    activeVisualFilters,
     setActiveVisualFilter
   } = useQuantumVisualization();
 
@@ -121,13 +144,15 @@ export const QuantumLegend: React.FC = () => {
   const isOrchestrationActive = true; // Sempre ativo para refletir orquestração em nível base
   const isObserverActive = observerState === 'active' || consciousStates.length > 0;
   
-  // Handle legend item click to toggle filtering
-  const handleLegendClick = (id: string) => {
-    if (activeVisualFilter === id) {
-      setActiveVisualFilter(null); // Deselect if already selected
-    } else {
-      setActiveVisualFilter(id); // Select the item
-    }
+  // Decoerência e isolamento são fenômenos físicos sempre presentes
+  // em diferentes graus, de acordo com a teoria Orch-OR
+  const isDecoherenceActive = true; // A decoerência é sempre uma ameaça presente
+  const isIsolationActive = true;   // Os mecanismos de isolamento estão sempre ativos
+  
+  // Handle legend item click to toggle filtering, com suporte para seleção múltipla
+  const handleLegendClick = (id: string, multiSelect: boolean = false) => {
+    // Passa o id e o estado do Command/Ctrl para o contexto
+    setActiveVisualFilter(id, multiSelect);
   };
 
   // Add the title at the top of the visualization
@@ -153,7 +178,7 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.SUPERPOSITION.color}
         description={QUANTUM_PHENOMENA.SUPERPOSITION.description}
         active={isSuperpositionActive}
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.SUPERPOSITION.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.SUPERPOSITION.id)}
         onClick={handleLegendClick}
       />
       <LegendItem 
@@ -162,7 +187,7 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.REDUCTION.color}
         description={QUANTUM_PHENOMENA.REDUCTION.description}
         active={isObjectiveReductionActive}
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.REDUCTION.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.REDUCTION.id)}
         onClick={handleLegendClick}
       />
       <LegendItem 
@@ -171,7 +196,7 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.ENTANGLEMENT.color}
         description={QUANTUM_PHENOMENA.ENTANGLEMENT.description}
         active={isQuantumEntanglementActive}
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.ENTANGLEMENT.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.ENTANGLEMENT.id)}
         onClick={handleLegendClick}
       />
       <LegendItem 
@@ -180,7 +205,7 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.CONSCIOUS.color}
         description={QUANTUM_PHENOMENA.CONSCIOUS.description}
         active={isConsciousStateActive} 
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.CONSCIOUS.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.CONSCIOUS.id)}
         onClick={handleLegendClick}
       />
       <LegendItem 
@@ -189,7 +214,7 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.COHERENCE.color}
         description={QUANTUM_PHENOMENA.COHERENCE.description}
         active={isCoherenceActive}
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.COHERENCE.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.COHERENCE.id)}
         onClick={handleLegendClick}
       />
       <LegendItem 
@@ -198,7 +223,25 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.ORCHESTRATION.color}
         description={QUANTUM_PHENOMENA.ORCHESTRATION.description}
         active={isOrchestrationActive}
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.ORCHESTRATION.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.ORCHESTRATION.id)}
+        onClick={handleLegendClick}
+      />
+      <LegendItem 
+        id={QUANTUM_PHENOMENA.DECOHERENCE.id}
+        label={QUANTUM_PHENOMENA.DECOHERENCE.label}
+        color={QUANTUM_PHENOMENA.DECOHERENCE.color}
+        description={QUANTUM_PHENOMENA.DECOHERENCE.description}
+        active={isDecoherenceActive}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.DECOHERENCE.id)}
+        onClick={handleLegendClick}
+      />
+      <LegendItem 
+        id={QUANTUM_PHENOMENA.ISOLATION.id}
+        label={QUANTUM_PHENOMENA.ISOLATION.label}
+        color={QUANTUM_PHENOMENA.ISOLATION.color}
+        description={QUANTUM_PHENOMENA.ISOLATION.description}
+        active={isIsolationActive}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.ISOLATION.id)}
         onClick={handleLegendClick}
       />
       <LegendItem 
@@ -207,7 +250,7 @@ export const QuantumLegend: React.FC = () => {
         color={QUANTUM_PHENOMENA.OBSERVER.color}
         description={QUANTUM_PHENOMENA.OBSERVER.description}
         active={isObserverActive} 
-        selected={activeVisualFilter === QUANTUM_PHENOMENA.OBSERVER.id}
+        selected={activeVisualFilters.includes(QUANTUM_PHENOMENA.OBSERVER.id)}
         onClick={handleLegendClick}
       />
     </div>

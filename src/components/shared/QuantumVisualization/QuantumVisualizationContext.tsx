@@ -70,9 +70,10 @@ export interface QuantumVisualizationContextType {
   setPlanckScaleFeedback: (active: boolean) => void;
   
   // Visual filtering for legend interaction
-  activeVisualFilter: string | null;      // ID of the active filter (null means show all)
-  setActiveVisualFilter: (filterId: string | null) => void; // Set active visual filter
-  
+  activeVisualFilters: string[];      // IDs of the active filters (empty array means show all)
+  setActiveVisualFilter: (filterId: string, multiSelect?: boolean) => void; // Set active visual filter
+  removeVisualFilter: (filterId: string) => void; // Remove a specific filter
+  clearVisualFilters: () => void; // Clear all filters
   // Effect management
   clearAllEffects: (preserveBasalState?: boolean, resetLevel?: number) => void;
 }
@@ -99,13 +100,40 @@ export const QuantumVisualizationProvider: React.FC<QuantumVisualizationProvider
   const [orchestrationIntensity, setOrchestrationIntensity] = useState<number>(0);
   const [planckScaleFeedback, setPlanckScaleFeedback] = useState<boolean>(false);
   
-  // Visual filtering state
-  const [activeVisualFilter, _setActiveVisualFilter] = useState<string | null>(null);
+  // State for visual filtering (activated by legend)
+  const [activeVisualFilters, setActiveVisualFilters] = useState<string[]>([]);
+  
+  // Handler to add/remove a filter with multiSelect support
+  const setActiveVisualFilter = useCallback((filterId: string, multiSelect: boolean = false) => {
+    setActiveVisualFilters(prev => {
+      // Se já está selecionado
+      if (prev.includes(filterId)) {
+        // Remove o filtro
+        return prev.filter(id => id !== filterId);
+      } else {
+        // Se multiSelect (Command/Ctrl pressionado), adiciona à seleção atual
+        if (multiSelect) {
+          return [...prev, filterId];
+        }
+        // Sem multiSelect, substitui toda a seleção atual
+        return [filterId];
+      }
+    });
+  }, []);
+  
+  // Remove um filtro específico
+  const removeVisualFilter = useCallback((filterId: string) => {
+    setActiveVisualFilters(prev => prev.filter(id => id !== filterId));
+  }, []);
+  
+  // Limpa todos os filtros
+  const clearVisualFilters = useCallback(() => {
+    setActiveVisualFilters([]);
+  }, []);
   
   // Memoized state updaters
   const setObserverState = useCallback((state: 'active' | 'inactive') => _setObserverState(state), []);
   const setActiveRegion = useCallback((region: QuantumCore | null) => _setActiveRegion(region), []);
-  const setActiveVisualFilter = useCallback((filterId: string | null) => _setActiveVisualFilter(filterId), []);
 
   // No automatic clearing interval to avoid update depth exceeded errors
   // We'll manage lifetime of effects more carefully through add/clear functions
@@ -454,9 +482,10 @@ export const QuantumVisualizationProvider: React.FC<QuantumVisualizationProvider
         setPlanckScaleFeedback: (active: boolean) => setPlanckScaleFeedback(active),
         
         // Visual filtering for legend interaction
-        activeVisualFilter,
+        activeVisualFilters,
         setActiveVisualFilter,
-        
+        removeVisualFilter,
+        clearVisualFilters,
         // Effect management
         clearAllEffects
       }}

@@ -9,6 +9,8 @@ import { WaveCollapse } from './WaveCollapse';
 import { QuantumEntanglement } from './QuantumEntanglement';
 import { ProbabilityFields } from './ProbabilityFields';
 import { InterferencePatterns } from './InterferencePatterns';
+import { QuantumDecoherence } from './QuantumDecoherence';
+import { QuantumIsolationField } from './QuantumIsolation';
 import { Observer, getCorePosition } from './QuantumUtils';
 import React from 'react';
 
@@ -30,7 +32,8 @@ export function QuantumField() {
     consciousStates,
     tubulinCoherenceLevel,
     clearAllEffects,
-    activeVisualFilter
+    
+    activeVisualFilters
   } = useQuantumVisualization();
 
   // Timers de referência  // Ref para gerenciar timers de ciclo quântico
@@ -99,30 +102,25 @@ export function QuantumField() {
     objectiveReductions.length > 0 || // CORREÇÃO: NÃO deve haver reduções objetivas em estado basal (teoria Orch-OR)
     consciousStates.length > 0;      // consciousStates só existem sob estímulo
     
-  // Filter visibility based on activeVisualFilter
+  // Filter visibility based on activeVisualFilters (multiple selection)
   const shouldShowComponent = (componentType: string): boolean => {
-    // If no filter is active, show all components
-    if (!activeVisualFilter) return true;
-    
-    // Otherwise, only show components of the selected type
-    switch (activeVisualFilter) {
-      case QUANTUM_PHENOMENA.SUPERPOSITION.id:
-        return componentType === 'superposition';
-      case QUANTUM_PHENOMENA.REDUCTION.id:
-        return componentType === 'reduction';
-      case QUANTUM_PHENOMENA.ENTANGLEMENT.id:
-        return componentType === 'entanglement';
-      case QUANTUM_PHENOMENA.CONSCIOUS.id:
-        return componentType === 'conscious';
-      case QUANTUM_PHENOMENA.COHERENCE.id:
-        return componentType === 'coherence';
-      case QUANTUM_PHENOMENA.ORCHESTRATION.id:
-        return componentType === 'orchestration';
-      case QUANTUM_PHENOMENA.OBSERVER.id:
-        return componentType === 'observer';
-      default:
-        return true;
-    }
+    // Se não há filtros ativos, mostrar tudo
+    if (!activeVisualFilters || activeVisualFilters.length === 0) return true;
+
+    // Mapeamento de tipo para id de fenômeno
+    const typeToId: Record<string, string> = {
+      superposition: QUANTUM_PHENOMENA.SUPERPOSITION.id,
+      reduction: QUANTUM_PHENOMENA.REDUCTION.id,
+      entanglement: QUANTUM_PHENOMENA.ENTANGLEMENT.id,
+      conscious: QUANTUM_PHENOMENA.CONSCIOUS.id,
+      coherence: QUANTUM_PHENOMENA.COHERENCE.id,
+      orchestration: QUANTUM_PHENOMENA.ORCHESTRATION.id,
+      observer: QUANTUM_PHENOMENA.OBSERVER.id,
+      decoherence: QUANTUM_PHENOMENA.DECOHERENCE.id,
+      isolation: QUANTUM_PHENOMENA.ISOLATION.id
+    };
+    const id = typeToId[componentType];
+    return !!id && activeVisualFilters.includes(id);
   };
 
   // Se não houver estímulo, mostrar a atividade quântica basal
@@ -156,6 +154,29 @@ export function QuantumField() {
         {shouldShowComponent('entanglement') && (
           <group position={[-1, 0.2, 0]}>
             <QuantumEntanglement pairs={1} />
+          </group>
+        )}
+        
+        {/* Decoerência quântica em nível basal - sempre presente como desafio */}
+        {shouldShowComponent('decoherence') && (
+          <group position={[1.2, 0.3, -0.8]}>
+            <QuantumDecoherence 
+              intensity={0.4}
+              scale={0.8} 
+              speed={0.5}
+              color="#FF5500"
+            />
+          </group>
+        )}
+        
+        {/* Mecanismos de isolamento quântico - protegem contra decoerência */}
+        {shouldShowComponent('isolation') && (
+          <group position={[0, 0, 0]}>
+            <QuantumIsolationField 
+              isolationFactor={0.5} 
+              size={1.5}
+              pulseSpeed={0.3}
+            />
           </group>
         )}
         
@@ -280,6 +301,29 @@ export function QuantumField() {
             pairs={Math.max(1, Math.round(1 + tubulinCoherenceLevel * 31))}
             coherence={tubulinCoherenceLevel}
             collapseActive={objectiveReductions.length > 0}
+          />
+        </group>
+      )}
+      
+      {/* Quantum Decoherence - processos de perda de coerência quântica */}
+      {shouldShowComponent('decoherence') && (
+        <group position={[0, 0.5, -1]}>
+          <QuantumDecoherence 
+            intensity={0.7} 
+            scale={1.5}
+            speed={0.8}
+            color="#FF5500"
+          />
+        </group>
+      )}
+      
+      {/* Quantum Isolation - mecanismos de proteção contra decoerência quântica */}
+      {shouldShowComponent('isolation') && (
+        <group position={[0, 0, 0]}>
+          <QuantumIsolationField 
+            isolationFactor={0.8} 
+            size={2.0}
+            pulseSpeed={0.5}
           />
         </group>
       )}

@@ -46,7 +46,8 @@ const CssQuantumFallback: React.FC = () => (
 const QuantumThreeScene: React.FC = () => (
   <>
     <ambientLight intensity={1} />
-    <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
+
+    <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} minDistance={8} maxDistance={30} />
     <QuantumField />
   </>
 );
@@ -76,7 +77,7 @@ export const QuantumModel: React.FC = () => {
   if (webglAvailable) {
     console.log('WebGL disponível, renderizando Canvas Three.js!');
     return (
-      <Canvas className="quantum-three-canvas" shadows camera={{ position: [0, 0, 5], fov: 50 }}>
+      <Canvas className="quantum-three-canvas" shadows camera={{ position: [0, 0, 15], fov: 40 }}>
         <Suspense fallback={null}>
           <QuantumThreeScene />
         </Suspense>
