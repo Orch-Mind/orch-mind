@@ -152,20 +152,23 @@ export function QuantumField() {
         
         {/* Entanglement quântico em nível basal - coerência quântica fundamental */}
         {/* Na teoria Orch-OR, mesmo em estado basal, há emaranhamento significativo entre microtúbulos */}
+        {/* O emaranhamento ocorre em múltiplas frequências (gigahertz, megahertz, kilohertz) */}
         {shouldShowComponent('entanglement') && (
           <>
             {/* Emaranhamento quântico central - entre microtúbulos regionais */}
+            {/* Representa o emaranhamento de maior intensidade nas regiões de alta densidade neural */}
             <group position={[0, 0.2, 0.3]}>
-              <QuantumEntanglement pairs={4} coherence={0.5} />
+              <QuantumEntanglement pairs={8} coherence={0.7} />
             </group>
             
-            {/* Emaranhamentos secundários em posições distribuídas - representa coerência quântica distribuída */}
+            {/* Emaranhamentos secundários em posições distribuídas */}
+            {/* Representa a coerência quântica distribuída entre regiões cerebrais distantes */}
             <group position={[-1.2, 0.3, -0.4]}>
-              <QuantumEntanglement pairs={3} coherence={0.4} />
+              <QuantumEntanglement pairs={6} coherence={0.6} />
             </group>
             
             <group position={[1.0, 0.2, -0.5]}>
-              <QuantumEntanglement pairs={3} coherence={0.4} />
+              <QuantumEntanglement pairs={6} coherence={0.6} />
             </group>
           </>
         )}

@@ -68,7 +68,9 @@ export function QuantumEntanglement({ pairs = 8, coherence = 0.3, collapseActive
         // Representa oscilações de Fröhlich nos microtúbulos
         frequency: 2 + Math.random() * 3,
         // Força do emaranhamento - afeta a intensidade da correlação quântica
-        entanglementStrength: 0.2 + Math.random() * 0.8,
+        // Na teoria Orch-OR, emaranhamento quântico é significativo mesmo em repouso
+        // Aumentamos o valor mínimo para refletir esse aspecto fundamental
+        entanglementStrength: 0.5 + Math.random() * 0.5,
         // Cor única para cada par emaranhado
         color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5)
       };
@@ -184,17 +186,15 @@ export function QuantumEntanglement({ pairs = 8, coherence = 0.3, collapseActive
             {/* Primeira partícula do par emaranhado */}
             <mesh position={pair.point1}>
               <sphereGeometry args={[0.05, 8, 8]} />
-              {/* Opacidade modulada por coerência global e evento OR */}
-{/* Opacidade mínima muito baixa em repouso (0.05), crescendo suavemente conforme coherence aumenta. */}
-<meshBasicMaterial color={pair.color} transparent opacity={collapseActive ? 1 : (0.05 + 0.9 * coherence)} />
+              {/* Opacidade aumentada para refletir a presença significativa do emaranhamento mesmo em estado basal */}
+              <meshBasicMaterial color={pair.color} transparent opacity={collapseActive ? 1 : (0.25 + 0.75 * coherence)} />
             </mesh>
             
             {/* Segunda partícula do par emaranhado */}
             <mesh position={pair.point2}>
               <sphereGeometry args={[0.05, 8, 8]} />
-              {/* Opacidade modulada por coerência global e evento OR */}
-{/* Opacidade mínima muito baixa em repouso (0.05), crescendo suavemente conforme coherence aumenta. */}
-<meshBasicMaterial color={pair.color} transparent opacity={collapseActive ? 1 : (0.05 + 0.9 * coherence)} />
+              {/* Opacidade aumentada para refletir a presença significativa do emaranhamento mesmo em estado basal */}
+              <meshBasicMaterial color={pair.color} transparent opacity={collapseActive ? 1 : (0.25 + 0.75 * coherence)} />
             </mesh>
           </React.Fragment>
         ))}
@@ -218,14 +218,13 @@ export function QuantumEntanglement({ pairs = 8, coherence = 0.3, collapseActive
                     ]), 3]}
                   />
                 </bufferGeometry>
-                {/* Opacidade da linha modulada por coerência e evento OR, e intensidade por entanglementStrength */}
-{/* Opacidade mínima muito baixa em repouso (0.05), crescendo suavemente conforme coherence aumenta. */}
-<lineBasicMaterial 
-  color={baseColor} 
-  transparent 
-  opacity={collapseActive ? 1 : ((0.05 + 0.9 * coherence) * pair.entanglementStrength)} 
-  linewidth={1}
-/>
+                {/* Opacidade aumentada para melhor visualização do emaranhamento mesmo em estado basal */}
+                <lineBasicMaterial 
+                  color={baseColor} 
+                  transparent 
+                  opacity={collapseActive ? 1 : ((0.25 + 0.75 * coherence) * pair.entanglementStrength)} 
+                  linewidth={1}
+                />
               </line>
             </React.Fragment>
           );
