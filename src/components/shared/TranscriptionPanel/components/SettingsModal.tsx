@@ -209,11 +209,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   show,
   onClose
 }) => {
-  const [openSection, setOpenSection] = useState<'pinecone' | 'chatgpt' | 'deepgram' | null>('pinecone');
+  const [openSection, setOpenSection] = useState<'pinecone' | 'chatgpt' | 'deepgram' | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'interface' | 'audio' | 'advanced'>('general');
   // Symbolic: State for options, initialized from storage cortex
   // General
-  const [name, setName] = useState<string>(() => getUserName());
+  const [name, setName] = useState<string>(() => getUserName() || 'User');
   const [enableMatrix, setEnableMatrix] = useState<boolean>(() => getOption<boolean>('enableMatrix') ?? true);
   const [matrixDensity, setMatrixDensity] = useState<number>(() => getOption<number>('matrixDensity') ?? 60);
   const [enableEffects, setEnableEffects] = useState<boolean>(() => getOption<boolean>('enableEffects') ?? true);
@@ -247,6 +247,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, []);
 
+  // Modo Basic/Advanced do Orch-OS (controla recursos neurais-simbólicos disponíveis)
+  const [applicationMode, setApplicationMode] = useState<'basic' | 'advanced'>(
+    () => (getOption('applicationMode') as 'basic' | 'advanced') || 'advanced'
+  );
 
   // Atualiza o idioma APENAS quando o modal é aberto (show muda de false para true)
   // Usando uma ref para rastrear o estado anterior
@@ -282,9 +286,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </svg>
         </button>
         
-        <h2 className="text-2xl font-bold mb-6 text-center tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)] orchos-title">
+        <h2 className="text-2xl font-bold mb-4 text-center tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)] orchos-title">
           Quantum System Settings
         </h2>
+        
+        {/* Neural-Symbolic Mode Toggle: Basic/Advanced */}
+        <div className="mb-6 flex flex-col items-center">
+          <div className="w-full max-w-xs backdrop-blur-md bg-black/40 rounded-full p-1 flex relative overflow-hidden border border-cyan-500/30 shadow-[0_0_15px_rgba(0,200,255,0.2)]">
+            {/* Glow indicator que se move conforme o modo selecionado - ajustado para posicionamento perfeito */}
+            <div 
+              className={`absolute inset-y-1 w-1/2 rounded-full transition-transform duration-500 ease-quantum ${applicationMode === 'basic' ? 'left-1 bg-gradient-to-r from-cyan-500/40 to-blue-500/40 shadow-[0_0_20px_5px_rgba(56,189,248,0.35)]' : 'right-1 left-auto bg-gradient-to-r from-blue-500/40 to-purple-600/40 shadow-[0_0_20px_5px_rgba(147,51,234,0.35)]'}`}
+            />
+            
+            <button 
+              className={`flex-1 py-2 px-2 rounded-full z-10 transition-colors duration-300 ${applicationMode === 'basic' ? 'text-white font-medium' : 'text-white/60'}`}
+              onClick={() => setApplicationMode('basic')}
+            >
+              Basic Mode
+            </button>
+            
+            <button 
+              className={`flex-1 py-2 px-2 rounded-full z-10 transition-colors duration-300 ${applicationMode === 'advanced' ? 'text-white font-medium' : 'text-white/60'}`}
+              onClick={() => setApplicationMode('advanced')}
+            >
+              Advanced Mode
+            </button>
+          </div>
+          
+          {/* Descrição do modo */}
+          <p className="text-xs text-cyan-300/70 mt-2 text-center max-w-xs">
+            {applicationMode === 'basic' ? 
+              'Using HuggingFace models and local database storage.' : 
+              'Using Deepgram, OpenAI and Pinecone neural infrastructure.'}
+          </p>
+        </div>
         
         {/* Name input (symbolic: user identity) */}
         {activeTab === 'general' && (
@@ -541,22 +576,81 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   <>
     {/* Accordion state for each group (Rules of Hooks compliant) */}
     {/* Section component defined outside render, uses props */}
-    <AdvancedSettings
-      openSection={openSection}
-      setOpenSection={setOpenSection}
-      pineconeApiKey={pineconeApiKey}
-      setPineconeApiKey={setPineconeApiKey}
-      chatgptApiKey={chatgptApiKey}
-      setChatgptApiKey={setChatgptApiKey}
-      chatgptModel={chatgptModel}
-      setChatgptModel={setChatgptModel}
-      deepgramApiKey={deepgramApiKey}
-      setDeepgramApiKey={setDeepgramApiKey}
-      deepgramModel={deepgramModel}
-      setDeepgramModel={setDeepgramModel}
-      deepgramLanguage={deepgramLanguage}
-      setDeepgramLanguage={setDeepgramLanguage}
-    />
+    {applicationMode === 'basic' ? (
+              <div className="p-4 rounded-lg bg-black/30 border border-cyan-500/20">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-cyan-500/30 to-blue-500/30 mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="text-cyan-300">
+                      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                      <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-cyan-300">Basic Mode Services</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-black/40 p-4 rounded-md">
+                    <h4 className="text-cyan-400 font-medium mb-2">HuggingFace Models</h4>
+                    <p className="text-white/70 text-sm">Select local models to use for your Orch-OS instance.</p>
+                    <div className="mt-3">
+                      <select 
+                        className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
+                        title="Select HuggingFace Model"
+                        aria-label="Select HuggingFace Model"
+                      >
+                        <option value="distilbert">DistilBERT (Small & Fast)</option>
+                        <option value="bert-base">BERT Base</option>
+                        <option value="llama-7b">Llama 7B (Recommended)</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-black/40 p-4 rounded-md">
+                    <h4 className="text-cyan-400 font-medium mb-2">Local Storage</h4>
+                    <p className="text-white/70 text-sm">Storage location for your neural memory database.</p>
+                    <div className="mt-3 flex">
+                      <input 
+                        type="text" 
+                        className="flex-1 p-2 rounded-l bg-black/40 text-white/90 border border-cyan-500/30"
+                        value="./orch-os-memory"
+                        readOnly
+                        title="Local storage location"
+                        aria-label="Local storage location"
+                      />
+                      <button className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded-r px-3 border border-cyan-500/30">
+                        Browse
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <button 
+                    className="text-cyan-300 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-500/40 hover:to-blue-500/40 px-4 py-2 rounded-md border border-cyan-500/30 transition-all duration-300"
+                    onClick={() => setApplicationMode('advanced')}
+                  >
+                    Switch to Advanced Mode
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <AdvancedSettings
+                openSection={openSection}
+                setOpenSection={setOpenSection}
+                pineconeApiKey={pineconeApiKey}
+                setPineconeApiKey={setPineconeApiKey}
+                chatgptApiKey={chatgptApiKey}
+                setChatgptApiKey={setChatgptApiKey}
+                chatgptModel={chatgptModel}
+                setChatgptModel={setChatgptModel}
+                deepgramApiKey={deepgramApiKey}
+                setDeepgramApiKey={setDeepgramApiKey}
+                deepgramModel={deepgramModel}
+                setDeepgramModel={setDeepgramModel}
+                deepgramLanguage={deepgramLanguage}
+                setDeepgramLanguage={setDeepgramLanguage}
+              />
+            )}
   </>
 )}
         </div>
@@ -573,6 +667,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={() => {
               // General
               setOption('name', name);
+              setOption('applicationMode', applicationMode);
               setOption('enableMatrix', enableMatrix);
               setOption('matrixDensity', matrixDensity);
               setOption('enableEffects', enableEffects);
