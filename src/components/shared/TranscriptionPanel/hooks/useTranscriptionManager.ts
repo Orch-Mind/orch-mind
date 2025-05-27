@@ -15,6 +15,7 @@ export const useTranscriptionManager = () => {
 
   const { texts, setTexts } = transcriptionContext;
 
+  // Always use LanguageContext, which now syncs with storage
   const { language, setLanguage } = useContext(LanguageContext);
   const { showToast } = useToast();
 

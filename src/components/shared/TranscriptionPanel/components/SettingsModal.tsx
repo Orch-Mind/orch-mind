@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { getUserName, setOption, getOption } from '../../../../services/StorageService';
 
 interface SettingsModalProps {
@@ -40,6 +40,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [deepgramApiKey, setDeepgramApiKey] = useState<string>(() => getOption<string>('deepgramApiKey') || '');
   const [deepgramModel, setDeepgramModel] = useState<string>(() => getOption<string>('deepgramModel') || 'nova-2');
   const [deepgramLanguage, setDeepgramLanguage] = useState<string>(() => getOption<string>('deepgramLanguage') || 'pt-BR');
+  // Keep local state in sync with LanguageContext
+  useEffect(() => {
+    const stored = getOption('deepgramLanguage');
+    if (stored && stored !== deepgramLanguage) {
+      setDeepgramLanguage(stored);
+    }
+  }, [deepgramLanguage]);
 
 
   if (!show) return null;
