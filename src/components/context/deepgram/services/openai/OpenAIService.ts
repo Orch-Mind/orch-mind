@@ -247,7 +247,13 @@ LANGUAGE: ${language}`;
           LoggingUtils.logInfo("OPENAI_KEY obtained via electronAPI");
         }
       }
-
+      // Fallback: buscar via StorageService se não encontrou
+      if (!key) {
+        key = getOption('chatgptApiKey') ?? null;
+        if (key) {
+          LoggingUtils.logInfo('[FALLBACK] OPENAI_KEY loaded from StorageService (chatgptApiKey)');
+        }
+      }
       // Initialize client with the key
       if (key) {
         this.apiKey = key;
@@ -256,7 +262,7 @@ LANGUAGE: ${language}`;
         return;
       }
 
-      LoggingUtils.logError("OPENAI_KEY not found. Configure the OPENAI_KEY environment variable.");
+      LoggingUtils.logError("OPENAI_KEY not found (env nor StorageService). Configure the OPENAI_KEY environment variable or set chatgptApiKey in options.");
     } catch (error) {
       LoggingUtils.logError("Error loading OPENAI_KEY:", error);
     }

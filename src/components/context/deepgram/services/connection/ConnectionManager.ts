@@ -468,15 +468,21 @@ export class ConnectionManager {
    */
   private async loadApiKey(): Promise<void> {
     if (typeof window === 'undefined' || !window.electronAPI) return;
-    
     try {
-      const key = await window.electronAPI.getEnv('DEEPGRAM_API_KEY');
+      let key = await window.electronAPI.getEnv('DEEPGRAM_API_KEY');
+      if (!key) {
+        // Fallback: buscar via StorageService
+        key = getOption('deepgramApiKey') ?? null;
+        if (key) {
+          this.logger.info('[FALLBACK] Deepgram API key loaded from StorageService');
+        }
+      }
       if (key) {
         this.apiKey = key;
         this.deepgramClient = createClient(key);
         this.logger.info("API key loaded and client initialized");
       } else {
-        this.logger.error("API key not found");
+        this.logger.error("API key not found (env nor StorageService)");
       }
     } catch (error) {
       this.logger.handleError("Failed to load API key", error);
