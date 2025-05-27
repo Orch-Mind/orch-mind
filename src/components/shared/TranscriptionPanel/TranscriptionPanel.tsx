@@ -18,6 +18,7 @@ import ConnectionDiagnostics from "./components/ConnectionDiagnostics";
 import ImportModal from "./components/ImportModal";
 import LanguageSelector from "./components/LanguageSelector";
 import PanelHeader from "./components/PanelHeader";
+import SettingsModal from "./components/SettingsModal";
 import TextEditor from "./components/TextEditor";
 import { useChatGptImport } from "./hooks/useChatGptImport";
 import { useTranscriptionManager } from "./hooks/useTranscriptionManager";
@@ -156,8 +157,9 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
     };
   }, []);
 
-  // Estado para modal de logs
+  // Estados para modais
   const [showLogsModal, setShowLogsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // --- Render ---
   return (
@@ -174,6 +176,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
          onToggleDiagnostics={() => setShowDetailedDiagnostics(!showDetailedDiagnostics)}
          onShowImportModal={() => setShowImportModal(true)}
          onShowLogsModal={() => setShowLogsModal(true)}
+         onShowSettings={() => setShowSettingsModal(true)}
          onMinimize={() => {
            if (window?.electronAPI?.minimizeWindow) {
              window.electronAPI.minimizeWindow();
@@ -188,6 +191,12 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
          onReconnect={connectToDeepgram}
        />
 
+      {/* Settings Modal */}
+      <SettingsModal 
+        show={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
+      
       {/* Connection Diagnostics - Now overlayed */}
       {showDetailedDiagnostics && (
         <ConnectionDiagnostics

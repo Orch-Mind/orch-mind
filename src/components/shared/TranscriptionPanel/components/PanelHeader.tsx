@@ -15,6 +15,7 @@ interface PanelHeaderProps {
   onToggleDiagnostics: () => void;
   onShowImportModal: () => void;
   onShowLogsModal: () => void; // Abre o modal de logs de cognição
+  onShowSettings?: () => void; // Abre as configurações gerais do sistema
   onMinimize?: () => void;
   connectionState: ConnectionState;
   microphoneState: MicrophoneState;
@@ -28,6 +29,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onToggleDiagnostics,
   onShowImportModal,
   onShowLogsModal,
+  onShowSettings,
   onMinimize,
   connectionState,
   microphoneState,
@@ -79,6 +81,22 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           </svg>
           Logs
         </button>
+        
+        {/* Botão de Configurações */}
+        {onShowSettings && (
+          <button
+            title="Settings"
+            aria-label="Open Settings"
+            onClick={onShowSettings}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-black/40 border border-cyan-500/40 hover:border-cyan-400/70 transition-all duration-200 backdrop-blur-sm shadow-[0_0_14px_2px_rgba(0,240,255,0.15)] hover:shadow-cyan-400/60 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 group"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="group-hover:rotate-45 transition-transform duration-500">
+              <circle cx="12" cy="12" r="9" stroke="#00faff" strokeWidth="1.5" strokeOpacity="0.8" />
+              <path d="M12 8v8M16 12H8" stroke="#00faff" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.9" className="hidden group-hover:block" />
+              <path d="M9.3 16.7a6.5 6.5 0 0 1 0-9.4 6.5 6.5 0 0 1 9.4 0 6.5 6.5 0 0 1 0 9.4M12 14.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5z" stroke="#00faff" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.9" className="group-hover:hidden" />
+            </svg>
+          </button>
+        )}
         
         {/* Indicador WiFi */}
         <WifiStatusConnection 
