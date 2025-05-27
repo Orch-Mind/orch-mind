@@ -17,7 +17,7 @@ export class ConnectionManager {
   private connectionState: ConnectionState = ConnectionState.CLOSED;
   private deepgramClient: DeepgramClient | null = null;
   private apiKey: string = "";
-  private language: string = "pt-BR";
+  private language: string = getOption('deepgramLanguage') || 'pt-BR';
   private autoReconnect: boolean = true;
   private keepAliveInterval?: ReturnType<typeof setInterval>;
   private lastConnectionId: number = 0;
@@ -202,8 +202,14 @@ export class ConnectionManager {
    * Ensure the language setting is valid
    */
   public ensureValidLanguage(): void {
-    if (!this.language || this.language === 'auto') {
-      this.language = 'pt-BR';
+    // Obter o idioma do storage se existir
+    const storedLanguage = getOption('deepgramLanguage');
+    
+    // Se não houver idioma definido, usar o do storage ou 'pt-BR' como padrão
+    if (!this.language) {
+      // Priorizar o idioma armazenado no storage
+      this.language = storedLanguage || 'pt-BR';
+      this.logger.info(`Idioma configurado a partir do storage: ${this.language}`);
     }
   }
   

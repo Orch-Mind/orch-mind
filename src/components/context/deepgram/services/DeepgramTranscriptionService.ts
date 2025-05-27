@@ -43,7 +43,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   private model: string = getOption('deepgramModel') || "nova-2-general";
   private interimResultsEnabled: boolean = true;
   private useSimplifiedHistory: boolean = false;
-  private currentLanguage: string = 'pt-BR';
+  private currentLanguage: string = getOption('deepgramLanguage') || 'pt-BR';
   
   // Properties for the neural system
   private _brainSessionId?: string;
@@ -227,7 +227,6 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     // If already processing a prompt, block new request
     if (this.isProcessingPrompt) {
       LoggingUtils.logWarning("Blocking prompt request: Already processing another prompt");
-      this.uiService.notifyPromptError("Please wait for the current prompt to be processed before sending a new one");
       return;
     }
     

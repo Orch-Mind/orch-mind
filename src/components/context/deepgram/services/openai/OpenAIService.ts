@@ -441,7 +441,7 @@ LANGUAGE: ${language}`;
       style: "auto",
       type: isImprovised ? "improvised_answer" : "direct_answer",
       improvised: isImprovised,
-      language: "pt-BR",
+      language: getOption('deepgramLanguage') || 'pt-BR',
       confidence: isImprovised ? 0.3 : 0.8
     };
   }

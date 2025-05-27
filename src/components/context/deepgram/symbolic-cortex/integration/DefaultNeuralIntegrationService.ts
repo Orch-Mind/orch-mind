@@ -11,6 +11,7 @@ import { OpenAICollapseStrategyService } from './OpenAICollapseStrategyService';
 import { SuperpositionLayer } from './SuperpositionLayer';
 import { SymbolicPatternAnalyzer, CognitiveMetrics } from '../patterns/SymbolicPatternAnalyzer';
 import { LoggingUtils } from '../../utils/LoggingUtils';
+import { getOption } from '../../../../../services/StorageService';
 
 function asNumber(val: unknown, fallback: number): number {
   return typeof val === 'number' ? val : fallback;
@@ -59,7 +60,7 @@ export class DefaultNeuralIntegrationService implements INeuralIntegrationServic
       insights: Record<string, unknown>;
     }>,
     originalInput: string,
-    language: string = 'pt-BR' // Default to pt-BR if not provided
+    language: string = getOption('deepgramLanguage') || 'pt-BR' // Default to pt-BR if not provided
   ): Promise<string> {
     if (!neuralResults || neuralResults.length === 0) {
       return originalInput;
