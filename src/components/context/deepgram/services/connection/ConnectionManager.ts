@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+import { getOption } from '../../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
@@ -176,7 +177,7 @@ export class ConnectionManager {
       console.log("📊 [COGNITIVE-CONFIG] Using minimal configuration and automatic format detection for brain audio input");
       
       const connection = this.deepgramClient.listen.live({
-        model: "nova-2",
+        model: getOption('deepgramModel') || 'nova-2-general',
         language: this.language,
         smart_format: true,
         multichannel: true,

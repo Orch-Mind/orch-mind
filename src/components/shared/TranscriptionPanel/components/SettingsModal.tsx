@@ -340,8 +340,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onChange={e => setChatgptModel(e.target.value)}
                     >
                       <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                      <option value="gpt-4">gpt-4</option>
+                      <option value="gpt-4-turbo">gpt-4-turbo</option>
                       <option value="gpt-4o">gpt-4o</option>
+                      <option value="gpt-4o-mini">gpt-4o-mini</option>
+                      <option value="gpt-4.1">gpt-4.1</option>
+                      <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                      <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+                      <option value="gpt-4.5-preview">gpt-4.5-preview</option>
                     </select>
                   </div>
                 </div>

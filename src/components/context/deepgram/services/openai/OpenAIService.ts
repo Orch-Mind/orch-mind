@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+import { getOption } from '../../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // OpenAIService.ts
@@ -189,7 +190,7 @@ LANGUAGE: ${language}`;
     };
     // Call to the API with the enrichment tool
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: getOption('openaiModel') || 'gpt-4o-mini',
       messages: [systemPrompt, userPrompt],
       tools: [enrichmentTool],
       tool_choice: { type: "function", function: { name: "enrichSemanticQuery" } }
@@ -346,7 +347,7 @@ LANGUAGE: ${language}`;
     }));
     // Send request with streaming enabled
     const stream = await this.openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: getOption('openaiModel') || 'gpt-4o-mini',
       messages: chatMessages,
       stream: true
     });
@@ -625,7 +626,7 @@ IMPORTANT: If a LANGUAGE is specified in the user message, ALL symbolic queries 
     try {
       // Call to the API with tools enabled
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getOption('openaiModel') || 'gpt-4o-mini',
         messages: [systemPrompt, userPrompt],
         tools,
         tool_choice: "auto"

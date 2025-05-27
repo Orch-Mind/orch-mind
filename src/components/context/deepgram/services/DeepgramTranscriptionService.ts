@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+import { getOption, setOption } from './../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // DeepgramTranscriptionService.ts
@@ -39,7 +40,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   private uiService: IUIUpdateService;
   
   // Configuration
-  private model: string = "nova-2";
+  private model: string = getOption('deepgramModel') || "nova-2-general";
   private interimResultsEnabled: boolean = true;
   private useSimplifiedHistory: boolean = false;
   private currentLanguage: string = 'pt-BR';
@@ -577,13 +578,16 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   setModel(model: string): void {
     this.model = model;
     LoggingUtils.logInfo(`Model defined for: ${model}`);
+    // Optional: save to StorageService
+    setOption('deepgramModel', model);
   }
   
   toggleInterimResults(enabled: boolean): void {
     this.interimResultsEnabled = enabled;
     LoggingUtils.logInfo(`Interim results: ${enabled ? "enabled" : "disabled"}`);
   }
-  
+
+// ... (rest of the code remains the same)
   reset(): void {
     LoggingUtils.logInfo("Resetting transcription state");
     this.clearTranscriptionData();
