@@ -1,50 +1,74 @@
-# Orch-OS Project Structure (2025-05-19)
+# 🧠 Orch-OS Project Structure Map (Scan Excerpt)
 
-## Key Services, Modules, and Responsibilities
+## Key Modules & Responsibilities
 
-### DeepgramTranscriptionService.ts
-- Orchestrates transcription, neural signal extraction, memory, OpenAI integration, speaker identification, UI updates, and symbolic cognition logging.
-- Symbolic intent: "neural-symbolic core orchestrator".
-- Architecture: Mixes orchestration and domain logic in infrastructure. Violates Clean Architecture.
+### MemoryService.ts
 
-### NeuralSignalExtractor.ts
-- Extracts symbolic neural signals from transcription context.
-- Symbolic intent: "Neuron-level signal extraction".
-- Architecture: Should be in domain/core, but is in infrastructure.
+- **Type:** Class (`MemoryService`) implementing `IMemoryService`
+- **Symbolic Intent:** "Memory cortex/neurons" — Orchestrates memory storage, context building, embedding, and interaction with Pinecone.
+- **Responsibilities:**
+  - Handles user context, history, and embedding services.
+  - Builds prompt messages for AI, injects context, and queries expanded memory.
+  - Logs symbolic/diagnostic events for explainability.
+- **Architecture:** Infrastructure-bound, mixes orchestration and domain logic (Clean Architecture violation: should be abstracted to the domain layer).
 
-### MemoryService.ts & PineconeMemoryService.ts
-- Handle memory storage, retrieval, and vector DB integration.
-- Symbolic intent: Memory cortex/neurons.
-- Architecture: Logic is infrastructure-bound; should be abstracted to domain layer.
+### IMemoryService.ts
 
-### chatgpt-import/interfaces/types.ts
-- Type definitions for ChatGPT import features.
-- Symbolic intent: Defines symbolic structure for imported data.
-- Architecture: Proper separation as types/interfaces.
+- **Type:** Interface
+- **Symbolic Intent:** "Memory cortex contract" — Defines the symbolic/functional contract for memory services.
+- **Responsibilities:**
+  - Fetches contextual memory.
+  - Queries/saves long-term memory.
+  - Manages conversation history, context, and memory expansion.
+- **Architecture:** Proper separation; interface resides in the correct layer.
 
 ### TranscriptionModule.tsx
-- React component for transcription UI, manages microphone state and Deepgram connection.
-- Symbolic intent: Interface cortex — bridges neural input with user interface.
-- Architecture: UI layer, proper separation.
 
-### lib/utils.ts
-- Utility function for merging Tailwind/clsx class names.
-- Symbolic intent: Pure utility neuron.
-- Architecture: Properly isolated.
+- **Type:** React Functional Component
+- **Symbolic Intent:** "Interface cortex" — Bridges neural input (microphone, Deepgram) with UI.
+- **Responsibilities:**
+  - Manages microphone state and Deepgram connection.
+  - Handles UI logic for transcription.
+- **Architecture:** UI layer, correct separation.
+
+### TranscriptionPanel.tsx
+
+- **Type:** React Functional Component
+- **Symbolic Intent:** "Quantum dashboard cortex" — Main UI for transcription and cognition logs, integrates advanced UI/UX (glassmorphism, spatial depth, Vision Pro-inspired).
+- **Responsibilities:**
+  - Hosts subcomponents (audio controls, logs, settings, visualization).
+  - Manages state for modals, logs, and imports.
+- **Architecture:** Interface layer, proper separation.
+
+### utils.ts
+
+- **Type:** Pure Function (`cn`)
+- **Symbolic Intent:** "Utility neuron" — Class name merger for Tailwind/clsx.
+- **Responsibilities:**
+  - Merges class names for styling.
+- **Architecture:** Properly isolated utility.
+
+### DeepgramSingleton.ts
+
+- **Type:** Singleton Class
+- **Symbolic Intent:** "Infrastructure neuron" — Ensures a single Deepgram client instance.
+- **Responsibilities:**
+  - Manages Deepgram API key and instance lifecycle.
+- **Architecture:** Infrastructure layer, proper encapsulation.
 
 ---
 
 ## Architectural Notes & Violations
-- Domain logic (neural/symbolic core, memory, signal extraction) is implemented in infrastructure/components, not in domain/core or domain/interfaces.
-- src/domain/core and src/domain/interfaces are empty — major violation per Clean Architecture and Orch-OS thesis.
-- Orchestration and cognitive logic are mixed in infrastructure services.
-- Utilities and types are properly separated.
-- UI logic is correctly isolated in the interface layer.
 
-## Missing Abstractions
-- Domain interfaces for memory, neural signal extraction, and core orchestration.
-- Core logic for cognitive cores (MemoryCore, ValenceCore, MetacognitiveCore, etc.) in the domain layer.
+- **Domain logic** (memory, neural signal extraction, core orchestration) is implemented in infrastructure/services, not in domain/core or domain/interfaces (Clean Architecture violation).
+- **Interfaces** (e.g., `IMemoryService`) are correctly separated.
+- **UI logic** is isolated in the interface layer.
+- **Utilities** are properly separated.
+- **Missing abstractions:** No domain interfaces/abstractions for neural signal extraction or core orchestration; domain layer is empty.
 
 ---
 
-This map should be updated whenever new domain abstractions or cognitive cores are implemented.
+## Next Steps
+
+- Expand this scan to cover all key modules for a complete map.
+- Store this map in internal memory (`orch.project.structure`) and generate/update `knowledge/orchos_project_map.md`.

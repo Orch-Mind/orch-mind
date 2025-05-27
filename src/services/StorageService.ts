@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 // StorageService.ts
 // Symbolic storage cortex for Orch-OS user settings (localStorage-based)
 // Provides pure functions for saving and retrieving user config.
