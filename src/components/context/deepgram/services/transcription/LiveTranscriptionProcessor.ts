@@ -7,10 +7,9 @@
  */
 import { Logger } from '../utils/Logger';
 import { SpeakerBuffer } from '../utils/DeepgramTypes';
-
 // Import of the interface for integration with the transcription storage service
 import { ITranscriptionStorageService } from '../../interfaces/transcription/ITranscriptionStorageService';
-
+import { getPrimaryUser } from "../../../../../config/UserConfig";
 export class LiveTranscriptionProcessor {
   private logger: Logger;
   private activeSpeakerBuffer: Record<number, SpeakerBuffer> = {};
@@ -72,7 +71,7 @@ export class LiveTranscriptionProcessor {
         if (!this.activeSpeakerBuffer[channelIndex]) {
           console.log(`🔄 [PROCESS] Initializing buffer for channel ${channelIndex}`);
           this.activeSpeakerBuffer[channelIndex] = {
-            lastSpeaker: channelIndex === 0 ? "Guilherme" : `Speaker ${channelIndex}`,
+            lastSpeaker: channelIndex === 0 ? getPrimaryUser() : `Speaker ${channelIndex}`,
             currentSegment: [],
             formattedSegment: '',
             lastFlushedText: ""
@@ -193,7 +192,7 @@ export class LiveTranscriptionProcessor {
           if (!this.activeSpeakerBuffer[channelIndex]) {
             console.log(`🔄 [PROCESS] Initializing buffer for channel ${channelIndex}`);
             this.activeSpeakerBuffer[channelIndex] = {
-              lastSpeaker: channelIndex === 0 ? "Guilherme" : `Speaker ${channelIndex}`,
+              lastSpeaker: channelIndex === 0 ? getPrimaryUser() : `Speaker ${channelIndex}`,
               currentSegment: [],
               formattedSegment: '',
               lastFlushedText: ""
