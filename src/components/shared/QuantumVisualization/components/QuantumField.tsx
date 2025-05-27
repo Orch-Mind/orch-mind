@@ -151,10 +151,23 @@ export function QuantumField() {
         )}
         
         {/* Entanglement quântico em nível basal - coerência quântica fundamental */}
+        {/* Na teoria Orch-OR, mesmo em estado basal, há emaranhamento significativo entre microtúbulos */}
         {shouldShowComponent('entanglement') && (
-          <group position={[-1, 0.2, 0]}>
-            <QuantumEntanglement pairs={1} />
-          </group>
+          <>
+            {/* Emaranhamento quântico central - entre microtúbulos regionais */}
+            <group position={[0, 0.2, 0.3]}>
+              <QuantumEntanglement pairs={4} coherence={0.5} />
+            </group>
+            
+            {/* Emaranhamentos secundários em posições distribuídas - representa coerência quântica distribuída */}
+            <group position={[-1.2, 0.3, -0.4]}>
+              <QuantumEntanglement pairs={3} coherence={0.4} />
+            </group>
+            
+            <group position={[1.0, 0.2, -0.5]}>
+              <QuantumEntanglement pairs={3} coherence={0.4} />
+            </group>
+          </>
         )}
         
         {/* Decoerência quântica em nível basal - sempre presente como desafio */}
@@ -178,6 +191,11 @@ export function QuantumField() {
               pulseSpeed={0.3}
             />
           </group>
+        )}
+        
+        {/* Observador quântico em estado basal - proto-consciência */}
+        {shouldShowComponent('observer') && (
+          <Observer active={false} />
         )}
         
         {/* Redução objetiva em nível basal - eventos OR espontâneos de baixo nível */}
@@ -264,10 +282,7 @@ export function QuantumField() {
         />
       )}
       
-      {/* Observer - representa o papel do observador na teoria quântica */}
-      {shouldShowComponent('observer') && consciousStates.length > 0 && (
-        <Observer active={true} />
-      )}
+      {/* Esta instância do Observer foi removida para evitar duplicação */}
       
       {/* Reduções objetivas (OR) - momentos de consciência segundo Orch OR */}
       {shouldShowComponent('reduction') && objectiveReductions.map((effect) => {
@@ -336,9 +351,9 @@ export function QuantumField() {
         />
       )}
       
-      {/* O observador quântico - aspecto protoconsciente na teoria Orch OR */}
-      {showConsciousStates && (
-        <Observer />
+      {/* O observador quântico - aspecto central na teoria Orch OR */}
+      {shouldShowComponent('observer') && (
+        <Observer active={consciousStates.length > 0} />
       )}
     </group>
   );
