@@ -1,0 +1,9 @@
+.quantum-spin {
+  animation: quantumSpin 4.5s linear infinite;
+}
+
+@keyframes quantumSpin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
