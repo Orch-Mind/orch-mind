@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
+import { getUserName, setOption, getOption } from '../../../../services/StorageService';
 
 interface SettingsModalProps {
   show: boolean;
@@ -13,6 +14,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'interface' | 'audio' | 'advanced'>('general');
+  // Symbolic: State for options, initialized from storage cortex
+  // General
+  const [name, setName] = useState<string>(() => getUserName());
+  const [enableMatrix, setEnableMatrix] = useState<boolean>(() => getOption<boolean>('enableMatrix') ?? true);
+  const [matrixDensity, setMatrixDensity] = useState<number>(() => getOption<number>('matrixDensity') ?? 60);
+  const [enableEffects, setEnableEffects] = useState<boolean>(() => getOption<boolean>('enableEffects') ?? true);
+  const [enableAnimations, setEnableAnimations] = useState<boolean>(() => getOption<boolean>('enableAnimations') ?? true);
+
+  // Interface
+  const [themeColor, setThemeColor] = useState<string>(() => getOption<string>('themeColor') || 'cyan');
+  const [glassOpacity, setGlassOpacity] = useState<number>(() => getOption<number>('glassOpacity') ?? 60);
+  const [useCompactLayout, setUseCompactLayout] = useState<boolean>(() => getOption<boolean>('useCompactLayout') ?? false);
+  const [showStatusBar, setShowStatusBar] = useState<boolean>(() => getOption<boolean>('showStatusBar') ?? true);
+
+  // Audio
+  const [audioQuality, setAudioQuality] = useState<string>(() => getOption<string>('audioQuality') || 'high');
+  const [noiseReduction, setNoiseReduction] = useState<number>(() => getOption<number>('noiseReduction') ?? 50);
+  const [enhancedPunctuation, setEnhancedPunctuation] = useState<boolean>(() => getOption<boolean>('enhancedPunctuation') ?? true);
+  const [speakerDiarization, setSpeakerDiarization] = useState<boolean>(() => getOption<boolean>('speakerDiarization') ?? true);
+
+  // Advanced
+  const [developerMode, setDeveloperMode] = useState<boolean>(() => getOption<boolean>('developerMode') ?? false);
+  const [enableLogging, setEnableLogging] = useState<boolean>(() => getOption<boolean>('enableLogging') ?? true);
+
+  // API (shared)
+  const [apiEndpoint, setApiEndpoint] = useState<string>(() => getOption<string>('apiEndpoint') || 'https://api.deepgram.com/v1/');
+  const [apiKey, setApiKey] = useState<string>(() => getOption<string>('apiKey') || '');
 
   if (!show) return null;
   
@@ -33,6 +61,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           Quantum System Settings
         </h2>
         
+        {/* Name input (symbolic: user identity) */}
+        {activeTab === 'general' && (
+          <div className="mb-6">
+            <label htmlFor="userName" className="block text-cyan-200/80 mb-1">User Name</label>
+            <input
+              type="text"
+              id="userName"
+              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Enter your name"
+            />
+          </div>
+        )}
         {/* Tabs navigation */}
         <div className="flex space-x-2 mb-6 border-b border-cyan-400/30 pb-2">
           <button 
@@ -73,7 +115,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="enableMatrix"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={enableMatrix}
+                      onChange={e => setEnableMatrix(e.target.checked)}
                     />
                     <label htmlFor="enableMatrix" className="ml-2 text-cyan-200/90">Enable Quantum Visualization</label>
                   </div>
@@ -85,7 +128,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       id="matrixDensity"
                       min="1"
                       max="100"
-                      defaultValue="60"
+                      value={matrixDensity}
+                      onChange={e => setMatrixDensity(Number(e.target.value))}
                       className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-cyan-800/30"
                     />
                   </div>
@@ -100,7 +144,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="enableEffects"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={enableEffects}
+                      onChange={e => setEnableEffects(e.target.checked)}
                     />
                     <label htmlFor="enableEffects" className="ml-2 text-cyan-200/90">Enable Visual Effects</label>
                   </div>
@@ -110,7 +155,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="enableAnimations"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={enableAnimations}
+                      onChange={e => setEnableAnimations(e.target.checked)}
                     />
                     <label htmlFor="enableAnimations" className="ml-2 text-cyan-200/90">Enable Animations</label>
                   </div>
@@ -128,29 +174,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <label htmlFor="themeColor" className="block text-cyan-200/80 mb-1">Primary Color</label>
                     <div className="flex space-x-2">
                       <button 
-                        className="w-8 h-8 rounded-full bg-cyan-500 ring-2 ring-white/20" 
+                        className={`w-8 h-8 rounded-full bg-cyan-500 ring-2 ring-white/20 ${themeColor === 'cyan' ? 'ring-cyan-400' : ''}`}
                         title="Cyan theme"
                         aria-label="Select cyan theme color"
+                        onClick={() => setThemeColor('cyan')}
                       ></button>
                       <button 
-                        className="w-8 h-8 rounded-full bg-purple-500 ring-2 ring-white/20" 
+                        className={`w-8 h-8 rounded-full bg-purple-500 ring-2 ring-white/20 ${themeColor === 'purple' ? 'ring-purple-400' : ''}`}
                         title="Purple theme"
                         aria-label="Select purple theme color"
+                        onClick={() => setThemeColor('purple')}
                       ></button>
                       <button 
-                        className="w-8 h-8 rounded-full bg-blue-500 ring-2 ring-white/20" 
+                        className={`w-8 h-8 rounded-full bg-blue-500 ring-2 ring-white/20 ${themeColor === 'blue' ? 'ring-blue-400' : ''}`}
                         title="Blue theme"
                         aria-label="Select blue theme color"
+                        onClick={() => setThemeColor('blue')}
                       ></button>
                       <button 
-                        className="w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-white/20" 
+                        className={`w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-white/20 ${themeColor === 'emerald' ? 'ring-emerald-400' : ''}`}
                         title="Emerald theme"
                         aria-label="Select emerald theme color"
+                        onClick={() => setThemeColor('emerald')}
                       ></button>
                       <button 
-                        className="w-8 h-8 rounded-full bg-amber-500 ring-2 ring-white/20" 
+                        className={`w-8 h-8 rounded-full bg-amber-500 ring-2 ring-white/20 ${themeColor === 'amber' ? 'ring-amber-400' : ''}`}
                         title="Amber theme"
                         aria-label="Select amber theme color"
+                        onClick={() => setThemeColor('amber')}
                       ></button>
                     </div>
                   </div>
@@ -162,7 +213,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       id="glassOpacity"
                       min="10"
                       max="95"
-                      defaultValue="60"
+                      value={glassOpacity}
+                      onChange={e => setGlassOpacity(Number(e.target.value))}
                       className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-cyan-800/30"
                     />
                   </div>
@@ -177,6 +229,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="useCompactLayout"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
+                      checked={useCompactLayout}
+                      onChange={e => setUseCompactLayout(e.target.checked)}
                     />
                     <label htmlFor="useCompactLayout" className="ml-2 text-cyan-200/90">Use Compact Layout</label>
                   </div>
@@ -186,7 +240,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="showStatusBar"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={showStatusBar}
+                      onChange={e => setShowStatusBar(e.target.checked)}
                     />
                     <label htmlFor="showStatusBar" className="ml-2 text-cyan-200/90">Show Status Bar</label>
                   </div>
@@ -205,7 +260,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <select 
                       id="audioQuality" 
                       className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                      defaultValue="high"
+                      value={audioQuality}
+                      onChange={e => setAudioQuality(e.target.value)}
                     >
                       <option value="low">Low (16kHz)</option>
                       <option value="standard">Standard (24kHz)</option>
@@ -220,7 +276,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       id="noiseReduction"
                       min="0"
                       max="100"
-                      defaultValue="50"
+                      value={noiseReduction}
+                      onChange={e => setNoiseReduction(Number(e.target.value))}
                       className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-cyan-800/30"
                     />
                   </div>
@@ -235,7 +292,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="enhancedPunctuation"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={enhancedPunctuation}
+                      onChange={e => setEnhancedPunctuation(e.target.checked)}
                     />
                     <label htmlFor="enhancedPunctuation" className="ml-2 text-cyan-200/90">Enhanced Punctuation</label>
                   </div>
@@ -245,7 +303,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="speakerDiarization"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={speakerDiarization}
+                      onChange={e => setSpeakerDiarization(e.target.checked)}
                     />
                     <label htmlFor="speakerDiarization" className="ml-2 text-cyan-200/90">Speaker Diarization</label>
                   </div>
@@ -264,6 +323,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="developerMode"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
+                      checked={developerMode}
+                      onChange={e => setDeveloperMode(e.target.checked)}
                     />
                     <label htmlFor="developerMode" className="ml-2 text-cyan-200/90">Developer Mode</label>
                   </div>
@@ -273,7 +334,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="checkbox"
                       id="enableLogging"
                       className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      defaultChecked
+                      checked={enableLogging}
+                      onChange={e => setEnableLogging(e.target.checked)}
                     />
                     <label htmlFor="enableLogging" className="ml-2 text-cyan-200/90">Enable Detailed Logging</label>
                   </div>
@@ -289,7 +351,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="text"
                       id="apiEndpoint"
                       className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                      defaultValue="https://api.deepgram.com/v1/"
+                      value={apiEndpoint}
+                      onChange={e => setApiEndpoint(e.target.value)}
                     />
                   </div>
                   
@@ -300,6 +363,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       id="apiKey"
                       className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
                       placeholder="••••••••••••••••"
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
                     />
                   </div>
                 </div>
@@ -317,6 +382,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
           <button 
             className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 shadow-lg shadow-cyan-500/20"
+            onClick={() => {
+              // General
+              setOption('name', name);
+              setOption('enableMatrix', enableMatrix);
+              setOption('matrixDensity', matrixDensity);
+              setOption('enableEffects', enableEffects);
+              setOption('enableAnimations', enableAnimations);
+              // Interface
+              setOption('themeColor', themeColor);
+              setOption('glassOpacity', glassOpacity);
+              setOption('useCompactLayout', useCompactLayout);
+              setOption('showStatusBar', showStatusBar);
+              // Audio
+              setOption('audioQuality', audioQuality);
+              setOption('noiseReduction', noiseReduction);
+              setOption('enhancedPunctuation', enhancedPunctuation);
+              setOption('speakerDiarization', speakerDiarization);
+              // Advanced
+              setOption('developerMode', developerMode);
+              setOption('enableLogging', enableLogging);
+              // API
+              setOption('apiEndpoint', apiEndpoint);
+              setOption('apiKey', apiKey);
+              onClose();
+            }}
           >
             Apply Changes
           </button>
