@@ -9,7 +9,7 @@ export const LanguageContext = createContext<{
   }>({ language: "pt-BR", setLanguage: () => {} });
   
   import { useEffect } from "react";
-import { getOption, setOption } from "../../services/StorageService";
+import { getOption, setOption, subscribeToStorageChanges } from "../../services/StorageService";
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialize from storage
@@ -21,12 +21,28 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
     setOption("deepgramLanguage", lang);
   };
 
-  // Sync with external storage changes (e.g., SettingsModal)
+  // Monitora e sincroniza com mudanças no storage usando o sistema de eventos
   useEffect(() => {
-    const stored = getOption("deepgramLanguage");
-    if (stored && stored !== language) {
-      setLanguageState(stored);
+    // Função que reage a mudanças no storage
+    const handleStorageChange = (key: string, value: any) => {
+      // Só reage se for a configuração de idioma que mudou
+      if (key === 'deepgramLanguage' && value && value !== language) {
+        console.log('🌐 LanguageContext: Recebida mudança de idioma do storage:', value);
+        setLanguageState(value);
+      }
+    };
+    
+    // Sincroniza imediatamente na montagem
+    const storedLanguage = getOption("deepgramLanguage");
+    if (storedLanguage && storedLanguage !== language) {
+      setLanguageState(storedLanguage);
     }
+    
+    // Se inscreve para receber mudanças no storage
+    const unsubscribe = subscribeToStorageChanges(handleStorageChange);
+    
+    // Cancela a inscrição quando o componente é desmontado
+    return unsubscribe;
   }, [language]);
 
   return (

@@ -64,9 +64,23 @@ export class PineconeHelper {
    */
   private async initialize() {
     try {
-      const apiKey = process.env.PINECONE_API_KEY;
+      // Step 1: Try to get API key from environment
+      let apiKey = process.env.PINECONE_API_KEY;
+      // Step 2: If not found, try to get from user storage (electron-store)
       if (!apiKey) {
-        console.warn("Pinecone API key not found in environment variables");
+        try {
+          // Dynamically import StorageService to avoid circular dependency
+          const { getOption } = require('../src/services/StorageService');
+          apiKey = getOption('pineconeApiKey');
+          if (apiKey) {
+            console.info('[PINECONE] Loaded API key from user storage (fallback)');
+          }
+        } catch (storageErr) {
+          console.warn('[PINECONE] Could not load API key from storage:', storageErr);
+        }
+      }
+      if (!apiKey) {
+        console.warn("Pinecone API key not found in environment or user settings");
         return;
       }
       if (!this.indexHost) {

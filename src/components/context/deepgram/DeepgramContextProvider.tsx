@@ -5,6 +5,7 @@
 // Component that manages the Deepgram context
 
 import React, { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState } from 'react';
+import { getOption } from '../../../services/StorageService';
 import { useAudioAnalyzer } from '../audioAnalyzer/AudioAnalyzerProvider';
 import { AudioContextService } from '../microphone/AudioContextService';
 import { useSettings } from '../settings/SettingsProvider';
@@ -13,13 +14,13 @@ import { DeepgramState, IDeepgramContext } from './interfaces/deepgram/IDeepgram
 import { ConnectionState, IDeepgramConnectionService } from './interfaces/deepgram/IDeepgramService';
 import { DeepgramTranscriptionService } from './services/DeepgramTranscriptionService';
 
-// Initial state
+// Initial state - obter idioma do storage
 const initialState = {
   deepgramState: DeepgramState.NotConnected,
   isConnected: false,
   isProcessing: false,
-  language: 'pt-BR',
-  model: 'nova-2'
+  language: getOption('deepgramLanguage') || 'pt-BR',
+  model: getOption('deepgramModel') || 'nova-2'
 };
 
 // Reducer actions

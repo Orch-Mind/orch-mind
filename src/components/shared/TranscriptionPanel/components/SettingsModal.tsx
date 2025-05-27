@@ -9,10 +9,207 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
+// Solução com estrutura de abas (tabs) para evitar problemas com selects nativos
+function AdvancedSettings(props: {
+  openSection: 'pinecone' | 'chatgpt' | 'deepgram' | null;
+  setOpenSection: (v: 'pinecone' | 'chatgpt' | 'deepgram' | null) => void;
+  pineconeApiKey: string;
+  setPineconeApiKey: (v: string) => void;
+  chatgptApiKey: string;
+  setChatgptApiKey: (v: string) => void;
+  chatgptModel: string;
+  setChatgptModel: (v: string) => void;
+  deepgramApiKey: string;
+  setDeepgramApiKey: (v: string) => void;
+  deepgramModel: string;
+  setDeepgramModel: (v: string) => void;
+  deepgramLanguage: string;
+  setDeepgramLanguage: (v: string) => void;
+}) {
+  const {
+    openSection, setOpenSection,
+    pineconeApiKey, setPineconeApiKey,
+    chatgptApiKey, setChatgptApiKey, chatgptModel, setChatgptModel,
+    deepgramApiKey, setDeepgramApiKey, deepgramModel, setDeepgramModel, deepgramLanguage, setDeepgramLanguage,
+  } = props;
+
+  // Sub-abas no estilo Vision Pro para cada serviço
+  return (
+    <div className="flex flex-col w-full">
+      {/* Sub-abas de navegação para os serviços de API */}
+      <div className="mb-6 border-b border-cyan-900/40">
+        <div className="flex space-x-6">
+          <button 
+            type="button"
+            className={`px-3 py-2 font-medium transition-colors border-b-2 ${openSection === 'pinecone' 
+              ? 'text-cyan-300 border-cyan-500/70' 
+              : 'text-cyan-500/60 border-transparent hover:text-cyan-400/80 hover:border-cyan-600/30'}`}
+            onClick={() => setOpenSection(openSection === 'pinecone' ? null : 'pinecone')}
+          >
+            Pinecone
+          </button>
+          
+          <button 
+            type="button"
+            className={`px-3 py-2 font-medium transition-colors border-b-2 ${openSection === 'chatgpt' 
+              ? 'text-cyan-300 border-cyan-500/70' 
+              : 'text-cyan-500/60 border-transparent hover:text-cyan-400/80 hover:border-cyan-600/30'}`}
+            onClick={() => setOpenSection(openSection === 'chatgpt' ? null : 'chatgpt')}
+          >
+            ChatGPT
+          </button>
+          
+          <button 
+            type="button"
+            className={`px-3 py-2 font-medium transition-colors border-b-2 ${openSection === 'deepgram' 
+              ? 'text-cyan-300 border-cyan-500/70' 
+              : 'text-cyan-500/60 border-transparent hover:text-cyan-400/80 hover:border-cyan-600/30'}`}
+            onClick={() => setOpenSection(openSection === 'deepgram' ? null : 'deepgram')}
+          >
+            Deepgram
+          </button>
+        </div>
+      </div>
+
+      {/* Conteúdo das seções - cada seção só aparece se for a selecionada */}
+      {openSection === 'pinecone' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="col-span-2">
+            <label htmlFor="pineconeApiKey" className="block text-cyan-200/80 mb-1">Pinecone API Key</label>
+            <input
+              type="password"
+              id="pineconeApiKey"
+              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+              placeholder="Ex: pcsk_..."
+              value={pineconeApiKey}
+              onChange={e => setPineconeApiKey(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {openSection === 'chatgpt' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label htmlFor="chatgptApiKey" className="block text-cyan-200/80 mb-1">ChatGPT API Key</label>
+            <input
+              type="password"
+              id="chatgptApiKey"
+              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+              placeholder="Ex: sk-..."
+              value={chatgptApiKey}
+              onChange={e => setChatgptApiKey(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="chatgptModel" className="block text-cyan-200/80 mb-1">ChatGPT Model</label>
+            <select
+              id="chatgptModel"
+              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+              value={chatgptModel}
+              onChange={e => setChatgptModel(e.target.value)}
+            >
+              <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+              <option value="gpt-4-turbo">gpt-4-turbo</option>
+              <option value="gpt-4o">gpt-4o</option>
+              <option value="gpt-4o-mini">gpt-4o-mini</option>
+              <option value="gpt-4.1">gpt-4.1</option>
+              <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+              <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+              <option value="gpt-4.5-preview">gpt-4.5-preview</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {openSection === 'deepgram' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label htmlFor="deepgramApiKey" className="block text-cyan-200/80 mb-1">Deepgram API Key</label>
+            <input
+              type="password"
+              id="deepgramApiKey"
+              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+              placeholder="Ex: 1a2b3c4d5e6f..."
+              value={deepgramApiKey}
+              onChange={e => setDeepgramApiKey(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <div>
+              <label htmlFor="deepgramModel" className="block text-cyan-200/80 mb-1">Deepgram Model</label>
+              <select
+                id="deepgramModel"
+                className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+                value={deepgramModel}
+                onChange={e => setDeepgramModel(e.target.value)}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+              >
+                {/* Conditional rendering of Deepgram models by language */}
+                {['en-US', 'en'].includes(deepgramLanguage) && (
+                  <>
+                    <option value="nova-3-general">nova-3-general</option>
+                    <option value="nova-3-medical">nova-3-medical</option>
+                  </>
+                )}
+                {/* nova-2 and others are available for all */}
+                <option value="nova-2-general">nova-2-general</option>
+                <option value="nova-2-meeting">nova-2-meeting</option>
+                <option value="nova-2-phonecall">nova-2-phonecall</option>
+                <option value="nova-2-voicemail">nova-2-voicemail</option>
+                <option value="nova-2-finance">nova-2-finance</option>
+                <option value="nova-2-conversationalai">nova-2-conversationalai</option>
+                <option value="nova-2-video">nova-2-video</option>
+                <option value="nova-2-medical">nova-2-medical</option>
+                <option value="nova-2-drivethru">nova-2-drivethru</option>
+                <option value="nova-2-automotive">nova-2-automotive</option>
+                <option value="nova-2-atc">nova-2-atc</option>
+                <option value="general">general</option>
+                <option value="phonecall">phonecall</option>
+                <option value="meeting">meeting</option>
+                <option value="voicemail">voicemail</option>
+                {/* Only show enhanced for pt-BR */}
+                {deepgramLanguage === 'pt-BR' && (
+                  <option value="enhanced">enhanced (pt-BR beta)</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="deepgramLanguage" className="block text-cyan-200/80 mb-1">Deepgram Language</label>
+              <select
+                id="deepgramLanguage"
+                className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
+                value={deepgramLanguage}
+                onChange={(e) => {
+                  // Capturo o valor de forma explícita
+                  const newLanguage = e.target.value;
+                  console.log('Deepgram language changed to:', newLanguage);
+                  // Atualizo o estado de forma garantida
+                  setDeepgramLanguage(newLanguage);
+                }}
+                // Previno propagação de eventos
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+              >
+                <option value="pt-BR">Portuguese (Brazil) – pt-BR</option>
+                <option value="pt-PT">Portuguese (Portugal) – pt-PT</option>
+                <option value="en-US">English (United States) – en-US</option>
+                <option value="en">English (Global) – en</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SettingsModal: React.FC<SettingsModalProps> = ({
   show,
   onClose
 }) => {
+  const [openSection, setOpenSection] = useState<'pinecone' | 'chatgpt' | 'deepgram' | null>('pinecone');
   const [activeTab, setActiveTab] = useState<'general' | 'interface' | 'audio' | 'advanced'>('general');
   // Symbolic: State for options, initialized from storage cortex
   // General
@@ -34,20 +231,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [enhancedPunctuation, setEnhancedPunctuation] = useState<boolean>(() => getOption<boolean>('enhancedPunctuation') ?? true);
   const [speakerDiarization, setSpeakerDiarization] = useState<boolean>(() => getOption<boolean>('speakerDiarization') ?? true);
 
-  // ChatGPT & Deepgram
+  // ChatGPT, Deepgram & Pinecone
   const [chatgptApiKey, setChatgptApiKey] = useState<string>(() => getOption<string>('chatgptApiKey') || '');
   const [chatgptModel, setChatgptModel] = useState<string>(() => getOption<string>('chatgptModel') || 'gpt-3.5-turbo');
   const [deepgramApiKey, setDeepgramApiKey] = useState<string>(() => getOption<string>('deepgramApiKey') || '');
   const [deepgramModel, setDeepgramModel] = useState<string>(() => getOption<string>('deepgramModel') || 'nova-2');
   const [deepgramLanguage, setDeepgramLanguage] = useState<string>(() => getOption<string>('deepgramLanguage') || 'pt-BR');
-  // Keep local state in sync with LanguageContext
+  // Pinecone
+  const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => getOption<string>('pineconeApiKey') || '');
+  // Load saved value only on mount
   useEffect(() => {
     const stored = getOption('deepgramLanguage');
-    if (stored && stored !== deepgramLanguage) {
+    if (stored) {
       setDeepgramLanguage(stored);
     }
-  }, [deepgramLanguage]);
+  }, []);
 
+
+  // Atualiza o idioma APENAS quando o modal é aberto (show muda de false para true)
+  // Usando uma ref para rastrear o estado anterior
+  const prevShowRef = React.useRef(false);
+  
+  useEffect(() => {
+    // Só atualiza quando o modal realmente abre (show muda de false para true)
+    if (show && !prevShowRef.current) {
+      // Busca o valor mais recente do storage quando o modal é aberto
+      const storedLanguage = getOption('deepgramLanguage');
+      if (storedLanguage) {
+        console.log('🔄 SettingsModal: Modal aberto, carregando idioma:', storedLanguage);
+        setDeepgramLanguage(storedLanguage);
+      }
+    }
+    
+    // Atualiza a ref com o valor atual de show
+    prevShowRef.current = show;
+  }, [show]);
 
   if (!show) return null;
   
@@ -319,119 +537,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </>
           )}
-          
-          {activeTab === 'advanced' && (
-            <>
-
-
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">ChatGPT Settings</h3>
-                <div className="space-y-4 pl-4">
-                  <div>
-                    <label htmlFor="chatgptApiKey" className="block text-cyan-200/80 mb-1">ChatGPT API Key</label>
-                    <input
-                      type="password"
-                      id="chatgptApiKey"
-                      className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                      placeholder="sk-..."
-                      value={chatgptApiKey}
-                      onChange={e => setChatgptApiKey(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="chatgptModel" className="block text-cyan-200/80 mb-1">ChatGPT Model</label>
-                    <select
-                      id="chatgptModel"
-                      className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                      value={chatgptModel}
-                      onChange={e => setChatgptModel(e.target.value)}
-                    >
-                      <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                      <option value="gpt-4-turbo">gpt-4-turbo</option>
-                      <option value="gpt-4o">gpt-4o</option>
-                      <option value="gpt-4o-mini">gpt-4o-mini</option>
-                      <option value="gpt-4.1">gpt-4.1</option>
-                      <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                      <option value="gpt-4.1-nano">gpt-4.1-nano</option>
-                      <option value="gpt-4.5-preview">gpt-4.5-preview</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">Deepgram Settings</h3>
-                <div className="space-y-4 pl-4">
-                  <div>
-                    <label htmlFor="deepgramApiKey" className="block text-cyan-200/80 mb-1">Deepgram API Key</label>
-                    <input
-                      type="password"
-                      id="deepgramApiKey"
-                      className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                      placeholder="Ex: 1a2b3c4d5e6f..."
-                      value={deepgramApiKey}
-                      onChange={e => setDeepgramApiKey(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="w-full md:w-1/2">
-                      <label htmlFor="deepgramModel" className="block text-cyan-200/80 mb-1">Deepgram Model</label>
-                      <select
-                        id="deepgramModel"
-                        className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                        value={deepgramModel}
-                        onChange={e => setDeepgramModel(e.target.value)}
-                      >
-                        {/* Conditional rendering of Deepgram models by language */}
-                        {['en-US', 'en'].includes(deepgramLanguage) && (
-                          <>
-                            <option value="nova-3-general">nova-3-general</option>
-                            <option value="nova-3-medical">nova-3-medical</option>
-                          </>
-                        )}
-                        {/* nova-2 and others are available for all */}
-                        <option value="nova-2-general">nova-2-general</option>
-                        <option value="nova-2-meeting">nova-2-meeting</option>
-                        <option value="nova-2-phonecall">nova-2-phonecall</option>
-                        <option value="nova-2-voicemail">nova-2-voicemail</option>
-                        <option value="nova-2-finance">nova-2-finance</option>
-                        <option value="nova-2-conversationalai">nova-2-conversationalai</option>
-                        <option value="nova-2-video">nova-2-video</option>
-                        <option value="nova-2-medical">nova-2-medical</option>
-                        <option value="nova-2-drivethru">nova-2-drivethru</option>
-                        <option value="nova-2-automotive">nova-2-automotive</option>
-                        <option value="nova-2-atc">nova-2-atc</option>
-                        <option value="general">general</option>
-                        <option value="phonecall">phonecall</option>
-                        <option value="meeting">meeting</option>
-                        <option value="voicemail">voicemail</option>
-                        {/* Only show enhanced for pt-BR */}
-                        {deepgramLanguage === 'pt-BR' && (
-                          <option value="enhanced">enhanced (pt-BR beta)</option>
-                        )}
-                      </select>
-                    </div>
-                    <div className="w-full md:w-1/2">
-                      <label htmlFor="deepgramLanguage" className="block text-cyan-200/80 mb-1">Deepgram Language</label>
-                      <select
-                        id="deepgramLanguage"
-                        className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                        value={deepgramLanguage}
-                        onChange={e => setDeepgramLanguage(e.target.value)}
-                      >
-                        <option value="pt-BR">Portuguese (Brazil) – pt-BR</option>
-                        <option value="pt-PT">Portuguese (Portugal) – pt-PT</option>
-                        <option value="en-US">English (United States) – en-US</option>
-                        <option value="en">English (Global) – en</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-
-            </>
-          )}
+                    {activeTab === 'advanced' && (
+  <>
+    {/* Accordion state for each group (Rules of Hooks compliant) */}
+    {/* Section component defined outside render, uses props */}
+    <AdvancedSettings
+      openSection={openSection}
+      setOpenSection={setOpenSection}
+      pineconeApiKey={pineconeApiKey}
+      setPineconeApiKey={setPineconeApiKey}
+      chatgptApiKey={chatgptApiKey}
+      setChatgptApiKey={setChatgptApiKey}
+      chatgptModel={chatgptModel}
+      setChatgptModel={setChatgptModel}
+      deepgramApiKey={deepgramApiKey}
+      setDeepgramApiKey={setDeepgramApiKey}
+      deepgramModel={deepgramModel}
+      setDeepgramModel={setDeepgramModel}
+      deepgramLanguage={deepgramLanguage}
+      setDeepgramLanguage={setDeepgramLanguage}
+    />
+  </>
+)}
         </div>
         
         <div className="flex justify-end mt-6 space-x-3 pt-4 border-t border-cyan-400/30">
@@ -460,6 +587,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               setOption('noiseReduction', noiseReduction);
               setOption('enhancedPunctuation', enhancedPunctuation);
               setOption('speakerDiarization', speakerDiarization);
+              setOption('pineconeApiKey', pineconeApiKey);
               setOption('chatgptApiKey', chatgptApiKey);
               setOption('chatgptModel', chatgptModel);
               setOption('deepgramApiKey', deepgramApiKey);

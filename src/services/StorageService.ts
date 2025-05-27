@@ -64,6 +64,26 @@ export function getAllOptions(): UserSettings {
   return getBackend().get();
 }
 
+// Sistema de eventos para notificar sobre mudanças no storage
+type StorageChangeListener = (key: string, value: any) => void;
+const storageChangeListeners: StorageChangeListener[] = [];
+
+/**
+ * Registra um listener para ser notificado quando uma opção específica mudar
+ * @param listener Função que será chamada quando a opção mudar
+ */
+export function subscribeToStorageChanges(listener: StorageChangeListener): () => void {
+  storageChangeListeners.push(listener);
+  
+  // Retorna uma função para cancelar a inscrição
+  return () => {
+    const index = storageChangeListeners.indexOf(listener);
+    if (index > -1) {
+      storageChangeListeners.splice(index, 1);
+    }
+  };
+}
+
 /**
  * Sets a single option by key.
  */
@@ -71,6 +91,15 @@ export function setOption<T = any>(key: string, value: T): void {
   const options = getAllOptions();
   options[key] = value;
   setAllOptions(options);
+  
+  // Notifica os listeners
+  storageChangeListeners.forEach(listener => {
+    try {
+      listener(key, value);
+    } catch (err) {
+      console.error(`Error in storage change listener for ${key}:`, err);
+    }
+  });
 }
 
 /**
