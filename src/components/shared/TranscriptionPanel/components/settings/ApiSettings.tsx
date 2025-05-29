@@ -196,9 +196,16 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 onChange={e => setChatgptModel(e.target.value)}
                 title="Select ChatGPT Model"
               >
+                {/* Modelos ChatGPT em ordem cronológica de lançamento */}
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                 <option value="gpt-4">GPT-4</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
                 <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                <option value="gpt-4.1">GPT-4.1</option>
+                <option value="gpt-4.5-preview">GPT-4.5 Preview</option>
               </select>
             </div>
           </div>
