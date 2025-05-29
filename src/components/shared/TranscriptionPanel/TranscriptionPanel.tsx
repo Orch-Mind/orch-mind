@@ -16,7 +16,6 @@ import AudioControls from "./components/AudioControls";
 import CognitionLogSection from "./components/CognitionLogSection";
 import ConnectionDiagnostics from "./components/ConnectionDiagnostics";
 import ImportModal from "./components/ImportModal";
-import LanguageSelector from "./components/LanguageSelector";
 import PanelHeader from "./components/PanelHeader";
 import SettingsModal from "./components/SettingsModal";
 import TextEditor from "./components/TextEditor";
@@ -301,10 +300,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
       </h3>
     </div>
     <div className="flex flex-col gap-4 px-1">
-      <LanguageSelector
-        language={language}
-        setLanguage={setLanguage}
-      />
       <AudioControls
         isMicrophoneOn={isMicrophoneOn}
         setIsMicrophoneOn={setIsMicrophoneOn}

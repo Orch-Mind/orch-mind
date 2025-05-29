@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-import { getOption } from '../../../../../services/StorageService';
+import { STORAGE_KEYS, getOption } from '../../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // OpenAIService.ts
@@ -190,7 +190,7 @@ LANGUAGE: ${language}`;
     };
     // Call to the API with the enrichment tool
     const response = await this.openai.chat.completions.create({
-      model: getOption('openaiModel') || 'gpt-4o-mini',
+      model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-4o-mini',
       messages: [systemPrompt, userPrompt],
       tools: [enrichmentTool],
       tool_choice: { type: "function", function: { name: "enrichSemanticQuery" } }
@@ -249,7 +249,7 @@ LANGUAGE: ${language}`;
       }
       // Fallback: buscar via StorageService se não encontrou
       if (!key) {
-        key = getOption('chatgptApiKey') ?? null;
+        key = getOption(STORAGE_KEYS.OPENAI_API_KEY) ?? null;
         if (key) {
           LoggingUtils.logInfo('[FALLBACK] OPENAI_KEY loaded from StorageService (chatgptApiKey)');
         }
@@ -353,7 +353,7 @@ LANGUAGE: ${language}`;
     }));
     // Send request with streaming enabled
     const stream = await this.openai.chat.completions.create({
-      model: getOption('openaiModel') || 'gpt-4o-mini',
+      model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-4o-mini',
       messages: chatMessages,
       stream: true
     });
@@ -441,7 +441,7 @@ LANGUAGE: ${language}`;
       style: "auto",
       type: isImprovised ? "improvised_answer" : "direct_answer",
       improvised: isImprovised,
-      language: getOption('deepgramLanguage') || 'pt-BR',
+      language: getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR',
       confidence: isImprovised ? 0.3 : 0.8
     };
   }
@@ -632,7 +632,7 @@ IMPORTANT: If a LANGUAGE is specified in the user message, ALL symbolic queries 
     try {
       // Call to the API with tools enabled
       const response = await this.openai.chat.completions.create({
-        model: getOption('openaiModel') || 'gpt-4o-mini',
+        model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-4o-mini',
         messages: [systemPrompt, userPrompt],
         tools,
         tool_choice: "auto"

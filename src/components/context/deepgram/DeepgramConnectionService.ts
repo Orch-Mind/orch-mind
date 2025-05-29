@@ -15,7 +15,7 @@ import { EventHandler } from "./services/connection/EventHandler";
 import { LiveTranscriptionProcessor } from "./services/transcription/LiveTranscriptionProcessor";
 import { TranscriptionEventCallback } from "./services/utils/DeepgramTypes";
 import { ITranscriptionStorageService } from './interfaces/transcription/ITranscriptionStorageService';
-import { getOption } from '../../../services/StorageService';
+import { STORAGE_KEYS, getOption } from '../../../services/StorageService';
 
 export class DeepgramConnectionService implements IDeepgramConnectionService {
   // Core service components
@@ -71,7 +71,7 @@ export class DeepgramConnectionService implements IDeepgramConnectionService {
    */
   async connectToDeepgram(language?: string): Promise<void> {
     // Sempre obtém o idioma mais atualizado do storage
-    const storedLanguage = getOption('deepgramLanguage');
+    const storedLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE);
     
     // Prioriza o idioma do storage, e só usa o parâmetro se não houver valor no storage
     const languageToUse = storedLanguage || language || 'pt-BR';

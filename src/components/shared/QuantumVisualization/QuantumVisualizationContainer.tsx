@@ -89,15 +89,7 @@ const QuantumVisualizationContent: React.FC<QuantumVisualizationContainerProps> 
   useEffect(() => {
     // Evitar múltiplas inicializações
     if (initializedRef.current) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[OrchORContainer] Quantum effects already initialized, skipping');
-      }
       return;
-    }
-    
-    // Configurar o estado quântico base apenas uma vez na montagem inicial
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[OrchORContainer] INITIALIZING quantum state (one-time)');
     }
     
     // Apenas reseta os estados uma vez para garantir início limpo

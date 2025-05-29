@@ -28,12 +28,7 @@ export class UIUpdateService implements IUIUpdateService {
   notifyPromptProcessingStarted(temporaryContext?: string): void {
     if (typeof window !== 'undefined' && window.electronAPI) {
       try {
-        // 1. Notify that we are sending the prompt (for UI to show loading)
-        if (window.electronAPI.sendPromptUpdate) {
-          window.electronAPI.sendPromptUpdate('partial', "Processing...");
-        }
-        
-        // 2. Send command to main process via IPC
+        // 1. Send command to main process via IPC
         if (window.electronAPI.sendNeuralPrompt) {
           window.electronAPI.sendNeuralPrompt(temporaryContext);
           LoggingUtils.logInfo("Prompt sent to main process");

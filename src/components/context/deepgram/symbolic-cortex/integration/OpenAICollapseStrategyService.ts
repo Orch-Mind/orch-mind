@@ -3,7 +3,7 @@
 
 import { IOpenAIService } from '../../interfaces/openai/IOpenAIService';
 import { CollapseStrategyDecision, CollapseStrategyParams, ICollapseStrategyService } from './ICollapseStrategyService';
-import { getOption } from '../../../../../services/StorageService';
+import { getOption, STORAGE_KEYS } from '../../../../../services/StorageService';
 
 // Types for OpenAI function calling
 interface OpenAIFunctionResponse {
@@ -170,7 +170,7 @@ Carefully analyze the activated cores and overall patterns to identify possible 
 
       // Make the OpenAI call with function calling
       const response: OpenAIFunctionResponse = await this.openAIService.callOpenAIWithFunctions({
-        model: getOption('openaiModel') || 'gpt-4o-mini',  // Model with function calling support
+        model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-4o-mini',  // Model with function calling support
         messages: [
           { role: 'developer', content: systemPrompt },
           { role: 'user', content: userPrompt }

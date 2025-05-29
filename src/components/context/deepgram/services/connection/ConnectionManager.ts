@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-import { getOption } from '../../../../../services/StorageService';
+import { getOption, STORAGE_KEYS } from '../../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
@@ -17,7 +17,7 @@ export class ConnectionManager {
   private connectionState: ConnectionState = ConnectionState.CLOSED;
   private deepgramClient: DeepgramClient | null = null;
   private apiKey: string = "";
-  private language: string = getOption('deepgramLanguage') || 'pt-BR';
+  private language: string = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR';
   private autoReconnect: boolean = true;
   private keepAliveInterval?: ReturnType<typeof setInterval>;
   private lastConnectionId: number = 0;
@@ -177,7 +177,7 @@ export class ConnectionManager {
       console.log("📊 [COGNITIVE-CONFIG] Using minimal configuration and automatic format detection for brain audio input");
       
       const connection = this.deepgramClient.listen.live({
-        model: getOption('deepgramModel') || 'nova-2-general',
+        model: getOption(STORAGE_KEYS.DEEPGRAM_MODEL) || 'nova-2-general',
         language: this.language,
         smart_format: true,
         multichannel: true,
@@ -199,17 +199,17 @@ export class ConnectionManager {
   }
   
   /**
-   * Ensure the language setting is valid
+   * Ensure the language setting is valid and always get the latest from storage
    */
   public ensureValidLanguage(): void {
-    // Obter o idioma do storage se existir
-    const storedLanguage = getOption('deepgramLanguage');
+    // SEMPRE obter o idioma mais recente do storage
+    const storedLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE);
     
-    // Se não houver idioma definido, usar o do storage ou 'pt-BR' como padrão
-    if (!this.language) {
-      // Priorizar o idioma armazenado no storage
-      this.language = storedLanguage || 'pt-BR';
-      this.logger.info(`Idioma configurado a partir do storage: ${this.language}`);
+    // Atualizar o idioma com o valor mais recente do storage
+    if (storedLanguage) {
+      this.language = storedLanguage;
+    } else if (!this.language) {
+      this.language = 'pt-BR';
     }
   }
   
@@ -444,18 +444,21 @@ export class ConnectionManager {
     this.updateState(ConnectionState.CONNECTING);
     
     try {
+      // Obter o idioma mais recente antes de reconectar
+      this.ensureValidLanguage();
       await this.connectToDeepgram();
     } catch (error) {
       this.logger.error("Failed forced reconnection", error);
       
       // Try again, if still within the limit
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts);
         this.reconnectAttempts++;
-        
-        this.logger.info(`Scheduling new attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+        const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts);
+        this.logger.info(`Scheduling reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
         
         setTimeout(() => {
+          // Sempre buscar o idioma mais recente antes de tentar reconectar
+          this.ensureValidLanguage();
           this.forceReconnect();
         }, delay);
       }
@@ -478,7 +481,7 @@ export class ConnectionManager {
       let key = await window.electronAPI.getEnv('DEEPGRAM_API_KEY');
       if (!key) {
         // Fallback: buscar via StorageService
-        key = getOption('deepgramApiKey') ?? null;
+        key = getOption(STORAGE_KEYS.DEEPGRAM_API_KEY) ?? null;
         if (key) {
           this.logger.info('[FALLBACK] Deepgram API key loaded from StorageService');
         }
@@ -549,11 +552,13 @@ export class ConnectionManager {
     const connectionId = this.generateConnectionId();
     this.updateState(ConnectionState.CONNECTING);
     
-    // Configure language if provided
+    // SEMPRE buscar o valor mais recente do idioma no storage
+    // e dar prioridade ao idioma fornecido como parâmetro, se houver
+    this.ensureValidLanguage(); // Busca o idioma mais recente do storage
+    
+    // Se receber um idioma como parâmetro, usar ele em vez do storage
     if (language) {
       this.setLanguage(language);
-    } else {
-      this.ensureValidLanguage(); // Ensure a default language if none is provided
     }
     
     if (!await this.ensureApiKey()) {

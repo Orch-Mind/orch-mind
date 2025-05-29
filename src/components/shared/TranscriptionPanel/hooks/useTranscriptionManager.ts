@@ -176,7 +176,6 @@ export const useTranscriptionManager = () => {
 
   const handleSendPrompt = async () => {
     try {
-      setTexts((prev) => ({ ...prev, aiResponse: "Preparing to send..." }));
       await sendTranscriptionPrompt(temporaryContextRef.current);
       setTemporaryContext("");
     } catch (error) {

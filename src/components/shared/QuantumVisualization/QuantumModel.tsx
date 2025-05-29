@@ -70,12 +70,7 @@ export const QuantumModel: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    console.log('QuantumModel montado!');
-  }, []);
-
   if (webglAvailable) {
-    console.log('WebGL disponível, renderizando Canvas Three.js!');
     return (
       <Canvas className="quantum-three-canvas" shadows camera={{ position: [0, 0, 15], fov: 40 }}>
         <Suspense fallback={null}>

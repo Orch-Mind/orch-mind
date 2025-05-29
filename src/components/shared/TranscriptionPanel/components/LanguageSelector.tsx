@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useEffect } from 'react';
-import { setOption, getOption, subscribeToStorageChanges } from '../../../../services/StorageService';
+import { setOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../services/StorageService';
 
 interface LanguageSelectorProps {
   language: string;
@@ -17,7 +17,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   useEffect(() => {
     // Handler para mudanças no storage
     const handleStorageChange = (key: string, value: any) => {
-      if (key === 'deepgramLanguage' && value && value !== language) {
+      if (key === STORAGE_KEYS.DEEPGRAM_LANGUAGE && value && value !== language) {
         console.log('🌐 LanguageSelector: Sincronizando com configurações globais:', value);
         setLanguage(value);
       }
@@ -45,7 +45,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           setLanguage(newLanguage);
           
           // Salva automaticamente no storage do sistema
-          setOption('deepgramLanguage', newLanguage);
+          setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, newLanguage);
           console.log('💾 Idioma salvo automaticamente no sistema:', newLanguage);
         }}
       >

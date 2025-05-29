@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-import { getOption, setOption } from './../../../../services/StorageService';
+import { getOption, setOption, STORAGE_KEYS } from './../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // DeepgramTranscriptionService.ts
@@ -38,13 +38,13 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   private memoryService: IMemoryService;
   private openAIService: IOpenAIService;
   private uiService: IUIUpdateService;
-  
+
   // Configuration
-  private model: string = getOption('deepgramModel') || "nova-2-general";
+  private model: string = getOption(STORAGE_KEYS.DEEPGRAM_MODEL) || "nova-2-general";
   private interimResultsEnabled: boolean = true;
   private useSimplifiedHistory: boolean = false;
-  private currentLanguage: string = getOption('deepgramLanguage') || 'pt-BR';
-  
+  private currentLanguage: string = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR';
+
   // Properties for the neural system
   private _brainSessionId?: string;
   private _interactionCount: number = 0;
@@ -54,10 +54,10 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     intensity: number;
     pattern?: string;
   }> = [];
-  
+
   // Processing prompt flag
   private isProcessingPrompt: boolean = false;
-  
+
   /**
    * Returns the current state of prompt processing
    * @returns true if a prompt is currently being processed, false otherwise
@@ -65,13 +65,13 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   public isProcessingPromptRequest(): boolean {
     return this.isProcessingPrompt;
   }
-  
+
   // Neural signal extractor (first impulse of the artificial mind)
   private _neuralSignalExtractor: NeuralSignalExtractor;
 
   // Neural integration service
   private neuralIntegrationService: INeuralIntegrationService;
-  
+
   constructor(setTexts: UIUpdater, primaryUserSpeaker: string = getPrimaryUser()) {
     // Initialize services
     this.speakerService = new SpeakerIdentificationService(primaryUserSpeaker);
@@ -79,38 +79,38 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     this.openAIService = new OpenAIService();
     this.memoryService = new MemoryService(this.openAIService);
     this.uiService = new UIUpdateService(setTexts);
-    
+
     // Initialize the neural signal extractor
     this._neuralSignalExtractor = new NeuralSignalExtractor(this.openAIService);
 
     // Initialize the neural integration service
     this.neuralIntegrationService = new DefaultNeuralIntegrationService(this.openAIService);
-    
+
     // Set reference back to this service in the storage service to enable auto-triggering
     if (this.storageService instanceof TranscriptionStorageService) {
       this.storageService.setTranscriptionService(this);
     }
-    
+
     // Load API key
     this.loadApiKey();
   }
-  
+
   // Main interface methods
-  
+
   /**
    * Sets the name of the primary speaker (user)
    */
   setPrimaryUserSpeaker(name: string): void {
     this.speakerService.setPrimaryUserSpeaker(name);
   }
-  
+
   /**
    * Adds a new transcription received from the Deepgram service
    */
   addTranscription(text: string, speaker?: string): void {
     this.storageService.addTranscription(text, speaker);
   }
-  
+
   /**
    * Clears transcription data
    */
@@ -119,28 +119,28 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     this.memoryService.clearMemoryData();
     this.memoryService.resetTranscriptionSnapshot();
   }
-  
+
   /**
    * Returns the current list of transcriptions
    */
   getTranscriptionList(): string[] {
     return this.storageService.getTranscriptionList();
   }
-  
+
   /**
    * Returns transcriptions organized by speaker
    */
   getSpeakerTranscriptions(): SpeakerTranscription[] {
     return this.storageService.getSpeakerTranscriptions();
   }
-  
+
   /**
    * Returns transcription logs grouped by speaker
    */
   getTranscriptionLogs(): SpeakerTranscriptionLog[] {
     return this.storageService.getTranscriptionLogs();
   }
-  
+
   /**
    * Accesses the internal storage service directly
    * @returns The instance of the storage service
@@ -149,14 +149,14 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   getStorageServiceForIntegration(): ITranscriptionStorageService {
     return this.storageService;
   }
-  
+
   /**
    * Verifies if only the primary user speaker is speaking
    */
   isOnlyUserSpeaking(): boolean {
     return this.speakerService.isOnlyUserSpeaking(this.storageService.getSpeakerTranscriptions());
   }
-  
+
   /**
    * Activates or deactivates the simplified history mode
    */
@@ -165,7 +165,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     this.memoryService.setSimplifiedHistoryMode(enabled);
     LoggingUtils.logInfo(`Simplified history mode: ${enabled ? "activated" : "deactivated"}`);
   }
-  
+
   /**
    * Generates a consistent session ID for the symbolic brain
    * @returns Session ID for neural continuity tracking
@@ -191,10 +191,10 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     try {
       // Increment the neural interaction counter (brain maturity)
       this._interactionCount++;
-      
+
       // Store activation data for neural continuity
       const timestamp = Date.now();
-      
+
       // Store only the main insights of each processed core
       const memorizedInsights = processingResults.map(result => ({
         timestamp,
@@ -205,21 +205,21 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
           .slice(0, 3) // Limit to 3 insights per core to avoid memory overload
           .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {})
       }));
-      
+
       // Store only the N most recent insights to limit memory usage
       this._neuralMemory = [
         ...this._neuralMemory,
         ...memorizedInsights
       ].slice(-100); // Keep only the 100 most recent insights
-      
+
       // In a real implementation, we could save this to a database for persistence
-      LoggingUtils.logInfo(`Neural memory updated: ${memorizedInsights.length} new insights`); 
+      LoggingUtils.logInfo(`Neural memory updated: ${memorizedInsights.length} new insights`);
     } catch (error) {
       // Errors here should not interrupt the main flow
       LoggingUtils.logError("Error saving neural data", error);
     }
   }
-  
+
   /**
    * Processes the transcription and sends it to the OpenAI API
    */
@@ -229,22 +229,26 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
       LoggingUtils.logWarning("Blocking prompt request: Already processing another prompt");
       return;
     }
-    
+
+    if (window.electronAPI.sendPromptUpdate) {
+      window.electronAPI.sendPromptUpdate('partial', "Processing...");
+    }
+
     try {
       // Mark that we are processing a prompt
       this.isProcessingPrompt = true;
       // Verify if there is text to process
       const hasTranscriptions = this.storageService.hasValidTranscriptions();
-      
+
       if (!hasTranscriptions) {
         LoggingUtils.logWarning("No transcription detected");
-        
+
         // Verify if there is text in lastTranscription (it might not have gone to transcriptionList)
         if (this.storageService.getLastTranscription()) {
           LoggingUtils.logInfo(`Using last known transcription: "${this.storageService.getLastTranscription()}"`);
         } else if (!temporaryContext) {
           // Notify error if there is no transcription or context
-          this.uiService.notifyPromptError("No transcription detected for processing");
+          LoggingUtils.logInfo(`No transcription detected for processing`);
           return;
         }
       }
@@ -260,9 +264,9 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
       const fullTranscription = this.storageService.getUITranscriptionText();
       const lines = fullTranscription.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       const newLines = lines.slice(this.lastSentLineIndex + 1);
-      
+
       if (newLines.length === 0) {
-        this.uiService.notifyPromptError("No new transcription to send.");
+        LoggingUtils.logInfo("No new transcription to send.");
         return;
       }
       const transcriptionToSend = newLines.join('\n');
@@ -274,12 +278,12 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
       }
       // After successful send, update the index
       this.lastSentLineIndex = lines.length - 1;
-      
+
       LoggingUtils.logInfo(`Processing transcription: "${transcriptionToSend.substring(0, 50)}..."`);
-      
+
       // [NEURAL IMPULSE] Phase 1: Identification of which brain areas should be activated
       LoggingUtils.logInfo("🧠 Starting neural system: Phase 1 - Sensory analysis...");
-      
+
       // Get relevant context from long-term memory before neural extraction
       const userTranscriptions = this.storageService.getSpeakerTranscriptions().filter(transcription => transcription.speaker.includes(getPrimaryUser()));
       const detectedSpeakers = this.storageService.getDetectedSpeakers();
@@ -334,7 +338,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
             }
             // Garantir que filters/contextHints existam se forem passados
             const filters = signal.filters || undefined;
-            
+
             // Log detalhado para debug
             LoggingUtils.logInfo(`[Enrichment] Core: ${signal.core} | Query: ${enrichment.enrichedQuery} | Keywords: ${JSON.stringify(enrichment.keywords)}  | Filters: ${JSON.stringify(filters)} | topK: ${topK}`);
             return {
@@ -344,7 +348,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
                 query: enrichment.enrichedQuery
               },
               keywords: enrichment.keywords,
-              
+
               filters,
               topK
             };
@@ -372,12 +376,12 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
             : {}
         );
       }
-      
+
       // PHASE 2: Process each activated neural core individually
       LoggingUtils.logInfo(`⚡ Segunda fase - Processando ${neuralActivation.signals.length} áreas cerebrais ativadas...`);
-      
+
       // Processamento de cada sinal neural ativado
-      
+
       const pineconeResults = await Promise.all(
         enrichedSignals.map(async (signal) => {
           LoggingUtils.logInfo(`→ Activating neural core: ${signal.core} (${(signal.intensity * 100).toFixed(1)}%)`);
@@ -397,7 +401,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
           let matchCount = 0;
           let durationMs = 0;
           const start = Date.now();
-          
+
           try {
             // Pass filters for contextualized search, if supported
             const pineconeResult = await this.memoryService.queryExpandedMemory(
@@ -414,7 +418,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
           } catch (pineconeError) {
             LoggingUtils.logError(`Error searching memories in Pinecone for core ${signal.core}`, pineconeError);
           }
-          
+
           // Symbolic retrieval log
           // Converter insights (Record<string, unknown>) para SymbolicInsight[] para logging
           const insightsArray: SymbolicInsight[] = Object.values(insights) as SymbolicInsight[];
@@ -424,7 +428,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
             matchCount,
             durationMs
           );
-          
+
           // Corrigir insights para garantir type safety (Record<string, unknown>)
           let safeInsights: Record<string, unknown> = {};
           if (Array.isArray(insights)) {
@@ -452,14 +456,14 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
         output: signal.pineconeResults.join("\n"),
         insights: Array.isArray(signal.symbolicInsights)
           ? signal.symbolicInsights.reduce((acc: Record<string, unknown>, ins: SymbolicInsight) => {
-              if (ins && typeof ins.type === 'string') {
-                acc[ins.type] = ins;
-              }
-              return acc;
-            }, {})
+            if (ins && typeof ins.type === 'string') {
+              acc[ins.type] = ins;
+            }
+            return acc;
+          }, {})
           : (typeof signal.symbolicInsights === 'object' && signal.symbolicInsights !== null ? signal.symbolicInsights : {})
       }));
-      
+
       // Phase 3: Integrate all signals into a consolidated prompt
       symbolicCognitionTimelineLogger.logFusionInitiated();
       LoggingUtils.logInfo("💥 Third phase - Integrating neural processing into final prompt...");
@@ -474,7 +478,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
         fusionPrompt: integratedPrompt,
         modules: neuralProcessingResults.map(r => ({ core: r.core, intensity: r.intensity }))
       });
-      
+
       // --- [NOVO FLUXO] ---
       // 1. Add context messages to the actual history (if present)
       const contextMessages: Message[] = [];
@@ -496,7 +500,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
         integratedPrompt,
         conversationHistory
       );
-      
+
       // 3. Send request to OpenAI API and process response stream
       const response = await this.openAIService.streamOpenAIResponse(messages);
 
@@ -522,14 +526,14 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
         this.storageService.getSpeakerTranscriptions(),
         this.speakerService.getPrimaryUserSpeaker()
       );
-      
+
       // 6. Also log the generated neural context for brain evolution
       await this.saveNeuralProcessingData(neuralActivation, neuralProcessingResults);
-      
+
       // 7. Update UI and notify about final response
       this.uiService.updateUI({ aiResponse: response.response });
       this.uiService.notifyPromptComplete(response.response);
-      
+
     } catch (error: Error | unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       LoggingUtils.logError("Error processing prompt", error);
@@ -541,16 +545,16 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
       LoggingUtils.logInfo("Prompt processing completed, releasing lock");
     }
   }
-  
+
   /**
    * Loads the OpenAI API key from the environment
    */
   private async loadApiKey(): Promise<void> {
     await this.openAIService.loadApiKey();
   }
-  
+
   // Implementation of IDeepgramTranscriptionService methods
-  
+
   async connect(language?: string): Promise<void> {
     if (language) {
       this.currentLanguage = language;
@@ -558,45 +562,45 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     LoggingUtils.logInfo(`Connecting transcription service. Language: ${this.currentLanguage}`);
     return Promise.resolve();
   }
-  
+
   async disconnect(): Promise<void> {
     LoggingUtils.logInfo("Disconnecting transcription service");
     return Promise.resolve();
   }
-  
+
   async startProcessing(): Promise<void> {
     LoggingUtils.logInfo("Starting transcription processing");
     return Promise.resolve();
   }
-  
+
   async stopProcessing(): Promise<void> {
     LoggingUtils.logInfo("Stopping transcription processing");
     return Promise.resolve();
   }
-  
+
   setModel(model: string): void {
     this.model = model;
     LoggingUtils.logInfo(`Model defined for: ${model}`);
     // Optional: save to StorageService
-    setOption('deepgramModel', model);
+    setOption(STORAGE_KEYS.DEEPGRAM_MODEL, model);
   }
-  
+
   toggleInterimResults(enabled: boolean): void {
     this.interimResultsEnabled = enabled;
     LoggingUtils.logInfo(`Interim results: ${enabled ? "enabled" : "disabled"}`);
   }
 
-// ... (rest of the code remains the same)
+  // ... (rest of the code remains the same)
   reset(): void {
     LoggingUtils.logInfo("Resetting transcription state");
     this.clearTranscriptionData();
     this.lastSentLineIndex = -1;
   }
-  
+
   isConnected(): boolean {
     return false;
   }
-  
+
   /**
    * Enable or disable automatic detection of questions for auto-triggering prompts
    */

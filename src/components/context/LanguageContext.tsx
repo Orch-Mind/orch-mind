@@ -1,49 +1,62 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { createContext, useState } from "react";
+import React, { createContext, useState, useEffect } from "react";
+import { getOption, setOption, subscribeToStorageChanges, STORAGE_KEYS } from "../../services/StorageService";
 
-export const LanguageContext = createContext<{
-    language: string;
-    setLanguage: (lang: string) => void;
-  }>({ language: "pt-BR", setLanguage: () => {} });
-  
-  import { useEffect } from "react";
-import { getOption, setOption, subscribeToStorageChanges } from "../../services/StorageService";
+/**
+ * Hook personalizado para gerenciar configurações do storage
+ * Permite um "espelhamento neural" de uma configuração global do storage
+ */
+function useStorageSetting<T>(key: string, defaultValue: T): [T, (value: T) => void] {
+  // Estado local que espelha o valor no storage
+  const [value, setValue] = useState<T>(() => {
+    const storedValue = getOption<T>(key);
+    return storedValue !== undefined ? storedValue : defaultValue;
+  });
 
-export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  // Initialize from storage
-  const [language, setLanguageState] = useState(() => getOption("deepgramLanguage") || "pt-BR");
-
-  // Persist to storage and update context
-  const setLanguage = (lang: string) => {
-    setLanguageState(lang);
-    setOption("deepgramLanguage", lang);
-  };
-
-  // Monitora e sincroniza com mudanças no storage usando o sistema de eventos
+  // Efeito para sincronizar com mudanças no storage
   useEffect(() => {
-    // Função que reage a mudanças no storage
-    const handleStorageChange = (key: string, value: any) => {
-      // Só reage se for a configuração de idioma que mudou
-      if (key === 'deepgramLanguage' && value && value !== language) {
-        console.log('🌐 LanguageContext: Recebida mudança de idioma do storage:', value);
-        setLanguageState(value);
+    const handleStorageChange = (changedKey: string, newValue: any) => {
+      if (changedKey === key && newValue !== undefined) {
+        console.log(`💾 [STORAGE-MIRROR] Valor atualizado para ${key}:`, newValue);
+        setValue(newValue as T);
       }
     };
     
-    // Sincroniza imediatamente na montagem
-    const storedLanguage = getOption("deepgramLanguage");
-    if (storedLanguage && storedLanguage !== language) {
-      setLanguageState(storedLanguage);
-    }
-    
-    // Se inscreve para receber mudanças no storage
-    const unsubscribe = subscribeToStorageChanges(handleStorageChange);
-    
-    // Cancela a inscrição quando o componente é desmontado
-    return unsubscribe;
-  }, [language]);
+    // Inscreve para mudanças e retorna função de limpeza
+    return subscribeToStorageChanges(handleStorageChange);
+  }, [key]);
+
+  // Função para atualizar o valor
+  const updateValue = (newValue: T) => {
+    setValue(newValue);
+    setOption(key, newValue);
+  };
+
+  return [value, updateValue];
+}
+
+// =====================================
+// Contexto de linguagem do Orch-OS
+// =====================================
+
+export const LanguageContext = createContext<{  
+  language: string;
+  setLanguage: (language: string) => void;
+}>({ language: "pt-BR", setLanguage: () => {} });
+
+export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
+  // Espelha configurações diretamente do storage neural
+  const [language, setLanguageInternal] = useStorageSetting(STORAGE_KEYS.DEEPGRAM_LANGUAGE, "pt-BR");
+  
+  // Simples wrapper para manter a API consistente
+  const setLanguage = (newLanguage: string) => {
+    setLanguageInternal(newLanguage);
+    console.log(`🌎 LanguageContext: Idioma alterado para ${newLanguage}`);
+  };
+  
+  // O contexto agora é sempre atualizado automaticamente graças ao espelhamento neural
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage }}>

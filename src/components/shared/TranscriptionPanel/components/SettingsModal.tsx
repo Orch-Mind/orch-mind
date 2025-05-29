@@ -1,278 +1,191 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useEffect, useState } from "react";
-import { getUserName, setOption, getOption } from '../../../../services/StorageService';
+import React, { useEffect, useState, useRef } from "react";
+import { getUserName, setOption, getOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../services/StorageService';
+
+// Importação dos componentes modularizados
+import {
+  GeneralSettings,
+  InterfaceSettings,
+  AudioSettings,
+  ApiSettings
+} from './settings';
 
 interface SettingsModalProps {
   show: boolean;
   onClose: () => void;
 }
 
-// Solução com estrutura de abas (tabs) para evitar problemas com selects nativos
-function AdvancedSettings(props: {
-  openSection: 'pinecone' | 'chatgpt' | 'deepgram' | null;
-  setOpenSection: (v: 'pinecone' | 'chatgpt' | 'deepgram' | null) => void;
-  pineconeApiKey: string;
-  setPineconeApiKey: (v: string) => void;
-  chatgptApiKey: string;
-  setChatgptApiKey: (v: string) => void;
-  chatgptModel: string;
-  setChatgptModel: (v: string) => void;
-  deepgramApiKey: string;
-  setDeepgramApiKey: (v: string) => void;
-  deepgramModel: string;
-  setDeepgramModel: (v: string) => void;
-  deepgramLanguage: string;
-  setDeepgramLanguage: (v: string) => void;
-}) {
-  const {
-    openSection, setOpenSection,
-    pineconeApiKey, setPineconeApiKey,
-    chatgptApiKey, setChatgptApiKey, chatgptModel, setChatgptModel,
-    deepgramApiKey, setDeepgramApiKey, deepgramModel, setDeepgramModel, deepgramLanguage, setDeepgramLanguage,
-  } = props;
-
-  // Sub-abas no estilo Vision Pro para cada serviço
-  return (
-    <div className="flex flex-col w-full">
-      {/* Sub-abas de navegação para os serviços de API */}
-      <div className="mb-6 border-b border-cyan-900/40">
-        <div className="flex space-x-6">
-          <button 
-            type="button"
-            className={`px-3 py-2 font-medium transition-colors border-b-2 ${openSection === 'pinecone' 
-              ? 'text-cyan-300 border-cyan-500/70' 
-              : 'text-cyan-500/60 border-transparent hover:text-cyan-400/80 hover:border-cyan-600/30'}`}
-            onClick={() => setOpenSection(openSection === 'pinecone' ? null : 'pinecone')}
-          >
-            Pinecone
-          </button>
-          
-          <button 
-            type="button"
-            className={`px-3 py-2 font-medium transition-colors border-b-2 ${openSection === 'chatgpt' 
-              ? 'text-cyan-300 border-cyan-500/70' 
-              : 'text-cyan-500/60 border-transparent hover:text-cyan-400/80 hover:border-cyan-600/30'}`}
-            onClick={() => setOpenSection(openSection === 'chatgpt' ? null : 'chatgpt')}
-          >
-            ChatGPT
-          </button>
-          
-          <button 
-            type="button"
-            className={`px-3 py-2 font-medium transition-colors border-b-2 ${openSection === 'deepgram' 
-              ? 'text-cyan-300 border-cyan-500/70' 
-              : 'text-cyan-500/60 border-transparent hover:text-cyan-400/80 hover:border-cyan-600/30'}`}
-            onClick={() => setOpenSection(openSection === 'deepgram' ? null : 'deepgram')}
-          >
-            Deepgram
-          </button>
-        </div>
-      </div>
-
-      {/* Conteúdo das seções - cada seção só aparece se for a selecionada */}
-      {openSection === 'pinecone' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="col-span-2">
-            <label htmlFor="pineconeApiKey" className="block text-cyan-200/80 mb-1">Pinecone API Key</label>
-            <input
-              type="password"
-              id="pineconeApiKey"
-              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-              placeholder="Ex: pcsk_..."
-              value={pineconeApiKey}
-              onChange={e => setPineconeApiKey(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
-      {openSection === 'chatgpt' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label htmlFor="chatgptApiKey" className="block text-cyan-200/80 mb-1">ChatGPT API Key</label>
-            <input
-              type="password"
-              id="chatgptApiKey"
-              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-              placeholder="Ex: sk-..."
-              value={chatgptApiKey}
-              onChange={e => setChatgptApiKey(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="chatgptModel" className="block text-cyan-200/80 mb-1">ChatGPT Model</label>
-            <select
-              id="chatgptModel"
-              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-              value={chatgptModel}
-              onChange={e => setChatgptModel(e.target.value)}
-            >
-              <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-              <option value="gpt-4-turbo">gpt-4-turbo</option>
-              <option value="gpt-4o">gpt-4o</option>
-              <option value="gpt-4o-mini">gpt-4o-mini</option>
-              <option value="gpt-4.1">gpt-4.1</option>
-              <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-              <option value="gpt-4.1-nano">gpt-4.1-nano</option>
-              <option value="gpt-4.5-preview">gpt-4.5-preview</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {openSection === 'deepgram' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label htmlFor="deepgramApiKey" className="block text-cyan-200/80 mb-1">Deepgram API Key</label>
-            <input
-              type="password"
-              id="deepgramApiKey"
-              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-              placeholder="Ex: 1a2b3c4d5e6f..."
-              value={deepgramApiKey}
-              onChange={e => setDeepgramApiKey(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <div>
-              <label htmlFor="deepgramModel" className="block text-cyan-200/80 mb-1">Deepgram Model</label>
-              <select
-                id="deepgramModel"
-                className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                value={deepgramModel}
-                onChange={e => setDeepgramModel(e.target.value)}
-                onClick={e => e.stopPropagation()}
-                onMouseDown={e => e.stopPropagation()}
-              >
-                {/* Conditional rendering of Deepgram models by language */}
-                {['en-US', 'en'].includes(deepgramLanguage) && (
-                  <>
-                    <option value="nova-3-general">nova-3-general</option>
-                    <option value="nova-3-medical">nova-3-medical</option>
-                  </>
-                )}
-                {/* nova-2 and others are available for all */}
-                <option value="nova-2-general">nova-2-general</option>
-                <option value="nova-2-meeting">nova-2-meeting</option>
-                <option value="nova-2-phonecall">nova-2-phonecall</option>
-                <option value="nova-2-voicemail">nova-2-voicemail</option>
-                <option value="nova-2-finance">nova-2-finance</option>
-                <option value="nova-2-conversationalai">nova-2-conversationalai</option>
-                <option value="nova-2-video">nova-2-video</option>
-                <option value="nova-2-medical">nova-2-medical</option>
-                <option value="nova-2-drivethru">nova-2-drivethru</option>
-                <option value="nova-2-automotive">nova-2-automotive</option>
-                <option value="nova-2-atc">nova-2-atc</option>
-                <option value="general">general</option>
-                <option value="phonecall">phonecall</option>
-                <option value="meeting">meeting</option>
-                <option value="voicemail">voicemail</option>
-                {/* Only show enhanced for pt-BR */}
-                {deepgramLanguage === 'pt-BR' && (
-                  <option value="enhanced">enhanced (pt-BR beta)</option>
-                )}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="deepgramLanguage" className="block text-cyan-200/80 mb-1">Deepgram Language</label>
-              <select
-                id="deepgramLanguage"
-                className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                value={deepgramLanguage}
-                onChange={(e) => {
-                  // Capturo o valor de forma explícita
-                  const newLanguage = e.target.value;
-                  console.log('Deepgram language changed to:', newLanguage);
-                  // Atualizo o estado de forma garantida
-                  setDeepgramLanguage(newLanguage);
-                }}
-                // Previno propagação de eventos
-                onClick={e => e.stopPropagation()}
-                onMouseDown={e => e.stopPropagation()}
-              >
-                <option value="pt-BR">Portuguese (Brazil) – pt-BR</option>
-                <option value="pt-PT">Portuguese (Portugal) – pt-PT</option>
-                <option value="en-US">English (United States) – en-US</option>
-                <option value="en">English (Global) – en</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
+/**
+ * Modal de configurações do Orch-OS
+ * Refatorado seguindo os princípios neural-simbólicos:
+ * - Clean Architecture (separação de responsabilidades)
+ * - SOLID (componentes com responsabilidade única)
+ * - KISS (simplificação da lógica)
+ */
 const SettingsModal: React.FC<SettingsModalProps> = ({
   show,
   onClose
 }) => {
+  // Estado de navegação e seções
   const [openSection, setOpenSection] = useState<'pinecone' | 'chatgpt' | 'deepgram' | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'interface' | 'audio' | 'advanced'>('general');
-  // Symbolic: State for options, initialized from storage cortex
+  
+  // Estado neural-simbólico para opções, inicializado do storage cortex
   // General
   const [name, setName] = useState<string>(() => getUserName() || 'User');
-  const [enableMatrix, setEnableMatrix] = useState<boolean>(() => getOption<boolean>('enableMatrix') ?? true);
-  const [matrixDensity, setMatrixDensity] = useState<number>(() => getOption<number>('matrixDensity') ?? 60);
-  const [enableEffects, setEnableEffects] = useState<boolean>(() => getOption<boolean>('enableEffects') ?? true);
-  const [enableAnimations, setEnableAnimations] = useState<boolean>(() => getOption<boolean>('enableAnimations') ?? true);
-
+  const [enableMatrix, setEnableMatrix] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_MATRIX) ?? true);
+  const [matrixDensity, setMatrixDensity] = useState<number>(() => getOption<number>(STORAGE_KEYS.MATRIX_DENSITY) ?? 60);
+  const [enableEffects, setEnableEffects] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_EFFECTS) ?? true);
+  const [enableAnimations, setEnableAnimations] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_ANIMATIONS) ?? true);
+  
   // Interface
-  const [themeColor, setThemeColor] = useState<string>(() => getOption<string>('themeColor') || 'cyan');
-  const [glassOpacity, setGlassOpacity] = useState<number>(() => getOption<number>('glassOpacity') ?? 60);
-  const [useCompactLayout, setUseCompactLayout] = useState<boolean>(() => getOption<boolean>('useCompactLayout') ?? false);
-  const [showStatusBar, setShowStatusBar] = useState<boolean>(() => getOption<boolean>('showStatusBar') ?? true);
-
+  const [darkMode, setDarkMode] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.DARK_MODE) ?? true);
+  const [enableNeumorphism, setEnableNeumorphism] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_NEUMORPHISM) ?? true);
+  const [enableGlassmorphism, setEnableGlassmorphism] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_GLASSMORPHISM) ?? true);
+  const [panelTransparency, setPanelTransparency] = useState<number>(() => getOption<number>(STORAGE_KEYS.PANEL_TRANSPARENCY) ?? 70);
+  const [colorTheme, setColorTheme] = useState<string>(() => getOption<string>(STORAGE_KEYS.COLOR_THEME) || 'quantum-blue');
+  
   // Audio
-  const [audioQuality, setAudioQuality] = useState<string>(() => getOption<string>('audioQuality') || 'high');
-  const [noiseReduction, setNoiseReduction] = useState<number>(() => getOption<number>('noiseReduction') ?? 50);
-  const [enhancedPunctuation, setEnhancedPunctuation] = useState<boolean>(() => getOption<boolean>('enhancedPunctuation') ?? true);
-  const [speakerDiarization, setSpeakerDiarization] = useState<boolean>(() => getOption<boolean>('speakerDiarization') ?? true);
+  const [audioQuality, setAudioQuality] = useState<number>(() => getOption<number>(STORAGE_KEYS.AUDIO_QUALITY) ?? 80);
+  const [autoGainControl, setAutoGainControl] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.AUTO_GAIN_CONTROL) ?? true);
+  const [noiseSuppression, setNoiseSuppression] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.NOISE_SUPPRESSION) ?? true);
+  const [echoCancellation, setEchoCancellation] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ECHO_CANCELLATION) ?? true);
+  const [enhancedPunctuation, setEnhancedPunctuation] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENHANCED_PUNCTUATION) ?? true);
+  const [speakerDiarization, setSpeakerDiarization] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.SPEAKER_DIARIZATION) ?? true);
+  const [language, setLanguage] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR');
 
   // ChatGPT, Deepgram & Pinecone
-  const [chatgptApiKey, setChatgptApiKey] = useState<string>(() => getOption<string>('chatgptApiKey') || '');
-  const [chatgptModel, setChatgptModel] = useState<string>(() => getOption<string>('chatgptModel') || 'gpt-3.5-turbo');
-  const [deepgramApiKey, setDeepgramApiKey] = useState<string>(() => getOption<string>('deepgramApiKey') || '');
-  const [deepgramModel, setDeepgramModel] = useState<string>(() => getOption<string>('deepgramModel') || 'nova-2');
-  const [deepgramLanguage, setDeepgramLanguage] = useState<string>(() => getOption<string>('deepgramLanguage') || 'pt-BR');
+  const [chatgptApiKey, setChatgptApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.OPENAI_API_KEY) || '');
+  const [chatgptModel, setChatgptModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-3.5-turbo');
+  const [deepgramApiKey, setDeepgramApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_API_KEY) || '');
+  const [deepgramModel, setDeepgramModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_MODEL) || 'nova-2');
+  const [deepgramLanguage, setDeepgramLanguage] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR');
   // Pinecone
-  const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => getOption<string>('pineconeApiKey') || '');
-  // Load saved value only on mount
-  useEffect(() => {
-    const stored = getOption('deepgramLanguage');
-    if (stored) {
-      setDeepgramLanguage(stored);
-    }
-  }, []);
-
+  const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.PINECONE_API_KEY) || '');
+  
   // Modo Basic/Advanced do Orch-OS (controla recursos neurais-simbólicos disponíveis)
   const [applicationMode, setApplicationMode] = useState<'basic' | 'advanced'>(
-    () => (getOption('applicationMode') as 'basic' | 'advanced') || 'advanced'
+    () => (getOption(STORAGE_KEYS.APPLICATION_MODE) as 'basic' | 'advanced') || 'advanced'
   );
 
   // Atualiza o idioma APENAS quando o modal é aberto (show muda de false para true)
   // Usando uma ref para rastrear o estado anterior
-  const prevShowRef = React.useRef(false);
+  const prevShowRef = useRef(false);
   
   useEffect(() => {
     // Só atualiza quando o modal realmente abre (show muda de false para true)
     if (show && !prevShowRef.current) {
       // Busca o valor mais recente do storage quando o modal é aberto
-      const storedLanguage = getOption('deepgramLanguage');
+      const storedLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE);
       if (storedLanguage) {
         console.log('🔄 SettingsModal: Modal aberto, carregando idioma:', storedLanguage);
         setDeepgramLanguage(storedLanguage);
+        setLanguage(storedLanguage);
       }
     }
     
     // Atualiza a ref com o valor atual de show
     prevShowRef.current = show;
   }, [show]);
-
-  if (!show) return null;
   
+  // Sistema de sincronização neural-simbólica entre componentes
+  // Escuta por mudanças em todas as configurações e atualiza o estado local
+  useEffect(() => {
+    // Handler para mudanças no storage (cortex de memória)
+    const handleStorageChange = (key: string, value: any) => {
+      console.log(`🔄 SettingsModal: Detectou mudança na configuração global: ${key}`, value);
+      
+      // Mapeia cada configuração ao seu setter correspondente
+      switch(key) {
+        // General
+        case STORAGE_KEYS.USER_NAME: setName(value); break;
+        case STORAGE_KEYS.APPLICATION_MODE: setApplicationMode(value); break;
+        case STORAGE_KEYS.ENABLE_MATRIX: setEnableMatrix(value); break;
+        case STORAGE_KEYS.MATRIX_DENSITY: setMatrixDensity(value); break;
+        case STORAGE_KEYS.ENABLE_EFFECTS: setEnableEffects(value); break;
+        case STORAGE_KEYS.ENABLE_ANIMATIONS: setEnableAnimations(value); break;
+        
+        // Interface
+        case STORAGE_KEYS.DARK_MODE: setDarkMode(value); break;
+        case STORAGE_KEYS.ENABLE_NEUMORPHISM: setEnableNeumorphism(value); break;
+        case STORAGE_KEYS.ENABLE_GLASSMORPHISM: setEnableGlassmorphism(value); break;
+        case STORAGE_KEYS.PANEL_TRANSPARENCY: setPanelTransparency(value); break;
+        case STORAGE_KEYS.COLOR_THEME: setColorTheme(value); break;
+        
+        // Audio
+        case STORAGE_KEYS.AUDIO_QUALITY: setAudioQuality(value); break;
+        case STORAGE_KEYS.AUTO_GAIN_CONTROL: setAutoGainControl(value); break;
+        case STORAGE_KEYS.NOISE_SUPPRESSION: setNoiseSuppression(value); break;
+        case STORAGE_KEYS.ECHO_CANCELLATION: setEchoCancellation(value); break;
+        case STORAGE_KEYS.ENHANCED_PUNCTUATION: setEnhancedPunctuation(value); break;
+        case STORAGE_KEYS.SPEAKER_DIARIZATION: setSpeakerDiarization(value); break;
+        
+        // Sincronização especial entre language e deepgramLanguage
+        case STORAGE_KEYS.DEEPGRAM_LANGUAGE: 
+          console.log('🌐 Atualizando idiomas no modal:', value);
+          setDeepgramLanguage(value);
+          setLanguage(value);
+          break;
+          
+        // API Keys
+        case STORAGE_KEYS.PINECONE_API_KEY: setPineconeApiKey(value); break;
+        case STORAGE_KEYS.OPENAI_API_KEY: setChatgptApiKey(value); break;
+        case STORAGE_KEYS.CHATGPT_MODEL: setChatgptModel(value); break;
+        case STORAGE_KEYS.DEEPGRAM_API_KEY: setDeepgramApiKey(value); break;
+        case STORAGE_KEYS.DEEPGRAM_MODEL: setDeepgramModel(value); break;
+      }
+    };
+    
+    // Registra o listener para mudanças no storage
+    const unsubscribe = subscribeToStorageChanges(handleStorageChange);
+    
+    // Limpa o listener quando o componente for desmontado
+    return () => {
+      unsubscribe();
+    };
+  }, []); // Sem dependências - só executa uma vez na montagem do componente
+
+  // Salva todas as configurações no armazenamento
+  const saveSettings = () => {
+    // General
+    setOption(STORAGE_KEYS.USER_NAME, name);
+    setOption(STORAGE_KEYS.APPLICATION_MODE, applicationMode);
+    setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
+    setOption(STORAGE_KEYS.MATRIX_DENSITY, matrixDensity);
+    setOption(STORAGE_KEYS.ENABLE_EFFECTS, enableEffects);
+    setOption(STORAGE_KEYS.ENABLE_ANIMATIONS, enableAnimations);
+    
+    // Interface
+    setOption(STORAGE_KEYS.DARK_MODE, darkMode);
+    setOption(STORAGE_KEYS.ENABLE_NEUMORPHISM, enableNeumorphism);
+    setOption(STORAGE_KEYS.ENABLE_GLASSMORPHISM, enableGlassmorphism);
+    setOption(STORAGE_KEYS.PANEL_TRANSPARENCY, panelTransparency);
+    setOption(STORAGE_KEYS.COLOR_THEME, colorTheme);
+    
+    // Audio
+    setOption(STORAGE_KEYS.AUDIO_QUALITY, audioQuality);
+    setOption(STORAGE_KEYS.AUTO_GAIN_CONTROL, autoGainControl);
+    setOption(STORAGE_KEYS.NOISE_SUPPRESSION, noiseSuppression);
+    setOption(STORAGE_KEYS.ECHO_CANCELLATION, echoCancellation);
+    setOption(STORAGE_KEYS.ENHANCED_PUNCTUATION, enhancedPunctuation);
+    setOption(STORAGE_KEYS.SPEAKER_DIARIZATION, speakerDiarization);
+    setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, deepgramLanguage);
+    
+    // API Keys
+    setOption(STORAGE_KEYS.PINECONE_API_KEY, pineconeApiKey);
+    setOption(STORAGE_KEYS.OPENAI_API_KEY, chatgptApiKey);
+    setOption(STORAGE_KEYS.CHATGPT_MODEL, chatgptModel);
+    setOption(STORAGE_KEYS.DEEPGRAM_API_KEY, deepgramApiKey);
+    setOption(STORAGE_KEYS.DEEPGRAM_MODEL, deepgramModel);
+    
+    onClose();
+  };
+
+  // Se não for exibido, não renderizar nada
+  if (!show) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-gray-900/90 rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative backdrop-blur-lg ring-2 ring-cyan-400/10 max-h-[80vh] overflow-auto">
@@ -290,51 +203,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           Quantum System Settings
         </h2>
         
-        {/* Neural-Symbolic Mode Toggle: Basic/Advanced */}
-        <div className="mb-6 flex flex-col items-center">
-          <div className="w-full max-w-xs backdrop-blur-md bg-black/40 rounded-full p-1 flex relative overflow-hidden border border-cyan-500/30 shadow-[0_0_15px_rgba(0,200,255,0.2)]">
-            {/* Glow indicator que se move conforme o modo selecionado - ajustado para posicionamento perfeito */}
-            <div 
-              className={`absolute inset-y-1 w-1/2 rounded-full transition-transform duration-500 ease-quantum ${applicationMode === 'basic' ? 'left-1 bg-gradient-to-r from-cyan-500/40 to-blue-500/40 shadow-[0_0_20px_5px_rgba(56,189,248,0.35)]' : 'right-1 left-auto bg-gradient-to-r from-blue-500/40 to-purple-600/40 shadow-[0_0_20px_5px_rgba(147,51,234,0.35)]'}`}
-            />
-            
-            <button 
-              className={`flex-1 py-2 px-2 rounded-full z-10 transition-colors duration-300 ${applicationMode === 'basic' ? 'text-white font-medium' : 'text-white/60'}`}
-              onClick={() => setApplicationMode('basic')}
-            >
-              Basic Mode
-            </button>
-            
-            <button 
-              className={`flex-1 py-2 px-2 rounded-full z-10 transition-colors duration-300 ${applicationMode === 'advanced' ? 'text-white font-medium' : 'text-white/60'}`}
-              onClick={() => setApplicationMode('advanced')}
-            >
-              Advanced Mode
-            </button>
-          </div>
-          
-          {/* Descrição do modo */}
-          <p className="text-xs text-cyan-300/70 mt-2 text-center max-w-xs">
-            {applicationMode === 'basic' ? 
-              'Using HuggingFace models and local database storage.' : 
-              'Using Deepgram, OpenAI and Pinecone neural infrastructure.'}
-          </p>
-        </div>
-        
-        {/* Name input (symbolic: user identity) */}
-        {activeTab === 'general' && (
-          <div className="mb-6">
-            <label htmlFor="userName" className="block text-cyan-200/80 mb-1">User Name</label>
-            <input
-              type="text"
-              id="userName"
-              className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Enter your name"
-            />
-          </div>
-        )}
         {/* Tabs navigation */}
         <div className="flex space-x-2 mb-6 border-b border-cyan-400/30 pb-2">
           <button 
@@ -363,333 +231,94 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
         
-        {/* Tab content */}
-        <div className="space-y-4">
+        {/* Conteúdo das abas utilizando os componentes modularizados */}
+        <div className="mb-6">
+          {/* General Tab */}
           {activeTab === 'general' && (
-            <>
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">Quantum Consciousness Matrix</h3>
-                <div className="space-y-4 pl-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="enableMatrix"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={enableMatrix}
-                      onChange={e => setEnableMatrix(e.target.checked)}
-                    />
-                    <label htmlFor="enableMatrix" className="ml-2 text-cyan-200/90">Enable Quantum Visualization</label>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="matrixDensity" className="block text-cyan-200/80 mb-1">Particle Density</label>
-                    <input
-                      type="range"
-                      id="matrixDensity"
-                      min="1"
-                      max="100"
-                      value={matrixDensity}
-                      onChange={e => setMatrixDensity(Number(e.target.value))}
-                      className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-cyan-800/30"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">System Performance</h3>
-                <div className="space-y-4 pl-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="enableEffects"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={enableEffects}
-                      onChange={e => setEnableEffects(e.target.checked)}
-                    />
-                    <label htmlFor="enableEffects" className="ml-2 text-cyan-200/90">Enable Visual Effects</label>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="enableAnimations"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={enableAnimations}
-                      onChange={e => setEnableAnimations(e.target.checked)}
-                    />
-                    <label htmlFor="enableAnimations" className="ml-2 text-cyan-200/90">Enable Animations</label>
-                  </div>
-                </div>
-              </div>
-            </>
+            <GeneralSettings
+              name={name}
+              setName={setName}
+              applicationMode={applicationMode}
+              setApplicationMode={setApplicationMode}
+              enableMatrix={enableMatrix}
+              setEnableMatrix={setEnableMatrix}
+              matrixDensity={matrixDensity}
+              setMatrixDensity={setMatrixDensity}
+              enableEffects={enableEffects}
+              setEnableEffects={setEnableEffects}
+              enableAnimations={enableAnimations}
+              setEnableAnimations={setEnableAnimations}
+            />
           )}
           
+          {/* Interface Tab */}
           {activeTab === 'interface' && (
-            <>
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">Theme Settings</h3>
-                <div className="space-y-4 pl-4">
-                  <div>
-                    <label htmlFor="themeColor" className="block text-cyan-200/80 mb-1">Primary Color</label>
-                    <div className="flex space-x-2">
-                      <button 
-                        className={`w-8 h-8 rounded-full bg-cyan-500 ring-2 ring-white/20 ${themeColor === 'cyan' ? 'ring-cyan-400' : ''}`}
-                        title="Cyan theme"
-                        aria-label="Select cyan theme color"
-                        onClick={() => setThemeColor('cyan')}
-                      ></button>
-                      <button 
-                        className={`w-8 h-8 rounded-full bg-purple-500 ring-2 ring-white/20 ${themeColor === 'purple' ? 'ring-purple-400' : ''}`}
-                        title="Purple theme"
-                        aria-label="Select purple theme color"
-                        onClick={() => setThemeColor('purple')}
-                      ></button>
-                      <button 
-                        className={`w-8 h-8 rounded-full bg-blue-500 ring-2 ring-white/20 ${themeColor === 'blue' ? 'ring-blue-400' : ''}`}
-                        title="Blue theme"
-                        aria-label="Select blue theme color"
-                        onClick={() => setThemeColor('blue')}
-                      ></button>
-                      <button 
-                        className={`w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-white/20 ${themeColor === 'emerald' ? 'ring-emerald-400' : ''}`}
-                        title="Emerald theme"
-                        aria-label="Select emerald theme color"
-                        onClick={() => setThemeColor('emerald')}
-                      ></button>
-                      <button 
-                        className={`w-8 h-8 rounded-full bg-amber-500 ring-2 ring-white/20 ${themeColor === 'amber' ? 'ring-amber-400' : ''}`}
-                        title="Amber theme"
-                        aria-label="Select amber theme color"
-                        onClick={() => setThemeColor('amber')}
-                      ></button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="glassOpacity" className="block text-cyan-200/80 mb-1">Glass Opacity</label>
-                    <input
-                      type="range"
-                      id="glassOpacity"
-                      min="10"
-                      max="95"
-                      value={glassOpacity}
-                      onChange={e => setGlassOpacity(Number(e.target.value))}
-                      className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-cyan-800/30"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">Layout</h3>
-                <div className="space-y-4 pl-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="useCompactLayout"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={useCompactLayout}
-                      onChange={e => setUseCompactLayout(e.target.checked)}
-                    />
-                    <label htmlFor="useCompactLayout" className="ml-2 text-cyan-200/90">Use Compact Layout</label>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="showStatusBar"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={showStatusBar}
-                      onChange={e => setShowStatusBar(e.target.checked)}
-                    />
-                    <label htmlFor="showStatusBar" className="ml-2 text-cyan-200/90">Show Status Bar</label>
-                  </div>
-                </div>
-              </div>
-            </>
+            <InterfaceSettings
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+              enableNeumorphism={enableNeumorphism}
+              setEnableNeumorphism={setEnableNeumorphism}
+              enableGlassmorphism={enableGlassmorphism}
+              setEnableGlassmorphism={setEnableGlassmorphism}
+              panelTransparency={panelTransparency}
+              setPanelTransparency={setPanelTransparency}
+              colorTheme={colorTheme}
+              setColorTheme={setColorTheme}
+            />
           )}
           
+          {/* Audio Tab */}
           {activeTab === 'audio' && (
-            <>
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">Transcription Settings</h3>
-                <div className="space-y-4 pl-4">                  
-                  <div>
-                    <label htmlFor="audioQuality" className="block text-cyan-200/80 mb-1">Audio Quality</label>
-                    <select 
-                      id="audioQuality" 
-                      className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
-                      value={audioQuality}
-                      onChange={e => setAudioQuality(e.target.value)}
-                    >
-                      <option value="low">Low (16kHz)</option>
-                      <option value="standard">Standard (24kHz)</option>
-                      <option value="high">High (48kHz)</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="noiseReduction" className="block text-cyan-200/80 mb-1">Noise Reduction</label>
-                    <input
-                      type="range"
-                      id="noiseReduction"
-                      min="0"
-                      max="100"
-                      value={noiseReduction}
-                      onChange={e => setNoiseReduction(Number(e.target.value))}
-                      className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-cyan-800/30"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <h3 className="text-cyan-300 text-lg mb-2">Speech Recognition</h3>
-                <div className="space-y-4 pl-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="enhancedPunctuation"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={enhancedPunctuation}
-                      onChange={e => setEnhancedPunctuation(e.target.checked)}
-                    />
-                    <label htmlFor="enhancedPunctuation" className="ml-2 text-cyan-200/90">Enhanced Punctuation</label>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="speakerDiarization"
-                      className="w-5 h-5 rounded bg-cyan-800/30 border-cyan-500/50 text-cyan-500 focus:ring-cyan-500/30"
-                      checked={speakerDiarization}
-                      onChange={e => setSpeakerDiarization(e.target.checked)}
-                    />
-                    <label htmlFor="speakerDiarization" className="ml-2 text-cyan-200/90">Speaker Diarization</label>
-                  </div>
-                </div>
-              </div>
-            </>
+            <AudioSettings
+              enhancedPunctuation={enhancedPunctuation}
+              setEnhancedPunctuation={setEnhancedPunctuation}
+              speakerDiarization={speakerDiarization}
+              setSpeakerDiarization={setSpeakerDiarization}
+              audioQuality={audioQuality}
+              setAudioQuality={setAudioQuality}
+              autoGainControl={autoGainControl}
+              setAutoGainControl={setAutoGainControl}
+              noiseSuppression={noiseSuppression}
+              setNoiseSuppression={setNoiseSuppression}
+              echoCancellation={echoCancellation}
+              setEchoCancellation={setEchoCancellation}
+            />
           )}
-                    {activeTab === 'advanced' && (
-  <>
-    {/* Accordion state for each group (Rules of Hooks compliant) */}
-    {/* Section component defined outside render, uses props */}
-    {applicationMode === 'basic' ? (
-              <div className="p-4 rounded-lg bg-black/30 border border-cyan-500/20">
-                <div className="flex items-center mb-4">
-                  <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-cyan-500/30 to-blue-500/30 mr-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="text-cyan-300">
-                      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                      <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium text-cyan-300">Basic Mode Services</h3>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="bg-black/40 p-4 rounded-md">
-                    <h4 className="text-cyan-400 font-medium mb-2">HuggingFace Models</h4>
-                    <p className="text-white/70 text-sm">Select local models to use for your Orch-OS instance.</p>
-                    <div className="mt-3">
-                      <select 
-                        className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
-                        title="Select HuggingFace Model"
-                        aria-label="Select HuggingFace Model"
-                      >
-                        <option value="distilbert">DistilBERT (Small & Fast)</option>
-                        <option value="bert-base">BERT Base</option>
-                        <option value="llama-7b">Llama 7B (Recommended)</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-black/40 p-4 rounded-md">
-                    <h4 className="text-cyan-400 font-medium mb-2">Local Storage</h4>
-                    <p className="text-white/70 text-sm">Storage location for your neural memory database.</p>
-                    <div className="mt-3 flex">
-                      <input 
-                        type="text" 
-                        className="flex-1 p-2 rounded-l bg-black/40 text-white/90 border border-cyan-500/30"
-                        value="./orch-os-memory"
-                        readOnly
-                        title="Local storage location"
-                        aria-label="Local storage location"
-                      />
-                      <button className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded-r px-3 border border-cyan-500/30">
-                        Browse
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex justify-end">
-                  <button 
-                    className="text-cyan-300 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-500/40 hover:to-blue-500/40 px-4 py-2 rounded-md border border-cyan-500/30 transition-all duration-300"
-                    onClick={() => setApplicationMode('advanced')}
-                  >
-                    Switch to Advanced Mode
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <AdvancedSettings
-                openSection={openSection}
-                setOpenSection={setOpenSection}
-                pineconeApiKey={pineconeApiKey}
-                setPineconeApiKey={setPineconeApiKey}
-                chatgptApiKey={chatgptApiKey}
-                setChatgptApiKey={setChatgptApiKey}
-                chatgptModel={chatgptModel}
-                setChatgptModel={setChatgptModel}
-                deepgramApiKey={deepgramApiKey}
-                setDeepgramApiKey={setDeepgramApiKey}
-                deepgramModel={deepgramModel}
-                setDeepgramModel={setDeepgramModel}
-                deepgramLanguage={deepgramLanguage}
-                setDeepgramLanguage={setDeepgramLanguage}
-              />
-            )}
-  </>
-)}
+          
+          {/* Advanced Tab */}
+          {activeTab === 'advanced' && (
+            <ApiSettings
+              applicationMode={applicationMode}
+              setApplicationMode={setApplicationMode}
+              pineconeApiKey={pineconeApiKey}
+              setPineconeApiKey={setPineconeApiKey}
+              chatgptApiKey={chatgptApiKey}
+              setChatgptApiKey={setChatgptApiKey}
+              chatgptModel={chatgptModel}
+              setChatgptModel={setChatgptModel}
+              deepgramApiKey={deepgramApiKey}
+              setDeepgramApiKey={setDeepgramApiKey}
+              deepgramModel={deepgramModel}
+              setDeepgramModel={setDeepgramModel}
+              deepgramLanguage={deepgramLanguage}
+              setDeepgramLanguage={setDeepgramLanguage}
+              openSection={openSection}
+              setOpenSection={setOpenSection}
+            />
+          )}
         </div>
         
-        <div className="flex justify-end mt-6 space-x-3 pt-4 border-t border-cyan-400/30">
+        {/* Botões de ação */}
+        <div className="flex justify-end space-x-4 mt-8">
           <button 
-            className="px-5 py-2 rounded-lg bg-transparent text-cyan-300 border border-cyan-400/40 hover:bg-cyan-900/30 transition-all duration-200"
+            className="px-6 py-2 bg-black/40 text-cyan-400/80 rounded hover:bg-black/60 hover:text-cyan-300 transition-all"
             onClick={onClose}
           >
             Cancel
           </button>
           <button 
-            className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 shadow-lg shadow-cyan-500/20"
-            onClick={() => {
-              // General
-              setOption('name', name);
-              setOption('applicationMode', applicationMode);
-              setOption('enableMatrix', enableMatrix);
-              setOption('matrixDensity', matrixDensity);
-              setOption('enableEffects', enableEffects);
-              setOption('enableAnimations', enableAnimations);
-              // Interface
-              setOption('themeColor', themeColor);
-              setOption('glassOpacity', glassOpacity);
-              setOption('useCompactLayout', useCompactLayout);
-              setOption('showStatusBar', showStatusBar);
-              // Audio
-              setOption('audioQuality', audioQuality);
-              setOption('noiseReduction', noiseReduction);
-              setOption('enhancedPunctuation', enhancedPunctuation);
-              setOption('speakerDiarization', speakerDiarization);
-              setOption('pineconeApiKey', pineconeApiKey);
-              setOption('chatgptApiKey', chatgptApiKey);
-              setOption('chatgptModel', chatgptModel);
-              setOption('deepgramApiKey', deepgramApiKey);
-              setOption('deepgramModel', deepgramModel);
-              setOption('deepgramLanguage', deepgramLanguage);
-              onClose();
-            }}
+            className="px-6 py-2 bg-gradient-to-r from-cyan-600/50 to-blue-600/50 text-white rounded hover:from-cyan-500/60 hover:to-blue-500/60 transition-all"
+            onClick={saveSettings}
           >
             Apply Changes
           </button>

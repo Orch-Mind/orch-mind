@@ -4,6 +4,7 @@
 import { Pinecone } from "@pinecone-database/pinecone";
 import { normalizeNamespace } from "../src/components/context/deepgram/services/memory/utils/namespace";
 import { getPrimaryUser } from "../src/config/UserConfig";
+import { STORAGE_KEYS } from "../src/services/StorageService";
 
 /**
  * Pinecone metadata interface
@@ -71,7 +72,7 @@ export class PineconeHelper {
         try {
           // Dynamically import StorageService to avoid circular dependency
           const { getOption } = require('../src/services/StorageService');
-          apiKey = getOption('pineconeApiKey');
+          apiKey = getOption(STORAGE_KEYS.PINECONE_API_KEY);
           if (apiKey) {
             console.info('[PINECONE] Loaded API key from user storage (fallback)');
           }

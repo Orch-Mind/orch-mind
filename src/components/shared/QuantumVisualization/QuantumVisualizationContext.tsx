@@ -383,10 +383,6 @@ export const QuantumVisualizationProvider: React.FC<QuantumVisualizationProvider
         return;
       }
       
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[OrchOR] clearAllEffects - preserving basal quantum state');
-      }
-      
       // Imediatamente adicionar o estado quântico basal (Orch-OR)
       // Duas superposições quânticas (oscilações de Fröhlich nos microtuúbulos)
       const baseSuper1: QuantumEffect = {
@@ -438,9 +434,6 @@ export const QuantumVisualizationProvider: React.FC<QuantumVisualizationProvider
       setActiveRegion('THALAMUS');
       setObserverState('active'); // Observer sempre ativo em nível basal
       
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[OrchOR] Established base quantum activity (Orch-OR)');
-      }
     } catch (error) {
       console.error('[OrchOR] Error in clearAllEffects:', error);
     }
