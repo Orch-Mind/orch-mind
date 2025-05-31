@@ -8,9 +8,11 @@ import { setOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../
  * Componente para configurações de APIs externas (Deepgram, ChatGPT, Pinecone)
  * Segue os princípios neurais-simbólicos e Clean Architecture do Orch-OS
  */
+import { OrchOSMode, OrchOSModeEnum } from '../../../../../services/ModeService';
+
 interface ApiSettingsProps {
-  applicationMode: 'basic' | 'advanced';
-  setApplicationMode: (mode: 'basic' | 'advanced') => void;
+  applicationMode: OrchOSMode;
+  setApplicationMode: (mode: OrchOSMode) => void;
   // Pinecone
   pineconeApiKey: string;
   setPineconeApiKey: (value: string) => void;
@@ -50,7 +52,8 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
   setOpenSection
 }) => {
   // Renderização condicional baseada no modo da aplicação
-  if (applicationMode === 'basic') {
+  // Symbolic: Use enum for mode-dependent logic
+  if (applicationMode === OrchOSModeEnum.BASIC) {
     return (
       <div className="p-4 rounded-lg bg-black/30 border border-cyan-500/20">
         <div className="flex items-center mb-4">
@@ -101,8 +104,9 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         
         <div className="mt-4 flex justify-end">
           <button 
-            className="text-cyan-300 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-500/40 hover:to-blue-500/40 px-4 py-2 rounded-md border border-cyan-500/30 transition-all duration-300"
-            onClick={() => setApplicationMode('advanced')}
+            type="button"
+            className="w-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg py-3 mt-6 hover:from-cyan-500/30 hover:to-blue-500/30 transition-all shadow-[0_0_10px_rgba(0,200,255,0.2)] backdrop-blur-sm"
+            onClick={() => setApplicationMode(OrchOSModeEnum.ADVANCED)}
           >
             Switch to Advanced Mode
           </button>

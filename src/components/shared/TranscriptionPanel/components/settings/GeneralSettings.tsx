@@ -8,11 +8,13 @@ import ModeToggle from './ModeToggle';
  * Componente para configurações gerais do Orch-OS
  * Segue os princípios neurais-simbólicos (Single Responsibility)
  */
+import { OrchOSMode, OrchOSModeEnum } from '../../../../../services/ModeService';
+
 interface GeneralSettingsProps {
   name: string;
   setName: (value: string) => void;
-  applicationMode: 'basic' | 'advanced';
-  setApplicationMode: (mode: 'basic' | 'advanced') => void;
+  applicationMode: OrchOSMode;
+  setApplicationMode: (mode: OrchOSMode) => void;
   enableMatrix: boolean;
   setEnableMatrix: (value: boolean) => void;
   matrixDensity: number;

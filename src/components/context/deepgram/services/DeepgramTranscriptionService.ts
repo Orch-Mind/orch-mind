@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 import { getOption, setOption, STORAGE_KEYS } from './../../../../services/StorageService';
+import { ModeService } from './../../../../services/ModeService'; // Orch-OS Mode Cortex
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // DeepgramTranscriptionService.ts

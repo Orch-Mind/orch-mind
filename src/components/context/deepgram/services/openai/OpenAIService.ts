@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 import { STORAGE_KEYS, getOption } from '../../../../../services/StorageService';
+import { ModeService } from '../../../../../services/ModeService'; // Orch-OS Mode Cortex
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // OpenAIService.ts
@@ -34,6 +35,13 @@ import { LoggingUtils } from "../../utils/LoggingUtils";
 
 export class OpenAIService implements IOpenAIService {
   // ...
+  /**
+   * Symbolic: Determines if Orch-OS is in basic or advanced mode using ModeService cortex
+   */
+  private getCurrentMode(): 'basic' | 'advanced' {
+    return ModeService.getMode();
+  }
+
   /**
    * Sends a request to OpenAI with support for function calling
    * @param options Request options including model, messages, tools, etc.
@@ -632,7 +640,8 @@ IMPORTANT: If a LANGUAGE is specified in the user message, ALL symbolic queries 
     try {
       // Call to the API with tools enabled
       const response = await this.openai.chat.completions.create({
-        model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-4o-mini',
+        // Symbolic: Always use model based on current Orch-OS mode
+       model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || (this.getCurrentMode() === 'advanced' ? 'gpt-4o-mini' : 'gpt-3.5-turbo'),
         messages: [systemPrompt, userPrompt],
         tools,
         tool_choice: "auto"

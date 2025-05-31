@@ -11,6 +11,7 @@ import {
   AudioSettings,
   ApiSettings
 } from './settings';
+import { ModeService, OrchOSMode, OrchOSModeEnum } from '../../../../services/ModeService'; // Orch-OS Mode Cortex
 
 interface SettingsModalProps {
   show: boolean;
@@ -65,9 +66,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // Pinecone
   const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.PINECONE_API_KEY) || '');
   
-  // Modo Basic/Advanced do Orch-OS (controla recursos neurais-simbólicos disponíveis)
-  const [applicationMode, setApplicationMode] = useState<'basic' | 'advanced'>(
-    () => (getOption(STORAGE_KEYS.APPLICATION_MODE) as 'basic' | 'advanced') || 'advanced'
+  // Orch-OS Mode Cortex: single source of truth for mode
+  // Symbolic: mode state uses enum for full type safety
+  const [applicationMode, setApplicationMode] = useState<OrchOSMode>(
+    () => ModeService.getMode()
   );
 
   // Atualiza o idioma APENAS quando o modal é aberto (show muda de false para true)
@@ -75,8 +77,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const prevShowRef = useRef(false);
   
   useEffect(() => {
-    // Só atualiza quando o modal realmente abre (show muda de false para true)
+    // Symbolic: ensure mode state syncs with ModeService on modal open
     if (show && !prevShowRef.current) {
+      setApplicationMode(ModeService.getMode());
       // Busca o valor mais recente do storage quando o modal é aberto
       const storedLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE);
       if (storedLanguage) {
@@ -85,8 +88,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         setLanguage(storedLanguage);
       }
     }
-    
-    // Atualiza a ref com o valor atual de show
     prevShowRef.current = show;
   }, [show]);
   
@@ -96,7 +97,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     // Handler para mudanças no storage (cortex de memória)
     const handleStorageChange = (key: string, value: any) => {
       console.log(`🔄 SettingsModal: Detectou mudança na configuração global: ${key}`, value);
-      
+      // Symbolic: sync mode cortex
+      if (key === STORAGE_KEYS.APPLICATION_MODE) {
+        ModeService.setMode(value);
+        setApplicationMode(value as OrchOSMode);
+      }
       // Mapeia cada configuração ao seu setter correspondente
       switch(key) {
         // General
@@ -152,6 +157,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     // General
     setOption(STORAGE_KEYS.USER_NAME, name);
     setOption(STORAGE_KEYS.APPLICATION_MODE, applicationMode);
+    ModeService.setMode(applicationMode); // Symbolic: update mode cortex
     setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
     setOption(STORAGE_KEYS.MATRIX_DENSITY, matrixDensity);
     setOption(STORAGE_KEYS.ENABLE_EFFECTS, enableEffects);
@@ -239,7 +245,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               name={name}
               setName={setName}
               applicationMode={applicationMode}
-              setApplicationMode={setApplicationMode}
+              setApplicationMode={(mode: OrchOSMode) => setApplicationMode(mode)}
               enableMatrix={enableMatrix}
               setEnableMatrix={setEnableMatrix}
               matrixDensity={matrixDensity}
@@ -289,7 +295,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'advanced' && (
             <ApiSettings
               applicationMode={applicationMode}
-              setApplicationMode={setApplicationMode}
+              setApplicationMode={(mode: OrchOSMode) => setApplicationMode(mode)}
               pineconeApiKey={pineconeApiKey}
               setPineconeApiKey={setPineconeApiKey}
               chatgptApiKey={chatgptApiKey}

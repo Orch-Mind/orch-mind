@@ -42,6 +42,43 @@ description: Este workflow escaneia toda a árvore de arquivos `.ts/.tsx` do pro
       "type": "generate_markdown",
       "path": "knowledge/orchos_project_map.md",
       "content": "{{structure_map}}"
+    },
+    {
+      "type": "link_graph_generation",
+      "format": "mermaid",
+      "include": ["modules", "dependencies", "directional_arrows"]
+    },
+    {
+      "type": "analyze_coupling_cohesion",
+      "thresholds": {
+        "max_coupling": 5,
+        "min_cohesion": 0.4
+      },
+      "note": "Helps identify critical refactors in core modules"
+    },
+    {
+      "type": "semantic_domain_clustering",
+      "strategy": "embedding-distance",
+      "group_by": ["naming", "comments", "dependencies"]
+    },
+    {
+      "type": "architecture_pattern_check",
+      "patterns": ["clean", "hexagonal"],
+      "report_violations": true
+    },
+    {
+      "type": "duplicate_detection",
+      "min_similarity": 0.85,
+      "report": "inline"
+    },
+    {
+      "type": "complexity_scoring",
+      "metrics": ["cyclomatic", "dependency_depth", "mutation_resistance"]
+    },
+    {
+      "type": "generate_qa_summary",
+      "questions_count": 10,
+      "target_audience": "new_devs"
     }
   ]
 }
