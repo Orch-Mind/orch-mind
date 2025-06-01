@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { setOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../../services/StorageService';
 
 /**
@@ -51,6 +51,21 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
   openSection,
   setOpenSection
 }) => {
+  // Estado simbólico para o modelo Hugging Face selecionado
+  const HF_MODELS = [
+  { id: "onnx-community/Qwen2.5-0.5B-Instruct", label: "Qwen2.5-0.5B-Instruct (Chat, fast, recommended)" },
+  { id: "Xenova/phi-3-mini-4k-instruct", label: "Phi-3 Mini (Chat, experimental)" },
+  { id: "Xenova/TinyLlama-1.1B-Chat-v1.0", label: "TinyLlama 1.1B (Chat, lightweight)" },
+  { id: "HuggingFaceTB/SmolLM2-135M-Instruct", label: "SmolLM2-135M (Ultra lightweight, chat)" },
+  { id: "Xenova/distilgpt2", label: "DistilGPT2 (Basic text generation)" }
+];
+  const [huggingfaceModel, setHuggingfaceModel] = useState(HF_MODELS[0].id);
+
+  useEffect(() => {
+    // Carrega o modelo salvo no storage, se existir
+    const saved = (window && window.localStorage) ? localStorage.getItem('huggingfaceModel') : undefined;
+    if (saved && HF_MODELS.some(m => m.id === saved)) setHuggingfaceModel(saved);
+  }, []);
   // Renderização condicional baseada no modo da aplicação
   // Symbolic: Use enum for mode-dependent logic
   if (applicationMode === OrchOSModeEnum.BASIC) {
@@ -68,17 +83,22 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
         
         <div className="space-y-4">
           <div className="bg-black/40 p-4 rounded-md">
-            <h4 className="text-cyan-400 font-medium mb-2">HuggingFace Models</h4>
-            <p className="text-white/70 text-sm">Select local models to use for your Orch-OS instance.</p>
+            <h4 className="text-cyan-400 font-medium mb-2">Hugging Face Text Models</h4>
+            <p className="text-white/70 text-sm">Select a local text-generation model for your Orch-OS instance. Only browser-compatible models are shown.</p>
             <div className="mt-3">
-              <select 
+              <select
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 title="Select HuggingFace Model"
                 aria-label="Select HuggingFace Model"
+                value={huggingfaceModel}
+                onChange={e => {
+                  setHuggingfaceModel(e.target.value);
+                  setOption(STORAGE_KEYS.HF_MODEL, e.target.value);
+                }}
               >
-                <option value="distilbert">DistilBERT (Small & Fast)</option>
-                <option value="bert-base">BERT Base</option>
-                <option value="llama-7b">Llama 7B (Recommended)</option>
+                {HF_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
               </select>
             </div>
           </div>

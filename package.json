@@ -119,6 +119,7 @@
     "@deepgram/sdk": "^4.1.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@huggingface/transformers": "^3.5.2",
     "@pinecone-database/pinecone": "^6.0.0",
     "@radix-ui/react-dialog": "^1.1.13",
     "@radix-ui/react-label": "^2.1.6",

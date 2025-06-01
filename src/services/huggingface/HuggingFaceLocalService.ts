@@ -1,0 +1,244 @@
+// HuggingFaceLocalService.ts
+// Symbolic cortex: Provides local inference using Hugging Face Transformers.js in the browser.
+// Processes symbolic text generation for Orch-OS in basic mode, without backend or API key.
+
+import { pipeline, TextGenerationPipeline } from "@huggingface/transformers";
+
+/**
+ * Symbolic: Supported browser models for local inference (expand as needed)
+ */
+// Symbolic: Supported browser models for local text-generation (must match settings UI)
+export const SUPPORTED_HF_BROWSER_MODELS = [
+  "onnx-community/Qwen2.5-0.5B-Instruct", // Qwen2.5-0.5B-Instruct (Chat, fast, recommended)
+  "Xenova/phi-3-mini-4k-instruct",        // Phi-3 Mini (Chat, experimental)
+  "Xenova/TinyLlama-1.1B-Chat-v1.0",      // TinyLlama 1.1B (Chat, lightweight)
+  "HuggingFaceTB/SmolLM2-135M-Instruct",  // SmolLM2-135M (Ultra lightweight, chat)
+  "Xenova/distilgpt2"                     // DistilGPT2 (Basic text generation)
+];
+
+export type HuggingFaceLocalOptions = {
+  model?: string;
+  systemPrompt?: string;
+  maxTokens?: number;
+  temperature?: number;
+};
+
+/**
+ * Interface matching the expected function tool call format from OpenAI
+ * Symbolic: Represents the neural signal schema for function execution
+ */
+export interface ToolCall {
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+/**
+ * Response format that matches OpenAI function calling API
+ * Symbolic: Neural response pattern with potential tool activation
+ */
+export interface HuggingFaceResponse {
+  content?: string;
+  tool_calls?: ToolCall[];
+}
+
+export class HuggingFaceLocalService {
+  // Using 'any' to avoid TypeScript union complexity errors with pipeline()
+  private generator: any = null;
+  private currentModel: string | null = null;
+
+  /**
+   * Loads a supported model for local inference with auto device/dtype fallback.
+   * Symbolic: Tries WebGPU + quantized (q4), depois q8, depois fp32, depois CPU.
+   * Maximizes browser compatibility and performance for Orch-OS.
+   */
+  async loadModel(modelId: string): Promise<void> {
+    if (this.currentModel === modelId && this.generator) return;
+    let lastError: any = null;
+    // Try WebGPU + q4
+    try {
+      this.generator = await pipeline("text-generation", modelId, { device: "webgpu", dtype: "q4" });
+      this.currentModel = modelId;
+      return;
+    } catch (e) { lastError = e; }
+    // Try WebGPU + q8
+    try {
+      this.generator = await pipeline("text-generation", modelId, { device: "webgpu", dtype: "q8" });
+      this.currentModel = modelId;
+      return;
+    } catch (e) { lastError = e; }
+    // Try WebGPU + fp32
+    try {
+      this.generator = await pipeline("text-generation", modelId, { device: "webgpu", dtype: "fp32" });
+      this.currentModel = modelId;
+      return;
+    } catch (e) { lastError = e; }
+    // Fallback: CPU + q4
+    try {
+      this.generator = await pipeline("text-generation", modelId, { device: "cpu", dtype: "q4" });
+      this.currentModel = modelId;
+      return;
+    } catch (e) { lastError = e; }
+    // Fallback: CPU + q8
+    try {
+      this.generator = await pipeline("text-generation", modelId, { device: "cpu", dtype: "q8" });
+      this.currentModel = modelId;
+      return;
+    } catch (e) { lastError = e; }
+    // Fallback: CPU + fp32
+    try {
+      this.generator = await pipeline("text-generation", modelId, { device: "cpu", dtype: "fp32" });
+      this.currentModel = modelId;
+      return;
+    } catch (e) { lastError = e; }
+    // If all attempts fail, throw last error
+    throw new Error(`Failed to load model ${modelId} on any supported device/dtype. Last error: ${lastError}`);
+  }
+
+  /**
+   * Generates a completion using the loaded model and messages (system+user), streaming output in real time.
+   * Symbolic: Each message is a neuron; the cortex fuses them for context. Emits tokens/chunks as they are generated.
+   *
+   * @param messages - Array of messages (system/user/assistant)
+   * @param opts - Generation options (maxTokens, temperature, etc)
+   * @param onToken - Optional callback invoked with each new piece of text generated
+   * @returns The full accumulated output as a string
+   */
+  async generate(
+    messages: { role: "system" | "user" | "assistant"; content: string }[],
+    opts?: HuggingFaceLocalOptions,
+    onToken?: (text: string) => void
+  ): Promise<string> {
+    if (!this.generator) throw new Error("Model not loaded");
+    // Symbolic: Compose context for the LLM
+    const prompt = messages.map(m => m.content).join("\n");
+
+    // Import TextStreamer dynamically (for browser/Node compatibility)
+    // @ts-ignore
+    const { TextStreamer } = await import("@huggingface/transformers");
+    // @ts-ignore
+    const tokenizer = this.generator.tokenizer;
+
+    let accumulated = "";
+    const streamer = new TextStreamer(tokenizer, {
+      skip_prompt: true,
+      skip_special_tokens: true,
+      callback_function: (text: string) => {
+        accumulated += text;
+        if (onToken) onToken(text);
+      }
+    });
+
+    await this.generator(prompt, {
+      max_new_tokens: opts?.maxTokens || 128,
+      temperature: opts?.temperature || 0.7,
+      streamer
+    });
+
+    return accumulated.trim();
+  }
+
+  /**
+   * Generates a completion with function calling capabilities using the loaded model .
+   * Symbolic: This method ALWAYS constructs the system prompt (including the function schema/tools) itself, in English.
+   * Only user/assistant messages should be passed in; any upstream system prompt will be ignored.
+   * This is prompt engineering to simulate function calling, NOT native function calling (transformers.js local does not support tools argument).
+   */
+  /**
+   * Generates a completion with simulated function calling, supporting streaming output.
+   * Symbolic: Streams both direct content and function call arguments in real time for UI/UX parity with OpenAI.
+   *
+   * @param messages - Array of user/assistant messages (system prompt is constructed internally)
+   * @param tools - Function schemas (see OpenAI format)
+   * @param opts - Generation options
+   * @param onToken - Optional callback for streaming partial output
+   * @returns HuggingFaceResponse (tool_calls or content)
+   */
+  async generateWithFunctions(
+    messages: { role: "system" | "user" | "assistant"; content: string }[],
+    tools: Array<{
+      type: string;
+      function: {
+        name: string;
+        description: string;
+        parameters: Record<string, unknown>;
+      }
+    }>,
+    opts?: HuggingFaceLocalOptions,
+    onToken?: (partial: string) => void
+  ): Promise<HuggingFaceResponse> {
+    if (!this.generator) throw new Error("Model not loaded");
+
+    // Filter out any incoming system prompts; only user/assistant messages allowed
+    const filteredMessages = messages.filter(m => m.role !== "system");
+
+    // Symbolic: Create neural schema for function activation (English, for consistency)
+    const toolsJSON = JSON.stringify(tools.map(t => ({
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters
+    })), null, 2);
+
+    // Symbolic: Neural instruction pattern for symbolic function execution (prompt engineering)
+    const systemPrompt = `You have access to the following functions (tools):\n${toolsJSON}\n\nIf you need to call a function, respond EXACTLY in this format:\n<function_call>\n{\n  "name": "function_name",\n  "arguments": {\n    "param1": "value1",\n    "param2": "value2"\n  }\n}\n</function_call>\n\nIf you do not need to call a function, respond with normal text.\n\nIMPORTANT: Do not invent functions or arguments. Only use the provided schema. Always use the exact format above if calling a function.`;
+
+    // Compose the full prompt: system prompt (with schema) + user/assistant messages
+    const augmentedMessages = [
+      { role: "system" as const, content: systemPrompt },
+      ...filteredMessages
+    ];
+
+    // --- Streaming logic ---
+    let accumulatedText = "";
+    let accumulatedArgs = "";
+    let lastFunctionCallFragment = "";
+
+    // Symbolic: Generate neural response with potential function activation, streaming partials
+    const text = await this.generate(
+      augmentedMessages,
+      {
+        maxTokens: opts?.maxTokens || 512, // Increase tokens to accommodate response format
+        temperature: opts?.temperature || 0.7
+      },
+      (partial: string) => {
+        accumulatedText += partial;
+        // Try to accumulate function call args in real time (simulate OpenAI tool_call streaming)
+        const match = /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/.exec(accumulatedText);
+        if (match && typeof match[1] === 'string' && match[1] !== lastFunctionCallFragment) {
+          lastFunctionCallFragment = match[1];
+          accumulatedArgs = match[1];
+          if (onToken) onToken(match[1]); // Optionally send partial function call
+        } else {
+          if (onToken) onToken(accumulatedText);
+        }
+      }
+    );
+
+    // Symbolic: Extract potential function call from neural response
+    const functionCallMatch = accumulatedArgs
+      ? [null, accumulatedArgs]
+      : text.match(/<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/);
+
+    if (functionCallMatch && typeof functionCallMatch[1] === 'string') {
+      try {
+        // Symbolic: Parse neural function signal into symbolic structure
+        const functionCall = JSON.parse(functionCallMatch[1]);
+        return {
+          tool_calls: [{
+            function: {
+              name: functionCall.name,
+              arguments: JSON.stringify(functionCall.arguments)
+            }
+          }]
+        };
+      } catch (e) {
+        console.error("Erro ao parsear chamada de função:", e);
+        return { content: text };
+      }
+    }
+    // If no function call detected, return as normal content
+    return { content: text };
+  }
+}
+

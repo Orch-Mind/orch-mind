@@ -27,6 +27,9 @@
 export const STORAGE_KEYS = {
   // Chave principal para armazenamento de todas as configurações
   SETTINGS_ROOT: 'orchos.user.settings',
+
+  // ===== Modelos Hugging Face =====
+  HF_MODEL: 'huggingfaceModel',
   
   // ===== Configurações gerais do sistema =====
   USER_NAME: 'userName',
