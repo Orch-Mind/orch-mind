@@ -6,8 +6,6 @@
 
 import { ICompletionService, ModelStreamResponse } from "../../../interfaces/openai/ICompletionService";
 import { IClientManagementService } from "../../../interfaces/openai/IClientManagementService";
-import { OrchOSModeEnum } from "../../../../../../services/ModeService";
-import { ModeService } from "../../../../../../services/ModeService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import { Message } from "../../../interfaces/transcription/TranscriptionTypes";
 import { STORAGE_KEYS, getOption } from "../../../../../../services/StorageService";
@@ -23,13 +21,6 @@ export class OpenAICompletionService implements ICompletionService {
     this.clientService = clientService;
   }
 
-  /**
-   * Obtém o modo atual do Orch-OS
-   * Symbolic: Consulta estado global do sistema neural
-   */
-  private getCurrentMode(): OrchOSModeEnum {
-    return ModeService.getMode();
-  }
 
   /**
    * Envia uma requisição ao modelo de linguagem com suporte a function calling
@@ -63,70 +54,6 @@ export class OpenAICompletionService implements ICompletionService {
     }>
   }> {
     try {
-      // Symbolic: If Orch-OS is in basic mode, use HuggingFaceLocalService for local inference
-      if (this.getCurrentMode() === OrchOSModeEnum.BASIC) {
-        try {
-          // Import the local service dynamically to use local inference in basic mode
-          const { HuggingFaceLocalService } = await import('../../../../../../services/huggingface/HuggingFaceLocalService');
-          const huggingFaceLocal = new HuggingFaceLocalService();
-          const modelId = getOption(STORAGE_KEYS.HF_MODEL) || 'onnx-community/Qwen2.5-0.5B-Instruct';
-          await huggingFaceLocal.loadModel(modelId);
-          
-          // Symbolic: Map messages for neural-symbolic cortex compatibility
-          const mappedMessages = options.messages.map(m => ({
-            // Map possible 'developer' role to 'system' for compatibility
-            role: m.role === 'developer' ? 'system' : (m.role as 'system' | 'user' | 'assistant'),
-            content: m.content
-          }));
-          
-          // Symbolic: If tools are provided, use function calling capabilities
-          if (options.tools && options.tools.length > 0) {
-            LoggingUtils.logInfo("Orch-OS Basic Mode: Using function calling with HuggingFace local model");
-            
-            // Symbolic: Neural pathway for function/tool execution with local model
-            const result = await huggingFaceLocal.generateWithFunctions(
-              mappedMessages,
-              options.tools,
-              {
-                maxTokens: options.max_tokens || 512, // Increase max tokens for function calling
-                temperature: options.temperature
-              }
-            );
-            
-            // Symbolic: Format response to match OpenAI API structure for consistent cortex processing
-            return {
-              choices: [
-                {
-                  message: result
-                }
-              ]
-            };
-          } else {
-            // Standard text generation without functions
-            const text = await huggingFaceLocal.generate(
-              mappedMessages,
-              {
-                maxTokens: options.max_tokens,
-                temperature: options.temperature
-              }
-            );
-            
-            return {
-              choices: [
-                {
-                  message: {
-                    content: text
-                  }
-                }
-              ]
-            };
-          }
-        } catch (error) {
-          console.error('Error using HuggingFaceLocalService:', error);
-          throw new Error(`Failed to generate text with local model: ${error}`);
-        }
-      }
-
       // Ensure the OpenAI client is available
       await this.clientService.ensureClient();
       
@@ -185,32 +112,7 @@ export class OpenAICompletionService implements ICompletionService {
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
   async streamModelResponse(messages: Array<{role: string; content: string}>): Promise<ModelStreamResponse> {
-    try {
-      // If in basic mode, use a non-streaming approach since local models might not support streaming
-      if (this.getCurrentMode() === OrchOSModeEnum.BASIC) {
-        const { HuggingFaceLocalService } = await import('../../../../../../services/huggingface/HuggingFaceLocalService');
-        const huggingFaceLocal = new HuggingFaceLocalService();
-        const modelId = getOption(STORAGE_KEYS.HF_MODEL) || 'onnx-community/Qwen2.5-0.5B-Instruct';
-        await huggingFaceLocal.loadModel(modelId);
-        
-        const mappedMessages = messages.map(m => ({
-          role: m.role === 'developer' ? 'system' : (m.role as 'system' | 'user' | 'assistant'),
-          content: m.content
-        }));
-        
-        const text = await huggingFaceLocal.generate(mappedMessages, {
-          maxTokens: 2048,
-          temperature: 0.7
-        });
-        
-        return {
-          responseText: text,
-          messageId: Date.now().toString(),
-          isComplete: true,
-          isDone: true
-        };
-      }
-      
+    try {      
       // Ensure the OpenAI client is available
       await this.clientService.ensureClient();
       

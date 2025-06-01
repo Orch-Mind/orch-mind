@@ -131,7 +131,6 @@ export class HuggingFaceLocalService {
     });
 
     await this.generator(prompt, {
-      max_new_tokens: opts?.maxTokens || 128,
       temperature: opts?.temperature || 0.7,
       streamer
     });
@@ -198,7 +197,6 @@ export class HuggingFaceLocalService {
     const text = await this.generate(
       augmentedMessages,
       {
-        maxTokens: opts?.maxTokens || 512, // Increase tokens to accommodate response format
         temperature: opts?.temperature || 0.7
       },
       (partial: string) => {
