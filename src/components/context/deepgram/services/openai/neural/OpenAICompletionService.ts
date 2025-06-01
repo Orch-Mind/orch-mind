@@ -126,8 +126,7 @@ export class OpenAICompletionService implements ICompletionService {
           role: m.role === 'developer' ? 'system' : m.role as 'system' | 'user' | 'assistant',
           content: m.content
         })),
-        stream: true,
-        temperature: 0.7,
+        stream: true
       });
       
       let fullResponse = '';

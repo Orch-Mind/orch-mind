@@ -113,8 +113,7 @@ export class OpenAINeuralSignalService implements INeuralSignalService, ISemanti
         model,
         messages: [systemPrompt, userPrompt],
         tools: tools,
-        tool_choice: { type: 'function', function: { name: 'activateBrainArea' } },
-        temperature: 0.7
+        tool_choice: { type: 'function', function: { name: 'activateBrainArea' } }
       });
       const toolCalls = response.choices?.[0]?.message?.tool_calls;
       let signals: NeuralSignalResponse['signals'] = [];
@@ -210,14 +209,14 @@ IMPORTANT: Always honor the neural core's specific domain and intensity level. H
     let userPromptText = `CORE: ${core}
     INTENSITY: ${intensity}
     ORIGINAL QUERY: ${query}`;
-        if (context) {
-          userPromptText += `
+    if (context) {
+      userPromptText += `
     CONTEXT: ${context}`;
-        }
-        if (language) {
-          userPromptText += `
+    }
+    if (language) {
+      userPromptText += `
     LANGUAGE: ${language}`;
-        }
+    }
 
     const userPrompt = {
       role: 'user',
@@ -230,8 +229,7 @@ IMPORTANT: Always honor the neural core's specific domain and intensity level. H
         model, 
         messages: [systemPrompt, userPrompt],
         tools: [enrichmentTool],
-        tool_choice: { type: 'function', function: { name: 'enrichSemanticQuery' } },
-        temperature: 0.7,
+        tool_choice: { type: 'function', function: { name: 'enrichSemanticQuery' } }
       });
       // Symbolic: Use central neural signal parser for all JSON arguments (tool_calls)
       const toolCalls = response.choices?.[0]?.message?.tool_calls;
