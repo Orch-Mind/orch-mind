@@ -30,6 +30,7 @@ export const STORAGE_KEYS = {
 
   // ===== Modelos Hugging Face =====
   HF_MODEL: 'huggingfaceModel',
+  HF_EMBEDDING_MODEL: 'huggingfaceEmbeddingModel',
   
   // ===== Configurações gerais do sistema =====
   USER_NAME: 'userName',

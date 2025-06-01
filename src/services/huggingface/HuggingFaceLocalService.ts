@@ -2,7 +2,8 @@
 // Symbolic cortex: Provides local inference using Hugging Face Transformers.js in the browser.
 // Processes symbolic text generation for Orch-OS in basic mode, without backend or API key.
 
-import { pipeline, TextGenerationPipeline } from "@huggingface/transformers";
+import { pipeline } from "@huggingface/transformers";
+import { getOption, STORAGE_KEYS } from "../StorageService";
 
 /**
  * Symbolic: Supported browser models for local inference (expand as needed)
@@ -110,7 +111,11 @@ export class HuggingFaceLocalService {
     opts?: HuggingFaceLocalOptions,
     onToken?: (text: string) => void
   ): Promise<string> {
-    if (!this.generator) throw new Error("Model not loaded");
+    // Symbolic: Auto-load model if not initialized
+    if (!this.generator) {
+      const modelId = opts?.model || getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0];
+      await this.loadModel(modelId);
+    }
     // Symbolic: Compose context for the LLM
     const prompt = messages.map(m => m.content).join("\n");
 
@@ -167,7 +172,11 @@ export class HuggingFaceLocalService {
     opts?: HuggingFaceLocalOptions,
     onToken?: (partial: string) => void
   ): Promise<HuggingFaceResponse> {
-    if (!this.generator) throw new Error("Model not loaded");
+    // Symbolic: Auto-load model if not initialized
+    if (!this.generator) {
+      const modelId = opts?.model || getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0];
+      await this.loadModel(modelId);
+    }
 
     // Filter out any incoming system prompts; only user/assistant messages allowed
     const filteredMessages = messages.filter(m => m.role !== "system");

@@ -114,8 +114,7 @@ export class OpenAINeuralSignalService implements INeuralSignalService, ISemanti
         messages: [systemPrompt, userPrompt],
         tools: tools,
         tool_choice: { type: 'function', function: { name: 'activateBrainArea' } },
-        temperature: 0.7,
-        max_tokens: 2048
+        temperature: 0.7
       });
       const toolCalls = response.choices?.[0]?.message?.tool_calls;
       let signals: NeuralSignalResponse['signals'] = [];
@@ -233,7 +232,6 @@ IMPORTANT: Always honor the neural core's specific domain and intensity level. H
         tools: [enrichmentTool],
         tool_choice: { type: 'function', function: { name: 'enrichSemanticQuery' } },
         temperature: 0.7,
-        max_tokens: 2048
       });
       // Symbolic: Use central neural signal parser for all JSON arguments (tool_calls)
       const toolCalls = response.choices?.[0]?.message?.tool_calls;
