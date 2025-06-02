@@ -24,6 +24,9 @@ import { PineconeMemoryService } from "./PineconeMemoryService";
 
 // Import of normalizeNamespace is no longer needed; namespace is managed internally by PineconeHelper (orchestrator abstraction)
 import { LoggingUtils } from "../../utils/LoggingUtils";
+import { ModeService, OrchOSModeEnum } from "../../../../../services/ModeService";
+import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
+import { STORAGE_KEYS, getOption } from "../../../../../services/StorageService";
 
 export class MemoryService implements IMemoryService {
   private currentUser: string = "default";
@@ -60,7 +63,9 @@ Never be generic. Always go deep.`
     // Initialize core components
     const formatter = new TranscriptionFormatter();
     const processor = new BatchTranscriptionProcessor(formatter);
-    const embeddingService = new OpenAIEmbeddingService(openAIService);
+    
+    // Dynamically select embedding service based on application mode (neural-symbolic decision gate)
+    const embeddingService = this.createEmbeddingService(openAIService);
     const persistenceService = new PineconeMemoryService(embeddingService);
     
     this.historyManager = new ConversationHistoryManager(systemMessage);
@@ -71,6 +76,48 @@ Never be generic. Always go deep.`
       persistenceService,
       formatter,
       processor
+    );
+    
+    // Subscribe to mode changes to update embedding service when needed
+    ModeService.onModeChange(() => this.updateEmbeddingService(openAIService));
+  }
+  
+  /**
+   * Creates the appropriate embedding service based on application mode
+   * Symbolic: Neural-symbolic gate to select correct embedding neural pathway
+   */
+  private createEmbeddingService(openAIService: IOpenAIService): IEmbeddingService {
+    const currentMode = ModeService.getMode();
+    
+    if (currentMode === OrchOSModeEnum.BASIC) {
+      // In basic mode, use HuggingFace with the selected model
+      const hfModel = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL);
+      LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Creating HuggingFaceEmbeddingService with model: ${hfModel || 'default'} for Basic mode`);
+      return new HuggingFaceEmbeddingService(hfModel);
+    } else {
+      // In advanced mode, use OpenAI with the selected model
+      const openaiModel = getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL);
+      LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Creating OpenAIEmbeddingService with model: ${openaiModel || 'default'} for Advanced mode`);
+      return new OpenAIEmbeddingService(openAIService);
+    }
+  }
+  
+  /**
+   * Updates the embedding service when the application mode changes
+   * Symbolic: Dynamic reconfiguration of neural pathways based on cognitive mode
+   */
+  private updateEmbeddingService(openAIService: IOpenAIService): void {
+    LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Updating embedding service based on mode change`);
+    const newEmbeddingService = this.createEmbeddingService(openAIService);
+    
+    // Update component references
+    this.embeddingService = newEmbeddingService;
+    this.persistenceService = new PineconeMemoryService(newEmbeddingService);
+    this.contextBuilder = new MemoryContextBuilder(
+      newEmbeddingService,
+      this.persistenceService,
+      new TranscriptionFormatter(),
+      new BatchTranscriptionProcessor(new TranscriptionFormatter())
     );
   }
   

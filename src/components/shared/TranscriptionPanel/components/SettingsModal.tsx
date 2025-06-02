@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useEffect, useState, useRef } from "react";
-import { getUserName, setOption, getOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../services/StorageService';
-
-// Importação dos componentes modularizados
+import React, { useEffect, useRef, useState } from "react";
+import { getOption, getUserName, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../services/StorageService';
+import { SUPPORTED_HF_EMBEDDING_MODELS } from '../../../../services/huggingface/HuggingFaceEmbeddingService';
+import { ModeService, OrchOSMode, OrchOSModeEnum } from '../../../../services/ModeService'; // Orch-OS Mode Cortex
 import {
+  ApiSettings,
+  AudioSettings,
   GeneralSettings,
   InterfaceSettings,
-  AudioSettings,
-  ApiSettings
+  ApiSettingsProps
 } from './settings';
-import { ModeService, OrchOSMode, OrchOSModeEnum } from '../../../../services/ModeService'; // Orch-OS Mode Cortex
 
 interface SettingsModalProps {
   show: boolean;
@@ -60,11 +60,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // ChatGPT, Deepgram & Pinecone
   const [chatgptApiKey, setChatgptApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.OPENAI_API_KEY) || '');
   const [chatgptModel, setChatgptModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-3.5-turbo');
+  const [chatgptTemperature, setChatgptTemperature] = useState<number>(() => getOption<number>(STORAGE_KEYS.CHATGPT_TEMPERATURE) ?? 0.7);
+  const [chatgptMaxTokens, setChatgptMaxTokens] = useState<number>(() => getOption<number>(STORAGE_KEYS.CHATGPT_MAX_TOKENS) ?? 2000);
+  const [openaiEmbeddingModel, setOpenaiEmbeddingModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL) || 'text-embedding-3-large');
+  
+  // HuggingFace
+  const [hfModel, setHfModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.HF_MODEL) || '');
+  const [hfEmbeddingModel, setHfEmbeddingModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.HF_EMBEDDING_MODEL) || SUPPORTED_HF_EMBEDDING_MODELS[0]);
+  
+  // Deepgram
   const [deepgramApiKey, setDeepgramApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_API_KEY) || '');
   const [deepgramModel, setDeepgramModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_MODEL) || 'nova-2');
   const [deepgramLanguage, setDeepgramLanguage] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR');
+  const [deepgramTier, setDeepgramTier] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_TIER) || 'enhanced');
+  
+  // Transcrição
+  const [transcriptionEnabled, setTranscriptionEnabled] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.TRANSCRIPTION_ENABLED) ?? true);
+  const [speakerIdentification, setSpeakerIdentification] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.SPEAKER_IDENTIFICATION) ?? true);
+  
   // Pinecone
   const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.PINECONE_API_KEY) || '');
+  const [pineconeEnvironment, setPineconeEnvironment] = useState<string>(() => getOption<string>(STORAGE_KEYS.PINECONE_ENVIRONMENT) || '');
+  const [pineconeIndex, setPineconeIndex] = useState<string>(() => getOption<string>(STORAGE_KEYS.PINECONE_INDEX) || '');
+  
+  // Interface adicional
+  const [theme, setTheme] = useState<string>(() => getOption<string>(STORAGE_KEYS.THEME) || 'auto');
+  const [uiDensity, setUiDensity] = useState<string>(() => getOption<string>(STORAGE_KEYS.UI_DENSITY) || 'normal');
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.SHOW_ADVANCED_SETTINGS) ?? false);
+  
+  // Debug
+  const [debugMode, setDebugMode] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.DEBUG_MODE) ?? false);
+  const [logLevel, setLogLevel] = useState<string>(() => getOption<string>(STORAGE_KEYS.LOG_LEVEL) || 'info');
   
   // Orch-OS Mode Cortex: single source of truth for mode
   // Symbolic: mode state uses enum for full type safety
@@ -118,6 +144,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         case STORAGE_KEYS.ENABLE_GLASSMORPHISM: setEnableGlassmorphism(value); break;
         case STORAGE_KEYS.PANEL_TRANSPARENCY: setPanelTransparency(value); break;
         case STORAGE_KEYS.COLOR_THEME: setColorTheme(value); break;
+        case STORAGE_KEYS.THEME: setTheme(value); break;
+        case STORAGE_KEYS.UI_DENSITY: setUiDensity(value); break;
+        case STORAGE_KEYS.SHOW_ADVANCED_SETTINGS: setShowAdvancedSettings(value); break;
         
         // Audio
         case STORAGE_KEYS.AUDIO_QUALITY: setAudioQuality(value); break;
@@ -127,6 +156,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         case STORAGE_KEYS.ENHANCED_PUNCTUATION: setEnhancedPunctuation(value); break;
         case STORAGE_KEYS.SPEAKER_DIARIZATION: setSpeakerDiarization(value); break;
         
+        // Transcrição
+        case STORAGE_KEYS.TRANSCRIPTION_ENABLED: setTranscriptionEnabled(value); break;
+        case STORAGE_KEYS.SPEAKER_IDENTIFICATION: setSpeakerIdentification(value); break;
+        
         // Sincronização especial entre language e deepgramLanguage
         case STORAGE_KEYS.DEEPGRAM_LANGUAGE: 
           console.log('🌐 Atualizando idiomas no modal:', value);
@@ -134,12 +167,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           setLanguage(value);
           break;
           
-        // API Keys
-        case STORAGE_KEYS.PINECONE_API_KEY: setPineconeApiKey(value); break;
+        // OpenAI/ChatGPT
         case STORAGE_KEYS.OPENAI_API_KEY: setChatgptApiKey(value); break;
         case STORAGE_KEYS.CHATGPT_MODEL: setChatgptModel(value); break;
+        case STORAGE_KEYS.CHATGPT_TEMPERATURE: setChatgptTemperature(value); break;
+        case STORAGE_KEYS.CHATGPT_MAX_TOKENS: setChatgptMaxTokens(value); break;
+        case STORAGE_KEYS.OPENAI_EMBEDDING_MODEL: setOpenaiEmbeddingModel(value); break;
+        
+        // HuggingFace
+        case STORAGE_KEYS.HF_MODEL: setHfModel(value); break;
+        case STORAGE_KEYS.HF_EMBEDDING_MODEL: setHfEmbeddingModel(value); break;
+        
+        // Deepgram
         case STORAGE_KEYS.DEEPGRAM_API_KEY: setDeepgramApiKey(value); break;
         case STORAGE_KEYS.DEEPGRAM_MODEL: setDeepgramModel(value); break;
+        case STORAGE_KEYS.DEEPGRAM_TIER: setDeepgramTier(value); break;
+        
+        // Pinecone
+        case STORAGE_KEYS.PINECONE_API_KEY: setPineconeApiKey(value); break;
+        case STORAGE_KEYS.PINECONE_ENVIRONMENT: setPineconeEnvironment(value); break;
+        case STORAGE_KEYS.PINECONE_INDEX: setPineconeIndex(value); break;
+        
+        // Debug
+        case STORAGE_KEYS.DEBUG_MODE: setDebugMode(value); break;
+        case STORAGE_KEYS.LOG_LEVEL: setLogLevel(value); break;
       }
     };
     
@@ -153,11 +204,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   }, []); // Sem dependências - só executa uma vez na montagem do componente
 
   // Salva todas as configurações no armazenamento
-  const saveSettings = () => {
+  useEffect(() => {
+    if (applicationMode) setOption(STORAGE_KEYS.APPLICATION_MODE, applicationMode);
+    ModeService.setMode(applicationMode); // Symbolic: update mode cortex
+
     // General
     setOption(STORAGE_KEYS.USER_NAME, name);
-    setOption(STORAGE_KEYS.APPLICATION_MODE, applicationMode);
-    ModeService.setMode(applicationMode); // Symbolic: update mode cortex
     setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
     setOption(STORAGE_KEYS.MATRIX_DENSITY, matrixDensity);
     setOption(STORAGE_KEYS.ENABLE_EFFECTS, enableEffects);
@@ -177,17 +229,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setOption(STORAGE_KEYS.ECHO_CANCELLATION, echoCancellation);
     setOption(STORAGE_KEYS.ENHANCED_PUNCTUATION, enhancedPunctuation);
     setOption(STORAGE_KEYS.SPEAKER_DIARIZATION, speakerDiarization);
-    setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, deepgramLanguage);
     
-    // API Keys
-    setOption(STORAGE_KEYS.PINECONE_API_KEY, pineconeApiKey);
-    setOption(STORAGE_KEYS.OPENAI_API_KEY, chatgptApiKey);
-    setOption(STORAGE_KEYS.CHATGPT_MODEL, chatgptModel);
-    setOption(STORAGE_KEYS.DEEPGRAM_API_KEY, deepgramApiKey);
-    setOption(STORAGE_KEYS.DEEPGRAM_MODEL, deepgramModel);
-    
-    onClose();
-  };
+    // Persistência universal (independente do modo)
+    setOption(STORAGE_KEYS.HF_MODEL, hfModel);
+    setOption(STORAGE_KEYS.THEME, theme);
+    setOption(STORAGE_KEYS.UI_DENSITY, uiDensity);
+    setOption(STORAGE_KEYS.SHOW_ADVANCED_SETTINGS, showAdvancedSettings);
+    setOption(STORAGE_KEYS.TRANSCRIPTION_ENABLED, transcriptionEnabled);
+    setOption(STORAGE_KEYS.SPEAKER_IDENTIFICATION, speakerIdentification);
+    setOption(STORAGE_KEYS.PINECONE_ENVIRONMENT, pineconeEnvironment);
+    setOption(STORAGE_KEYS.PINECONE_INDEX, pineconeIndex);
+    setOption(STORAGE_KEYS.DEEPGRAM_TIER, deepgramTier);
+    setOption(STORAGE_KEYS.CHATGPT_TEMPERATURE, chatgptTemperature);
+    setOption(STORAGE_KEYS.CHATGPT_MAX_TOKENS, chatgptMaxTokens);
+    setOption(STORAGE_KEYS.DEBUG_MODE, debugMode);
+    setOption(STORAGE_KEYS.LOG_LEVEL, logLevel);
+
+    // Configurações específicas por modo
+    if (applicationMode === OrchOSModeEnum.ADVANCED) {
+      // API Keys para o modo avançado apenas
+      setOption(STORAGE_KEYS.OPENAI_API_KEY, chatgptApiKey);
+      setOption(STORAGE_KEYS.CHATGPT_MODEL, chatgptModel);
+      setOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL, openaiEmbeddingModel);
+      setOption(STORAGE_KEYS.DEEPGRAM_API_KEY, deepgramApiKey);
+      setOption(STORAGE_KEYS.DEEPGRAM_MODEL, deepgramModel);
+      setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, deepgramLanguage);
+      setOption(STORAGE_KEYS.PINECONE_API_KEY, pineconeApiKey);
+    } else {
+      // Configurações específicas para o modo básico
+      setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, hfEmbeddingModel);
+    }
+  }, [ 
+    name, enableMatrix, matrixDensity, enableEffects, enableAnimations, darkMode, enableNeumorphism, 
+    enableGlassmorphism, panelTransparency, colorTheme, audioQuality, autoGainControl,
+    noiseSuppression, echoCancellation, enhancedPunctuation, speakerDiarization, 
+    chatgptApiKey, chatgptModel, openaiEmbeddingModel, hfEmbeddingModel, deepgramApiKey, deepgramModel, deepgramLanguage, pineconeApiKey, applicationMode]);
 
   // Se não for exibido, não renderizar nada
   if (!show) return null;
@@ -295,13 +371,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'advanced' && (
             <ApiSettings
               applicationMode={applicationMode}
-              setApplicationMode={(mode: OrchOSMode) => setApplicationMode(mode)}
+              setApplicationMode={setApplicationMode}
               pineconeApiKey={pineconeApiKey}
               setPineconeApiKey={setPineconeApiKey}
               chatgptApiKey={chatgptApiKey}
               setChatgptApiKey={setChatgptApiKey}
               chatgptModel={chatgptModel}
               setChatgptModel={setChatgptModel}
+              openaiEmbeddingModel={openaiEmbeddingModel}
+              setOpenaiEmbeddingModel={setOpenaiEmbeddingModel}
+              hfModel={hfModel}
+              setHfModel={setHfModel}
+              hfEmbeddingModel={hfEmbeddingModel}
+              setHfEmbeddingModel={setHfEmbeddingModel}
               deepgramApiKey={deepgramApiKey}
               setDeepgramApiKey={setDeepgramApiKey}
               deepgramModel={deepgramModel}
@@ -323,8 +405,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             Cancel
           </button>
           <button 
-            className="px-6 py-2 bg-gradient-to-r from-cyan-600/50 to-blue-600/50 text-white rounded hover:from-cyan-500/60 hover:to-blue-500/60 transition-all"
-            onClick={saveSettings}
+            className="px-6 py-2 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 rounded hover:from-cyan-500/40 hover:to-blue-500/40 transition-all shadow-[0_0_10px_rgba(0,200,255,0.2)] backdrop-blur-sm"
+            onClick={onClose}
           >
             Apply Changes
           </button>

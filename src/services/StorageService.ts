@@ -72,6 +72,7 @@ export const STORAGE_KEYS = {
   CHATGPT_MODEL: 'chatgptModel',
   CHATGPT_TEMPERATURE: 'chatgptTemperature',
   CHATGPT_MAX_TOKENS: 'chatgptMaxTokens',
+  OPENAI_EMBEDDING_MODEL: 'openaiEmbeddingModel',
   
   // Deepgram
   DEEPGRAM_API_KEY: 'deepgramApiKey',

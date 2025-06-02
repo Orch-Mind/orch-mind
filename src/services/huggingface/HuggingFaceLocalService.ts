@@ -49,6 +49,20 @@ export class HuggingFaceLocalService {
   private generator: any = null;
   private currentModel: string | null = null;
 
+  constructor() {
+    this.initialize(); // Auto-inicializa o serviço
+  }
+
+  /**
+   * Symbolic: Initializes the service by loading the user-selected HuggingFace model from storage.
+   * If no model is set, loads the default model.
+   * This ensures persistence of user preference across reloads.
+   */
+  async initialize(): Promise<void> {
+    const savedModel = getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0];
+    await this.loadModel(savedModel);
+  }
+
   /**
    * Loads a supported model for local inference with auto device/dtype fallback.
    * Symbolic: Tries WebGPU + quantized (q4), depois q8, depois fp32, depois CPU.

@@ -300,15 +300,24 @@ LANGUAGE: ${language}`;
 
   /**
    * Creates embeddings for the provided text
+   * @param text Text to create embeddings for
+   * @param model Optional embedding model to use, defaults to text-embedding-3-large or configured value
    */
-  async createEmbedding(text: string): Promise<number[]> {
+  async createEmbedding(text: string, model?: string): Promise<number[]> {
     if (!this.openai) {
       throw new Error("OpenAI client not initialized");
     }
 
     try {
+      // Get the model from the param or use the stored preference or default
+      const embeddingModel = model || 
+                          getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL) || 
+                          "text-embedding-3-large";
+                          
+      LoggingUtils.logInfo(`Creating embedding with model: ${embeddingModel}`);
+      
       const embeddingResponse = await this.openai.embeddings.create({
-        model: "text-embedding-3-large",
+        model: embeddingModel,
         input: text.trim(),
       });
 
@@ -322,25 +331,36 @@ LANGUAGE: ${language}`;
   /**
    * Creates embeddings for a batch of texts (batch processing)
    * @param texts Array of texts to generate embeddings in batch
+   * @param model Optional embedding model to use, defaults to text-embedding-3-large or configured value
    * @returns Array of arrays of numbers representing the embeddings
    */
-  async createEmbeddings(texts: string[]): Promise<number[][]> {
+  async createEmbeddings(texts: string[], model?: string): Promise<number[][]> {
     if (!this.openai) {
       throw new Error("OpenAI client not initialized");
     }
 
     try {
-      // Ensure all texts are trimmed to remove unnecessary spaces
-      const trimmedTexts = texts.map(text => text.trim());
+      if (texts.length === 0) return [];
 
-      // OpenAI API already supports sending multiple texts in a single request
+      // Filter out empty texts
+      const validTexts = texts.filter(t => t && t.trim().length > 0).map(t => t.trim());
+      if (validTexts.length === 0) return [];
+
+      // Get the model from the param or use the stored preference or default
+      const embeddingModel = model || 
+                          getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL) || 
+                          "text-embedding-3-large";
+                          
+      LoggingUtils.logInfo(`Creating batch embeddings with model: ${embeddingModel}`);
+
       const embeddingResponse = await this.openai.embeddings.create({
-        model: "text-embedding-3-large",
-        input: trimmedTexts,
+        model: embeddingModel,
+        input: validTexts,
       });
 
-      // Organize the results in the same order as the input texts
-      return embeddingResponse.data.map(item => item.embedding);
+      // Sort the results by index to ensure they match the input order
+      const sortedData = [...embeddingResponse.data].sort((a, b) => a.index - b.index);
+      return sortedData.map(d => d.embedding);
     } catch (error) {
       LoggingUtils.logError("Error creating embeddings in batch", error);
       throw error;

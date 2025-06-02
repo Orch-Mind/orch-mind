@@ -30,15 +30,18 @@ export interface IOpenAIService {
   
   /**
    * Cria embeddings para o texto fornecido
+   * @param text Texto para gerar embedding
+   * @param model Modelo de embedding a ser usado (opcional)
    */
-  createEmbedding(text: string): Promise<number[]>;
+  createEmbedding(text: string, model?: string): Promise<number[]>;
   
   /**
    * Cria embeddings para um lote de textos (processamento em batch)
    * @param texts Array de textos para gerar embeddings
+   * @param model Modelo de embedding a ser usado (opcional)
    * @returns Array de arrays de numbers representando os embeddings
    */
-  createEmbeddings?(texts: string[]): Promise<number[][]>;
+  createEmbeddings?(texts: string[], model?: string): Promise<number[][]>;
   
   /**
    * Verifica se o cliente OpenAI está inicializado

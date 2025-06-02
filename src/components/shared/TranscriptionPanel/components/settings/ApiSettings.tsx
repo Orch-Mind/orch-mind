@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useState, useEffect } from 'react';
-import { setOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../../services/StorageService';
+import React, { useEffect } from 'react';
+import { setOption, STORAGE_KEYS } from '../../../../../services/StorageService';
+import { SUPPORTED_OPENAI_EMBEDDING_MODELS } from '../../../../context/deepgram/services/openai/OpenAIEmbeddingService';
+import { SUPPORTED_HF_EMBEDDING_MODELS } from '../../../../../services/huggingface/HuggingFaceEmbeddingService';
 
 /**
  * Componente para configurações de APIs externas (Deepgram, ChatGPT, Pinecone)
@@ -10,7 +12,7 @@ import { setOption, subscribeToStorageChanges, STORAGE_KEYS } from '../../../../
  */
 import { OrchOSMode, OrchOSModeEnum } from '../../../../../services/ModeService';
 
-interface ApiSettingsProps {
+export interface ApiSettingsProps {
   applicationMode: OrchOSMode;
   setApplicationMode: (mode: OrchOSMode) => void;
   // Pinecone
@@ -21,6 +23,13 @@ interface ApiSettingsProps {
   setChatgptApiKey: (value: string) => void;
   chatgptModel: string;
   setChatgptModel: (value: string) => void;
+  openaiEmbeddingModel: string;
+  setOpenaiEmbeddingModel: (value: string) => void;
+  // HuggingFace
+  hfModel: string;
+  setHfModel: (value: string) => void;
+  hfEmbeddingModel: string;
+  setHfEmbeddingModel: (value: string) => void;
   // Deepgram
   deepgramApiKey: string;
   setDeepgramApiKey: (value: string) => void;
@@ -33,7 +42,7 @@ interface ApiSettingsProps {
   setOpenSection: (section: 'pinecone' | 'chatgpt' | 'deepgram' | null) => void;
 }
 
-const ApiSettings: React.FC<ApiSettingsProps> = ({
+export const ApiSettings: React.FC<ApiSettingsProps> = ({  
   applicationMode,
   setApplicationMode,
   pineconeApiKey,
@@ -42,6 +51,12 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
   setChatgptApiKey,
   chatgptModel,
   setChatgptModel,
+  openaiEmbeddingModel,
+  setOpenaiEmbeddingModel,
+  hfModel,
+  setHfModel,
+  hfEmbeddingModel,
+  setHfEmbeddingModel,
   deepgramApiKey,
   setDeepgramApiKey,
   deepgramModel,
@@ -51,7 +66,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
   openSection,
   setOpenSection
 }) => {
-  // Estado simbólico para o modelo Hugging Face selecionado
+  // AI model options for HuggingFace
   const HF_MODELS = [
   { id: "onnx-community/Qwen2.5-0.5B-Instruct", label: "Qwen2.5-0.5B-Instruct (Chat, fast, recommended)" },
   { id: "Xenova/phi-3-mini-4k-instruct", label: "Phi-3 Mini (Chat, experimental)" },
@@ -59,13 +74,123 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
   { id: "HuggingFaceTB/SmolLM2-135M-Instruct", label: "SmolLM2-135M (Ultra lightweight, chat)" },
   { id: "Xenova/distilgpt2", label: "DistilGPT2 (Basic text generation)" }
 ];
-  const [huggingfaceModel, setHuggingfaceModel] = useState(HF_MODELS[0].id);
 
+  // Efeito global para compatibilidade de idioma com modelo Deepgram
   useEffect(() => {
-    // Carrega o modelo salvo no storage, se existir
-    const saved = (window && window.localStorage) ? localStorage.getItem('huggingfaceModel') : undefined;
-    if (saved && HF_MODELS.some(m => m.id === saved)) setHuggingfaceModel(saved);
-  }, []);
+    if (openSection === 'deepgram') {
+      // Determinar os idiomas disponíveis para o modelo selecionado
+      type ModelLanguageMap = {
+        [key: string]: string[];
+      };
+      
+      // Dicionário de idiomas disponíveis por família de modelo
+      const modelLanguageCompatibility: ModelLanguageMap = {
+        // Nova-3 suporta apenas inglês na versão inicial
+        'nova-3': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ'],
+        'nova-3-medical': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ'],
+        
+        // Nova-2 tem suporte extenso a idiomas
+        'nova-2': [
+          'multi', 
+          'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+          'pt', 'pt-BR', 'pt-PT',
+          'es', 'es-419',
+          'fr', 'fr-CA',
+          'de', 'de-CH',
+          'it', 'ja', 'ko', 'ko-KR',
+          'zh-CN', 'zh-TW', 'zh-HK',
+          'ru', 'hi', 'nl', 'nl-BE',
+          'bg', 'ca', 'cs', 'da', 'da-DK',
+          'el', 'et', 'fi', 'hu', 'id',
+          'lv', 'lt', 'ms', 'no', 'pl', 'ro',
+          'sk', 'sv', 'sv-SE', 'th', 'th-TH',
+          'tr', 'uk', 'vi'
+        ],
+        'nova-2-meeting': [
+          'multi', 
+          'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+          'pt', 'pt-BR', 'pt-PT',
+          'es', 'es-419', 'fr', 'de', 'it', 'ja'
+        ],
+        'nova-2-phonecall': [
+          'multi', 
+          'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+          'pt', 'pt-BR', 'pt-PT',
+          'es', 'es-419', 'fr', 'de', 'it', 'ja'
+        ],
+        'nova-2-video': [
+          'multi', 
+          'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+          'pt', 'pt-BR', 'pt-PT',
+          'es', 'es-419', 'fr', 'de', 'it', 'ja'
+        ],
+        
+        // Nova modelos padrão
+        'nova': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'ko', 'nl', 'pl', 'ru'],
+        'nova-phonecall': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja'],
+        
+        // Enhanced models
+        'enhanced': ['en', 'en-US', 'en-GB', 'en-AU', 'pt', 'pt-BR', 'es', 'es-419', 'fr', 'de', 'it', 'ja', 'hi', 'nl', 'id', 'zh-CN', 'ko', 'ru'],
+        'enhanced-meeting': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja'],
+        'enhanced-phonecall': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'ko'],
+        'enhanced-finance': ['en', 'en-US', 'en-GB'],
+        
+        // Base models
+        'base': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'hi', 'nl', 'id', 'zh-CN', 'ko'],
+        'base-meeting': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja'],
+        'base-phonecall': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'ko'],
+        'base-finance': ['en', 'en-US', 'en-GB']
+      };
+      
+      // Obter idiomas disponíveis para o modelo selecionado
+      const modelPrefix = deepgramModel.split('-')[0]; // ex: 'nova-2-meeting' -> 'nova'
+      const availableLanguages = modelLanguageCompatibility[deepgramModel] ||
+                               modelLanguageCompatibility[`${modelPrefix}-general`] ||
+                               modelLanguageCompatibility[modelPrefix] || 
+                               ['en', 'en-US']; // fallback para inglês
+      
+      // Verificar se o idioma atual é compatível
+      const isCurrentLanguageCompatible = availableLanguages.includes(deepgramLanguage);
+      
+      // Se não for compatível, selecionar o primeiro idioma disponível
+      if (!isCurrentLanguageCompatible && availableLanguages.length > 0) {
+        console.log(`🌐 Modelo ${deepgramModel} não suporta idioma ${deepgramLanguage}, alterando para ${availableLanguages[0]}`);
+        setDeepgramLanguage(availableLanguages[0]);
+        // Salvar na configuração global
+        setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, availableLanguages[0]);
+      }
+    }
+  }, [deepgramModel, deepgramLanguage, openSection]);
+  
+  // Efeito para limpar a seção aberta ao trocar de modo
+  useEffect(() => {
+    // Reset the open section when switching modes to avoid showing wrong sections
+    setOpenSection(null);
+  }, [applicationMode]);
+
+  // Efeito para ouvir mudanças nas configurações globais
+  useEffect(() => {
+    // Só processa se estiver no modo avançado e a seção Deepgram estiver aberta
+    if (openSection === 'deepgram' && applicationMode === OrchOSModeEnum.ADVANCED) {
+      const handleStorageChange = (key: string, value: any) => {
+        if (key === 'deepgramLanguage' && value && value !== deepgramLanguage) {
+          // Implementar a verificação de compatibilidade aqui se necessário
+          setDeepgramLanguage(value);
+        }
+      };
+      
+      const storageListener = (e: StorageEvent) => {
+        if (e.key) handleStorageChange(e.key, e.newValue);
+      };
+      
+      window.addEventListener('storage', storageListener);
+      
+      return () => {
+        window.removeEventListener('storage', storageListener);
+      };
+    }
+  }, [deepgramLanguage, openSection, applicationMode]);
+
   // Renderização condicional baseada no modo da aplicação
   // Symbolic: Use enum for mode-dependent logic
   if (applicationMode === OrchOSModeEnum.BASIC) {
@@ -90,9 +215,9 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 title="Select HuggingFace Model"
                 aria-label="Select HuggingFace Model"
-                value={huggingfaceModel}
+                value={hfModel}
                 onChange={e => {
-                  setHuggingfaceModel(e.target.value);
+                  setHfModel(e.target.value);
                   setOption(STORAGE_KEYS.HF_MODEL, e.target.value);
                 }}
               >
@@ -100,6 +225,28 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                   <option key={m.id} value={m.id}>{m.label}</option>
                 ))}
               </select>
+            </div>
+          </div>
+          
+          <div className="bg-black/40 p-4 rounded-md">
+            <h4 className="text-cyan-400 font-medium mb-2">Hugging Face Embedding Models <span className="text-xs text-cyan-500/70">(Basic Mode)</span></h4>
+            <p className="text-white/70 text-sm">Select a local model for generating vector embeddings in the neural memory database.</p>
+            <div className="mt-3">
+              <select
+                className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
+                title="Select HuggingFace Embedding Model"
+                aria-label="Select HuggingFace Embedding Model"
+                value={hfEmbeddingModel}
+                onChange={e => {
+                  setHfEmbeddingModel(e.target.value);
+                  setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, e.target.value);
+                }}
+              >
+                {SUPPORTED_HF_EMBEDDING_MODELS.map(model => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+              <p className="text-xs text-cyan-400/60 mt-1">Modelo utilizado para gerar embeddings e busca semântica na memória no modo básico.</p>
             </div>
           </div>
           
@@ -185,7 +332,10 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 id="pineconeApiKey"
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 value={pineconeApiKey}
-                onChange={e => setPineconeApiKey(e.target.value)}
+                onChange={e => {
+                  setPineconeApiKey(e.target.value);
+                  setOption(STORAGE_KEYS.PINECONE_API_KEY, e.target.value);
+                }}
                 placeholder="Enter your Pinecone API key"
               />
               <p className="text-xs text-cyan-400/60 mt-1">Used for long-term memory storage.</p>
@@ -206,7 +356,10 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 id="chatgptApiKey"
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 value={chatgptApiKey}
-                onChange={e => setChatgptApiKey(e.target.value)}
+                onChange={e => {
+                  setChatgptApiKey(e.target.value);
+                  setOption(STORAGE_KEYS.OPENAI_API_KEY, e.target.value);
+                }}
                 placeholder="Enter your ChatGPT API key"
               />
             </div>
@@ -217,7 +370,10 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 id="chatgptModel"
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 value={chatgptModel}
-                onChange={e => setChatgptModel(e.target.value)}
+                onChange={e => {
+                  setChatgptModel(e.target.value);
+                  setOption(STORAGE_KEYS.CHATGPT_MODEL, e.target.value);
+                }}
                 title="Select ChatGPT Model"
               >
                 {/* Modelos ChatGPT em ordem cronológica de lançamento */}
@@ -232,6 +388,28 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 <option value="gpt-4.5-preview">GPT-4.5 Preview</option>
               </select>
             </div>
+            
+            {/* OpenAI Embedding Model - apenas no modo avançado */}
+            {applicationMode === OrchOSModeEnum.ADVANCED && (
+              <div>
+                <label htmlFor="openaiEmbeddingModel" className="block mb-1 text-sm text-cyan-200/80">OpenAI Embedding Model <span className="text-xs text-cyan-500/70">(Advanced Mode)</span></label>
+                <select
+                  id="openaiEmbeddingModel"
+                  className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
+                  value={openaiEmbeddingModel}
+                  onChange={e => {
+                    setOpenaiEmbeddingModel(e.target.value);
+                    setOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL, e.target.value);
+                  }}
+                  title="Select OpenAI Embedding Model"
+                >
+                  {SUPPORTED_OPENAI_EMBEDDING_MODELS.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-cyan-400/60 mt-1">Modelo utilizado para gerar embeddings e busca semântica na memória no modo avançado.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -248,7 +426,10 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 id="deepgramApiKey"
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 value={deepgramApiKey}
-                onChange={e => setDeepgramApiKey(e.target.value)}
+                onChange={e => {
+                  setDeepgramApiKey(e.target.value);
+                  setOption(STORAGE_KEYS.DEEPGRAM_API_KEY, e.target.value);
+                }}
                 placeholder="Enter your Deepgram API key"
               />
             </div>
@@ -259,7 +440,10 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
                 id="deepgramModel"
                 className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
                 value={deepgramModel}
-                onChange={e => setDeepgramModel(e.target.value)}
+                onChange={e => {
+                  setDeepgramModel(e.target.value);
+                  setOption(STORAGE_KEYS.DEEPGRAM_MODEL, e.target.value);
+                }}
                 title="Select Deepgram Model"
               >
                 {/* Nova-3 - Latest and most advanced */}
@@ -303,198 +487,150 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
             {/* Compatibilidade modelo-idioma */}
             <div>
               <label htmlFor="deepgramLanguage" className="block mb-1 text-sm text-cyan-200/80">Transcription Language</label>
-              
-              {/* Mapa de compatibilidade entre modelos e idiomas */}
-              {(() => {
-                // Tipagem para assegurar que os índices string funcionem corretamente
-                type ModelLanguageMap = {
-                  [key: string]: string[];
-                };
                 
-                // Dicionário de idiomas disponíveis por família de modelo
-                // Baseado na documentação oficial mais recente do Deepgram
-                const modelLanguageCompatibility: ModelLanguageMap = {
-                  // Nova-3 suporta apenas inglês na versão inicial
-                  'nova-3': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ'],
-                  'nova-3-medical': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ'],
-                  
-                  // Nova-2 tem suporte extenso a idiomas
-                  'nova-2': [
-                    'multi', 
-                    'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
-                    'pt', 'pt-BR', 'pt-PT',
-                    'es', 'es-419',
-                    'fr', 'fr-CA',
-                    'de', 'de-CH',
-                    'it', 'ja', 'ko', 'ko-KR',
-                    'zh-CN', 'zh-TW', 'zh-HK',
-                    'ru', 'hi', 'nl', 'nl-BE',
-                    'bg', 'ca', 'cs', 'da', 'da-DK',
-                    'el', 'et', 'fi', 'hu', 'id',
-                    'lv', 'lt', 'ms', 'no', 'pl', 'ro',
-                    'sk', 'sv', 'sv-SE', 'th', 'th-TH',
-                    'tr', 'uk', 'vi'
-                  ],
-                  'nova-2-meeting': [
-                    'multi', 
-                    'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
-                    'es', 'fr', 'de', 'pt-BR'
-                  ],
-                  'nova-2-phonecall': [
-                    'multi', 
-                    'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 
-                    'es', 'fr', 'de', 'pt-BR'
-                  ],
-                  'nova-2-video': [
-                    'multi',
-                    'en', 'en-US', 'en-GB', 'en-AU',  
-                    'es', 'fr', 'de', 'pt-BR'
-                  ],
-                  
-                  // Nova suporta principalmente inglês
-                  'nova': ['en', 'en-US', 'en-GB', 'en-AU'],
-                  'nova-phonecall': ['en', 'en-US', 'en-GB'],
-                  
-                  // Enhanced suporta alguns idiomas principais
-                  'enhanced': ['en', 'en-US', 'en-GB', 'en-AU', 'es', 'fr', 'de', 'pt-BR', 'ja', 'ko'],
-                  'enhanced-meeting': ['en', 'en-US', 'en-GB', 'es', 'fr', 'de'],
-                  'enhanced-phonecall': ['en', 'en-US', 'en-GB', 'es'],
-                  'enhanced-finance': ['en', 'en-US', 'en-GB'],
-                  
-                  // Base com suporte limitado
-                  'base': ['en', 'en-US', 'en-GB', 'en-AU', 'es', 'fr', 'de', 'pt-BR', 'ja'],
-                  'base-meeting': ['en', 'en-US', 'en-GB'],
-                  'base-phonecall': ['en', 'en-US', 'en-GB', 'es'],
-                  'base-finance': ['en', 'en-US']
-                };
-                
-                // Determinar os idiomas disponíveis para o modelo selecionado
-                const modelPrefix = deepgramModel.split('-')[0]; // ex: 'nova-2-meeting' -> 'nova'
-                const availableLanguages = modelLanguageCompatibility[deepgramModel] ||
-                                          modelLanguageCompatibility[`${modelPrefix}-general`] ||
-                                          modelLanguageCompatibility[modelPrefix] || 
-                                          ['en', 'en-US']; // fallback para inglês
-                                       
-                // Verificar se o idioma atual é compatível
-                const isCurrentLanguageCompatible = availableLanguages.includes(deepgramLanguage);
-                
-                // Se não for compatível, selecionar o primeiro idioma disponível
-                React.useEffect(() => {
-                  if (!isCurrentLanguageCompatible && availableLanguages.length > 0) {
-                    console.log(`🌐 Modelo ${deepgramModel} não suporta idioma ${deepgramLanguage}, alterando para ${availableLanguages[0]}`);
-                    setDeepgramLanguage(availableLanguages[0]);
-                    // Salvar na configuração global
-                    setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, availableLanguages[0]);
-                  }
-                }, [deepgramModel]);
-                
-                // Ouvir mudanças nas configurações globais
-                React.useEffect(() => {
-                  const handleStorageChange = (key: string, value: any) => {
-                    if (key === 'deepgramLanguage' && value && value !== deepgramLanguage) {
-                      // Verifica se o novo idioma é compatível com o modelo atual
-                      if (availableLanguages.includes(value)) {
-                        console.log(`🌐 ApiSettings: Sincronizando idioma com configurações globais: ${value}`);
-                        setDeepgramLanguage(value);
-                      } else {
-                        console.log(`⚠️ ApiSettings: Idioma ${value} incompatível com modelo ${deepgramModel}`);
-                      }
-                    }
+              {/* Seletor de idioma filtrado por compatibilidade com o modelo */}
+              <select
+                id="deepgramLanguage"
+                className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
+                value={deepgramLanguage}
+                onChange={e => {
+                  const newValue = e.target.value;
+                  setDeepgramLanguage(newValue);
+                  setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, newValue);
+                }}
+                title="Select Transcription Language"
+              >
+                {(() => {
+                  // Definições de idiomas para exibição
+                  const languageDisplay: { [key: string]: string } = {
+                    'multi': 'Multilingual (Auto-detect)',
+                    'en': 'English (Global)',
+                    'en-US': 'English (US)',
+                    'en-GB': 'English (UK)',
+                    'en-AU': 'English (Australia)',
+                    'en-IN': 'English (India)',
+                    'en-NZ': 'English (New Zealand)',
+                    'pt': 'Portuguese',
+                    'pt-BR': 'Portuguese (Brazil)',
+                    'pt-PT': 'Portuguese (Portugal)',
+                    'es': 'Spanish',
+                    'es-419': 'Spanish (Latin America)',
+                    'fr': 'French',
+                    'fr-CA': 'French (Canada)',
+                    'de': 'German',
+                    'de-CH': 'German (Switzerland)',
+                    'it': 'Italian',
+                    'ja': 'Japanese',
+                    'ko': 'Korean',
+                    'ko-KR': 'Korean',
+                    'zh-CN': 'Chinese (Simplified)',
+                    'zh-TW': 'Chinese (Traditional)',
+                    'zh-HK': 'Chinese (Cantonese)',
+                    'ru': 'Russian',
+                    'hi': 'Hindi',
+                    'nl': 'Dutch',
+                    'nl-BE': 'Dutch (Belgium)/Flemish',
+                    'bg': 'Bulgarian',
+                    'ca': 'Catalan',
+                    'cs': 'Czech',
+                    'da': 'Danish',
+                    'da-DK': 'Danish',
+                    'el': 'Greek',
+                    'et': 'Estonian',
+                    'fi': 'Finnish',
+                    'hu': 'Hungarian',
+                    'id': 'Indonesian',
+                    'lv': 'Latvian',
+                    'lt': 'Lithuanian',
+                    'ms': 'Malay',
+                    'no': 'Norwegian',
+                    'pl': 'Polish',
+                    'ro': 'Romanian',
+                    'sk': 'Slovak',
+                    'sv': 'Swedish',
+                    'sv-SE': 'Swedish',
+                    'th': 'Thai',
+                    'th-TH': 'Thai',
+                    'tr': 'Turkish',
+                    'uk': 'Ukrainian',
+                    'vi': 'Vietnamese'
                   };
                   
-                  // Registra o listener para mudanças
-                  const unsubscribe = subscribeToStorageChanges(handleStorageChange);
+                  // Mapear idiomas disponíveis para o modelo
+                  // Dicionário de idiomas disponíveis por família de modelo
+                  const modelLanguageCompatibility: { [key: string]: string[] } = {
+                    // Nova-3 suporta apenas inglês na versão inicial
+                    'nova-3': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ'],
+                    'nova-3-medical': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ'],
+                    
+                    // Nova-2 tem suporte extenso a idiomas
+                    'nova-2': [
+                      'multi', 
+                      'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+                      'pt', 'pt-BR', 'pt-PT',
+                      'es', 'es-419',
+                      'fr', 'fr-CA',
+                      'de', 'de-CH',
+                      'it', 'ja', 'ko', 'ko-KR',
+                      'zh-CN', 'zh-TW', 'zh-HK',
+                      'ru', 'hi', 'nl', 'nl-BE',
+                      'bg', 'ca', 'cs', 'da', 'da-DK',
+                      'el', 'et', 'fi', 'hu', 'id',
+                      'lv', 'lt', 'ms', 'no', 'pl', 'ro',
+                      'sk', 'sv', 'sv-SE', 'th', 'th-TH',
+                      'tr', 'uk', 'vi'
+                    ],
+                    'nova-2-meeting': [
+                      'multi', 
+                      'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+                      'pt', 'pt-BR', 'pt-PT',
+                      'es', 'es-419', 'fr', 'de', 'it', 'ja'
+                    ],
+                    'nova-2-phonecall': [
+                      'multi', 
+                      'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+                      'pt', 'pt-BR', 'pt-PT',
+                      'es', 'es-419', 'fr', 'de', 'it', 'ja'
+                    ],
+                    'nova-2-video': [
+                      'multi', 
+                      'en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ',
+                      'pt', 'pt-BR', 'pt-PT',
+                      'es', 'es-419', 'fr', 'de', 'it', 'ja'
+                    ],
+                    
+                    // Nova modelos padrão
+                    'nova': ['en', 'en-US', 'en-GB', 'en-AU', 'en-IN', 'en-NZ', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'ko', 'nl', 'pl', 'ru'],
+                    'nova-phonecall': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja'],
+                    
+                    // Enhanced models
+                    'enhanced': ['en', 'en-US', 'en-GB', 'en-AU', 'pt', 'pt-BR', 'es', 'es-419', 'fr', 'de', 'it', 'ja', 'hi', 'nl', 'id', 'zh-CN', 'ko', 'ru'],
+                    'enhanced-meeting': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja'],
+                    'enhanced-phonecall': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'ko'],
+                    'enhanced-finance': ['en', 'en-US', 'en-GB'],
+                    
+                    // Base models
+                    'base': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'hi', 'nl', 'id', 'zh-CN', 'ko'],
+                    'base-meeting': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja'],
+                    'base-phonecall': ['en', 'en-US', 'en-GB', 'pt', 'pt-BR', 'es', 'fr', 'de', 'it', 'ja', 'ko'],
+                    'base-finance': ['en', 'en-US', 'en-GB']
+                  };
                   
-                  // Limpeza ao desmontar
-                  return () => unsubscribe();
-                }, [availableLanguages]);
-               
-                // Definições de idiomas para exibição
-                // Tipagem para assegurar que os índices string funcionem corretamente
-                type LanguageDisplayMap = { 
-                  [key: string]: string;
-                };
-                
-                const languageDisplay: LanguageDisplayMap = {
-                  'multi': 'Multilingual (Auto-detect)',
-                  'en': 'English (Global)',
-                  'en-US': 'English (US)',
-                  'en-GB': 'English (UK)',
-                  'en-AU': 'English (Australia)',
-                  'en-IN': 'English (India)',
-                  'en-NZ': 'English (New Zealand)',
-                  'pt': 'Portuguese',
-                  'pt-BR': 'Portuguese (Brazil)',
-                  'pt-PT': 'Portuguese (Portugal)',
-                  'es': 'Spanish',
-                  'es-419': 'Spanish (Latin America)',
-                  'fr': 'French',
-                  'fr-CA': 'French (Canada)',
-                  'de': 'German',
-                  'de-CH': 'German (Switzerland)',
-                  'it': 'Italian',
-                  'ja': 'Japanese',
-                  'ko': 'Korean',
-                  'ko-KR': 'Korean',
-                  'zh-CN': 'Chinese (Simplified)',
-                  'zh-TW': 'Chinese (Traditional)',
-                  'zh-HK': 'Chinese (Cantonese)',
-                  'ru': 'Russian',
-                  'hi': 'Hindi',
-                  'nl': 'Dutch',
-                  'nl-BE': 'Dutch (Belgium)/Flemish',
-                  'bg': 'Bulgarian',
-                  'ca': 'Catalan',
-                  'cs': 'Czech',
-                  'da': 'Danish',
-                  'da-DK': 'Danish',
-                  'el': 'Greek',
-                  'et': 'Estonian',
-                  'fi': 'Finnish',
-                  'hu': 'Hungarian',
-                  'id': 'Indonesian',
-                  'lv': 'Latvian',
-                  'lt': 'Lithuanian',
-                  'ms': 'Malay',
-                  'no': 'Norwegian',
-                  'pl': 'Polish',
-                  'ro': 'Romanian',
-                  'sk': 'Slovak',
-                  'sv': 'Swedish',
-                  'sv-SE': 'Swedish',
-                  'th': 'Thai',
-                  'th-TH': 'Thai',
-                  'tr': 'Turkish',
-                  'uk': 'Ukrainian',
-                  'vi': 'Vietnamese'
-                };
-                
-                // Renderizar o seletor de idiomas com base nos idiomas disponíveis
-                return (
-                  <select
-                    id="deepgramLanguage"
-                    className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
-                    value={deepgramLanguage}
-                    onChange={e => setDeepgramLanguage(e.target.value)}
-                    title="Select Transcription Language"
-                  >
-                    {availableLanguages.map((lang: string) => (
-                      <option key={lang} value={lang}>
-                        {languageDisplay[lang] || lang}
-                      </option>
-                    ))}
-                  </select>
-                );
-              })()}
-              
-              {/* Nota informativa sobre compatibilidade */}
-              <p className="text-xs text-cyan-200/50 mt-1">
-                {deepgramModel.includes('nova-3') ? 
-                  'Nova-3 currently supports English only. More languages coming soon.' :
-                  deepgramModel.includes('nova-2') ?
-                    'Nova-2 supports up to 36 languages with best-in-class accuracy.' :
-                    'Limited language support for this model.'}
-              </p>
+                  // Obter idiomas disponíveis para o modelo selecionado
+                  const modelPrefix = deepgramModel.split('-')[0];
+                  const availableLanguages = modelLanguageCompatibility[deepgramModel] ||
+                                             modelLanguageCompatibility[`${modelPrefix}-general`] ||
+                                             modelLanguageCompatibility[modelPrefix] || 
+                                             ['en', 'en-US']; // fallback para inglês
+                  
+                  // Renderizar apenas os idiomas compatíveis
+                  return availableLanguages.map(lang => (
+                    <option key={lang} value={lang}>
+                      {languageDisplay[lang] || lang}
+                    </option>
+                  ));
+                })()}
+              </select>
             </div>
           </div>
         </div>
@@ -502,5 +638,3 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({
     </div>
   );
 };
-
-export default ApiSettings;
