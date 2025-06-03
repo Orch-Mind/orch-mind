@@ -1,0 +1,167 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
+import { OrchOSMode } from '../../../../../services/ModeService';
+
+// Interfaces para props compartilhados entre componentes
+
+export interface SettingsModalProps {
+  show: boolean;
+  onClose: () => void;
+}
+
+export interface SettingsNavigationProps {
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
+}
+
+export interface SettingsHeaderProps {
+  onClose: () => void;
+}
+
+export interface SettingsFooterProps {
+  onClose: () => void;
+  saveSettings: () => void;
+}
+
+export type TabType = 'general' | 'interface' | 'audio' | 'advanced';
+
+export type OpenSectionType = 'pinecone' | 'chatgpt' | 'deepgram' | null;
+
+// Interface para o state completo das configurações
+export interface SettingsState {
+  // Estado de navegação e seções
+  openSection: OpenSectionType;
+  setOpenSection: (section: OpenSectionType) => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
+  
+  // General
+  name: string;
+  setName: (name: string) => void;
+  enableMatrix: boolean;
+  setEnableMatrix: (enable: boolean) => void;
+  matrixDensity: number;
+  setMatrixDensity: (density: number) => void;
+  enableEffects: boolean;
+  setEnableEffects: (enable: boolean) => void;
+  enableAnimations: boolean;
+  setEnableAnimations: (enable: boolean) => void;
+  
+  // Interface
+  darkMode: boolean;
+  setDarkMode: (enable: boolean) => void;
+  enableNeumorphism: boolean;
+  setEnableNeumorphism: (enable: boolean) => void;
+  enableGlassmorphism: boolean;
+  setEnableGlassmorphism: (enable: boolean) => void;
+  panelTransparency: number;
+  setPanelTransparency: (transparency: number) => void;
+  colorTheme: string;
+  setColorTheme: (theme: string) => void;
+  
+  // Audio
+  audioQuality: number;
+  setAudioQuality: (quality: number) => void;
+  autoGainControl: boolean;
+  setAutoGainControl: (enable: boolean) => void;
+  noiseSuppression: boolean;
+  setNoiseSuppression: (enable: boolean) => void;
+  echoCancellation: boolean;
+  setEchoCancellation: (enable: boolean) => void;
+  enhancedPunctuation: boolean;
+  setEnhancedPunctuation: (enable: boolean) => void;
+  speakerDiarization: boolean;
+  setSpeakerDiarization: (enable: boolean) => void;
+  language: string;
+  setLanguage: (language: string) => void;
+
+  // ChatGPT, Deepgram & Pinecone
+  chatgptApiKey: string;
+  setChatgptApiKey: (key: string) => void;
+  chatgptModel: string;
+  setChatgptModel: (model: string) => void;
+  chatgptTemperature: number;
+  setChatgptTemperature: (temp: number) => void;
+  chatgptMaxTokens: number;
+  setChatgptMaxTokens: (tokens: number) => void;
+  openaiEmbeddingModel: string;
+  setOpenaiEmbeddingModel: (model: string) => void;
+  
+  // HuggingFace
+  hfModel: string;
+  setHfModel: (model: string) => void;
+  hfEmbeddingModel: string;
+  setHfEmbeddingModel: (model: string) => void;
+  
+  // Deepgram
+  deepgramApiKey: string;
+  setDeepgramApiKey: (key: string) => void;
+  deepgramModel: string;
+  setDeepgramModel: (model: string) => void;
+  deepgramLanguage: string;
+  setDeepgramLanguage: (language: string) => void;
+  deepgramTier: string;
+  setDeepgramTier: (tier: string) => void;
+  
+  // Transcrição
+  transcriptionEnabled: boolean;
+  setTranscriptionEnabled: (enable: boolean) => void;
+  speakerIdentification: boolean;
+  setSpeakerIdentification: (enable: boolean) => void;
+  
+  // Pinecone
+  pineconeApiKey: string;
+  setPineconeApiKey: (key: string) => void;
+  pineconeEnvironment: string;
+  setPineconeEnvironment: (env: string) => void;
+  pineconeIndex: string;
+  setPineconeIndex: (index: string) => void;
+  
+  // Interface adicional
+  theme: string;
+  setTheme: (theme: string) => void;
+  uiDensity: string;
+  setUiDensity: (density: string) => void;
+  showAdvancedSettings: boolean;
+  setShowAdvancedSettings: (show: boolean) => void;
+  
+  // Debug
+  debugMode: boolean;
+  setDebugMode: (enable: boolean) => void;
+  logLevel: string;
+  setLogLevel: (level: string) => void;
+  
+  // Orch-OS Mode
+  applicationMode: OrchOSMode;
+  setApplicationMode: (mode: OrchOSMode) => void;
+  
+  // Métodos
+  saveSettings: () => void;
+}
+
+// Props específicos para ApiSettings (mantido para compatibilidade)
+export interface ApiSettingsProps {
+  applicationMode: OrchOSMode;
+  setApplicationMode: (mode: OrchOSMode) => void;
+  pineconeApiKey: string;
+  setPineconeApiKey: (key: string) => void;
+  chatgptApiKey: string;
+  setChatgptApiKey: (key: string) => void;
+  chatgptModel: string;
+  setChatgptModel: (model: string) => void;
+  openaiEmbeddingModel: string;
+  setOpenaiEmbeddingModel: (model: string) => void;
+  hfModel: string;
+  setHfModel: (model: string) => void;
+  hfEmbeddingModel: string;
+  setHfEmbeddingModel: (model: string) => void;
+  deepgramApiKey: string;
+  setDeepgramApiKey: (key: string) => void;
+  deepgramModel: string;
+  setDeepgramModel: (model: string) => void;
+  deepgramLanguage: string;
+  setDeepgramLanguage: (language: string) => void;
+  openSection: OpenSectionType;
+  setOpenSection: (section: OpenSectionType) => void;
+}
