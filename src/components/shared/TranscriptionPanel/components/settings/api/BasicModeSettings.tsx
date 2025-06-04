@@ -6,6 +6,21 @@ import { OrchOSModeEnum } from '../../../../../../services/ModeService';
 import { HuggingFaceSettingsProps } from './types';
 
 /**
+ * Retorna a dimensionalidade de um modelo de embedding com base em seu nome
+ * @param model Nome do modelo Hugging Face
+ * @returns Número de dimensões do embedding (384, 768 ou 1024)
+ */
+const getModelDimensions = (model: string): number => {
+  if (model.includes('bge-m3')) return 1024;
+  if (model.includes('multilingual-e5-large')) return 1024;
+  if (model.includes('multilingual-e5-base')) return 768;
+  if (model.includes('all-mpnet-base')) return 768;
+  if (model.includes('multilingual-e5-small')) return 384;
+  // Default para modelos MiniLM
+  return 384;
+};
+
+/**
  * Componente para configurações do modo básico
  * Implementa princípio de Responsabilidade Única (SRP) do SOLID
  * Symbolic: Neurônios de interface para configuração cognitiva local
@@ -68,7 +83,7 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
               }}
             >
               {hfEmbeddingModelOptions.map(model => (
-                <option key={model} value={model}>{model}</option>
+                <option key={model} value={model}>{model} ({getModelDimensions(model)}d)</option>
               ))}
             </select>
             <p className="text-xs text-cyan-400/60 mt-1">Modelo utilizado para gerar embeddings e busca semântica na memória no modo básico.</p>

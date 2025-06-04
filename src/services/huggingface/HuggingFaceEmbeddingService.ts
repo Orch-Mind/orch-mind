@@ -27,8 +27,7 @@ export const SUPPORTED_HF_EMBEDDING_MODELS = [
   // Melhor compatibilidade e performance no browser
   'Xenova/multilingual-e5-small',   // 384-dimensional, leve (~106MB), ideal para browsers
   'Xenova/multilingual-e5-base',    // 768-dimensional, melhor qualidade (~278MB)
-  'Xenova/bge-small-m3',            // 1024-dimensional, excelente qualidade multilíngue (~165MB)
-  'Xenova/bge-base-m3',             // 1024-dimensional, qualidade superior (~280MB)
+  'Xenova/bge-m3',                  // 1024-dimensional, versão unificada do BGE-M3 (~165MB)
   'Xenova/all-MiniLM-L6-v2',        // 384-dimensional, extremamente leve (~33MB), suporte a +50 idiomas
   'Xenova/paraphrase-multilingual-MiniLM-L12-v2', // 384-dimensional, bom para detecção semântica (~120MB)
   'Xenova/all-mpnet-base-v2',       // 768-dimensional, bom equilíbrio tamanho/qualidade (~438MB)
