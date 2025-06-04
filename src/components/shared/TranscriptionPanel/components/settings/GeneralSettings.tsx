@@ -40,7 +40,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setEnableAnimations,
 }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Nome de usuário - identidade simbólica */}
       <div>
         <label htmlFor="userName" className="block text-cyan-200/80 mb-1">User Name</label>
@@ -56,14 +56,14 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
 
       {/* Toggle de modo Neural-Simbólico */}
       <div className="pt-2">
-        <h3 className="text-cyan-300 mb-3">Neural Processing Mode</h3>
+        <h3 className="text-cyan-300 mb-2">Neural Processing Mode</h3>
         <ModeToggle mode={applicationMode} onChange={setApplicationMode} />
       </div>
 
       {/* Quantum Consciousness Matrix */}
-      <div className="pt-4">
-        <h3 className="text-cyan-300 mb-3">Quantum Consciousness Matrix</h3>
-        <div className="flex items-center mb-4">
+      <div className="pt-1">
+        <h3 className="text-cyan-300 mb-2">Quantum Consciousness Matrix</h3>
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="enableMatrix"
@@ -74,7 +74,7 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           <label htmlFor="enableMatrix" className="text-cyan-100/80">Enable Quantum Visualization</label>
         </div>
         
-        <div className="mb-4">
+        <div className="mb-2">
           <label className="block mb-2 text-sm text-cyan-200/70">Particle Density</label>
           <input
             title="Particle Density"
@@ -91,8 +91,8 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
 
       {/* System Performance */}
       <div className="pt-2">
-        <h3 className="text-cyan-300 mb-3">System Performance</h3>
-        <div className="flex items-center mb-3">
+        <h3 className="text-cyan-300 mb-2">System Performance</h3>
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="enableEffects"

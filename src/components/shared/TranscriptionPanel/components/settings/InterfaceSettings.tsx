@@ -33,10 +33,10 @@ const InterfaceSettings: React.FC<InterfaceSettingsProps> = ({
   setColorTheme
 }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Appearance */}
       <div>
-        <h3 className="text-cyan-300 mb-3">Visual Appearance</h3>
+        <h3 className="text-cyan-300 mb-2">Visual Appearance</h3>
         
         <div className="flex items-center mb-3">
           <input
@@ -60,7 +60,7 @@ const InterfaceSettings: React.FC<InterfaceSettingsProps> = ({
           <label htmlFor="enableGlassmorphism" className="text-cyan-100/80">Glassmorphic Effects</label>
         </div>
         
-        <div className="flex items-center mb-4">
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="enableNeumorphism"

@@ -37,12 +37,12 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
   setEchoCancellation
 }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Configurações de transcrição */}
       <div>
-        <h3 className="text-cyan-300 mb-3">Transcription Options</h3>
+        <h3 className="text-cyan-300 mb-2">Transcription Options</h3>
         
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="enhancedPunctuation"
@@ -53,7 +53,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
           <label htmlFor="enhancedPunctuation" className="text-cyan-100/80">Enhanced Punctuation</label>
         </div>
         
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="speakerDiarization"
@@ -85,9 +85,9 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
 
       {/* Processamento de áudio */}
       <div>
-        <h3 className="text-cyan-300 mb-3">Audio Processing</h3>
+        <h3 className="text-cyan-300 mb-2">Audio Processing</h3>
         
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="autoGainControl"
@@ -98,7 +98,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
           <label htmlFor="autoGainControl" className="text-cyan-100/80">Auto Gain Control</label>
         </div>
         
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-2">
           <input
             type="checkbox"
             id="noiseSuppression"

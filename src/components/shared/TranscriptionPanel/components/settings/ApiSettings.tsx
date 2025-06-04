@@ -90,6 +90,22 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(({
     setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, value);
   };
 
+  // Modo Advanced - APIs completas
+  // Move os logs para um useEffect para evitar logs em cada render
+  useEffect(() => {
+    // Apenas logar no modo advanced
+    if (applicationMode === OrchOSModeEnum.ADVANCED) {
+      console.log('[ApiSettings] deepgramModel alterado:', deepgramModel);
+    }
+  }, [deepgramModel, applicationMode]);
+
+  useEffect(() => {
+    // Apenas logar no modo advanced
+    if (applicationMode === OrchOSModeEnum.ADVANCED) {
+      console.log('[ApiSettings] deepgramLanguage alterado:', deepgramLanguage);
+    }
+  }, [deepgramLanguage, applicationMode]);
+  
   // Renderização condicional baseada no modo da aplicação
   // Symbolic: Use enum for mode-dependent logic
   if (applicationMode === OrchOSModeEnum.BASIC) {
@@ -106,16 +122,6 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(({
       />
     );
   }
-
-  // Modo Advanced - APIs completas
-  // Move os logs para um useEffect para evitar logs em cada render
-  useEffect(() => {
-    console.log('[ApiSettings] deepgramModel alterado:', deepgramModel);
-  }, [deepgramModel]);
-
-  useEffect(() => {
-    console.log('[ApiSettings] deepgramLanguage alterado:', deepgramLanguage);
-  }, [deepgramLanguage]);
 
   return (
     <div className="flex flex-col w-full">
@@ -173,7 +179,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(({
         />
       )}
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-3 flex justify-end">
         <button 
           type="button"
           className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg px-6 py-2 hover:from-cyan-500/30 hover:to-blue-500/30 transition-all shadow-[0_0_10px_rgba(0,200,255,0.2)] backdrop-blur-sm"

@@ -33,7 +33,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-gray-900/90 rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative backdrop-blur-lg ring-2 ring-cyan-400/10 max-h-[80vh] overflow-auto">
+      <div className="bg-gray-900/90 rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative backdrop-blur-lg ring-2 ring-cyan-400/10">
         {/* Cabeçalho */}
         <SettingsHeader onClose={onClose} />
         
@@ -44,7 +44,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         />
         
         {/* Conteúdo das abas */}
-        <div className="mb-6">
+        <div className="mb-4">
           {/* General Tab */}
           {settings.activeTab === 'general' && (
             <GeneralSettings

@@ -54,9 +54,9 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(({
   }, [deepgramLanguage]);
 
   return (
-    <div className="p-4 rounded-md bg-black/20 mb-4 animate-fade-in">
-      <h3 className="text-lg text-cyan-300 mb-4">Deepgram Voice Transcription</h3>
-      <div className="space-y-4">
+    <div className="p-3 rounded-md bg-black/20 mb-3 animate-fade-in">
+      <h3 className="text-lg text-cyan-300 mb-2">Deepgram Voice Transcription</h3>
+      <div className="space-y-3">
         <div>
           <label htmlFor="deepgramApiKey" className="block mb-1 text-sm text-cyan-200/80">Deepgram API Key</label>
           <input 

@@ -39,6 +39,7 @@ export interface HuggingFaceSettingsProps extends BaseApiSettingsProps {
   setHfEmbeddingModel: (value: string) => void;
   hfModelOptions?: Array<{id: string, label: string}>;
   hfEmbeddingModelOptions?: string[];
+  setApplicationMode?: (mode: OrchOSMode) => void; // Adicionado para suportar o botão no BasicModeSettings
 }
 
 // Props específicas para Deepgram
