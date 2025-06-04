@@ -17,7 +17,7 @@ import { DefaultNeuralIntegrationService } from "../symbolic-cortex/integration/
 import { INeuralIntegrationService } from "../symbolic-cortex/integration/INeuralIntegrationService";
 import { LoggingUtils } from "../utils/LoggingUtils";
 import { MemoryService } from "./memory/MemoryService";
-import { OpenAIService } from "./openai/OpenAIService";
+import { OpenAIServiceFacade } from "./openai/OpenAIServiceFacade";
 import { TranscriptionPromptProcessor } from "./transcription/TranscriptionPromptProcessor";
 import { TranscriptionStorageService } from "./transcription/TranscriptionStorageService";
 import { SpeakerIdentificationService } from "./utils/SpeakerIdentificationService";
@@ -65,7 +65,7 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     // Initialize services
     this.speakerService = new SpeakerIdentificationService(primaryUserSpeaker);
     this.storageService = new TranscriptionStorageService(this.speakerService, setTexts);
-    this.openAIService = new OpenAIService();
+    this.openAIService = new OpenAIServiceFacade();
     this.memoryService = new MemoryService(this.openAIService);
     this.uiService = new UIUpdateService(setTexts);
 

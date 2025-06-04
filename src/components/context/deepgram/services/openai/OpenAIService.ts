@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-import { STORAGE_KEYS, getOption } from '../../../../../services/StorageService';
 import { ModeService } from '../../../../../services/ModeService'; // Orch-OS Mode Cortex
+import { STORAGE_KEYS, getOption } from '../../../../../services/StorageService';
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // OpenAIService.ts
@@ -660,8 +660,8 @@ IMPORTANT: If a LANGUAGE is specified in the user message, ALL symbolic queries 
     try {
       // Call to the API with tools enabled
       const response = await this.openai.chat.completions.create({
-        // Symbolic: Always use model based on current Orch-OS mode
-       model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || (this.getCurrentMode() === 'advanced' ? 'gpt-4o-mini' : 'gpt-3.5-turbo'),
+        // Symbolic: Use consistent model selection with fallback to valid models
+        model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || 'gpt-4o-mini',
         messages: [systemPrompt, userPrompt],
         tools,
         tool_choice: "auto"

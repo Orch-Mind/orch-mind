@@ -5,9 +5,8 @@
 // Symbolic: Gerencia a conexão com a API do OpenAI, atuando como ponte neural entre o sistema e o modelo externo
 
 import OpenAI from "openai";
+import { getOption, STORAGE_KEYS } from "../../../../../../services/StorageService";
 import { IClientManagementService } from "../../../interfaces/openai/IClientManagementService";
-import { STORAGE_KEYS } from "../../../../../../services/StorageService";
-import { getOption } from "../../../../../../services/StorageService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 
 /**
@@ -38,15 +37,31 @@ export class OpenAIClientService implements IClientManagementService {
   }
 
   /**
-   * Carrega a chave da API do armazenamento local
-   * Symbolic: Recuperação de credencial neural do armazenamento local
+   * Carrega a chave da API do ambiente (.env) ou armazenamento local
+   * Symbolic: Recuperação de credencial neural seguindo hierarquia de prioridade
    */
   async loadApiKey(): Promise<string> {
-    const storedKey = getOption(STORAGE_KEYS.OPENAI_API_KEY);
-    if (storedKey) {
-      this.apiKey = storedKey;
-      return storedKey;
+    // Prioridade 1: Variável de ambiente (.env) via Electron API
+    try {
+      const envKey = await window.electronAPI.getEnv('OPENAI_KEY');
+      if (envKey?.trim()) {
+        this.apiKey = envKey.trim();
+        LoggingUtils.logInfo("OpenAI API key loaded from environment variables");
+        return this.apiKey;
+      }
+    } catch (error) {
+      LoggingUtils.logInfo("Could not load API key from environment, trying local storage");
     }
+    
+    // Prioridade 2: Armazenamento local (configuração do usuário)
+    const storedKey = getOption(STORAGE_KEYS.OPENAI_API_KEY);
+    if (storedKey?.trim()) {
+      this.apiKey = storedKey.trim();
+      LoggingUtils.logInfo("OpenAI API key loaded from local storage");
+      return this.apiKey;
+    }
+    
+    LoggingUtils.logWarning("No OpenAI API key found in environment or local storage");
     return "";
   }
 
@@ -57,11 +72,11 @@ export class OpenAIClientService implements IClientManagementService {
   async ensureClient(): Promise<boolean> {
     if (this.isInitialized()) return true;
     
-    // If no API key, try to load from storage
+    // If no API key, try to load from environment/storage
     if (!this.apiKey) {
       const apiKey = await this.loadApiKey();
       if (!apiKey) {
-        LoggingUtils.logError("Failed to load OpenAI API key");
+        LoggingUtils.logError("Failed to load OpenAI API key from environment or storage");
         return false;
       }
     }

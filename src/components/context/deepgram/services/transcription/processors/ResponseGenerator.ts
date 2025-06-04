@@ -83,7 +83,19 @@ export class ResponseGenerator {
    * Generate response using OpenAI backend
    */
   private async _generateWithOpenAI(messages: Message[]): Promise<string> {
-    const response = await this.openAIService.streamOpenAIResponse(messages);
-    return response.response;
+    try {
+      const response = await this.openAIService.streamOpenAIResponse(messages);
+      return response.response;
+    } catch (error: any) {
+      if (error.message?.includes('does not have access to model')) {
+        LoggingUtils.logError("Invalid model detected, falling back to gpt-4o-mini", error);
+        // Clear invalid model and retry with default
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem('chatgptModel');
+        }
+        throw new Error("Invalid model configuration. Please restart the application.");
+      }
+      throw error;
+    }
   }
 } 

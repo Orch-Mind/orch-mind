@@ -4,10 +4,10 @@
 import dotenv from "dotenv"
 import { app, BrowserWindow, ipcMain, screen, shell } from "electron"
 import path from "path"
-import { OpenAIService } from "../src/components/context/deepgram/services/openai/OpenAIService"
+import { OpenAIServiceFacade } from "../src/components/context/deepgram/services/openai/OpenAIServiceFacade"
 import { initAutoUpdater } from "./autoUpdater"
-import { initializeIpcHandlers } from "./ipcHandlers"
 import { DuckDBHelper } from "./DuckDBHelper"
+import { initializeIpcHandlers } from "./ipcHandlers"
 import { PineconeHelper } from "./PineconeHelper"
 import { ShortcutsHelper } from "./shortcuts"
 
@@ -32,7 +32,7 @@ const state = {
   shortcutsHelper: null as ShortcutsHelper | null,
   pineconeHelper: null as PineconeHelper | null,
   duckDBHelper: null as DuckDBHelper | null,
-  openAIService: null as OpenAIService | null,
+  openAIService: null as OpenAIServiceFacade | null,
 
   // Processing events
   PROCESSING_EVENTS: {
@@ -69,7 +69,7 @@ export interface IIpcHandlerDeps {
   duckDBHelper: DuckDBHelper | null
   PROCESSING_EVENTS: typeof state.PROCESSING_EVENTS
   toggleMainWindow: () => void
-  openAIService: OpenAIService | null
+  openAIService: OpenAIServiceFacade | null
 }
 
 // Initialize helpers
@@ -83,7 +83,7 @@ function initializeHelpers() {
   // Initialize memory services (Pinecone for cloud, DuckDB for local)
   state.pineconeHelper = new PineconeHelper()
   state.duckDBHelper = new DuckDBHelper()
-  state.openAIService = new OpenAIService()
+  state.openAIService = new OpenAIServiceFacade()
 }
 
 // Register the neural-coder protocol
@@ -456,8 +456,8 @@ function getDuckDBHelper(): DuckDBHelper | null {
 }
 
 export {
-  createWindow, getMainWindow, getPineconeHelper, getDuckDBHelper, handleAuthCallback, hideMainWindow,
-  setWindowDimensions, showMainWindow, toggleMainWindow
+    createWindow, getDuckDBHelper, getMainWindow, getPineconeHelper, handleAuthCallback, hideMainWindow,
+    setWindowDimensions, showMainWindow, toggleMainWindow
 }
 
 app.whenReady().then(initializeApp)
