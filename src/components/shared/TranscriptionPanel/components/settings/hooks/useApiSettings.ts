@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getOption, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
 import { SUPPORTED_HF_EMBEDDING_MODELS } from '../../../../../../services/huggingface/HuggingFaceEmbeddingService';
 
@@ -44,19 +44,37 @@ export const useApiSettings = () => {
         case STORAGE_KEYS.OPENAI_EMBEDDING_MODEL: setOpenaiEmbeddingModel(value); break;
         
         // HuggingFace
-        case STORAGE_KEYS.HF_MODEL: setHfModel(value); break;
-        case STORAGE_KEYS.HF_EMBEDDING_MODEL: setHfEmbeddingModel(value); break;
+        case STORAGE_KEYS.HF_MODEL: 
+          if (value !== hfModel) setHfModel(value); 
+          break;
+        case STORAGE_KEYS.HF_EMBEDDING_MODEL: 
+          if (value !== hfEmbeddingModel) setHfEmbeddingModel(value); 
+          break;
         
         // Deepgram
-        case STORAGE_KEYS.DEEPGRAM_API_KEY: setDeepgramApiKey(value); break;
-        case STORAGE_KEYS.DEEPGRAM_MODEL: setDeepgramModel(value); break;
-        case STORAGE_KEYS.DEEPGRAM_LANGUAGE: setDeepgramLanguage(value); break;
-        case STORAGE_KEYS.DEEPGRAM_TIER: setDeepgramTier(value); break;
+        case STORAGE_KEYS.DEEPGRAM_API_KEY: 
+          if (value !== deepgramApiKey) setDeepgramApiKey(value); 
+          break;
+        case STORAGE_KEYS.DEEPGRAM_MODEL:
+          if (value !== deepgramModel) setDeepgramModel(value);
+          break;
+        case STORAGE_KEYS.DEEPGRAM_LANGUAGE:
+          if (value !== deepgramLanguage) setDeepgramLanguage(value);
+          break;
+        case STORAGE_KEYS.DEEPGRAM_TIER: 
+          if (value !== deepgramTier) setDeepgramTier(value); 
+          break;
         
         // Pinecone
-        case STORAGE_KEYS.PINECONE_API_KEY: setPineconeApiKey(value); break;
-        case STORAGE_KEYS.PINECONE_ENVIRONMENT: setPineconeEnvironment(value); break;
-        case STORAGE_KEYS.PINECONE_INDEX: setPineconeIndex(value); break;
+        case STORAGE_KEYS.PINECONE_API_KEY: 
+          if (value !== pineconeApiKey) setPineconeApiKey(value); 
+          break;
+        case STORAGE_KEYS.PINECONE_ENVIRONMENT: 
+          if (value !== pineconeEnvironment) setPineconeEnvironment(value); 
+          break;
+        case STORAGE_KEYS.PINECONE_INDEX: 
+          if (value !== pineconeIndex) setPineconeIndex(value); 
+          break;
       }
     };
     
@@ -89,7 +107,8 @@ export const useApiSettings = () => {
     setOption(STORAGE_KEYS.PINECONE_INDEX, pineconeIndex);
   };
   
-  return {
+  // Memoize all API settings to ensure stable reference and avoid unnecessary renders
+  return useMemo(() => ({
     // OpenAI/ChatGPT
     chatgptApiKey,
     setChatgptApiKey,
@@ -101,13 +120,11 @@ export const useApiSettings = () => {
     setChatgptMaxTokens,
     openaiEmbeddingModel,
     setOpenaiEmbeddingModel,
-    
     // HuggingFace
     hfModel,
     setHfModel,
     hfEmbeddingModel,
     setHfEmbeddingModel,
-    
     // Deepgram
     deepgramApiKey,
     setDeepgramApiKey,
@@ -117,7 +134,6 @@ export const useApiSettings = () => {
     setDeepgramLanguage,
     deepgramTier,
     setDeepgramTier,
-    
     // Pinecone
     pineconeApiKey,
     setPineconeApiKey,
@@ -125,8 +141,37 @@ export const useApiSettings = () => {
     setPineconeEnvironment,
     pineconeIndex,
     setPineconeIndex,
-    
-    // Ações
+    // Salvar tudo
     saveApiSettings
-  };
+  }), [
+    chatgptApiKey,
+    setChatgptApiKey,
+    chatgptModel,
+    setChatgptModel,
+    chatgptTemperature,
+    setChatgptTemperature,
+    chatgptMaxTokens,
+    setChatgptMaxTokens,
+    openaiEmbeddingModel,
+    setOpenaiEmbeddingModel,
+    hfModel,
+    setHfModel,
+    hfEmbeddingModel,
+    setHfEmbeddingModel,
+    deepgramApiKey,
+    setDeepgramApiKey,
+    deepgramModel,
+    setDeepgramModel,
+    deepgramLanguage,
+    setDeepgramLanguage,
+    deepgramTier,
+    setDeepgramTier,
+    pineconeApiKey,
+    setPineconeApiKey,
+    pineconeEnvironment,
+    setPineconeEnvironment,
+    pineconeIndex,
+    setPineconeIndex,
+    saveApiSettings
+  ]);
 };

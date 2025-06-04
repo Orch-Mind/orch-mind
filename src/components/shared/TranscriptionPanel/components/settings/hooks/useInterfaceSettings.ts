@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getOption, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
 
 /**
@@ -50,7 +50,7 @@ export const useInterfaceSettings = () => {
     setOption(STORAGE_KEYS.SHOW_ADVANCED_SETTINGS, showAdvancedSettings);
   };
   
-  return {
+  return useMemo(() => ({
     // Valores
     darkMode,
     setDarkMode,
@@ -71,5 +71,23 @@ export const useInterfaceSettings = () => {
     
     // Ações
     saveInterfaceSettings
-  };
+  }), [
+    darkMode,
+    setDarkMode,
+    enableNeumorphism,
+    setEnableNeumorphism,
+    enableGlassmorphism,
+    setEnableGlassmorphism,
+    panelTransparency,
+    setPanelTransparency,
+    colorTheme,
+    setColorTheme,
+    theme,
+    setTheme,
+    uiDensity,
+    setUiDensity,
+    showAdvancedSettings,
+    setShowAdvancedSettings,
+    saveInterfaceSettings
+  ]);
 };

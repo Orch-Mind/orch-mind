@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getOption, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
 
 /**
@@ -32,14 +32,19 @@ export const useDebugSettings = () => {
     setOption(STORAGE_KEYS.LOG_LEVEL, logLevel);
   };
   
-  return {
+  return useMemo(() => ({
     // Valores
     debugMode,
     setDebugMode,
     logLevel,
     setLogLevel,
-    
     // Ações
     saveDebugSettings
-  };
+  }), [
+    debugMode,
+    setDebugMode,
+    logLevel,
+    setLogLevel,
+    saveDebugSettings
+  ]);
 };

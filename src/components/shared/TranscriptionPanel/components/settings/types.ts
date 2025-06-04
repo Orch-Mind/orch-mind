@@ -73,8 +73,6 @@ export interface SettingsState {
   setEnhancedPunctuation: (enable: boolean) => void;
   speakerDiarization: boolean;
   setSpeakerDiarization: (enable: boolean) => void;
-  language: string;
-  setLanguage: (language: string) => void;
 
   // ChatGPT, Deepgram & Pinecone
   chatgptApiKey: string;

@@ -4,8 +4,8 @@
 import React from "react";
 import { useSettingsState } from './settings/useSettingsState';
 import { SettingsModalProps } from './settings/types';
+import ApiSettings from './settings/ApiSettings';
 import {
-  ApiSettings,
   AudioSettings,
   GeneralSettings,
   InterfaceSettings

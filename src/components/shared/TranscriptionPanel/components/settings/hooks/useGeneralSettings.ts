@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getOption, getUserName, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
 import { ModeService, OrchOSMode } from '../../../../../../services/ModeService';
 
@@ -54,7 +54,7 @@ export const useGeneralSettings = () => {
     setOption(STORAGE_KEYS.ENABLE_ANIMATIONS, enableAnimations);
   };
   
-  return {
+  return useMemo(() => ({
     // Valores
     name,
     setName,
@@ -68,8 +68,21 @@ export const useGeneralSettings = () => {
     setEnableEffects,
     enableAnimations,
     setEnableAnimations,
-    
     // Ações
     saveGeneralSettings
-  };
+  }), [
+    name,
+    setName,
+    applicationMode,
+    setApplicationMode,
+    enableMatrix,
+    setEnableMatrix,
+    matrixDensity,
+    setMatrixDensity,
+    enableEffects,
+    setEnableEffects,
+    enableAnimations,
+    setEnableAnimations,
+    saveGeneralSettings
+  ]);
 };

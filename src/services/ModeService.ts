@@ -14,7 +14,8 @@ export enum OrchOSModeEnum {
 }
 export type OrchOSMode = OrchOSModeEnum.BASIC | OrchOSModeEnum.ADVANCED;
 
-const MODE_STORAGE_KEY = 'orchos_mode';
+import { STORAGE_KEYS } from './StorageService';
+const MODE_STORAGE_KEY = STORAGE_KEYS.APPLICATION_MODE;
 const DEFAULT_MODE: OrchOSMode = OrchOSModeEnum.ADVANCED;
 
 export class ModeService {

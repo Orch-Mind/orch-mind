@@ -580,10 +580,10 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   }
 
   setModel(model: string): void {
-    this.model = model;
-    LoggingUtils.logInfo(`Model defined for: ${model}`);
-    // Optional: save to StorageService
-    setOption(STORAGE_KEYS.DEEPGRAM_MODEL, model);
+    if (this.model !== model) {
+      this.model = model;
+      LoggingUtils.logInfo(`Model defined for: ${model}`);
+    }
   }
 
   toggleInterimResults(enabled: boolean): void {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { OpenSectionType, TabType } from '../types';
 
 /**
@@ -12,10 +12,15 @@ export const useNavigationState = () => {
   const [openSection, setOpenSection] = useState<OpenSectionType>(null);
   const [activeTab, setActiveTab] = useState<TabType>('general');
 
-  return {
+  return useMemo(() => ({
     openSection,
     setOpenSection,
     activeTab,
     setActiveTab
-  };
+  }), [
+    openSection,
+    setOpenSection,
+    activeTab,
+    setActiveTab
+  ]);
 };
