@@ -37,6 +37,17 @@ export interface IDeepgramTranscriptionService {
   toggleInterimResults: (enabled: boolean) => void;
   reset: () => void;
   isConnected: () => boolean;
+  
+  // Transcription prompt processing methods
+  sendTranscriptionPrompt: (temporaryContext?: string) => Promise<void>;
+  sendTranscriptionPromptWithHuggingFace: (temporaryContext?: string) => Promise<void>;
+  
+  // Language management methods
+  setProcessingLanguage: (language: string) => void;
+  getProcessingLanguage: () => string;
+  
+  // Processing state methods
+  isProcessingPromptRequest: () => boolean;
 }
 
 // Interface for the Deepgram audio analyzer service
