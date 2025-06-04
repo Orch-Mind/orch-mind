@@ -3,7 +3,8 @@
 
 console.log("Preload script starting...")
 import { contextBridge, ipcRenderer } from "electron"
-import { NormalizedPineconeMatch } from "./PineconeHelper";
+import { NormalizedPineconeMatch } from "./PineconeHelper"
+import { NormalizedDuckDBMatch } from "./DuckDBHelper";
 
 // Types for the exposed Electron API
 interface ElectronAPI {
@@ -29,8 +30,12 @@ interface ElectronAPI {
   sendAudioTranscription: (text: string) => void;
   toogleNeuralRecording: (callback: () => void) => () => void;
   setDeepgramLanguage: (lang: string) => void
+  // Pinecone IPC methods
   queryPinecone: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: NormalizedPineconeMatch[] }>;
   saveToPinecone: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>
+  // DuckDB IPC methods (for basic mode)
+  queryDuckDB: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: NormalizedDuckDBMatch[] }>;
+  saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>
   sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void
   importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>,
   minimizeWindow: () => void;
@@ -217,10 +222,23 @@ const electronAPI: ElectronAPI = {
   setDeepgramLanguage: (lang: string) => ipcRenderer.invoke(PROCESSING_EVENTS.SET_DEEPGRAM_LANGUAGE, lang),
 
   // Pinecone IPC methods
-  queryPinecone: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => ipcRenderer.invoke("query-pinecone", embedding, topK, keywords, filters),
-  saveToPinecone: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => 
-    ipcRenderer.invoke("save-to-pinecone", vectors),
+  queryPinecone: async (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => {
+    return await ipcRenderer.invoke('query-pinecone', embedding, topK || 5, keywords || [], filters || {});
+  },
+
+  saveToPinecone: async (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => {
+    return await ipcRenderer.invoke('save-pinecone', vectors);
+  },
   
+  // DuckDB IPC methods (for basic mode)
+  queryDuckDB: async (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => {
+    return await ipcRenderer.invoke('query-duckdb', embedding, topK || 5, keywords || [], filters || {});
+  },
+
+  saveToDuckDB: async (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => {
+    return await ipcRenderer.invoke('save-duckdb', vectors);
+  },
+
   // Send prompt update directly
   sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => {
     // Send directly to the specific event based on the type

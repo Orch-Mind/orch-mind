@@ -7,6 +7,7 @@ import path from "path"
 import { OpenAIService } from "../src/components/context/deepgram/services/openai/OpenAIService"
 import { initAutoUpdater } from "./autoUpdater"
 import { initializeIpcHandlers } from "./ipcHandlers"
+import { DuckDBHelper } from "./DuckDBHelper"
 import { PineconeHelper } from "./PineconeHelper"
 import { ShortcutsHelper } from "./shortcuts"
 
@@ -30,6 +31,7 @@ const state = {
   // Application helpers
   shortcutsHelper: null as ShortcutsHelper | null,
   pineconeHelper: null as PineconeHelper | null,
+  duckDBHelper: null as DuckDBHelper | null,
   openAIService: null as OpenAIService | null,
 
   // Processing events
@@ -64,6 +66,7 @@ export interface IIpcHandlerDeps {
   getMainWindow: () => BrowserWindow | null
   setWindowDimensions: (width: number, height: number) => void
   pineconeHelper: PineconeHelper | null
+  duckDBHelper: DuckDBHelper | null
   PROCESSING_EVENTS: typeof state.PROCESSING_EVENTS
   toggleMainWindow: () => void
   openAIService: OpenAIService | null
@@ -77,7 +80,9 @@ function initializeHelpers() {
     toggleMainWindow
   })
 
+  // Initialize memory services (Pinecone for cloud, DuckDB for local)
   state.pineconeHelper = new PineconeHelper()
+  state.duckDBHelper = new DuckDBHelper()
   state.openAIService = new OpenAIService()
 }
 
@@ -375,6 +380,7 @@ async function initializeApp() {
       getMainWindow,
       setWindowDimensions,
       pineconeHelper: state.pineconeHelper,
+      duckDBHelper: state.duckDBHelper,
       PROCESSING_EVENTS: state.PROCESSING_EVENTS,
       toggleMainWindow,
       openAIService: state.openAIService
@@ -445,8 +451,12 @@ function getPineconeHelper(): PineconeHelper | null {
   return state.pineconeHelper
 }
 
+function getDuckDBHelper(): DuckDBHelper | null {
+  return state.duckDBHelper
+}
+
 export {
-  createWindow, getMainWindow, getPineconeHelper, handleAuthCallback, hideMainWindow,
+  createWindow, getMainWindow, getPineconeHelper, getDuckDBHelper, handleAuthCallback, hideMainWindow,
   setWindowDimensions, showMainWindow, toggleMainWindow
 }
 

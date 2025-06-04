@@ -127,7 +127,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   });
 
-  ipcMain.handle("save-to-pinecone", async (event, vectors: Array<{ id: string, values: number[], metadata: Record<string, string | number | boolean | string[]> }>) => {
+  ipcMain.handle("save-pinecone", async (event, vectors: Array<{ id: string, values: number[], metadata: Record<string, string | number | boolean | string[]> }>) => {
     try {
       if (!deps.pineconeHelper) {
         console.error("Pinecone helper not initialized");
@@ -139,6 +139,38 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       console.error("Error saving to Pinecone:", error);
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
       return { success: false, error: errorMessage || "Error saving to Pinecone" };
+    }
+  });
+
+  // DuckDB IPC handlers (for basic mode)
+  ipcMain.handle("query-duckdb", async (event, embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => {
+    try {
+      if (!deps.duckDBHelper) {
+        console.error("DuckDB helper not initialized");
+        return { matches: [] };
+      }
+      const result = await deps.duckDBHelper.queryDuckDB(embedding, topK, keywords, filters);
+      console.log(`[MEMORY] DuckDB query returned ${result.matches.length} matches`);
+      return result;
+    } catch (error: unknown) {
+      console.error("Error querying DuckDB:", error);
+      return { matches: [] };
+    }
+  });
+
+  ipcMain.handle("save-duckdb", async (event, vectors: Array<{ id: string, values: number[], metadata: Record<string, string | number | boolean | string[]> }>) => {
+    try {
+      if (!deps.duckDBHelper) {
+        console.error("DuckDB helper not initialized");
+        return { success: false, error: "DuckDB helper not initialized" };
+      }
+      await deps.duckDBHelper.saveToDuckDB(vectors);
+      console.log(`[MEMORY] Saved ${vectors.length} vectors to DuckDB`);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error("Error saving to DuckDB:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      return { success: false, error: errorMessage || "Error saving to DuckDB" };
     }
   });
 

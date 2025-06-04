@@ -2,8 +2,9 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // PineconeMemoryService.ts
-// Implementation of IPersistenceService using Pinecone
+// Implementation of IPersistenceService using Pinecone or DuckDB (for basic mode)
 
+import { ModeService, OrchOSModeEnum } from "../../../../../services/ModeService";
 import { IPersistenceService } from "../../interfaces/memory/IPersistenceService";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { SpeakerTranscription } from "../../interfaces/transcription/TranscriptionTypes";
@@ -19,6 +20,8 @@ export class PineconeMemoryService implements IPersistenceService {
   private embeddingService: IEmbeddingService;
   // Set that keeps track of processed transcription indices per speaker (brain memory index)
   private processedTranscriptionIndices: Record<string, Set<number>> = {};
+  // Whether we're using basic mode (DuckDB) or complete mode (Pinecone)
+  private useBasicMode: boolean = false;
 
   // Buffer to temporarily store messages before sending to Pinecone (cognitive buffer)
   private messageBuffer: {
@@ -50,6 +53,16 @@ export class PineconeMemoryService implements IPersistenceService {
 
   constructor(embeddingService: IEmbeddingService) {
     this.embeddingService = embeddingService;
+    
+    // Check if basic mode is enabled using ModeService for consistency
+    this.useBasicMode = ModeService.getMode() === OrchOSModeEnum.BASIC;
+    LoggingUtils.logInfo(`[MEMORY] Initialized in ${this.useBasicMode ? 'basic (DuckDB)' : 'complete (Pinecone)'} mode`);
+    
+    // Listen for mode changes to update storage choice at runtime
+    ModeService.onModeChange((mode) => {
+      this.useBasicMode = mode === OrchOSModeEnum.BASIC;
+      LoggingUtils.logInfo(`[MEMORY] Mode changed to ${mode}, using ${this.useBasicMode ? 'DuckDB' : 'Pinecone'}`);
+    });
   }
 
   /**
@@ -158,10 +171,16 @@ export class PineconeMemoryService implements IPersistenceService {
   }
 
   /**
-   * Checks if the Pinecone service is available
+   * Checks if the memory service is available (Pinecone or DuckDB)
    */
   isAvailable(): boolean {
-    return !!window.electronAPI?.saveToPinecone && !!window.electronAPI.queryPinecone;
+    if (this.useBasicMode) {
+      // In basic mode, check if DuckDB services are available
+      return !!window.electronAPI?.saveToDuckDB && !!window.electronAPI.queryDuckDB;
+    } else {
+      // In complete mode, check if Pinecone services are available
+      return !!window.electronAPI?.saveToPinecone && !!window.electronAPI.queryPinecone;
+    }
   }
 
   /**
@@ -180,7 +199,7 @@ export class PineconeMemoryService implements IPersistenceService {
   }
 
   /**
-   * Queries Pinecone for relevant memory
+   * Queries memory store (Pinecone or DuckDB) for relevant memory
    */
   async queryMemory(
     embedding: number[],
@@ -194,26 +213,44 @@ export class PineconeMemoryService implements IPersistenceService {
     try {
       // Log filters for debug (brain query diagnostics)
       if (filters) {
-        LoggingUtils.logInfo(`[PineconeMemoryService] filters: ${JSON.stringify(filters)}`);
+        LoggingUtils.logInfo(`[MemoryService] filters: ${JSON.stringify(filters)}`);
       }
-      // Query Pinecone via IPC, passing filters if possible (brain memory search)
-      const queryResponse = await window.electronAPI.queryPinecone(
-        embedding,
-        topK,
-        normalizeKeywords(keywords),
-        filters
-      );
+      
+      let queryResponse;
+      // Use either DuckDB or Pinecone based on mode
+      if (this.useBasicMode) {
+        // Query DuckDB via IPC (local memory)
+        LoggingUtils.logInfo(`[MEMORY] Querying DuckDB in basic mode`);
+        queryResponse = await window.electronAPI.queryDuckDB(
+          embedding,
+          topK,
+          normalizeKeywords(keywords),
+          filters
+        );
+      } else {
+        // Query Pinecone via IPC (cloud memory)
+        LoggingUtils.logInfo(`[MEMORY] Querying Pinecone in complete mode`);
+        queryResponse = await window.electronAPI.queryPinecone(
+          embedding,
+          topK,
+          normalizeKeywords(keywords),
+          filters
+        );
+      }
+      
       // Extract relevant texts from results (brain memory retrieval)
       const relevantTexts = queryResponse.matches
         .filter((match: { metadata?: { content?: string } }) => match.metadata && match.metadata.content)
         .map((match: { metadata?: { content?: string } }) => match.metadata?.content as string)
         .join("\n\n");
+      
       if (relevantTexts) {
-        LoggingUtils.logInfo("[COGNITIVE-MEMORY] Relevant context retrieved via IPC");
+        LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Relevant context retrieved via ${this.useBasicMode ? 'DuckDB' : 'Pinecone'}`);
       }
+      
       return relevantTexts;
     } catch (error) {
-      LoggingUtils.logError("[COGNITIVE-MEMORY] Error querying Pinecone brain memory", error);
+      LoggingUtils.logError(`[COGNITIVE-MEMORY] Error querying ${this.useBasicMode ? 'DuckDB' : 'Pinecone'} memory`, error);
       return "";
     }
   }
@@ -344,9 +381,14 @@ export class PineconeMemoryService implements IPersistenceService {
 
       // Verificar se há entradas para salvar
       if (pineconeEntries.length > 0) {
-        // Salvar no Pinecone via IPC
-        await window.electronAPI?.saveToPinecone(pineconeEntries);
-        LoggingUtils.logInfo(`[Buffer] Persistido no Pinecone: ${pineconeEntries.length} entradas`);
+        // Save to DuckDB or Pinecone based on mode via IPC
+        if (this.useBasicMode) {
+          await window.electronAPI?.saveToDuckDB(pineconeEntries);
+          LoggingUtils.logInfo(`[Buffer] Persistido no DuckDB: ${pineconeEntries.length} entradas`);
+        } else {
+          await window.electronAPI?.saveToPinecone(pineconeEntries);
+          LoggingUtils.logInfo(`[Buffer] Persistido no Pinecone: ${pineconeEntries.length} entradas`);
+        }
 
         // Atualizar timestamp do último flush
         this.messageBuffer.lastFlushTime = now;
@@ -412,10 +454,15 @@ export class PineconeMemoryService implements IPersistenceService {
           }
         ));
 
-        // Save only the response to Pinecone via IPC (direct neural persistence)
+        // Save only the response to DuckDB or Pinecone based on mode via IPC (direct neural persistence)
         if (pineconeEntries.length > 0) {
-          await window.electronAPI?.saveToPinecone(pineconeEntries);
-          LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to Pinecone: ${pineconeEntries.length} entries`);
+          if (this.useBasicMode) {
+            await window.electronAPI?.saveToDuckDB(pineconeEntries);
+            LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to DuckDB: ${pineconeEntries.length} entries`);
+          } else {
+            await window.electronAPI?.saveToPinecone(pineconeEntries);
+            LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to Pinecone: ${pineconeEntries.length} entries`);
+          }
         }
       }
     } catch (error) {
@@ -529,12 +576,20 @@ export class PineconeMemoryService implements IPersistenceService {
   }
 
   /**
-   * Saves vectors to Pinecone (neural persistence)
+   * Saves vectors to memory store (Pinecone or DuckDB)
    * @param vectors Array of vectors
    * @returns Promise that resolves when vectors are saved
    */
   public saveToPinecone(vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>): Promise<void> {
-    return window.electronAPI.saveToPinecone(vectors);
+    if (this.useBasicMode) {
+      // Save to DuckDB in basic mode
+      LoggingUtils.logInfo(`[MEMORY] Saving ${vectors.length} vectors to DuckDB in basic mode`);
+      return window.electronAPI.saveToDuckDB(vectors);
+    } else {
+      // Save to Pinecone in complete mode
+      LoggingUtils.logInfo(`[MEMORY] Saving ${vectors.length} vectors to Pinecone in complete mode`);
+      return window.electronAPI.saveToPinecone(vectors);
+    }
   }
 
   /**

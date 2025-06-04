@@ -39,7 +39,9 @@ export interface ElectronAPI {
   // Pinecone IPC methods
   queryPinecone: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: Array<{ metadata?: Record<string, unknown> }> }>;
   saveToPinecone: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>;
-  
+  // DuckDB IPC methods (for basic mode)
+  queryDuckDB: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: NormalizedDuckDBMatch[] }>;
+  saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>
   // 📝 Method to send prompt updates directly
   sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
 
