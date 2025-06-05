@@ -226,6 +226,7 @@ export class PineconeMemoryService implements IPersistenceService {
           topK,
           normalizeKeywords(keywords),
           filters
+          // Using dynamic threshold - system will choose optimal value based on context
         );
       } else {
         // Query Pinecone via IPC (cloud memory)

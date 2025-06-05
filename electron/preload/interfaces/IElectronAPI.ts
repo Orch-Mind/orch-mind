@@ -150,7 +150,9 @@ export interface IElectronAPI extends
   queryDuckDB(
     embedding: number[], 
     limit?: number, 
-    threshold?: number
+    keywords?: string[], 
+    filters?: Record<string, unknown>, 
+    threshold?: number  // Optional - will be determined dynamically based on context
   ): Promise<{ matches: DuckDBMatch[] }>;
   
   saveDuckDB(

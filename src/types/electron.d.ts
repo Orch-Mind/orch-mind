@@ -35,12 +35,12 @@ export interface ElectronAPI {
   toogleNeuralRecording: (callback: () => void) => () => void;
 
   setDeepgramLanguage: (lang: string) => void
-  
+
   // Pinecone IPC methods
   queryPinecone: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: Array<{ metadata?: Record<string, unknown> }> }>;
   saveToPinecone: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>;
   // DuckDB IPC methods (simplified)
-  queryDuckDB: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: DuckDBMatch[] }>;
+  queryDuckDB: (embedding: number[], limit?: number, keywords?: string[], filters?: Record<string, unknown>, threshold?: number) => Promise<{ matches: DuckDBMatch[] }>;
   saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<{ success: boolean; error?: string }>
   // 📝 Method to send prompt updates directly
   sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;

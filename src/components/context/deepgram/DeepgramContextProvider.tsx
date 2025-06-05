@@ -561,6 +561,7 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const queryResult = await electronAPI.duckdbCommand('query', {
           embedding: testVector.values,
           topK: 1,
+          threshold: 0.1,  // Add threshold for RAG quality
           namespace: 'test'
         });
         

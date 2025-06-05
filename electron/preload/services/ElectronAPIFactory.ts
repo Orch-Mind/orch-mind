@@ -353,9 +353,9 @@ export class ElectronAPIFactory {
       },
 
       // DuckDB Legacy Support (IPC mode)
-      queryDuckDB: async (embedding: number[], limit = 5, threshold = -1.0) => {
+      queryDuckDB: async (embedding: number[], limit = 5, keywords: string[] = [], filters = {}, threshold?: number) => {
         try {
-          return await ipcRenderer.invoke('query-duckdb', embedding, limit, threshold);
+          return await ipcRenderer.invoke('query-duckdb', embedding, limit, keywords, filters, threshold);
         } catch (error) {
           this.logger.error('DuckDB query failed', { error, operation: 'queryDuckDB' });
           return { matches: [] };

@@ -143,21 +143,20 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   });
 
   // DuckDB IPC handlers (updated for new API)
-  ipcMain.handle("query-duckdb", async (event, embedding: number[], limit?: number, threshold?: number) => {
+  ipcMain.handle("query-duckdb", async (event, embedding: number[], limit?: number, keywords: string[] = [], filters: Record<string, unknown> = {}, threshold?: number) => {
     try {
       if (!deps.duckDBHelper) {
         console.error("DuckDB helper not initialized");
         return { matches: [] };
       }
       
-      // Use very low threshold by default to show all results for debugging
-      const defaultThreshold = -1.0; // Allow all similarities from -1 to 1
-      const finalThreshold = threshold !== undefined ? threshold : defaultThreshold;
+      // Ensure keywords is always an array for robust error handling
+      const safeKeywords = Array.isArray(keywords) ? keywords : [];
       
-      console.log(`[MEMORY] Querying DuckDB with embedding[${embedding.length}], limit=${limit || 5}, threshold=${finalThreshold}`);
-      const result = await deps.duckDBHelper.findSimilarVectors(embedding, limit || 5, finalThreshold);
-      console.log(`[MEMORY] DuckDB query returned ${result.length} matches`);
-      return { matches: result };
+      console.log(`[MEMORY] Querying DuckDB with embedding[${embedding.length}], limit=${limit || 5}, threshold=${threshold || 'dynamic'}, keywords=[${safeKeywords.join(', ')}]`);
+      const result = await deps.duckDBHelper.queryDuckDB(embedding, limit || 5, safeKeywords, filters, threshold);
+      console.log(`[MEMORY] DuckDB query returned ${result.matches.length} matches`);
+      return { matches: result.matches };
     } catch (error: unknown) {
       console.error("Error querying DuckDB:", error);
       return { matches: [] };

@@ -11,9 +11,9 @@ import { IPersistenceService } from "../../interfaces/memory/IPersistenceService
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import {
-    Message,
-    SpeakerMemoryResults,
-    SpeakerTranscription
+  Message,
+  SpeakerMemoryResults,
+  SpeakerTranscription
 } from "../../interfaces/transcription/TranscriptionTypes";
 import { OpenAIEmbeddingService } from "../openai/OpenAIEmbeddingService";
 import { BatchTranscriptionProcessor } from "../transcription/BatchTranscriptionProcessor";
@@ -23,10 +23,10 @@ import { MemoryContextBuilder } from "./MemoryContextBuilder";
 import { PineconeMemoryService } from "./PineconeMemoryService";
 
 // Import of normalizeNamespace is no longer needed; namespace is managed internally by PineconeHelper (orchestrator abstraction)
-import { LoggingUtils } from "../../utils/LoggingUtils";
-import { ModeService, OrchOSModeEnum } from "../../../../../services/ModeService";
 import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
+import { ModeService, OrchOSModeEnum } from "../../../../../services/ModeService";
 import { STORAGE_KEYS, getOption } from "../../../../../services/StorageService";
+import { LoggingUtils } from "../../utils/LoggingUtils";
 
 export class MemoryService implements IMemoryService {
   private currentUser: string = "default";
@@ -317,12 +317,14 @@ Never be generic. Always go deep.`
     query: string,
     keywords?: string[],
     topK?: number,
-    filters?: Record<string, unknown>,
-
+    filters?: Record<string, unknown>
   ): Promise<string> {
+    // Ensure keywords is always an array for robust RAG processing
+    const safeKeywords = Array.isArray(keywords) ? keywords : [];
+    
     let expansion = query;
-    if (keywords && keywords.length > 0) {
-      expansion += ` (associado a: ${keywords.join(", ")})`;
+    if (safeKeywords.length > 0) {
+      expansion += ` (associado a: ${safeKeywords.join(", ")})`;
     }
     // Log filters for debugging/explainability (orchestrator diagnostics)
     if (filters) {
@@ -332,7 +334,7 @@ Never be generic. Always go deep.`
       const embedding = await this.embeddingService.createEmbedding(expansion);
       if (this.persistenceService.isAvailable()) {
         // If persistence accepts filters, pass them here in the future (future neural filter support)
-        return this.persistenceService.queryMemory(embedding, topK, keywords, filters);
+        return this.persistenceService.queryMemory(embedding, topK, safeKeywords, filters);
       }
       return "";
     } catch (error) {
