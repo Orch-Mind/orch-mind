@@ -150,8 +150,8 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         return { matches: [] };
       }
       
-      // Use more reasonable threshold defaults based on embedding dimensions
-      const defaultThreshold = embedding.length > 100 ? 0.3 : 0.7; // Lower threshold for high-dimensional embeddings
+      // Use very low threshold by default to show all results for debugging
+      const defaultThreshold = -1.0; // Allow all similarities from -1 to 1
       const finalThreshold = threshold !== undefined ? threshold : defaultThreshold;
       
       console.log(`[MEMORY] Querying DuckDB with embedding[${embedding.length}], limit=${limit || 5}, threshold=${finalThreshold}`);

@@ -353,7 +353,7 @@ export class ElectronAPIFactory {
       },
 
       // DuckDB Legacy Support (IPC mode)
-      queryDuckDB: async (embedding: number[], limit = 5, threshold = 0.7) => {
+      queryDuckDB: async (embedding: number[], limit = 5, threshold = -1.0) => {
         try {
           return await ipcRenderer.invoke('query-duckdb', embedding, limit, threshold);
         } catch (error) {
