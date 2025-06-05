@@ -470,6 +470,26 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatch({ type: 'RESET_STATE' });
   };
   
+  // Debug database function
+  const debugDatabase = useCallback(async (action: 'count' | 'inspect' | 'debug' | 'diagnose' = 'count', options?: any) => {
+    try {
+      console.log(`🔍 [DEBUG] Executando ação de debug: ${action}`);
+      
+      const electronAPI = window.electronAPI as any;
+      if (electronAPI?.duckdbCommand) {
+        const result = await electronAPI.duckdbCommand(action, options || {});
+        console.log(`✅ [DEBUG] Resultado do ${action}:`, result);
+        return result;
+      } else {
+        console.warn("⚠️ [DEBUG] duckdbCommand não disponível no electronAPI");
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ [DEBUG] Erro ao executar ${action}:`, error);
+      return null;
+    }
+  }, []);
+  
     // Export real service instances for UI/integration
   let transcriptionServiceInstance: any = undefined;
   let memoryServiceInstance: any = undefined;
@@ -483,6 +503,76 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       memoryServiceInstance = memoryService["persistenceService"];
     }
   }
+
+  // Additional debugging functions for development
+  const testDatabaseDiagnosis = useCallback(async () => {
+    console.log("🔍 Executando diagnóstico completo do banco de dados...");
+    try {
+      const diagnosis = await debugDatabase('diagnose');
+      if (diagnosis) {
+        console.log("📊 DIAGNÓSTICO COMPLETO:", diagnosis);
+        console.log("📈 Estatísticas por namespace:", diagnosis.embedding_analysis?.by_namespace);
+        console.log("🔧 Info do sistema:", diagnosis.system_info);
+        
+        // Check for potential issues
+        if (diagnosis.system_info?.db_type === 'mock') {
+          console.warn("⚠️ ALERTA: Usando banco MOCK - dados não persistem!");
+        }
+        
+        if (diagnosis.embedding_analysis?.by_namespace?.length === 0) {
+          console.warn("⚠️ ALERTA: Nenhum embedding encontrado em qualquer namespace!");
+        }
+        
+        return diagnosis;
+      }
+    } catch (error) {
+      console.error("❌ Erro durante diagnóstico:", error);
+    }
+    return null;
+  }, [debugDatabase]);
+  
+  const testEmbeddingModel = useCallback(async () => {
+    console.log("🧪 Testando modelo de embeddings...");
+    try {
+      // Create a simple test embedding
+      const testText = "This is a test sentence for embedding generation.";
+      console.log("📝 Texto de teste:", testText);
+      
+      // You would need to add an embedding generation test here
+      // For now, just check if we can save/retrieve a dummy embedding
+      const electronAPI = window.electronAPI as any;
+      if (electronAPI?.duckdbCommand) {
+        const testVector = {
+          id: 'test-embedding-' + Date.now(),
+          values: Array.from({length: 384}, () => Math.random()),
+          metadata: { content: testText, test: true }
+        };
+        
+        console.log("💾 Salvando embedding de teste...");
+        const saveResult = await electronAPI.duckdbCommand('save', {
+          vectors: [testVector],
+          namespace: 'test'
+        });
+        
+        console.log("✅ Resultado do save:", saveResult);
+        
+        // Now try to retrieve it
+        console.log("🔍 Buscando embedding salvo...");
+        const queryResult = await electronAPI.duckdbCommand('query', {
+          embedding: testVector.values,
+          topK: 1,
+          namespace: 'test'
+        });
+        
+        console.log("✅ Resultado da busca:", queryResult);
+        
+        return { saveResult, queryResult };
+      }
+    } catch (error) {
+      console.error("❌ Erro durante teste de embedding:", error);
+    }
+    return null;
+  }, []);
 
   // Context value
   const contextValue: IDeepgramContext = {
@@ -514,7 +604,10 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     },
     transcriptionService: transcriptionServiceInstance,
-    memoryService: memoryServiceInstance
+    memoryService: memoryServiceInstance,
+    debugDatabase,
+    testDatabaseDiagnosis,
+    testEmbeddingModel
   };
   
   return (

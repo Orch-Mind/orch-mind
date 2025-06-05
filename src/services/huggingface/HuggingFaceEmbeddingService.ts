@@ -25,12 +25,12 @@ import { STORAGE_KEYS } from "../StorageService";
 export const SUPPORTED_HF_EMBEDDING_MODELS = [
   // ===== MODELOS PARA BROWSER OTIMIZADOS (XENOVA) =====
   // Melhor compatibilidade e performance no browser
+  'Xenova/all-MiniLM-L6-v2',        // 384-dimensional, extremamente leve (~33MB), suporte a +50 idiomas, mais estável
+  'Xenova/paraphrase-multilingual-MiniLM-L12-v2', // 384-dimensional, bom para detecção semântica (~120MB)
+  'Xenova/all-mpnet-base-v2',       // 768-dimensional, bom equilíbrio tamanho/qualidade (~438MB)
   'Xenova/multilingual-e5-small',   // 384-dimensional, leve (~106MB), ideal para browsers
   'Xenova/multilingual-e5-base',    // 768-dimensional, melhor qualidade (~278MB)
   'Xenova/bge-m3',                  // 1024-dimensional, versão unificada do BGE-M3 (~165MB)
-  'Xenova/all-MiniLM-L6-v2',        // 384-dimensional, extremamente leve (~33MB), suporte a +50 idiomas
-  'Xenova/paraphrase-multilingual-MiniLM-L12-v2', // 384-dimensional, bom para detecção semântica (~120MB)
-  'Xenova/all-mpnet-base-v2',       // 768-dimensional, bom equilíbrio tamanho/qualidade (~438MB)
   
   // ===== MODELOS NÃO-XENOVA (COMPATIBILIDADE LIMITADA) =====
   // Podem ter problemas com arquivos de dados externos no browser
@@ -43,7 +43,7 @@ export const SUPPORTED_HF_EMBEDDING_MODELS = [
  */
 export type HuggingFaceEmbeddingOptions = {
   model?: string;
-  device?: "cpu" | "webgpu";
+  device?: "wasm" | "webgpu";
   dtype?: "fp32" | "q8" | "q4";
 };
 
@@ -131,20 +131,28 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
       return ["fp32"];
     }
     
+    // For the most stable models, start with fp32 to avoid JSON issues
+    if (modelId === 'Xenova/all-MiniLM-L6-v2' || 
+        modelId === 'Xenova/all-mpnet-base-v2') {
+      // These models are very stable and work well with all dtypes
+      return ["fp32", "q8", "q4"];
+    }
+    
     // For specific models that we know don't have q4 quantization
     if (modelId === 'Xenova/multilingual-e5-base') {
       // multilingual-e5-base doesn't have q4 version available
-      return ["q8", "fp32"];
+      return ["fp32", "q8"];
     } else if (modelId === 'Xenova/multilingual-e5-small') {
-      // multilingual-e5-small doesn't have q4 version available
-      return ["q8", "fp32"];
+      // multilingual-e5-small sometimes has JSON loading issues with quantized versions
+      // Start with fp32 for better compatibility
+      return ["fp32", "q8"];
     } else if (modelId.includes('multilingual-e5')) {
       // Other multilingual-e5 variants - safer to avoid q4
-      return ["q8", "fp32"];
+      return ["fp32", "q8"];
     }
     
-    // Default case - try all available dtypes
-    return [...HuggingFaceEmbeddingService.DTYPE_OPTIONS];
+    // Default case - try all available dtypes with fp32 first for stability
+    return ["fp32", "q8", "q4"];
   }
 
   /**
@@ -167,44 +175,95 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
     return true;
   }
 
-  async loadModel(modelId: string = this.getDefaultModelId()): Promise<void> {
-    if (this.currentModel === modelId && this.embeddingGenerator) return;
+  /**
+   * Test network connectivity to HuggingFace model repository
+   * This helps diagnose network issues that might cause JSON parsing errors
+   */
+  private async testHuggingFaceConnectivity(): Promise<boolean> {
+    try {
+      // Test connectivity by fetching a small model config file
+      const response = await fetch(`https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/config.json`);
+      return response.ok;
+    } catch (error) {
+      this.logger.warn(`Network connectivity test to HuggingFace failed: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Check if WebGPU is available in the current browser environment
+   */
+  private async isWebGPUAvailable(): Promise<boolean> {
+    try {
+      // Type assertion for WebGPU support (experimental feature)
+      const gpu = (navigator as any).gpu;
+      if (!gpu) {
+        this.logger.debug('WebGPU not available: navigator.gpu is undefined');
+        return false;
+      }
+      
+      const adapter = await gpu.requestAdapter();
+      if (!adapter) {
+        this.logger.debug('WebGPU not available: no adapter found');
+        return false;
+      }
+      
+      this.logger.debug('WebGPU is available');
+      return true;
+    } catch (error) {
+      this.logger.debug(`WebGPU availability check failed: ${error}`);
+      return false;
+    }
+  }
+
+  async loadModel(modelId?: string): Promise<void> {
+    // Use the provided modelId or get the default one
+    const actualModelId = modelId || this.getDefaultModelId();
+    if (this.currentModel === actualModelId && this.embeddingGenerator) return;
     
     // Determine embedding dimensionality based on loaded model
     // Different multilingual models produce embeddings of different sizes
     if (
-      modelId.includes('bge-m3') || 
-      modelId.includes('multilingual-e5-large')
+      actualModelId.includes('bge-m3') || 
+      actualModelId.includes('multilingual-e5-large')
     ) {
       this.embeddingDimension = 1024; // Premium multilingual models have 1024 dimensions
     } else if (
-      modelId.includes('mpnet') || 
-      modelId.includes('bge-base') ||
-      (modelId.includes('multilingual-e5') && modelId.includes('base'))
+      actualModelId.includes('mpnet') || 
+      actualModelId.includes('bge-base') ||
+      (actualModelId.includes('multilingual-e5') && actualModelId.includes('base'))
     ) {
       this.embeddingDimension = 768; // Base models typically have 768 dimensions
     } else {
       this.embeddingDimension = 384; // Default for small and MiniLM models (384 dimensions)
     }
     
-    this.logger.debug(`Embedding dimensionality set to ${this.embeddingDimension} for model ${modelId}`);
+    this.logger.debug(`Embedding dimensionality set to ${this.embeddingDimension} for model ${actualModelId}`);
     
     // Warn about potential compatibility issues with non-optimized models
-    if (!this.isModelBrowserCompatible(modelId)) {
-      this.logger.warn(`Model ${modelId} may have compatibility issues in browser environments. Xenova/* models are recommended.`);
+    if (!this.isModelBrowserCompatible(actualModelId)) {
+      this.logger.warn(`Model ${actualModelId} may have compatibility issues in browser environments. Xenova/* models are recommended.`);
     }
     
     let lastError: any = null;
     
+    // Check WebGPU availability and adjust device options accordingly
+    const webGPUAvailable = await this.isWebGPUAvailable();
+    const deviceOptions = webGPUAvailable 
+      ? HuggingFaceEmbeddingService.DEVICE_OPTIONS 
+      : ["wasm"]; // Use only WASM if WebGPU is not available
+    
+    this.logger.info(`WebGPU available: ${webGPUAvailable}, using devices: ${deviceOptions.join(', ')}`);
+    
     // Get compatible dtypes for this specific model
-    const compatibleDtypes = this.getCompatibleDtypes(modelId);
-    this.logger.info(`Using compatible dtypes for model ${modelId}: ${compatibleDtypes.join(', ')}`);
+    const compatibleDtypes = this.getCompatibleDtypes(actualModelId);
+    this.logger.info(`Using compatible dtypes for model ${actualModelId}: ${compatibleDtypes.join(', ')}`);
     
     // Try all combinations of device and compatible dtype
-    for (const device of HuggingFaceEmbeddingService.DEVICE_OPTIONS) {
+    for (const device of deviceOptions) {
       for (const dtype of compatibleDtypes) {
         try {
-          this.logger.info(`Loading embedding model ${modelId} with ${device} + ${dtype}...`);
+          this.logger.info(`Loading embedding model ${actualModelId} with ${device} + ${dtype}...`);
           
           // Note: ONNX Runtime warnings about execution providers are normal and expected
           // These warnings occur because ONNX Runtime intelligently assigns different operations
@@ -215,14 +274,39 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
 
             // Configuração do pipeline com opções suportadas pelos tipos TypeScript
             // Mantemos apenas opções válidas para evitar erros de lint
-            this.embeddingGenerator = await pipeline("feature-extraction", modelId, {
+            const pipelineConfig: any = {
               device,
-              dtype
-            });
+              dtype,
+              // Force local model usage when possible to avoid CSP issues
+              local_files_only: false, // Allow download but prefer cache
+              use_external_data_format: false, // Avoid external data dependencies
+              // Add progress callback for debugging
+              progress_callback: (data: any) => {
+                if (data.status === 'progress') {
+                  // Ensure progress is between 0-100% by clamping the value
+                  const progressPercent = Math.min(Math.round((data.progress || 0) * 100), 100);
+                  this.logger.debug(`Loading model progress: ${progressPercent}%`);
+                } else if (data.status === 'done') {
+                  this.logger.debug(`Model file loaded: ${data.file}`);
+                }
+              }
+            };
+
+            // Enhanced cache configuration for Electron environment
+            if (typeof window !== 'undefined') {
+              pipelineConfig.cache_dir = "./.cache";
+              // Set environment variables for better HuggingFace behavior in Electron
+              if (typeof process !== 'undefined' && process.env) {
+                process.env.HF_HUB_DISABLE_TELEMETRY = '1';
+                process.env.HF_HUB_OFFLINE = '0'; // Allow downloads but use cache aggressively
+              }
+            }
+
+            this.embeddingGenerator = await pipeline("feature-extraction", actualModelId, pipelineConfig);
           
-          this.currentModel = modelId;
+          this.currentModel = actualModelId;
           this.initialized = true;
-          this.logger.success(`Successfully loaded ${modelId} with ${device} + ${dtype}`);
+          this.logger.success(`Successfully loaded ${actualModelId} with ${device} + ${dtype}`);
           return;
         } catch (e) { 
           lastError = e;
@@ -234,14 +318,30 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
             this.logger.error(`This model uses external data files which aren't fully supported in browser environments. Consider using a Xenova/* model instead.`);
           } else if (errorMsg.includes('Could not locate file') && errorMsg.includes('404')) {
             this.logger.error(`The model file wasn't found (404 error). This model may not have a ${dtype} version available.`);
+          } else if (errorMsg.includes('Unexpected token') && errorMsg.includes('<!DOCTYPE')) {
+            this.logger.error(`Received HTML instead of model files - possible network issue or model not available. Trying next configuration...`);
+          } else if (errorMsg.includes('SyntaxError') && errorMsg.includes('JSON')) {
+            this.logger.error(`JSON parsing error when fetching model files. The model server may be returning an error page instead of the model data.`);
           }
         }
       }
     }
     
+    // If all attempts fail, try fallback to a more stable model if we're not already using the most stable one
+    if (actualModelId !== SUPPORTED_HF_EMBEDDING_MODELS[0] && 
+        lastError && 
+        String(lastError).includes('JSON')) {
+      this.logger.warn(`Model ${actualModelId} failed to load due to JSON parsing issues. Trying fallback to more stable model: ${SUPPORTED_HF_EMBEDDING_MODELS[0]}`);
+      try {
+        return await this.loadModel(SUPPORTED_HF_EMBEDDING_MODELS[0]);
+      } catch (fallbackError) {
+        this.logger.error(`Fallback model also failed to load:`, fallbackError);
+      }
+    }
+    
     // If all attempts fail, throw last error with helpful message
     this.initialized = false;
-    throw new Error(`Failed to load embedding model ${modelId} on any supported device/dtype. ` +
+    throw new Error(`Failed to load embedding model ${actualModelId} on any supported device/dtype. ` +
       `Try using a Xenova/* model which is optimized for browsers. Last error: ${lastError}`);
   }
 
@@ -259,11 +359,25 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
    */
   async initialize(config?: Record<string, any>): Promise<boolean> {
     try {
-      const modelId = config?.modelId || 
-                     (typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.HF_EMBEDDING_MODEL) : null) || 
-                     this.getDefaultModelId();
-      await this.loadModel(modelId);
-      return true;
+      const requestedModelId = config?.modelId || 
+                              (typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.HF_EMBEDDING_MODEL) : null);
+      
+      const modelId = requestedModelId || this.getDefaultModelId();
+      
+      this.logger.info(`Initializing HuggingFace embedding service with model: ${modelId}`);
+      
+      // If a specific model was requested but fails, try the default stable model
+      try {
+        await this.loadModel(modelId);
+        return true;
+      } catch (modelError) {
+        if (requestedModelId && requestedModelId !== SUPPORTED_HF_EMBEDDING_MODELS[0]) {
+          this.logger.warn(`Requested model ${requestedModelId} failed to load. Trying default stable model.`);
+          await this.loadModel(SUPPORTED_HF_EMBEDDING_MODELS[0]);
+          return true;
+        }
+        throw modelError;
+      }
     } catch (error) {
       this.logger.error('Failed to initialize HuggingFaceEmbeddingService', error);
       return false;

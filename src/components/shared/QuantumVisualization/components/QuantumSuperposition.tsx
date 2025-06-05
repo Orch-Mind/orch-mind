@@ -2,10 +2,10 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /* eslint-disable react/no-unknown-property */
-import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { Trail } from '@react-three/drei';
+import React, { useCallback, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useOptimizedQuantumFrame } from '../utils/performance';
 
 /**
  * Component for quantum state superposition in microtubules (Orch OR theory)
@@ -27,7 +27,11 @@ interface QuantumSuperpositionProps {
   collapseActive?: boolean; // Sinaliza evento de Redução Objetiva (OR)
 }
 
-export function QuantumSuperposition({ amount = 7, coherence = 0.3, collapseActive = false }: QuantumSuperpositionProps) {
+const QuantumSuperposition = React.memo<QuantumSuperpositionProps>(({ 
+  amount = 7, 
+  coherence = 0.3, 
+  collapseActive = false 
+}) => {
   const group = useRef<THREE.Group>(null);
   const tubuleRefs = useRef<THREE.Mesh[]>([]);
   
@@ -87,106 +91,119 @@ export function QuantumSuperposition({ amount = 7, coherence = 0.3, collapseActi
     }));
   }, [paths]);
 
+  // Optimized animation callback with performance monitoring
+  const animateQuantumStates = useCallback((state: { clock: { getElapsedTime: () => number } }) => {
+    if (!group.current) return;
+    
+    const t = state.clock.getElapsedTime();
+    
+    // Rotação lenta da estrutura - representando os microtúbulos em movimento browniano
+    group.current.rotation.y = t * 0.05;
+    group.current.rotation.x = Math.sin(t * 0.1) * 0.1;
+    
+    // Atualizando cada "quantum bit" de tubulina individualmente
+    group.current.children.forEach((child, i) => {
+      if (i >= paths.length) return;
+      
+      const mesh = child as THREE.Mesh;
+      const originalPos = paths[i];
+      const state = tubulinStates[i];
+      
+      // Movimento quântico que segue a equação de Schrödinger (simplificada)
+      // Aqui simulamos a evolução temporal dos estados quânticos de forma simplificada
+      const quantum_phase = state.phase + t * state.frequency;
+      const probability_amplitude = Math.cos(quantum_phase) * Math.sin(t * 0.1 + i);
+      
+      // Oscilação quântica - representando superposição quântica nas moléculas de tubulina
+      // Em Orch OR, estas oscilações podem ser mantidas em estado coerente,
+      // protegidas da decoerência por processos de isolamento quântico
+      const quantum_offset = 0.1 * probability_amplitude;
+      
+      // Atualizando posição com oscilação quântica
+      mesh.position.set(
+        originalPos.x + quantum_offset * Math.sin(quantum_phase),
+        originalPos.y + quantum_offset * Math.cos(quantum_phase),
+        originalPos.z + quantum_offset * Math.sin(quantum_phase * 0.7)
+      );
+      
+      // A cor representa o estado quântico da tubulina
+      // Vermelho/laranja: mais "excitado"
+      // Azul/verde: mais próximo do estado fundamental
+      const intensity = 0.5 + 0.5 * probability_amplitude;
+      const hue = 240 - 180 * intensity; // 240=azul, 60=amarelo/vermelho
+      
+      // Atualizando cor diretamente através do material
+      if (mesh.material) {
+        (mesh.material as THREE.MeshBasicMaterial).color.setHSL(hue/360, 0.8, 0.6 + 0.4 * intensity);
+        
+        // Opacidade mínima muito baixa em repouso (0.05), crescendo suavemente com coherence
+        // Corrige: aplica opacidade e transparência apenas se material for MeshBasicMaterial ou array de MeshBasicMaterial
+        // Durante evento OR (colapso), aumenta opacidade e pulsação, representando o "momento de consciência" da teoria Orch-OR
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat) => {
+            if (mat instanceof THREE.MeshBasicMaterial) {
+              mat.transparent = true;
+              // Durante colapso (OR), opacidade máxima; em repouso, proporcional à coerência
+              mat.opacity = collapseActive ? 1 : (0.05 + 0.9 * coherence);
+            }
+          });
+        } else if (mesh.material instanceof THREE.MeshBasicMaterial) {
+          mesh.material.transparent = true;
+          mesh.material.opacity = collapseActive ? 1 : (0.05 + 0.9 * coherence);
+        }
+      }
+      
+      // Atualiza escala para representar "expansão quântica"
+      // Escala modulada por intensidade local e coerência global
+      // Durante evento OR (colapso), expansão máxima; em repouso, proporcional à intensidade e coerência
+      // Represent a expansão temporal durante o colapso da função de onda (segundo Penrose)
+      mesh.scale.setScalar(collapseActive ? 
+        (0.8 + 0.5 * intensity) : // Expansão máxima durante OR
+        (0.6 + 0.4 * intensity * (0.8 + 0.4 * coherence))); // Escala normal em coerência
+    });
+  }, [paths, tubulinStates, coherence, collapseActive]);
+
   // Animação da superposição quântica em tubulinas
   // Simulando a dinâmica quântica descrita na teoria Orch OR
-  useFrame(({ clock }) => {
-    if (group.current) {
-      const t = clock.getElapsedTime();
+  useOptimizedQuantumFrame(animateQuantumStates, 'medium');
+
+  // Memoized trail components for better performance
+  const trailComponents = useMemo(() => {
+    return paths.map((path, i) => {
+      // Define o padrão de cores inicial para cada estado de tubulina
+      const state = tubulinStates[i];
+      const initialProbability = state.probability;
+      const hue = 240 - 180 * initialProbability; // 240=azul, 60=amarelo/vermelho
       
-      // Rotação lenta da estrutura - representando os microtúbulos em movimento browniano
-      group.current.rotation.y = t * 0.05;
-      group.current.rotation.x = Math.sin(t * 0.1) * 0.1;
-      
-      // Atualizando cada "quantum bit" de tubulina individualmente
-      group.current.children.forEach((child, i) => {
-        if (i >= paths.length) return;
-        
-        const mesh = child as THREE.Mesh;
-        const originalPos = paths[i];
-        const state = tubulinStates[i];
-        
-        // Movimento quântico que segue a equação de Schrödinger (simplificada)
-        // Aqui simulamos a evolução temporal dos estados quânticos de forma simplificada
-        const quantum_phase = state.phase + t * state.frequency;
-        const probability_amplitude = Math.cos(quantum_phase) * Math.sin(t * 0.1 + i);
-        
-        // Oscilação quântica - representando superposição quântica nas moléculas de tubulina
-        // Em Orch OR, estas oscilações podem ser mantidas em estado coerente,
-        // protegidas da decoerência por processos de isolamento quântico
-        const quantum_offset = 0.1 * probability_amplitude;
-        
-        // Atualizando posição com oscilação quântica
-        mesh.position.set(
-          originalPos.x + quantum_offset * Math.sin(quantum_phase),
-          originalPos.y + quantum_offset * Math.cos(quantum_phase),
-          originalPos.z + quantum_offset * Math.sin(quantum_phase * 0.7)
-        );
-        
-        // A cor representa o estado quântico da tubulina
-        // Vermelho/laranja: mais "excitado"
-        // Azul/verde: mais próximo do estado fundamental
-        const intensity = 0.5 + 0.5 * probability_amplitude;
-        const hue = 240 - 180 * intensity; // 240=azul, 60=amarelo/vermelho
-        
-        // Atualizando cor diretamente através do material
-        if (mesh.material) {
-          (mesh.material as THREE.MeshBasicMaterial).color.setHSL(hue/360, 0.8, 0.6 + 0.4 * intensity);
-// Opacidade mínima muito baixa em repouso (0.05), crescendo suavemente com coherence
-// Corrige: aplica opacidade e transparência apenas se material for MeshBasicMaterial ou array de MeshBasicMaterial
-// Durante evento OR (colapso), aumenta opacidade e pulsação, representando o "momento de consciência" da teoria Orch-OR
-if (Array.isArray(mesh.material)) {
-  mesh.material.forEach((mat) => {
-    if (mat instanceof THREE.MeshBasicMaterial) {
-      mat.transparent = true;
-      // Durante colapso (OR), opacidade máxima; em repouso, proporcional à coerência
-      mat.opacity = collapseActive ? 1 : (0.05 + 0.9 * coherence);
-    }
-  });
-} else if (mesh.material instanceof THREE.MeshBasicMaterial) {
-  mesh.material.transparent = true;
-  mesh.material.opacity = collapseActive ? 1 : (0.05 + 0.9 * coherence);
-}
-        }
-        
-        // Atualiza escala para representar "expansão quântica"
-        // Escala modulada por intensidade local e coerência global
-// Durante evento OR (colapso), expansão máxima; em repouso, proporcional à intensidade e coerência
-// Represent a expansão temporal durante o colapso da função de onda (segundo Penrose)
-mesh.scale.setScalar(collapseActive ? 
-  (0.8 + 0.5 * intensity) : // Expansão máxima durante OR
-  (0.6 + 0.4 * intensity * (0.8 + 0.4 * coherence))); // Escala normal em coerência
-      });
-    }
-  });
+      return (
+        <Trail
+          key={i}
+          width={1.5}
+          length={3 + Math.floor(initialProbability * 6)}
+          color={new THREE.Color().setHSL(hue/360, 0.8, 0.6)}
+          attenuation={(t) => Math.pow(1-t, 1.5)} // Queda mais rápida das "caudas quânticas"
+        >
+          <mesh 
+            position={path}
+            ref={(el) => { 
+              if (el) tubuleRefs.current[i] = el;
+            }}
+          >
+            <sphereGeometry args={[0.05 + (initialProbability * 0.03), 8, 8]} />
+            <meshBasicMaterial color={new THREE.Color().setHSL(hue/360, 0.8, 0.6)} />
+          </mesh>
+        </Trail>
+      );
+    });
+  }, [paths, tubulinStates]);
 
   return (
     <group ref={group}>
-      {paths.map((path, i) => {
-        // Define o padrão de cores inicial para cada estado de tubulina
-        const state = tubulinStates[i];
-        const initialProbability = state.probability;
-        const hue = 240 - 180 * initialProbability; // 240=azul, 60=amarelo/vermelho
-        
-        return (
-          <Trail
-            key={i}
-            width={1.5}
-            length={3 + Math.floor(initialProbability * 6)}
-            color={new THREE.Color().setHSL(hue/360, 0.8, 0.6)}
-            attenuation={(t) => Math.pow(1-t, 1.5)} // Queda mais rápida das "caudas quânticas"
-          >
-            <mesh 
-              position={path}
-              ref={(el) => { 
-                if (el) tubuleRefs.current[i] = el;
-              }}
-            >
-              <sphereGeometry args={[0.05 + (initialProbability * 0.03), 8, 8]} />
-              <meshBasicMaterial color={new THREE.Color().setHSL(hue/360, 0.8, 0.6)} />
-            </mesh>
-          </Trail>
-        );
-      })}
+      {trailComponents}
     </group>
   );
-}
+});
+
+QuantumSuperposition.displayName = 'QuantumSuperposition';
+
+export { QuantumSuperposition };

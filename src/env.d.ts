@@ -41,8 +41,8 @@ interface ElectronAPI {
     saveToPinecone: (
         vectors: Array<{ id: string, values: number[], metadata: Record<string, string | number | boolean> }>
     ) => Promise<{ success: boolean; error?: string }>;
-    queryDuckDB: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: NormalizedDuckDBMatch[] }>;
-    saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>
+    queryDuckDB: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: DuckDBMatch[] }>;
+    saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<{ success: boolean; error?: string }>
     sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
     importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>
 }

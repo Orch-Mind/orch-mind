@@ -2,10 +2,10 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from 'react';
-import WifiStatusConnection from './WifiStatusConnection';
 import { ConnectionState, MicrophoneState } from '../../../context';
-import QuantumSettingsIcon from './QuantumSettingsIcon';
 import styles from './PanelHeader.module.css';
+import QuantumSettingsIcon from './QuantumSettingsIcon';
+import WifiStatusConnection from './WifiStatusConnection';
 
 /**
  * Interface cortical para o cabeçalho do painel de transcrição
@@ -18,6 +18,7 @@ interface PanelHeaderProps {
   onShowImportModal: () => void;
   onShowLogsModal: () => void; // Abre o modal de logs de cognição
   onShowSettings?: () => void; // Abre as configurações gerais do sistema
+  onShowDebugModal?: () => void; // Abre o modal de debug DuckDB
   onMinimize?: () => void;
   connectionState: ConnectionState;
   microphoneState: MicrophoneState;
@@ -32,6 +33,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onShowImportModal,
   onShowLogsModal,
   onShowSettings,
+  onShowDebugModal,
   onMinimize,
   connectionState,
   microphoneState,
@@ -83,6 +85,22 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           </svg>
           Logs
         </button>
+        
+        {/* Botão Debug DuckDB - apenas em desenvolvimento */}
+        {onShowDebugModal && process.env.NODE_ENV === 'development' && (
+          <button
+            title="DuckDB Debug (Dev Only)"
+            aria-label="Open DuckDB Debug"
+            onClick={onShowDebugModal}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-orange-400 via-red-500 to-purple-600 shadow-[0_0_24px_4px_rgba(255,165,0,0.25)] hover:shadow-orange-400/80 hover:scale-105 transition-all duration-200 ring-2 ring-orange-400/30 backdrop-blur text-white focus:outline-none focus:ring-4 focus:ring-orange-400/60 h-10"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="3" y="4" width="14" height="12" rx="2" stroke="#FFA500" strokeWidth="1.5" />
+              <path d="M7 8h6M7 11h6M7 14h4" stroke="#FF4500" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Debug
+          </button>
+        )}
         
         {/* Botão de Configurações */}
         {onShowSettings && (

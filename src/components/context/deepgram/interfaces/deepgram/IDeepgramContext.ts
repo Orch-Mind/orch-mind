@@ -15,8 +15,8 @@ export enum DeepgramState {
   Error = 'error'
 }
 
-import { TranscriptionStorageService } from '../../services/transcription/TranscriptionStorageService';
 import { PineconeMemoryService } from '../../services/memory/PineconeMemoryService';
+import { TranscriptionStorageService } from '../../services/transcription/TranscriptionStorageService';
 
 export interface IDeepgramContext {
   connection: ListenLiveClient | null;
@@ -49,4 +49,11 @@ export interface IDeepgramContext {
   // Advanced services exposed for UI/integration
   transcriptionService?: TranscriptionStorageService;
   memoryService?: PineconeMemoryService;
+  
+  // Debug function for database inspection
+  debugDatabase?: (action: 'count' | 'inspect' | 'debug' | 'diagnose', options?: any) => Promise<any>;
+  
+  // Additional debugging functions for development
+  testDatabaseDiagnosis?: () => Promise<any>;
+  testEmbeddingModel?: () => Promise<any>;
 } 

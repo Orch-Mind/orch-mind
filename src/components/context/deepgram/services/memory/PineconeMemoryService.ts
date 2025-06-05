@@ -383,8 +383,12 @@ export class PineconeMemoryService implements IPersistenceService {
       if (pineconeEntries.length > 0) {
         // Save to DuckDB or Pinecone based on mode via IPC
         if (this.useBasicMode) {
-          await window.electronAPI?.saveToDuckDB(pineconeEntries);
-          LoggingUtils.logInfo(`[Buffer] Persistido no DuckDB: ${pineconeEntries.length} entradas`);
+          const result = await window.electronAPI?.saveToDuckDB(pineconeEntries);
+          if (result?.success) {
+            LoggingUtils.logInfo(`[Buffer] Persistido no DuckDB: ${pineconeEntries.length} entradas`);
+          } else {
+            LoggingUtils.logError(`[Buffer] Erro ao persistir no DuckDB: ${result?.error}`);
+          }
         } else {
           await window.electronAPI?.saveToPinecone(pineconeEntries);
           LoggingUtils.logInfo(`[Buffer] Persistido no Pinecone: ${pineconeEntries.length} entradas`);
@@ -457,8 +461,12 @@ export class PineconeMemoryService implements IPersistenceService {
         // Save only the response to DuckDB or Pinecone based on mode via IPC (direct neural persistence)
         if (pineconeEntries.length > 0) {
           if (this.useBasicMode) {
-            await window.electronAPI?.saveToDuckDB(pineconeEntries);
-            LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to DuckDB: ${pineconeEntries.length} entries`);
+            const result = await window.electronAPI?.saveToDuckDB(pineconeEntries);
+            if (result?.success) {
+              LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to DuckDB: ${pineconeEntries.length} entries`);
+            } else {
+              LoggingUtils.logError(`[COGNITIVE-BUFFER] Error persisting to DuckDB: ${result?.error}`);
+            }
           } else {
             await window.electronAPI?.saveToPinecone(pineconeEntries);
             LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to Pinecone: ${pineconeEntries.length} entries`);
@@ -580,15 +588,18 @@ export class PineconeMemoryService implements IPersistenceService {
    * @param vectors Array of vectors
    * @returns Promise that resolves when vectors are saved
    */
-  public saveToPinecone(vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>): Promise<void> {
+  public async saveToPinecone(vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>): Promise<void> {
     if (this.useBasicMode) {
       // Save to DuckDB in basic mode
       LoggingUtils.logInfo(`[MEMORY] Saving ${vectors.length} vectors to DuckDB in basic mode`);
-      return window.electronAPI.saveToDuckDB(vectors);
+      const result = await window.electronAPI.saveToDuckDB(vectors);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save to DuckDB');
+      }
     } else {
       // Save to Pinecone in complete mode
       LoggingUtils.logInfo(`[MEMORY] Saving ${vectors.length} vectors to Pinecone in complete mode`);
-      return window.electronAPI.saveToPinecone(vectors);
+      await window.electronAPI.saveToPinecone(vectors);
     }
   }
 

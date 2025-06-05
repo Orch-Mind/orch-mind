@@ -142,35 +142,193 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   });
 
-  // DuckDB IPC handlers (for basic mode)
-  ipcMain.handle("query-duckdb", async (event, embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => {
+  // DuckDB IPC handlers (updated for new API)
+  ipcMain.handle("query-duckdb", async (event, embedding: number[], limit?: number, threshold?: number) => {
     try {
       if (!deps.duckDBHelper) {
         console.error("DuckDB helper not initialized");
         return { matches: [] };
       }
-      const result = await deps.duckDBHelper.queryDuckDB(embedding, topK, keywords, filters);
-      console.log(`[MEMORY] DuckDB query returned ${result.matches.length} matches`);
-      return result;
+      
+      // Use more reasonable threshold defaults based on embedding dimensions
+      const defaultThreshold = embedding.length > 100 ? 0.3 : 0.7; // Lower threshold for high-dimensional embeddings
+      const finalThreshold = threshold !== undefined ? threshold : defaultThreshold;
+      
+      console.log(`[MEMORY] Querying DuckDB with embedding[${embedding.length}], limit=${limit || 5}, threshold=${finalThreshold}`);
+      const result = await deps.duckDBHelper.findSimilarVectors(embedding, limit || 5, finalThreshold);
+      console.log(`[MEMORY] DuckDB query returned ${result.length} matches`);
+      return { matches: result };
     } catch (error: unknown) {
       console.error("Error querying DuckDB:", error);
       return { matches: [] };
     }
   });
 
-  ipcMain.handle("save-duckdb", async (event, vectors: Array<{ id: string, values: number[], metadata: Record<string, string | number | boolean | string[]> }>) => {
+  ipcMain.handle("save-duckdb", async (event, vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => {
     try {
       if (!deps.duckDBHelper) {
         console.error("DuckDB helper not initialized");
         return { success: false, error: "DuckDB helper not initialized" };
       }
-      await deps.duckDBHelper.saveToDuckDB(vectors);
-      console.log(`[MEMORY] Saved ${vectors.length} vectors to DuckDB`);
+      
+      console.log(`[MEMORY] Saving ${vectors.length} vectors to DuckDB`);
+      
+      for (const vector of vectors) {
+        if (!vector.id || !Array.isArray(vector.values) || vector.values.length === 0) {
+          console.warn(`[MEMORY] Skipping invalid vector:`, vector.id);
+          continue;
+        }
+        await deps.duckDBHelper.storeVector(vector.id, vector.values, vector.metadata || {});
+      }
+      
+      console.log(`[MEMORY] Successfully saved ${vectors.length} vectors to DuckDB`);
       return { success: true };
     } catch (error: unknown) {
       console.error("Error saving to DuckDB:", error);
-      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
-      return { success: false, error: errorMessage || "Error saving to DuckDB" };
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  // New DuckDB test and utility handlers
+  ipcMain.handle("test-duckdb", async () => {
+    try {
+      if (!deps.duckDBHelper) {
+        return { success: false, error: "DuckDB helper not initialized" };
+      }
+
+      console.log("🧪 [TEST] Starting DuckDB functionality test...");
+
+      // Test 1: Initialize
+      await deps.duckDBHelper.initialize();
+      console.log("✅ [TEST] DuckDB initialized successfully");
+
+      // Test 2: Store a test vector
+      const testVector = [0.1, 0.2, 0.3, 0.4, 0.5];
+      const testMetadata = { type: "test", timestamp: new Date().toISOString() };
+      await deps.duckDBHelper.storeVector("test-vector-1", testVector, testMetadata);
+      console.log("✅ [TEST] Test vector stored successfully");
+
+      // Test 3: Get vector count
+      const count = await deps.duckDBHelper.getVectorCount();
+      console.log(`✅ [TEST] Vector count: ${count}`);
+
+      // Test 4: Query similar vectors
+      const queryVector = [0.15, 0.25, 0.35, 0.45, 0.55]; // Similar to test vector
+      const results = await deps.duckDBHelper.findSimilarVectors(queryVector, 5, 0.5);
+      console.log(`✅ [TEST] Found ${results.length} similar vectors`);
+
+      // Log results details
+      results.forEach((result, index) => {
+        console.log(`   ${index + 1}. ID: ${result.id}, Score: ${result.score.toFixed(4)}, Metadata:`, result.metadata);
+      });
+
+      return { 
+        success: true, 
+        results: {
+          vectorCount: count,
+          queryResults: results,
+          testCompleted: true
+        }
+      };
+    } catch (error: unknown) {
+      console.error("❌ [TEST] DuckDB test failed:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  ipcMain.handle("get-duckdb-info", async () => {
+    try {
+      if (!deps.duckDBHelper) {
+        return { success: false, error: "DuckDB helper not initialized" };
+      }
+
+      await deps.duckDBHelper.initialize();
+      const count = await deps.duckDBHelper.getVectorCount();
+      
+      console.log(`📊 [INFO] DuckDB status - Vector count: ${count}`);
+      
+      return { 
+        success: true, 
+        info: {
+          vectorCount: count,
+          isInitialized: true,
+          dbPath: "~/Library/Application Support/orch-os/orch-os-vectors.db"
+        }
+      };
+    } catch (error: unknown) {
+      console.error("Error getting DuckDB info:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  ipcMain.handle("clear-duckdb", async () => {
+    try {
+      if (!deps.duckDBHelper) {
+        return { success: false, error: "DuckDB helper not initialized" };
+      }
+
+      await deps.duckDBHelper.clearVectors();
+      console.log("🗑️ [CLEAR] All vectors cleared from DuckDB");
+      
+      return { success: true };
+    } catch (error: unknown) {
+      console.error("Error clearing DuckDB:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  // DuckDB sandboxed command handler (updated for new API)
+  ipcMain.handle("duckdb-command", async (event, command: string, data?: any) => {
+    try {
+      console.log(`[MAIN:DuckDB] Executing command: ${command}${data ? ' with data' : ''}`);
+
+      switch (command) {
+        case 'query':
+          const { embedding, limit, threshold } = data || {};
+          if (!embedding || !Array.isArray(embedding)) {
+            return { success: false, error: "Invalid embedding data for query" };
+          }
+          const queryResult = await deps.duckDBHelper?.findSimilarVectors(embedding, limit, threshold);
+          console.log(`[MAIN:DuckDB] Query completed - found ${queryResult?.length || 0} matches`);
+          return { success: true, matches: queryResult || [] };
+          
+        case 'save':
+          const { vectors } = data || {};
+          if (!vectors || !Array.isArray(vectors)) {
+            return { success: false, error: "Invalid vectors data for save operation" };
+          }
+          
+          for (const vector of vectors) {
+            await deps.duckDBHelper?.storeVector(vector.id, vector.values, vector.metadata || {});
+          }
+          console.log(`[MAIN:DuckDB] Save completed - stored ${vectors.length} vectors`);
+          return { success: true };
+
+        case 'getInfo':
+          const count = await deps.duckDBHelper?.getVectorCount();
+          return { 
+            success: true, 
+            info: { 
+              vectorCount: count || 0,
+              isInitialized: !!deps.duckDBHelper 
+            } 
+          };
+
+        case 'clear':
+          await deps.duckDBHelper?.clearVectors();
+          return { success: true };
+
+        default:
+          return { success: false, error: `Unknown command: ${command}` };
+      }
+    } catch (error: unknown) {
+      console.error(`[MAIN:DuckDB] Command ${command} failed:`, error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
     }
   });
 
@@ -185,6 +343,20 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       }
     } catch (error) {
       console.error("❌ [IPC] Error processing realtime-transcription:", error);
+    }
+  });
+
+  // Handler for toggle-recording event (from shortcuts)
+  ipcMain.on(deps.PROCESSING_EVENTS.TOOGLE_RECORDING, (event) => {
+    try {
+      console.log("🎤 [IPC] Toggle recording event received in main process");
+      const mainWindow = deps.getMainWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send(deps.PROCESSING_EVENTS.TOOGLE_RECORDING);
+        console.log("🎤 [IPC] Toggle recording event re-sent to all listeners");
+      }
+    } catch (error) {
+      console.error("❌ [IPC] Error processing toggle-recording:", error);
     }
   });
   

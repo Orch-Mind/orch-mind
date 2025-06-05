@@ -2,8 +2,7 @@
  * Copyright (c) 2025 Guilherme Ferrari Brescia
  */
 
-@import url('https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap');
-@import url('https://fonts.googleapis.com/css?family=Orbitron:700&display=swap');
+/* Google Fonts imported via HTML head for better COEP compatibility */
 
 :root {
   --orchos-font-title: 'Orbitron', 'SF Pro Display', 'Inter', 'Roboto', Arial, sans-serif;
@@ -49,7 +48,7 @@ body, .orchos-card, .orchos-btn, .orchos-text, input, textarea, select {
 }
 
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap');
+/* Orbitron font imported via HTML head */
 
 :root {
   /* Cognição Quântica Theme */

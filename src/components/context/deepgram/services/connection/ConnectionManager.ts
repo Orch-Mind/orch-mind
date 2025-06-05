@@ -258,10 +258,6 @@ export class ConnectionManager {
       try {
         if (connection && connection.getReadyState() === 1) {
           connection.keepAlive();
-          // Reduce log frequency to avoid spam
-          if (Math.random() < 0.1) { // Log only ~10% of the time
-            console.log("💓 [COGNITIVE-CONNECTION] KeepAlive sent to maintain active brain WebSocket connection");
-          }
         } else if (connection && connection.getReadyState() !== 1) {
           this.logger.warning(`Unable to send keepAlive: state ${connection.getReadyState()}`);
           

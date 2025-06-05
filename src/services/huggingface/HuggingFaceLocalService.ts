@@ -65,7 +65,7 @@ export class HuggingFaceLocalService {
 
   /**
    * Loads a supported model for local inference with auto device/dtype fallback.
-   * Symbolic: Tries WebGPU + quantized (q4), depois q8, depois fp32, depois CPU.
+   * Symbolic: Tries WebGPU + quantized (q4), depois q8, depois fp32, depois WASM.
    * Maximizes browser compatibility and performance for Orch-OS.
    */
   async loadModel(modelId: string): Promise<void> {
@@ -89,21 +89,21 @@ export class HuggingFaceLocalService {
       this.currentModel = modelId;
       return;
     } catch (e) { lastError = e; }
-    // Fallback: CPU + q4
+    // Fallback: WASM + q4
     try {
-      this.generator = await pipeline("text-generation", modelId, { device: "cpu", dtype: "q4" });
+      this.generator = await pipeline("text-generation", modelId, { device: "wasm", dtype: "q4" });
       this.currentModel = modelId;
       return;
     } catch (e) { lastError = e; }
-    // Fallback: CPU + q8
+    // Fallback: WASM + q8
     try {
-      this.generator = await pipeline("text-generation", modelId, { device: "cpu", dtype: "q8" });
+      this.generator = await pipeline("text-generation", modelId, { device: "wasm", dtype: "q8" });
       this.currentModel = modelId;
       return;
     } catch (e) { lastError = e; }
-    // Fallback: CPU + fp32
+    // Fallback: WASM + fp32
     try {
-      this.generator = await pipeline("text-generation", modelId, { device: "cpu", dtype: "fp32" });
+      this.generator = await pipeline("text-generation", modelId, { device: "wasm", dtype: "fp32" });
       this.currentModel = modelId;
       return;
     } catch (e) { lastError = e; }

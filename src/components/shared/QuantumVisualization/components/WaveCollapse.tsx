@@ -2,8 +2,8 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /* eslint-disable react/no-unknown-property */
-import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import React, { useCallback, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 /**
@@ -27,13 +27,13 @@ interface WaveCollapseProps {
   collapseActive?: boolean;
 }
 
-export function WaveCollapse({ 
+const WaveCollapse = React.memo<WaveCollapseProps>(({ 
   position = [0, 0, 0], 
   active = false, 
   color = "#00FFFF",
   isNonComputable = false,
   collapseActive = false
-}: WaveCollapseProps) {
+}) => {
   // Referências para animação
   const outerRing = useRef<THREE.Mesh>(null);
   const middleRing = useRef<THREE.Mesh>(null);
@@ -79,13 +79,12 @@ export function WaveCollapse({
     }
     return particles;
   }, []);
-  
-  // Animação da Redução Objetiva (OR)
-  // Simula o processo de colapso descrito por Penrose-Hameroff
-  useFrame(({ clock }) => {
+
+  // Optimized animation callback for OR (Objective Reduction)
+  const animateObjectiveReduction = useCallback((state: { clock: { getElapsedTime: () => number } }) => {
     if (!active) return;
     
-    const t = clock.getElapsedTime();
+    const t = state.clock.getElapsedTime();
     
     // Se o colapso ativo for forçado externamente, controlamos a fase diretamente
     // Isso permite sincronização entre colapsos e eventos de OR (Objective Reduction)
@@ -203,64 +202,39 @@ export function WaveCollapse({
             0
           );
           
-          // Partículas diminuem até desaparecer
-          mesh.scale.setScalar(0.5 * (1 - dissipationFactor));
+          // Partículas diminuem - energia dissipada
+          mesh.scale.setScalar(1.0 * (1 - dissipationFactor));
         }
       });
     }
     
-    // Distorção espaço-temporal - representa a curvatura que Penrose descreve como
-    // responsável pelo colapso quântico (aspecto gravitacional da teoria Orch OR)
-    if (spacetime_curvature.current && spacetime_curvature.current.children.length > 0) {
-      // Calcula distorção espaço-temporal baseada na fase de colapso
-      const vertices: THREE.Vector3[] = [];
-      spacetimePoints.forEach((point, i) => {
-        const theta = (i / spacetimePoints.length) * Math.PI * 2;
+    // Animação da curvatura espaço-temporal
+    if (spacetime_curvature.current) {
+      spacetime_curvature.current.children.forEach((child, i) => {
+        const mesh = child as THREE.Mesh;
+        const point = spacetimePoints[i % spacetimePoints.length];
         
-        // Distorção máxima durante a fase de colapso (baseada na fórmula τ ~ h-bar/E_G)
-        // Na teoria de Penrose, a auto-gravitação causa o colapso da função de onda
-        let distortion = 0;
-        if (normalizedTime < 0.3) {
-          // Pequena distorção inicial - gravidade começa a agir
-          distortion = 0.1 * (normalizedTime / 0.3);
-        } else if (normalizedTime < 0.7) {
-          // Distorção máxima durante o colapso
-          const collapseProgress = (normalizedTime - 0.3) / 0.4;
-          distortion = 0.1 + 0.3 * Math.sin(collapseProgress * Math.PI);
-        } else {
-          // Distorção diminui após colapso
-          distortion = 0.1 * (1 - (normalizedTime - 0.7) / 0.3);
-        }
+        // Curvatura do espaço-tempo durante OR
+        // Segundo Penrose, a gravitação é responsável pelo colapso
+        const curvature_intensity = normalizedTime < 0.7 ? 
+          Math.sin(normalizedTime * Math.PI * 2) * 0.3 : 
+          0.1 * (1 - (normalizedTime - 0.7) / 0.3);
         
-        // Distorção varia com posição angular - simula curvatura não uniforme
-        const vertexDistortion = distortion * (1 + 0.5 * Math.sin(theta * 4 + t));
+        mesh.position.set(
+          point.x * (1 + curvature_intensity),
+          point.y * (1 + curvature_intensity),
+          curvature_intensity * Math.sin(t * 2 + i * 0.1)
+        );
         
-        // Aplica distorção espaço-temporal
-        const distortedPoint = point.clone();
-        distortedPoint.z = -vertexDistortion * Math.sin(theta * 2 + t * 2);
-        distortedPoint.x += vertexDistortion * Math.sin(theta * 3 + t);
-        distortedPoint.y += vertexDistortion * Math.cos(theta * 3 + t);
-        
-        vertices.push(distortedPoint);
+        // Escala representa a intensidade da curvatura
+        mesh.scale.setScalar(0.3 + curvature_intensity * 0.7);
       });
-      
-      // Atualiza a geometria da linha de espaço-tempo
-      const lineObj = spacetime_curvature.current.children[0] as THREE.Line;
-      if (lineObj && lineObj.geometry) {
-        const lineGeometry = lineObj.geometry as THREE.BufferGeometry;
-        const positions = new Float32Array(vertices.length * 3);
-        
-        for (let i = 0; i < vertices.length; i++) {
-          positions[i * 3] = vertices[i].x;
-          positions[i * 3 + 1] = vertices[i].y;
-          positions[i * 3 + 2] = vertices[i].z;
-        }
-        
-        lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        lineGeometry.attributes.position.needsUpdate = true;
-      }
     }
-  });
+  }, [active, collapseActive, quantumParticles, spacetimePoints]);
+  
+  // Animação da Redução Objetiva (OR)
+  // Simula o processo de colapso descrito por Penrose-Hameroff
+  useFrame(animateObjectiveReduction);
   
   if (!active) return null;
   
@@ -321,4 +295,6 @@ export function WaveCollapse({
       </group>
     </group>
   );
-}
+});
+
+export default WaveCollapse;

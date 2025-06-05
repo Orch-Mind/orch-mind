@@ -80,7 +80,6 @@ export class LiveTranscriptionProcessor {
 
         const alternative = data.channel.alternatives[0];
         if (!alternative?.transcript) {
-          console.log("❌ [PROCESS] Alternative without transcription, aborting");
           return;
         }
         
@@ -207,7 +206,6 @@ export class LiveTranscriptionProcessor {
           
           const buffer = this.activeSpeakerBuffer[channelIndex];
           const transcriptText = `[${buffer.lastSpeaker}] ${alternative.transcript}`;
-          console.log(`🔄 [PROCESS] Text of channel ${channelIndex}: "${transcriptText}"`);
           
           // Send final transcriptions via IPC to the main process
           if (typeof window !== 'undefined' && window.electronAPI && 

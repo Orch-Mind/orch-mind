@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import "./styles/orchos-theme.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import React, { createContext, useContext, useRef, useState } from "react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   DeepgramProvider,
   MicrophoneProvider,
   TranscriptionProvider
-} from "./components/context"
-import { CognitionLogProvider } from "./components/context/CognitionLogContext"
-import { LanguageProvider } from "./components/context/LanguageContext"
+} from "./components/context";
+import { CognitionLogProvider } from "./components/context/CognitionLogContext";
+import { LanguageProvider } from "./components/context/LanguageContext";
+import { initializeQuantumPerformanceOptimizations } from './components/shared/QuantumVisualization/utils/performance';
+import {
+  useGlobalPassiveEventOptimization,
+  useHeavyTaskManager
+} from "./components/shared/QuantumVisualization/utils/performanceOptimizations";
 import {
   Toast,
   ToastDescription,
@@ -19,8 +23,9 @@ import {
   ToastTitle,
   ToastVariant,
   ToastViewport
-} from "./components/ui/toast"
-import TranscriptionModule from "./features/transcription/TranscriptionModule"
+} from "./components/ui/toast";
+import TranscriptionModule from "./features/transcription/TranscriptionModule";
+import "./styles/orchos-theme.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,7 +66,7 @@ export function updateLanguage(newLanguage: string) {
 
 // This component has been moved to TranscriptionModule
 
-const App: React.FC = () => {
+export default function App() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<ToastMessage>({
@@ -69,6 +74,19 @@ const App: React.FC = () => {
     description: "",
     variant: "neutral"
   })
+
+  // Initialize performance optimizations once at application startup
+  useEffect(() => {
+    const cleanup = initializeQuantumPerformanceOptimizations();
+    
+    return cleanup;
+  }, []);
+
+  // Apply global passive event optimization to resolve OrbitControls violations
+  useGlobalPassiveEventOptimization();
+  
+  // Apply heavy task management to coordinate HuggingFace + 3D rendering
+  const { queueHeavyTask } = useHeavyTaskManager();
 
   const showToast = (
     title: string,
@@ -79,6 +97,11 @@ const App: React.FC = () => {
     setToastOpen(true)
   }
 
+  // Provide heavy task manager to child components via context if needed
+  const contextValue = {
+    showToast,
+    queueHeavyTask // Make available for HuggingFace service coordination
+  };
 
   return (
     <div ref={containerRef} className="h-screen w-full overflow-hidden">
@@ -89,7 +112,7 @@ const App: React.FC = () => {
               <DeepgramProvider>
                 <CognitionLogProvider>
                   <ToastProvider>
-                    <ToastContext.Provider value={{ showToast }}>
+                    <ToastContext.Provider value={contextValue}>
                       <TranscriptionModule />
                     </ToastContext.Provider>
                     <Toast
@@ -112,5 +135,3 @@ const App: React.FC = () => {
     </div>
   )
 }
-
-export default App

@@ -2,8 +2,8 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /* eslint-disable react/no-unknown-property */
-import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import React, { useCallback, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 /**
@@ -25,7 +25,11 @@ interface ProbabilityFieldsProps {
   collapseActive?: boolean;
 }
 
-export function ProbabilityFields({ particleCount = 150, coherence = 0.3, collapseActive = false }: ProbabilityFieldsProps) {
+const ProbabilityFields = React.memo<ProbabilityFieldsProps>(({ 
+  particleCount = 150, 
+  coherence = 0.3, 
+  collapseActive = false 
+}) => {
   const particles = useRef<THREE.Points>(null);
   
   // Criando posições iniciais para partículas
@@ -65,65 +69,72 @@ export function ProbabilityFields({ particleCount = 150, coherence = 0.3, collap
     }
     return new Float32Array(cols);
   }, [particleCount]);
+
+  // Optimized animation callback for probability fields
+  const animateProbabilityFields = useCallback((state: { clock: { getElapsedTime: () => number } }) => {
+    if (!particles.current) return;
+    
+    const t = state.clock.getElapsedTime();
+    const positions = particles.current.geometry.attributes.position.array as Float32Array;
+    
+    for (let i = 0; i < positions.length; i += 3) {
+      const i3 = i / 3;
+      
+      // Usa funções senoidais para criar movimento fluido
+      // Isto simula a evolução da função de onda quântica
+      const x = positions[i];
+      const y = positions[i + 1];
+      const z = positions[i + 2];
+      
+      // Cálculo de deslocamento baseado em funções senoidais entrelaçadas
+      // Simula as interações não-locais dos campos quânticos
+      const modulation = Math.sin(t * 0.5 + i3 * 0.1);
+      const phase = t * 0.2 + i3 * 0.05;
+      
+      // Movimento em espiral - representa evolução da função de onda
+      // que caracteriza os estados quânticos em proteínas tubulina
+      positions[i] = x + Math.sin(phase + y * 0.5) * 0.01 * modulation;
+      positions[i + 1] = y + Math.cos(phase + x * 0.5) * 0.01 * modulation;
+      positions[i + 2] = z + Math.sin(phase * 1.5) * 0.01 * modulation;
+    }
+    
+    particles.current.geometry.attributes.position.needsUpdate = true;
+    
+    // Rotação lenta do sistema de partículas
+    // Representa a dinâmica global do campo quântico
+    particles.current.rotation.y = t * 0.05;
+    particles.current.rotation.x = Math.sin(t * 0.1) * 0.2;
+  }, []);
   
   // Animação do campo de probabilidade
   // Na teoria Orch OR, os campos quânticos evoluem de acordo com a equação de Schrödinger
   // até atingirem um limiar de massa-energia para colapso gravitacional
-  useFrame(({ clock }) => {
-    if (particles.current) {
-      const t = clock.getElapsedTime();
-      const positions = particles.current.geometry.attributes.position.array as Float32Array;
-      
-      for (let i = 0; i < positions.length; i += 3) {
-        const i3 = i / 3;
-        
-        // Usa funções senoidais para criar movimento fluido
-        // Isto simula a evolução da função de onda quântica
-        const x = positions[i];
-        const y = positions[i + 1];
-        const z = positions[i + 2];
-        
-        // Cálculo de deslocamento baseado em funções senoidais entrelaçadas
-        // Simula as interações não-locais dos campos quânticos
-        const modulation = Math.sin(t * 0.5 + i3 * 0.1);
-        const phase = t * 0.2 + i3 * 0.05;
-        
-        // Movimento em espiral - representa evolução da função de onda
-        // que caracteriza os estados quânticos em proteínas tubulina
-        positions[i] = x + Math.sin(phase + y * 0.5) * 0.01 * modulation;
-        positions[i + 1] = y + Math.cos(phase + x * 0.5) * 0.01 * modulation;
-        positions[i + 2] = z + Math.sin(phase * 1.5) * 0.01 * modulation;
-      }
-      
-      particles.current.geometry.attributes.position.needsUpdate = true;
-      
-      // Rotação lenta do sistema de partículas
-      // Representa a dinâmica global do campo quântico
-      particles.current.rotation.y = t * 0.05;
-      particles.current.rotation.x = Math.sin(t * 0.1) * 0.2;
-    }
-  });
+  useFrame(animateProbabilityFields);
+
+  // Memoized geometry for better performance
+  const geometry = useMemo(() => {
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    return geom;
+  }, [positions, colors]);
+
+  // Memoized material for better performance
+  const material = useMemo(() => {
+    return new THREE.PointsMaterial({
+      size: 0.05,
+      vertexColors: true,
+      transparent: true,
+      opacity: collapseActive ? 1 : (0.03 + 0.8 * coherence),
+      sizeAttenuation: true
+    });
+  }, [collapseActive, coherence]);
   
   return (
-    <points ref={particles}>
-      <bufferGeometry>
-        <bufferAttribute 
-          attach="attributes-position" 
-          args={[positions, 3]}
-        />
-        <bufferAttribute 
-          attach="attributes-color" 
-          args={[colors, 3]}
-        />
-      </bufferGeometry>
-      {/* Opacidade mínima muito baixa em repouso (0.03), crescendo suavemente com coherence */}
-      <pointsMaterial 
-        size={0.05} 
-        vertexColors 
-        transparent 
-        opacity={collapseActive ? 1 : (0.03 + 0.8 * coherence)} 
-        sizeAttenuation 
-      />
-    </points>
+    <points ref={particles} geometry={geometry} material={material} />
   );
-}
+});
+
+ProbabilityFields.displayName = 'ProbabilityFields';
+
+export { ProbabilityFields };

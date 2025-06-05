@@ -8,13 +8,14 @@ declare global {
   }
 }
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useToast } from "../../../App";
 import { useCognitionLog } from '../../context/CognitionLogContext';
 import AudioControls from "./components/AudioControls";
 import CognitionLogSection from "./components/CognitionLogSection";
 import ConnectionDiagnostics from "./components/ConnectionDiagnostics";
+import DebugModal from "./components/DebugModal";
 import ImportModal from "./components/ImportModal";
 import PanelHeader from "./components/PanelHeader";
 import SettingsModal from "./components/SettingsModal";
@@ -159,6 +160,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
   // Estados para modais
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showDebugModal, setShowDebugModal] = useState(false);
 
   // --- Render ---
   return (
@@ -176,6 +178,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
          onShowImportModal={() => setShowImportModal(true)}
          onShowLogsModal={() => setShowLogsModal(true)}
          onShowSettings={() => setShowSettingsModal(true)}
+         onShowDebugModal={() => setShowDebugModal(true)}
          onMinimize={() => {
            if (window?.electronAPI?.minimizeWindow) {
              window.electronAPI.minimizeWindow();
@@ -194,6 +197,12 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ onClose, width 
       <SettingsModal 
         show={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+      />
+      
+      {/* Debug Modal */}
+      <DebugModal 
+        show={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
       />
       
       {/* Connection Diagnostics - Now overlayed */}

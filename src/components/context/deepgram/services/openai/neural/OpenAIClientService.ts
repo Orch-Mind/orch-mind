@@ -43,7 +43,7 @@ export class OpenAIClientService implements IClientManagementService {
   async loadApiKey(): Promise<string> {
     // Prioridade 1: Variável de ambiente (.env) via Electron API
     try {
-      const envKey = await window.electronAPI.getEnv('OPENAI_KEY');
+      const envKey = await (window as any).electronAPI.getEnv('OPENAI_KEY');
       if (envKey?.trim()) {
         this.apiKey = envKey.trim();
         LoggingUtils.logInfo("OpenAI API key loaded from environment variables");
@@ -114,7 +114,7 @@ export class OpenAIClientService implements IClientManagementService {
     
     try {
       const response = await this.getClient().embeddings.create({
-        model: "text-embedding-3-small",
+        model: getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL) || "text-embedding-3-large",
         input: text,
       });
       
@@ -134,7 +134,7 @@ export class OpenAIClientService implements IClientManagementService {
     
     try {
       const response = await this.getClient().embeddings.create({
-        model: "text-embedding-3-small",
+        model: getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL) || "text-embedding-3-large",
         input: texts,
       });
       

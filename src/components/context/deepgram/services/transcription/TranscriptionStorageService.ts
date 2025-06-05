@@ -31,9 +31,8 @@ export class TranscriptionStorageService implements ITranscriptionStorageService
   private lastPromptTimestamp: number = 0;
   private autoQuestionDetectionEnabled: boolean = true; // Default: enabled
   
-  // Timer for question delay
+  // Timer for question delay (kept for compatibility with cancelPendingQuestionTimer)
   private questionTimerId: NodeJS.Timeout | null = null;
-  private questionDelayMs: number = 10000; // 10 seconds delay before triggering prompt
   private pendingQuestionText: string = ""; // Text of the pending question
   private inQuestionCycle: boolean = false; // Flag to track if we're in a question cycle
   
@@ -57,28 +56,19 @@ export class TranscriptionStorageService implements ITranscriptionStorageService
   addTranscription(text: string, speaker?: string): void {
     if (!text || !text.trim()) return;
     
-    // If we are in a question cycle, any new transcription resets the timer
+    // If we are in a question cycle, new transcription cancels it (since prompt was already sent)
     if (this.inQuestionCycle) {
-      LoggingUtils.logInfo(`New transcription received during question cycle, resetting timer: "${text.trim()}"`); 
+      LoggingUtils.logInfo(`New transcription received, ending question cycle: "${text.trim()}"`); 
       
-      // Clear the existing timer
+      // Clear any existing timer
       if (this.questionTimerId) {
         clearTimeout(this.questionTimerId);
         this.questionTimerId = null;
       }
       
-      // Configures a new 10 second timer
-      this.questionTimerId = setTimeout(() => {
-        if (this.inQuestionCycle) {
-          LoggingUtils.logInfo(`10 seconds without new transcriptions. Sending prompt for: "${this.pendingQuestionText}"`);
-          this.transcriptionService?.sendTranscriptionPrompt();
-          
-          // Exit the question cycle
-          this.inQuestionCycle = false;
-          this.questionTimerId = null;
-          this.pendingQuestionText = "";
-        }
-      }, this.questionDelayMs);
+      // Exit the question cycle since new content arrived
+      this.inQuestionCycle = false;
+      this.pendingQuestionText = "";
     }
     
     const cleanText = text.trim();
@@ -247,20 +237,14 @@ export class TranscriptionStorageService implements ITranscriptionStorageService
       LoggingUtils.logInfo(`Question detected: "${trimmedText}". Starting question cycle...`);
       this.inQuestionCycle = true;
       
-      // Start the 10-second timer
-      this.questionTimerId = setTimeout(() => {
-        if (this.inQuestionCycle) {
-          LoggingUtils.logInfo(`10 seconds without new transcriptions. Sending prompt for: "${this.pendingQuestionText}"`);
-          this.transcriptionService?.sendTranscriptionPrompt();
-          
-          // Exit the question cycle
-          this.inQuestionCycle = false;
-          this.questionTimerId = null;
-          this.pendingQuestionText = "";
-        }
-      }, this.questionDelayMs);
+      // Send prompt immediately instead of waiting 10 seconds
+      LoggingUtils.logInfo(`Sending prompt immediately for question: "${this.pendingQuestionText}"`);
+      this.transcriptionService?.sendTranscriptionPrompt();
+      
+      // Exit the question cycle immediately
+      this.inQuestionCycle = false;
+      this.pendingQuestionText = "";
     }
-    // If already in a question cycle, the timer reset was already done in addTranscription
   }
   
   /**

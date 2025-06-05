@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getOption, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
-import { SUPPORTED_HF_EMBEDDING_MODELS } from '../../../../../../services/huggingface/HuggingFaceEmbeddingService';
 
 /**
  * Hook para gerenciamento de configurações de APIs externas
@@ -19,7 +18,7 @@ export const useApiSettings = () => {
   
   // HuggingFace
   const [hfModel, setHfModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.HF_MODEL) || '');
-  const [hfEmbeddingModel, setHfEmbeddingModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.HF_EMBEDDING_MODEL) || SUPPORTED_HF_EMBEDDING_MODELS[0]);
+  const [hfEmbeddingModel, setHfEmbeddingModel] = useState<string>(() => getOption<string>(STORAGE_KEYS.HF_EMBEDDING_MODEL) || 'Xenova/all-MiniLM-L6-v2');
   
   // Deepgram
   const [deepgramApiKey, setDeepgramApiKey] = useState<string>(() => getOption<string>(STORAGE_KEYS.DEEPGRAM_API_KEY) || '');

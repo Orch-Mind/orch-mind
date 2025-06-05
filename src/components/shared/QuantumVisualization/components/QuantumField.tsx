@@ -2,17 +2,17 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /* eslint-disable react/no-unknown-property */
-import { useQuantumVisualization, QuantumFrequencyBand } from '../QuantumVisualizationContext';
-import { QUANTUM_PHENOMENA } from '../QuantumLegend';
-import { QuantumSuperposition } from './QuantumSuperposition';
-import { WaveCollapse } from './WaveCollapse';
-import { QuantumEntanglement } from './QuantumEntanglement';
-import { ProbabilityFields } from './ProbabilityFields';
-import { InterferencePatterns } from './InterferencePatterns';
-import { QuantumDecoherence } from './QuantumDecoherence';
-import { QuantumIsolationField } from './QuantumIsolation';
-import { Observer, getCorePosition } from './QuantumUtils';
 import React from 'react';
+import { QUANTUM_PHENOMENA } from '../QuantumLegend';
+import { QuantumFrequencyBand, useQuantumVisualization } from '../QuantumVisualizationContext';
+import { InterferencePatterns } from './InterferencePatterns';
+import { ProbabilityFields } from './ProbabilityFields';
+import { QuantumDecoherence } from './QuantumDecoherence';
+import QuantumEntanglement from './QuantumEntanglement';
+import { QuantumIsolationField } from './QuantumIsolation';
+import { QuantumSuperposition } from './QuantumSuperposition';
+import { Observer, getCorePosition } from './QuantumUtils';
+import WaveCollapse from './WaveCollapse';
 
 /**
  * Main component that orchestrates the complete visualization

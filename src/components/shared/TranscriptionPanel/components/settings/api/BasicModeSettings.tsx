@@ -11,12 +11,13 @@ import { HuggingFaceSettingsProps } from './types';
  * @returns Número de dimensões do embedding (384, 768 ou 1024)
  */
 const getModelDimensions = (model: string): number => {
-  if (model.includes('bge-m3')) return 1024;
   if (model.includes('multilingual-e5-large')) return 1024;
   if (model.includes('multilingual-e5-base')) return 768;
-  if (model.includes('all-mpnet-base')) return 768;
   if (model.includes('multilingual-e5-small')) return 384;
-  // Default para modelos MiniLM
+  if (model.includes('gte-small')) return 384;
+  if (model.includes('all-MiniLM')) return 384;
+  if (model.includes('paraphrase-multilingual')) return 384;
+  // Default para modelos pequenos (mais compatíveis)
   return 384;
 };
 

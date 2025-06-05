@@ -12,8 +12,13 @@ import { PineconeHelper } from "./PineconeHelper"
 import { ShortcutsHelper } from "./shortcuts"
 
 dotenv.config();
+
+// Immediate console log to verify script execution
+console.log("📱 Electron main.ts is executing...");
+
 // Constants
 const isDev = !app.isPackaged
+console.log("🔧 Development mode:", isDev);
 
 // Application State
 const state = {
@@ -86,6 +91,17 @@ function initializeHelpers() {
   state.openAIService = new OpenAIServiceFacade()
 }
 
+// Chromium flags for WASM and WebGPU compatibility
+if (isDev) {
+  app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer,VaapiVideoDecodeLinuxGL');
+  app.commandLine.appendSwitch('enable-unsafe-webgpu');
+  app.commandLine.appendSwitch('enable-features', 'Vulkan');
+} else {
+  // Production - minimal flags for compatibility
+  app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer');
+  app.commandLine.appendSwitch('enable-unsafe-webgpu');
+}
+
 // Register the neural-coder protocol
 if (process.platform === "darwin") {
   app.setAsDefaultProtocolClient("neural-coder")
@@ -102,20 +118,26 @@ if (process.defaultApp && process.argv.length >= 2) {
   ])
 }
 
-// Force Single Instance Lock
+// Force Single Instance Lock - Unified implementation
+console.log("🔒 Requesting single instance lock...");
 const gotTheLock = app.requestSingleInstanceLock()
+console.log("🔒 Got the lock:", gotTheLock);
 
 if (!gotTheLock) {
+  console.log("❌ Another instance is running, quitting...");
   app.quit()
 } else {
+  console.log("✅ Single instance lock acquired");
+  
+  // Handle second instance attempts
   app.on("second-instance", (event, commandLine) => {
+    console.log("🔄 Second instance detected, focusing main window...");
     // Someone tried to run a second instance, we should focus our window.
     if (state.mainWindow) {
       if (state.mainWindow.isMinimized()) state.mainWindow.restore()
       state.mainWindow.focus()
 
-      // Protocol handler for state.mainWindow32
-      // argv: An array of the second instance's (command line / deep linked) arguments
+      // Protocol handler for Windows
       if (process.platform === "win32") {
         // Keep only command line / deep linked arguments
         const deeplinkingUrl = commandLine.pop()
@@ -123,6 +145,15 @@ if (!gotTheLock) {
           handleAuthCallback(deeplinkingUrl, state.mainWindow)
         }
       }
+    } else {
+      // If window doesn't exist, create it
+      createWindow()
+    }
+    
+    // Handle deep linking
+    const url = commandLine.find((arg) => arg.startsWith("neural-coder://"))
+    if (url) {
+      handleAuthCallback(url, state.mainWindow)
     }
   })
 }
@@ -174,29 +205,67 @@ async function createWindow(): Promise<void> {
     y: 0,
     alwaysOnTop: true,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: isDev
-        ? path.join(__dirname, "../dist-electron/preload.js")
-        : path.join(__dirname, "preload.js"),
+      // Security configuration following Electron best practices
+      sandbox: true, // Enable sandbox for security
+      contextIsolation: true, // Critical for security
+      nodeIntegration: false, // Disable Node.js in renderer
+      nodeIntegrationInWorker: false,
+      nodeIntegrationInSubFrames: false,
+      
+      // Preload script
+      preload: path.join(__dirname, "index.js"),
       scrollBounce: false,
+      
+      // Security settings
+      webSecurity: true, // Keep web security enabled
+      allowRunningInsecureContent: false, // Keep secure content policy
+      experimentalFeatures: false, // Disable experimental features for security
+      // GPU acceleration settings
+      webgl: true,
+      plugins: true,
+      // Additional performance settings
+      backgroundThrottling: false,
+      // Enable hardware acceleration
+      offscreen: false,
     },
     show: true,
-    frame: false,
-    transparent: true,
-    fullscreenable: false,
-    hasShadow: false,
-    backgroundColor: "#00000000",
-    focusable: true,
-    skipTaskbar: true,
-    type: "panel",
-    paintWhenInitiallyHidden: true,
-    titleBarStyle: "hidden",
-    enableLargerThanScreen: true,
-    movable: true
+    icon: path.join(__dirname, isDev ? "../public/icon.png" : "./icon.png"),
+    titleBarOverlay: false,
+    autoHideMenuBar: true,
+    useContentSize: true,
+    resizable: false,
+    movable: true,
+    minimizable: true,
+    maximizable: true,
+    closable: true,
+    hasShadow: true,
+    skipTaskbar: false, // Show in taskbar 
+    // type: "panel", // Disable panel type for development
+    // GPU performance configuration
+    paintWhenInitiallyHidden: false,
+    titleBarStyle: "default", // Default title bar for testing
+    enableLargerThanScreen: false,
   }
 
   state.mainWindow = new BrowserWindow(windowSettings)
+
+  // Set up CSP using session.defaultSession approach (YY-EN40P method)
+  // This prevents the Electron security warning by setting CSP before window loads
+  state.mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = {
+      ...details.responseHeaders,
+      'Cross-Origin-Opener-Policy': ['same-origin-allow-popups'],
+      'Cross-Origin-Embedder-Policy': ['credentialless'],
+      'Cross-Origin-Resource-Policy': ['cross-origin'],
+      'Content-Security-Policy': [
+        isDev 
+          ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; script-src-elem 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'self' blob:;"
+          : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; script-src-elem 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'self' blob:;"
+      ]
+    };
+
+    callback({ responseHeaders });
+  })
 
   // Add more detailed logging for window events
   state.mainWindow.webContents.on("did-finish-load", () => {
@@ -259,7 +328,6 @@ async function createWindow(): Promise<void> {
     // Prevent window from being captured in screenshots
     state.mainWindow.setHiddenInMissionControl(true)
     state.mainWindow.setWindowButtonVisibility(false)
-    state.mainWindow.setBackgroundColor("#00000000")
 
     // Prevent window from being included in window switcher
     state.mainWindow.setSkipTaskbar(true)
@@ -312,7 +380,6 @@ function hideMainWindow(): void {
     state.mainWindow?.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true
     })
-    state.mainWindow?.setOpacity(0)
     state.mainWindow?.hide()
     state.isWindowVisible = false
   }
@@ -332,9 +399,7 @@ function showMainWindow(): void {
       visibleOnFullScreen: true
     })
    // state.mainWindow?.setContentProtection(true)
-    state.mainWindow?.setOpacity(0)
     state.mainWindow?.showInactive()
-    state.mainWindow?.setOpacity(1)
     state.isWindowVisible = true
   }
 }
@@ -374,8 +439,13 @@ function loadEnvVariables() {
 
 async function initializeApp() {
   try {
+    console.log("🚀 Starting application initialization...")
     loadEnvVariables()
+    console.log("✅ Environment variables loaded")
+    
     initializeHelpers()
+    console.log("✅ Helpers initialized")
+    
     initializeIpcHandlers({
       getMainWindow,
       setWindowDimensions,
@@ -385,18 +455,24 @@ async function initializeApp() {
       toggleMainWindow,
       openAIService: state.openAIService
     })
+    console.log("✅ IPC handlers initialized")
     
     await createWindow()
+    console.log("✅ Window created")
+    
     state.shortcutsHelper?.registerGlobalShortcuts()
+    console.log("✅ Global shortcuts registered")
 
     initAutoUpdater()
     console.log(
-      "Auto-updater initialized in",
+      "✅ Auto-updater initialized in",
       isDev ? "development" : "production",
       "mode"
     )
+    
+    console.log("🎉 Application fully initialized!")
   } catch (error) {
-    console.error("Failed to initialize application:", error)
+    console.error("❌ Failed to initialize application:", error)
     app.quit()
   }
 }
@@ -406,39 +482,24 @@ process.on('uncaughtException', (error) => {
   // Don't exit
 });
 
-app.on("second-instance", (event, commandLine) => {
-  console.log("second-instance event received:", commandLine)
-  const url = commandLine.find((arg) => arg.startsWith("neural-coder://"))
-  if (url) {
-    handleAuthCallback(url, state.mainWindow)
-  }
-
-  // Focus or create the main window
-  if (!state.mainWindow) {
-    createWindow()
-  } else {
-    if (state.mainWindow.isMinimized()) state.mainWindow.restore()
-    state.mainWindow.focus()
+// App event handlers
+app.on("window-all-closed", () => {
+  console.log("🪟 All windows closed");
+  if (process.platform !== "darwin") {
+    console.log("🚪 Quitting app (not macOS)");
+    app.quit()
+    state.mainWindow = null
   }
 })
-
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-} else {
-  app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit()
-      state.mainWindow = null
-    }
-  })
-}
 
 ipcMain.handle("get-env", (_event, key) => {
   return process.env[key] || null;
 });
 
 app.on("activate", () => {
+  console.log("🔄 App activated");
   if (BrowserWindow.getAllWindows().length === 0) {
+    console.log("🪟 No windows, creating new one");
     createWindow()
   }
 })
@@ -456,8 +517,14 @@ function getDuckDBHelper(): DuckDBHelper | null {
 }
 
 export {
-    createWindow, getDuckDBHelper, getMainWindow, getPineconeHelper, handleAuthCallback, hideMainWindow,
-    setWindowDimensions, showMainWindow, toggleMainWindow
+  createWindow, getDuckDBHelper, getMainWindow, getPineconeHelper, handleAuthCallback, hideMainWindow,
+  setWindowDimensions, showMainWindow, toggleMainWindow
 }
 
-app.whenReady().then(initializeApp)
+console.log("🔄 Setting up app.whenReady() handler...");
+app.whenReady().then(() => {
+  console.log("✅ App is ready! Calling initializeApp...");
+  return initializeApp();
+}).catch((error) => {
+  console.error("❌ Error in app.whenReady():", error);
+});
