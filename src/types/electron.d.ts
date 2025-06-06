@@ -42,6 +42,20 @@ export interface ElectronAPI {
   // DuckDB IPC methods (simplified)
   queryDuckDB: (embedding: number[], limit?: number, keywords?: string[], filters?: Record<string, unknown>, threshold?: number) => Promise<{ matches: DuckDBMatch[] }>;
   saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<{ success: boolean; error?: string }>
+
+  // Directory selection for DuckDB path
+  selectDirectory: () => Promise<{
+    success: boolean;
+    path?: string;
+    canceled?: boolean;
+    error?: string;
+  }>;
+
+  // Reinitialize DuckDB with new path  
+  reinitializeDuckDB: (newPath: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
   // 📝 Method to send prompt updates directly
   sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
 

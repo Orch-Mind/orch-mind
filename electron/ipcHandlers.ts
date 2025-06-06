@@ -3,7 +3,7 @@
 
 // ipcHandlers.ts
 
-import { ipcMain } from "electron";
+import { dialog, ipcMain } from "electron";
 import type { ProgressInfo } from '../src/electron/chatgpt-import';
 import { importChatGPTHistoryHandler } from '../src/electron/chatgpt-import';
 import { IIpcHandlerDeps } from "./main";
@@ -396,6 +396,65 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       }
     } catch (error) {
       console.error("❌ [IPC] Error processing prompt-error:", error);
+    }
+  });
+
+  // Directory selection handler for DuckDB path
+  ipcMain.handle("select-directory", async () => {
+    try {
+      const mainWindow = deps.getMainWindow();
+      if (!mainWindow) {
+        return { success: false, error: "Main window not available" };
+      }
+
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory'],
+        title: 'Select Directory for Neural Memory Database',
+        message: 'Choose where to store your Orch-OS neural memory database',
+        defaultPath: require('os').homedir()
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, canceled: true };
+      }
+
+      const selectedPath = result.filePaths[0];
+      console.log(`📁 [DIRECTORY] User selected path: ${selectedPath}`);
+      
+      return { 
+        success: true, 
+        path: selectedPath 
+      };
+    } catch (error: unknown) {
+      console.error("Error selecting directory:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  // Handler to reinitialize DuckDB with new path
+  ipcMain.handle("reinitialize-duckdb", async (event, newPath: string) => {
+    try {
+      console.log(`🔄 [DUCKDB] Reinitializing DuckDB with new path: ${newPath}`);
+      
+      // Close existing DuckDB connection
+      if (deps.duckDBHelper) {
+        await deps.duckDBHelper.close();
+      }
+      
+      // Create new DuckDB helper with custom path
+      const { DuckDBHelper } = await import('./DuckDBHelper');
+      deps.duckDBHelper = new DuckDBHelper(newPath);
+      
+      // Initialize the new instance
+      await deps.duckDBHelper.initialize();
+      
+      console.log(`✅ [DUCKDB] Successfully reinitialized with path: ${newPath}`);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error("Error reinitializing DuckDB:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { success: false, error: errorMessage };
     }
   });
 

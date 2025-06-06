@@ -401,6 +401,28 @@ export class ElectronAPIFactory {
         }
       },
 
+      // Directory selection for DuckDB path
+      selectDirectory: async () => {
+        try {
+          this.logger.info('📁 Opening directory selection dialog...');
+          return await ipcRenderer.invoke('select-directory');
+        } catch (error) {
+          this.logger.error('Directory selection failed', { error, operation: 'selectDirectory' });
+          return { success: false, error: String(error) };
+        }
+      },
+
+      // Reinitialize DuckDB with new path
+      reinitializeDuckDB: async (newPath: string) => {
+        try {
+          this.logger.info(`🔄 Reinitializing DuckDB with path: ${newPath}`);
+          return await ipcRenderer.invoke('reinitialize-duckdb', newPath);
+        } catch (error) {
+          this.logger.error('DuckDB reinitialization failed', { error, operation: 'reinitializeDuckDB' });
+          return { success: false, error: String(error) };
+        }
+      },
+
       // Legacy alias for backward compatibility
       saveToDuckDB: async (vectors: Array<{ id: string; values: number[]; metadata: Record<string, unknown> }>) => {
         try {

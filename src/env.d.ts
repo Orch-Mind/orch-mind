@@ -43,6 +43,18 @@ interface ElectronAPI {
     ) => Promise<{ success: boolean; error?: string }>;
     queryDuckDB: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: DuckDBMatch[] }>;
     saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<{ success: boolean; error?: string }>
+    selectDirectory: () => Promise<{
+    success: boolean;
+    path?: string;
+    canceled?: boolean;
+    error?: string;
+  }>;
+
+  // Reinitialize DuckDB with new path
+    reinitializeDuckDB: (newPath: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
     sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
     importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>
 }

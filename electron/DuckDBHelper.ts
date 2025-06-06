@@ -36,9 +36,15 @@ export class DuckDBHelper {
   private insertStmt: any = null;
   private similarityStmt: any = null;
 
-  constructor() {
-    const userDataPath = app.getPath('userData');
-    this.dbPath = path.join(userDataPath, 'orch-os-vectors.db');
+  constructor(customPath?: string) {
+    if (customPath) {
+      // Use custom path provided by user
+      this.dbPath = path.resolve(customPath, 'orch-os-vectors.db');
+    } else {
+      // Default: use Electron userData directory
+      const userDataPath = app.getPath('userData');
+      this.dbPath = path.join(userDataPath, 'orch-os-vectors.db');
+    }
   }
 
   /**

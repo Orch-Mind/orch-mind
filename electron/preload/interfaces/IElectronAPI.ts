@@ -190,6 +190,20 @@ export interface IElectronAPI extends
 
   clearDuckDB(): Promise<{ success: boolean; error?: string }>;
 
+  // Directory selection for DuckDB path
+  selectDirectory(): Promise<{
+    success: boolean;
+    path?: string;
+    canceled?: boolean;
+    error?: string;
+  }>;
+
+  // Reinitialize DuckDB with new path
+  reinitializeDuckDB(newPath: string): Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
   // Legacy alias for backward compatibility  
   saveToDuckDB(
     vectors: Array<{ 

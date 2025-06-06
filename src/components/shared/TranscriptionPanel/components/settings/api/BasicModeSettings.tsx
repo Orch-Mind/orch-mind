@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { OrchOSModeEnum } from '../../../../../../services/ModeService';
+import { getOption, setOption, STORAGE_KEYS } from '../../../../../../services/StorageService';
 import { HuggingFaceSettingsProps } from './types';
 
 /**
@@ -35,6 +36,73 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
   hfModelOptions = [],
   hfEmbeddingModelOptions = []
 }) => {
+  // Estado para o caminho do DuckDB
+  const [duckDbPath, setDuckDbPath] = useState<string>(() => 
+    getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || './orch-os-memory'
+  );
+
+  // Carregar configuração salva na inicialização
+  useEffect(() => {
+    const savedPath = getOption<string>(STORAGE_KEYS.DUCKDB_PATH);
+    if (savedPath) {
+      setDuckDbPath(savedPath);
+    }
+  }, []);
+
+  // Handler para seleção de diretório
+  const handleBrowseDirectory = async () => {
+    try {
+      // Verificar se estamos no Electron
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        const result = await (window as any).electronAPI.selectDirectory();
+        
+        if (result.success && result.path) {
+          const newPath = result.path;
+          setDuckDbPath(newPath);
+          setOption(STORAGE_KEYS.DUCKDB_PATH, newPath);
+          console.log('📁 [SETTINGS] DuckDB path updated:', newPath);
+          
+          // Reinicializar DuckDB com o novo caminho
+          try {
+            const reinitResult = await (window as any).electronAPI.reinitializeDuckDB(newPath);
+            if (reinitResult.success) {
+              console.log('✅ [SETTINGS] DuckDB successfully reinitialized with new path');
+            } else {
+              console.error('❌ [SETTINGS] Failed to reinitialize DuckDB:', reinitResult.error);
+            }
+          } catch (reinitError) {
+            console.error('❌ [SETTINGS] Error reinitializing DuckDB:', reinitError);
+          }
+        } else if (!result.canceled) {
+          console.error('❌ [SETTINGS] Failed to select directory:', result.error);
+        }
+      } else {
+        console.warn('⚠️ [SETTINGS] Directory selection not available in web mode');
+      }
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error selecting directory:', error);
+    }
+  };
+
+  // Handler para mudança manual do caminho
+  const handlePathChange = async (newPath: string) => {
+    setDuckDbPath(newPath);
+    setOption(STORAGE_KEYS.DUCKDB_PATH, newPath);
+    
+    // Reinicializar DuckDB apenas se estamos no Electron e o caminho não está vazio
+    if (typeof window !== 'undefined' && (window as any).electronAPI && newPath.trim()) {
+      try {
+        const reinitResult = await (window as any).electronAPI.reinitializeDuckDB(newPath);
+        if (reinitResult.success) {
+          console.log('✅ [SETTINGS] DuckDB successfully reinitialized with new path');
+        } else {
+          console.error('❌ [SETTINGS] Failed to reinitialize DuckDB:', reinitResult.error);
+        }
+      } catch (reinitError) {
+        console.error('❌ [SETTINGS] Error reinitializing DuckDB:', reinitError);
+      }
+    }
+  };
   return (
     <div className="p-3 rounded-lg bg-black/30 border border-cyan-500/20">
       <div className="flex items-center mb-2">
@@ -92,21 +160,27 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
         </div>
         
         <div className="bg-black/40 p-2 rounded-md">
-          <h4 className="text-cyan-400 font-medium mb-1">Local Storage</h4>
-          <p className="text-white/70 text-sm">Storage location for your neural memory database.</p>
+          <h4 className="text-cyan-400 font-medium mb-1">Memory Storage Location</h4>
+          <p className="text-white/70 text-sm">Directory where your neural memory database will be stored locally.</p>
           <div className="mt-2 flex">
             <input 
               type="text" 
               className="flex-1 p-2 rounded-l bg-black/40 text-white/90 border border-cyan-500/30"
-              value="./orch-os-memory"
-              readOnly
-              title="Local storage location"
-              aria-label="Local storage location"
+              value={duckDbPath}
+              onChange={(e) => handlePathChange(e.target.value)}
+              title="Memory storage directory"
+              aria-label="Memory storage directory"
+              placeholder="Enter or browse for directory path"
             />
-            <button className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded-r px-3 border border-cyan-500/30">
+            <button 
+              className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded-r px-3 border border-cyan-500/30 transition-colors"
+              onClick={handleBrowseDirectory}
+              title="Browse for directory"
+            >
               Browse
             </button>
           </div>
+          <p className="text-xs text-cyan-400/60 mt-1">DuckDB will automatically manage the vector database at this location.</p>
         </div>
       </div>
       
@@ -124,3 +198,4 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
 };
 
 export default BasicModeSettings;
+

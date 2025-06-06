@@ -87,7 +87,26 @@ function initializeHelpers() {
 
   // Initialize memory services (Pinecone for cloud, DuckDB for local)
   state.pineconeHelper = new PineconeHelper()
-  state.duckDBHelper = new DuckDBHelper()
+  
+  // Initialize DuckDB with custom path if configured
+  try {
+    const Store = require('electron-store').default;
+    const store = new Store();
+    const settings = store.get('orchos.user.settings', {});
+    const customPath = settings.duckdbPath;
+    
+    if (customPath) {
+      console.log(`📁 [MAIN] Using custom DuckDB path: ${customPath}`);
+      state.duckDBHelper = new DuckDBHelper(customPath);
+    } else {
+      console.log(`📁 [MAIN] Using default DuckDB path`);
+      state.duckDBHelper = new DuckDBHelper();
+    }
+  } catch (error) {
+    console.warn(`⚠️ [MAIN] Could not load custom DuckDB path, using default:`, error);
+    state.duckDBHelper = new DuckDBHelper();
+  }
+  
   state.openAIService = new OpenAIServiceFacade()
 }
 

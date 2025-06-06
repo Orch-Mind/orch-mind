@@ -85,6 +85,9 @@ export const STORAGE_KEYS = {
   PINECONE_ENVIRONMENT: 'pineconeEnvironment',
   PINECONE_INDEX: 'pineconeIndex',
   
+  // ===== Configurações de banco de dados local =====
+  DUCKDB_PATH: 'duckdbPath', // Caminho personalizado para o banco DuckDB
+  
   // ===== Configurações de debugging =====
   DEBUG_MODE: 'debugMode',
   LOG_LEVEL: 'logLevel'
