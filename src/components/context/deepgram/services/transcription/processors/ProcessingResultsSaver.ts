@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { IMemoryService } from '../../../interfaces/memory/IMemoryService';
 import { NeuralProcessingResult, NeuralSignalResponse } from '../../../interfaces/neural/NeuralSignalTypes';
 import { ITranscriptionStorageService } from '../../../interfaces/transcription/ITranscriptionStorageService';

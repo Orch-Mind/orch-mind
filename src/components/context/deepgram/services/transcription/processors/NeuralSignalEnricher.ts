@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { NeuralSignal } from '../../../interfaces/neural/NeuralSignalTypes';
 import { IOpenAIService } from '../../../interfaces/openai/IOpenAIService';
 import { LoggingUtils } from '../../../utils/LoggingUtils';

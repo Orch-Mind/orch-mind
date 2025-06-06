@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 /**
  * Neural session cognitive manager
  * Responsible for managing session identifiers and interaction tracking

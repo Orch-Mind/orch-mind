@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 // HuggingFaceLocalService.ts
 // Symbolic cortex: Provides local inference using Hugging Face Transformers.js in the browser.
 // Processes symbolic text generation for Orch-OS in basic mode, without backend or API key.

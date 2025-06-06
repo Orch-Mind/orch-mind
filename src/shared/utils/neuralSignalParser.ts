@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 // neuralSignalParser.ts
 // Symbolic: Pure functions for parsing neural signals from model output
 import { NeuralSignal } from '../../components/context/deepgram/interfaces/neural/NeuralSignalTypes';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { NeuralProcessingResult, NeuralSignalResponse } from '../../interfaces/neural/NeuralSignalTypes';
 import { Message } from '../../interfaces/transcription/TranscriptionTypes';
 import { NeuralSignalExtractor } from '../../symbolic-cortex/activation/NeuralSignalExtractor';

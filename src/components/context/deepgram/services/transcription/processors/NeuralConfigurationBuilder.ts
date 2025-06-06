@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { getPrimaryUser } from '../../../../../../config/UserConfig';
 import { IMemoryService } from '../../../interfaces/memory/IMemoryService';
 import { ITranscriptionStorageService } from '../../../interfaces/transcription/ITranscriptionStorageService';

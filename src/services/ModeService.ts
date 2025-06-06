@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 // ModeService.ts — Orch-OS Mode Cortex
 // Symbolic Intent: Central neuron for controlling Orch-OS operational mode (basic/advanced)
 // Responsibilities: Exposes current mode, persists mode, notifies listeners, enforces symbolic clarity
