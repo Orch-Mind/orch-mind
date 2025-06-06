@@ -5,22 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { OrchOSModeEnum } from '../../../../../../services/ModeService';
 import { getOption, setOption, STORAGE_KEYS } from '../../../../../../services/StorageService';
 import { HuggingFaceSettingsProps } from './types';
-
-/**
- * Retorna a dimensionalidade de um modelo de embedding com base em seu nome
- * @param model Nome do modelo Hugging Face
- * @returns Número de dimensões do embedding (384, 768 ou 1024)
- */
-const getModelDimensions = (model: string): number => {
-  if (model.includes('multilingual-e5-large')) return 1024;
-  if (model.includes('multilingual-e5-base')) return 768;
-  if (model.includes('multilingual-e5-small')) return 384;
-  if (model.includes('gte-small')) return 384;
-  if (model.includes('all-MiniLM')) return 384;
-  if (model.includes('paraphrase-multilingual')) return 384;
-  // Default para modelos pequenos (mais compatíveis)
-  return 384;
-};
+import { getModelDimensions } from '../../../../../../utils/EmbeddingUtils';
 
 /**
  * Componente para configurações do modo básico

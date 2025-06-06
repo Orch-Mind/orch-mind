@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { IOpenAIService } from '../../../components/context/deepgram/interfaces/openai/IOpenAIService';
 import { PineconeHelper } from '../../../../electron/PineconeHelper';
+import { IOpenAIService } from '../../../components/context/deepgram/interfaces/openai/IOpenAIService';
 
 // ChatGPT data interfaces for artificial brain memory import
 export interface ChatGPTMessageContent {
@@ -75,6 +75,7 @@ export interface ProgressInfo {
 export interface ImportChatGPTParams {
   fileBuffer: Buffer;
   mode: 'increment' | 'overwrite';
+  applicationMode?: 'basic' | 'advanced'; // Mode passed from renderer process
   openAIService?: IOpenAIService | null;
   pineconeHelper: PineconeHelper;
   onProgress?: (info: ProgressInfo) => void;

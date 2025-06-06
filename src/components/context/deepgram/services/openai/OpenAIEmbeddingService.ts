@@ -67,6 +67,45 @@ export class OpenAIEmbeddingService implements IEmbeddingService {
   }
   
   /**
+   * Creates embeddings for a batch of texts using OpenAI
+   * @param texts Array of texts to create embeddings for
+   * @returns Array of embeddings (array of number arrays)
+   */
+  async createEmbeddings(texts: string[]): Promise<number[][]> {
+    if (!texts?.length) {
+      return [];
+    }
+    
+    try {
+      // Get the selected model
+      const model = this.getEmbeddingModel();
+      
+      // Check if the OpenAI service supports batch embeddings directly
+      if (this.openAIService.createEmbeddings) {
+        // Use the batch API if available
+        return await this.openAIService.createEmbeddings(texts.map(text => text.trim()), model);
+      } else {
+        // Fallback: process embeddings one by one
+        const embeddings = await Promise.all(
+          texts.map(async (text) => {
+            try {
+              return await this.openAIService.createEmbedding(text.trim(), model);
+            } catch (err) {
+              LoggingUtils.logError(`Error generating embedding for text: ${text.substring(0, 50)}...`, err);
+              return []; // Return empty array on error
+            }
+          })
+        );
+        
+        return embeddings;
+      }
+    } catch (error) {
+      LoggingUtils.logError("Error creating batch embeddings", error);
+      return [];
+    }
+  }
+  
+  /**
    * Checks if the embedding service is initialized
    */
   isInitialized(): boolean {

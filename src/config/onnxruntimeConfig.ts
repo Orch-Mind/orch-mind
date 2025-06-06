@@ -49,11 +49,13 @@ export class OnnxRuntimeConfig {
    * Based on official ONNX Runtime documentation and community best practices
    * @see https://onnxruntime.ai/docs/performance/transformers-optimization.html
    */
-  static getOptimizedSessionOptions(device: 'webgpu' | 'wasm' = 'wasm'): any {
+  static getOptimizedSessionOptions(device: 'cpu' | 'webgpu' | 'wasm' = 'wasm'): any {
     return {
       // ✅ RECOMMENDED: Specify execution providers in order of preference
       executionProviders: device === 'webgpu' 
         ? ['webgpu', 'wasm'] 
+        : device === 'cpu'
+        ? ['cpu']
         : ['wasm'],
         
       // ✅ RECOMMENDED: Control logging level (production setting)
@@ -75,6 +77,12 @@ export class OnnxRuntimeConfig {
       ...(device === 'wasm' && {
         interOpNumThreads: 1,     // Single thread for WASM compatibility
         intraOpNumThreads: 1,     // Single thread for WASM compatibility
+      }),
+      
+      // ✅ RECOMMENDED: CPU-specific optimizations for Node.js/Electron
+      ...(device === 'cpu' && {
+        interOpNumThreads: 0,     // Use all available cores
+        intraOpNumThreads: 0,     // Use all available cores
       }),
     };
   }

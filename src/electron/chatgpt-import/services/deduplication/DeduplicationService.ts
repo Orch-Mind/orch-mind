@@ -2,20 +2,26 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { ProcessedMessage } from '../../interfaces/types';
-import { PineconeHelper } from '../../../../../electron/PineconeHelper';
-import { ProgressReporter } from '../../utils/progressReporter';
 import { Logger } from '../../utils/logging';
+import { ProgressReporter } from '../../utils/progressReporter';
+
+/**
+ * Interface for checking existing vectors (abstraction for Pinecone/DuckDB)
+ */
+interface IVectorChecker {
+  checkExistingIds(ids: string[], progressCallback?: (processed: number, total: number) => void): Promise<string[]>;
+}
 
 /**
  * Service to check and eliminate duplicate messages
  */
 export class DeduplicationService {
-  private pineconeHelper: PineconeHelper;
+  private vectorChecker: IVectorChecker;
   private progressReporter: ProgressReporter;
   private logger: Logger;
 
-  constructor(pineconeHelper: PineconeHelper, progressReporter: ProgressReporter, logger?: Logger) {
-    this.pineconeHelper = pineconeHelper;
+  constructor(vectorChecker: IVectorChecker, progressReporter: ProgressReporter, logger?: Logger) {
+    this.vectorChecker = vectorChecker;
     this.progressReporter = progressReporter;
     this.logger = logger || new Logger('[DeduplicationService]');
     this.logger.info('DeduplicationService successfully instantiated');
@@ -66,21 +72,21 @@ export class DeduplicationService {
       return messages;
     }
     
-    // Verify existence of IDs in Pinecone with timeout
-    this.logger.info(`Verifying ${limitedMessageIdsToCheck.length} IDs in Pinecone`);
+    // Verify existence of IDs in storage with timeout
+    this.logger.info(`Verifying ${limitedMessageIdsToCheck.length} IDs in vector storage`);
     this.logger.debug('First 10 IDs to be verified:', JSON.stringify(limitedMessageIdsToCheck.slice(0, 10)));
     const existingMessageIds = new Set<string>();
     const timeoutPromise = new Promise<string[]>((_, reject) => {
       const timeoutId = setTimeout(() => {
         clearTimeout(timeoutId);
-        reject(new Error('Timeout checking IDs in Pinecone - operation took more than 5 minutes'));
+        reject(new Error('Timeout checking IDs in vector storage - operation took more than 5 minutes'));
       }, 5 * 60 * 1000); // 5 minutes timeout
     });
     let existingIds: string[] = [];
     try {
       this.logger.info('Starting complete ID verification with security timeout...');
-      this.logger.debug('Calling pineconeHelper.checkExistingIds...');
-      const checkIdsPromise = this.pineconeHelper.checkExistingIds(
+      this.logger.debug('Calling vectorChecker.checkExistingIds...');
+      const checkIdsPromise = this.vectorChecker.checkExistingIds(
         limitedMessageIdsToCheck,
         (processed, total) => {
           this.logger.debug(`[Dedup] Progress: ${processed}/${total}`);

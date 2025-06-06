@@ -1,30 +1,149 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { IEmbeddingService } from '../../../../components/context/deepgram/interfaces/openai/IEmbeddingService';
 import { IOpenAIService } from '../../../../components/context/deepgram/interfaces/openai/IOpenAIService';
+import { OpenAIEmbeddingService } from '../../../../components/context/deepgram/services/openai/OpenAIEmbeddingService';
+import { HuggingFaceEmbeddingService } from '../../../../services/huggingface/HuggingFaceEmbeddingService';
+import { ModeService, OrchOSModeEnum } from '../../../../services/ModeService';
+import { getOption, STORAGE_KEYS } from '../../../../services/StorageService';
+import { getModelDimensions } from '../../../../utils/EmbeddingUtils';
 import { MessageChunk, PineconeVector } from '../../interfaces/types';
 import { Logger } from '../../utils/logging';
 import { ProgressReporter } from '../../utils/progressReporter';
 
 /**
  * Service for generating embeddings
+ * Switches between OpenAI (Advanced mode) and HuggingFace (Basic mode)
  */
 export class EmbeddingService {
   private openAIService: IOpenAIService | null | undefined;
+  private embeddingService: IEmbeddingService;
   private logger: Logger;
   private progressReporter?: ProgressReporter;
-  private embeddingDimension: number = 3072; // Dimension configured in Pinecone database
+  private embeddingDimension: number = 1536; // Default dimension, will be updated dynamically
+  private isBasicMode: boolean;
 
-  constructor(openAIService: IOpenAIService | null | undefined, logger?: Logger, progressReporter?: ProgressReporter) {
+  constructor(
+    openAIService: IOpenAIService | null | undefined, 
+    logger?: Logger, 
+    progressReporter?: ProgressReporter,
+    applicationMode?: 'basic' | 'advanced'
+  ) {
     this.openAIService = openAIService;
     this.logger = logger || new Logger('[EmbeddingService]');
     this.progressReporter = progressReporter;
+    
+    // Use provided applicationMode or detect from ModeService
+    let currentMode: OrchOSModeEnum;
+    if (applicationMode) {
+      // Convert string to enum
+      if (applicationMode.toLowerCase() === 'basic') {
+        currentMode = OrchOSModeEnum.BASIC;
+      } else if (applicationMode.toLowerCase() === 'advanced') {
+        currentMode = OrchOSModeEnum.ADVANCED;
+      } else {
+        this.logger.warn(`🟡 [EmbeddingService] Unknown applicationMode: "${applicationMode}", falling back to ModeService`);
+        currentMode = ModeService.getMode();
+      }
+      this.logger.info(`🔧 [EmbeddingService] Using applicationMode from IPC: "${applicationMode}" -> ${currentMode}`);
+    } else {
+      currentMode = ModeService.getMode();
+      this.logger.info(`🔧 [EmbeddingService] No applicationMode provided, using ModeService: ${currentMode}`);
+    }
+    
+    this.isBasicMode = currentMode === OrchOSModeEnum.BASIC;
+    
+    this.logger.info(`🔍 [EmbeddingService] === MODE DETECTION DEBUG ===`);
+    this.logger.info(`🔍 [EmbeddingService] Input applicationMode: "${applicationMode}"`);
+    this.logger.info(`🔍 [EmbeddingService] Resolved OrchOSModeEnum: "${currentMode}"`);
+    this.logger.info(`🔍 [EmbeddingService] OrchOSModeEnum.BASIC: "${OrchOSModeEnum.BASIC}"`);
+    this.logger.info(`🔍 [EmbeddingService] OrchOSModeEnum.ADVANCED: "${OrchOSModeEnum.ADVANCED}"`);
+    this.logger.info(`🔍 [EmbeddingService] Final isBasicMode: ${this.isBasicMode}`);
+    this.logger.info(`🔍 [EmbeddingService] Final selected mode: ${this.isBasicMode ? 'BASIC (HuggingFace)' : 'ADVANCED (OpenAI)'}`);
+    
+    // Check storage for debugging
+    const storageMode = typeof window !== 'undefined' ? 
+      window.localStorage?.getItem('APPLICATION_MODE') || 'undefined' : 
+      'not-available-in-main-process';
+    this.logger.info(`🔍 [EmbeddingService] Storage APPLICATION_MODE: "${storageMode}"`);
+    this.logger.info(`🔍 [EmbeddingService] === END MODE DEBUG ===`);
+    
+    this.embeddingService = this.createEmbeddingService();
+    
+    // Only subscribe to mode changes if no applicationMode was provided
+    // (to avoid conflicts between IPC and ModeService)
+    if (!applicationMode) {
+      // Subscribe to mode changes to update embedding service when needed
+      ModeService.onModeChange((newMode: OrchOSModeEnum) => {
+        this.logger.info(`🔄 [EmbeddingService] Mode change detected: ${newMode}`);
+        this.updateModeAndService(newMode);
+      });
+    } else {
+      this.logger.info(`🔧 [EmbeddingService] Skipping ModeService listener (using IPC mode: ${applicationMode})`);
+    }
+  }
+  
+  /**
+   * Updates the embedding dimension based on the embedding service
+   * @param service The embedding service to get dimension from
+   */
+  private updateEmbeddingDimension(service: IEmbeddingService): void {
+    // Check if the service has a method to get embedding dimension
+    if (typeof (service as any).getEmbeddingDimension === 'function') {
+      try {
+        this.embeddingDimension = (service as any).getEmbeddingDimension();
+        this.logger.info(`Using dynamic embedding dimension from service: ${this.embeddingDimension}`);
+        return;
+      } catch (error) {
+        this.logger.warn(`Failed to get embedding dimension dynamically: ${error}`);
+      }
+    }
+    
+    // If service doesn't provide the dimension or there was an error, use the utility function
+    if (this.isBasicMode) {
+      const defaultHFModelName = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL) || '';
+      this.embeddingDimension = getModelDimensions(defaultHFModelName);
+    } else {
+      const defaultOpenAIModel = getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL) || '';
+      this.embeddingDimension = getModelDimensions(defaultOpenAIModel);
+    }
+    
+    this.logger.info(`Using embedding dimension from utility for mode ${this.isBasicMode ? 'BASIC' : 'ADVANCED'}: ${this.embeddingDimension}`);
   }
 
   /**
-   * Initializes the OpenAI service if necessary
+   * Creates the appropriate embedding service based on mode
+   */
+  private createEmbeddingService(): IEmbeddingService {
+    if (this.isBasicMode) {
+      // In basic mode, use HuggingFace with the selected model
+      const hfModel = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL);
+      this.logger.info(`[EmbeddingService] Creating HuggingFaceEmbeddingService with model: ${hfModel || 'default'} for Basic mode`);
+      const service = new HuggingFaceEmbeddingService(hfModel);
+      // Use the service's method to get the embedding dimension
+      this.updateEmbeddingDimension(service);
+      return service;
+    } else {
+      // In advanced mode, use OpenAI with the selected model
+      const openaiModel = getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL);
+      this.logger.info(`[EmbeddingService] Creating OpenAIEmbeddingService with model: ${openaiModel || 'default'} for Advanced mode`);
+      const service = new OpenAIEmbeddingService(this.openAIService!);
+      // Use the service's method to get the embedding dimension
+      this.updateEmbeddingDimension(service);
+      return service;
+    }
+  }
+
+  /**
+   * Initializes the embedding service (OpenAI for Advanced mode, HuggingFace for Basic mode)
    */
   public async ensureOpenAIInitialized(): Promise<boolean> {
+    if (this.isBasicMode) {
+      this.logger.info('✅ Basic mode detected - using HuggingFace embeddings (no OpenAI required)');
+      return true; // In basic mode, we don't need OpenAI
+    }
+    
     this.logger.info('Verifying OpenAI service initialization...');
     
     if (!this.openAIService) {
@@ -72,46 +191,59 @@ export class EmbeddingService {
   }
 
   /**
-   * Generates embeddings for text chunks
+   * Generates embeddings for text chunks using the appropriate service (OpenAI or HuggingFace)
    */
   public async generateEmbeddingsForChunks(
     batches: MessageChunk[][], 
     allMessageChunks: MessageChunk[]
   ): Promise<PineconeVector[]> {
+    // Ensure we have the correct embedding dimension from the service
+    this.updateEmbeddingDimension(this.embeddingService);
+    
     // Start the progress of generating embeddings
     if (this.progressReporter) {
       this.progressReporter.startStage('generating_embeddings', allMessageChunks.length);
     }
     
-    // Verify if we have the OpenAI service available
-    const openAIInitialized = await this.ensureOpenAIInitialized();
-    this.logger.info(`Status of OpenAI for embedding generation: ${openAIInitialized ? 'Initialized' : 'Not initialized'}`)
+    // Verify if we have the embedding service available
+    const embeddingInitialized = await this.ensureOpenAIInitialized();
+    this.logger.info(`Status of embedding service for generation: ${embeddingInitialized ? 'Initialized' : 'Not initialized'}`);
     
-    if (!openAIInitialized) {
-      throw new Error('OpenAI service not initialized. Configure the OPENAI_KEY variable to generate embeddings.');
+    if (!embeddingInitialized) {
+      if (this.isBasicMode) {
+        throw new Error('HuggingFace embedding service not initialized in Basic mode.');
+      } else {
+        throw new Error('OpenAI service not initialized. Configure the OPENAI_KEY variable to generate embeddings.');
+      }
     }
 
     const vectors: PineconeVector[] = [];
     let embeddingsProcessed = 0;
     
     let processedTotal = 0;
-for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       this.logger.info(`Processing batch ${batchIndex + 1}/${batches.length} with ${batch.length} messages`);
       
       // Prepare the texts for the current batch
       const batchTexts = batch.map(chunk => chunk.content);
       
-      // Generate embeddings for the entire batch
+      // Generate embeddings for the entire batch using the appropriate service
       let batchEmbeddings: number[][] = [];
       
-      if (openAIInitialized && this.openAIService) {
-        try {
-          // Method to generate embeddings in batch
-          if (this.openAIService.createEmbeddings) {
+      try {
+        if (this.isBasicMode) {
+          // Use HuggingFace service for batch embeddings
+          this.logger.info(`[BASIC MODE] Generating embeddings with HuggingFace for batch ${batchIndex + 1}`);
+          batchEmbeddings = await this.embeddingService.createEmbeddings(batchTexts);
+          this.logger.success(`✅ HuggingFace embeddings generated successfully for batch ${batchIndex + 1}/${batches.length}`);
+        } else {
+          // Use OpenAI service for batch embeddings
+          this.logger.info(`[ADVANCED MODE] Generating embeddings with OpenAI for batch ${batchIndex + 1}`);
+          if (this.openAIService && this.openAIService.createEmbeddings) {
             // If the API supports batch embeddings
             batchEmbeddings = await this.openAIService.createEmbeddings(batchTexts);
-            this.logger.success(`Embeddings generated successfully for batch ${batchIndex + 1}/${batches.length}`);
+            this.logger.success(`✅ OpenAI embeddings generated successfully for batch ${batchIndex + 1}/${batches.length}`);
           } else {
             // Fallback: generate embeddings one by one
             this.logger.warn('API does not support batch embeddings, processing sequentially...');
@@ -121,19 +253,15 @@ for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
                   return await this.openAIService!.createEmbedding(text);
                 } catch (err) {
                   this.logger.error(`Error generating embedding for text: ${text.substring(0, 50)}...`, err);
-                  throw new Error(`Failed to generate real embedding: ${err instanceof Error ? err.message : String(err)}`);
+                  throw new Error(`Failed to generate embedding: ${err instanceof Error ? err.message : String(err)}`);
                 }
               })
             );
           }
-        } catch (batchError) {
-          this.logger.error(`Error processing batch ${batchIndex + 1}:`, batchError);
-          throw new Error(`Failed to process embeddings batch: ${batchError instanceof Error ? batchError.message : String(batchError)}`);
         }
-      } else {
-        const error = new Error(`OpenAI service not available to process batch ${batchIndex + 1}`);
-        this.logger.error(error.message);
-        throw error;
+      } catch (batchError) {
+        this.logger.error(`Error processing batch ${batchIndex + 1}:`, batchError);
+        throw new Error(`Failed to process embeddings batch: ${batchError instanceof Error ? batchError.message : String(batchError)}`);
       }
       
       // Create vectors from generated embeddings
@@ -200,5 +328,27 @@ for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     
     this.logger.info(`Generated ${vectors.length} vectors with embeddings`);
     return vectors;
+  }
+
+  private updateModeAndService(newMode: OrchOSModeEnum): void {
+    const oldMode = this.isBasicMode;
+    this.isBasicMode = newMode === OrchOSModeEnum.BASIC;
+    
+    this.logger.info(`🔄 [EmbeddingService] === MODE UPDATE DEBUG ===`);
+    this.logger.info(`🔄 [EmbeddingService] Previous isBasicMode: ${oldMode}`);
+    this.logger.info(`🔄 [EmbeddingService] New mode from event: "${newMode}"`);
+    this.logger.info(`🔄 [EmbeddingService] New isBasicMode: ${this.isBasicMode}`);
+    this.logger.info(`🔄 [EmbeddingService] Mode actually changed: ${oldMode !== this.isBasicMode}`);
+    this.logger.info(`🔄 [EmbeddingService] Final selected mode: ${this.isBasicMode ? 'BASIC (HuggingFace)' : 'ADVANCED (OpenAI)'}`);
+    
+    if (oldMode !== this.isBasicMode) {
+      this.logger.info(`🔄 [EmbeddingService] Creating new embedding service...`);
+      this.embeddingService = this.createEmbeddingService();
+      this.logger.info(`🔄 [EmbeddingService] New embedding service created successfully`);
+    } else {
+      this.logger.info(`🔄 [EmbeddingService] Mode unchanged, keeping existing service`);
+    }
+    
+    this.logger.info(`🔄 [EmbeddingService] === END MODE UPDATE DEBUG ===`);
   }
 }

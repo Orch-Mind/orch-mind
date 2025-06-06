@@ -442,12 +442,15 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         await deps.duckDBHelper.close();
       }
       
-      // Create new DuckDB helper with custom path
-      const { DuckDBHelper } = await import('./DuckDBHelper');
+      // Import DuckDBHelper statically to avoid dynamic/static import conflict
+      // Note: This requires DuckDBHelper to be available in the main process context
+      const { DuckDBHelper } = require('./DuckDBHelper');
       deps.duckDBHelper = new DuckDBHelper(newPath);
       
-      // Initialize the new instance
-      await deps.duckDBHelper.initialize();
+      // Initialize the new instance - null check for safety
+      if (deps.duckDBHelper) {
+        await deps.duckDBHelper.initialize();
+      }
       
       console.log(`✅ [DUCKDB] Successfully reinitialized with path: ${newPath}`);
       return { success: true };
@@ -459,18 +462,78 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   });
 
   // Import ChatGPT history
-  ipcMain.handle("import-chatgpt-history", async (event, { fileBuffer, mode }) => {
+  ipcMain.handle("import-chatgpt-history", async (event, { fileBuffer, mode, user, applicationMode }) => {
     try {
-      if (!deps.pineconeHelper) {
-        throw new Error("Pinecone helper not initialized");
+      console.log('[IPC] Importing ChatGPT history', {
+        mode,
+        applicationMode,
+        fileBufferType: fileBuffer && fileBuffer.constructor && fileBuffer.constructor.name
+      });
+      
+      // Determine which storage helper to use based on mode
+      let isBasicMode = false;
+      if (applicationMode) {
+        isBasicMode = applicationMode.toLowerCase() === 'basic';
+      } else {
+        // Fallback to checking environment or default
+        try {
+          const { ModeService, OrchOSModeEnum } = require('../src/services/ModeService');
+          const currentMode = ModeService.getMode();
+          isBasicMode = currentMode === OrchOSModeEnum.BASIC;
+        } catch (error) {
+          console.warn('[IPC] Could not determine mode, defaulting to advanced (Pinecone)');
+          isBasicMode = false;
+        }
       }
+      
+      const storageType = isBasicMode ? 'DuckDB' : 'Pinecone';
+      console.log(`[IPC] Using ${storageType} storage for import (mode: ${isBasicMode ? 'Basic' : 'Advanced'})`);
+      
+      // Create appropriate vector helper
+      let vectorHelper: any;
+      if (isBasicMode) {
+        if (!deps.duckDBHelper) {
+          throw new Error("DuckDB helper not initialized for basic mode");
+        }
+        // Create wrapper that matches the expected interface
+        vectorHelper = {
+          async deleteAllUserVectors(): Promise<void> {
+            if (deps.duckDBHelper?.deleteAllUserVectors) {
+              await deps.duckDBHelper.deleteAllUserVectors();
+            } else {
+              throw new Error('DuckDB deleteAllUserVectors method not available');
+            }
+          },
+          async saveToDuckDB(vectors: any[]): Promise<{ success: boolean; error?: string }> {
+            if (deps.duckDBHelper?.saveToDuckDB) {
+              return await deps.duckDBHelper.saveToDuckDB(vectors);
+            } else {
+              throw new Error('DuckDB saveToDuckDB method not available');
+            }
+          },
+          async checkExistingIds(ids: string[], progressCallback?: (processed: number, total: number) => void): Promise<string[]> {
+            if (deps.duckDBHelper?.checkExistingIds) {
+              return await deps.duckDBHelper.checkExistingIds(ids, progressCallback);
+            } else {
+              // Fallback: assume no existing IDs in DuckDB for now
+              console.warn('[IPC] DuckDB checkExistingIds method not available, returning empty array');
+              if (progressCallback) {
+                progressCallback(ids.length, ids.length);
+              }
+              return [];
+            }
+          }
+        };
+      } else {
+        if (!deps.pineconeHelper) {
+          throw new Error("Pinecone helper not initialized for advanced mode");
+        }
+        vectorHelper = deps.pineconeHelper;
+      }
+      
       if (!fileBuffer) {
         throw new Error("No file uploaded");
       }
-      console.log('[IPC] Importing ChatGPT history', {
-        mode,
-        fileBufferType: fileBuffer && fileBuffer.constructor && fileBuffer.constructor.name
-      });
       
       let processedBuffer: Buffer;
       if (fileBuffer instanceof Buffer) {
@@ -494,8 +557,9 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       const result = await importChatGPTHistoryHandler({
         fileBuffer: processedBuffer,
         mode,
+        applicationMode,
         openAIService: deps.openAIService,
-        pineconeHelper: deps.pineconeHelper,
+        pineconeHelper: vectorHelper, // Pass the appropriate helper
         onProgress: progressCallback
       });
       

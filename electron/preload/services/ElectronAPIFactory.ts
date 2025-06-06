@@ -278,10 +278,11 @@ export class ElectronAPIFactory {
    */
   private createImportManager() {
     return {
-      importChatHistory: async ({ fileBuffer, mode, user, onProgress }: {
+      importChatHistory: async ({ fileBuffer, mode, user, applicationMode, onProgress }: {
         fileBuffer: Buffer | ArrayBuffer | Uint8Array;
         mode: string;
         user: string;
+        applicationMode?: string;
         onProgress?: (data: {
           processed: number;
           total: number;
@@ -290,7 +291,7 @@ export class ElectronAPIFactory {
         }) => void;
       }) => {
         return this.errorHandler.wrapAsync(async () => {
-          this.logger.info(`Starting ChatGPT import: mode=${mode}, user=${user}`);
+          this.logger.info(`Starting ChatGPT import: mode=${mode}, user=${user}, applicationMode=${applicationMode}`);
 
           if (onProgress) {
             const progressListener = (_event: Electron.IpcRendererEvent, data: any) => {
@@ -307,7 +308,7 @@ export class ElectronAPIFactory {
             ipcRenderer.on("import-progress", progressListener);
 
             try {
-              const result = await ipcRenderer.invoke("import-chatgpt-history", { fileBuffer, mode, user });
+              const result = await ipcRenderer.invoke("import-chatgpt-history", { fileBuffer, mode, user, applicationMode });
               ipcRenderer.removeListener("import-progress", progressListener);
               return result;
             } catch (error) {
@@ -315,7 +316,7 @@ export class ElectronAPIFactory {
               throw error;
             }
           } else {
-            return await ipcRenderer.invoke("import-chatgpt-history", { fileBuffer, mode, user });
+            return await ipcRenderer.invoke("import-chatgpt-history", { fileBuffer, mode, user, applicationMode });
           }
         }, {
           component: 'ImportManager',

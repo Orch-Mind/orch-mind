@@ -11,6 +11,7 @@ import { OnnxRuntimeConfig } from "../../config/onnxruntimeConfig";
 import { MessageChunk, PineconeVector } from "../../electron/chatgpt-import/interfaces/types";
 import { Logger } from "../../electron/chatgpt-import/utils/logging";
 import { ProgressReporter } from "../../electron/chatgpt-import/utils/progressReporter";
+import { getModelDimensions } from "../../utils/EmbeddingUtils";
 import { STORAGE_KEYS } from "../StorageService";
 
 /**
@@ -44,7 +45,7 @@ export const SUPPORTED_HF_EMBEDDING_MODELS = [
  */
 export type HuggingFaceEmbeddingOptions = {
   model?: string;
-  device?: "wasm" | "webgpu";
+  device?: "cpu" | "wasm" | "webgpu";
   dtype?: "fp32" | "q8" | "q4";
 };
 
@@ -64,8 +65,8 @@ export type HuggingFaceEmbeddingOptions = {
  */
 export class HuggingFaceEmbeddingService implements IEmbeddingService {
   // Device and dtype options for model loading
-  // Note: In Transformers.js v3, "cpu" is no longer a valid option, use "wasm" instead
-  private static readonly DEVICE_OPTIONS = ["webgpu", "wasm"] as const;
+  // Note: Use "cpu" for Node.js/Electron main process, "wasm"/"webgpu" for browsers
+  private static readonly DEVICE_OPTIONS = ["cpu", "webgpu", "wasm"] as const;
   private static readonly DTYPE_OPTIONS = ["q4", "q8", "fp32"] as const;
 
   // Using 'any' to avoid TypeScript complexity with pipeline() typing
@@ -208,23 +209,8 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
     const actualModelId = modelId || this.getDefaultModelId();
     if (this.currentModel === actualModelId && this.embeddingGenerator) return;
     
-    // Determine embedding dimensionality based on loaded model
-    // Different multilingual models produce embeddings of different sizes
-    if (
-      actualModelId.includes('bge-m3') || 
-      actualModelId.includes('multilingual-e5-large')
-    ) {
-      this.embeddingDimension = 1024; // Premium multilingual models have 1024 dimensions
-    } else if (
-      actualModelId.includes('mpnet') || 
-      actualModelId.includes('bge-base') ||
-      (actualModelId.includes('multilingual-e5') && actualModelId.includes('base'))
-    ) {
-      this.embeddingDimension = 768; // Base models typically have 768 dimensions
-    } else {
-      this.embeddingDimension = 384; // Default for small and MiniLM models (384 dimensions)
-    }
-    
+    // Determine embedding dimensionality from centralized utility function
+    this.embeddingDimension = getModelDimensions(actualModelId);
     this.logger.debug(`Embedding dimensionality set to ${this.embeddingDimension} for model ${actualModelId}`);
     
     // Warn about potential compatibility issues with non-optimized models
@@ -234,13 +220,24 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
     
     let lastError: any = null;
     
-    // Check WebGPU availability and adjust device options accordingly
-    const webGPUAvailable = await this.isWebGPUAvailable();
-    const deviceOptions = webGPUAvailable 
-      ? HuggingFaceEmbeddingService.DEVICE_OPTIONS 
-      : ["wasm"]; // Use only WASM if WebGPU is not available
+    // Detect environment and choose appropriate device options
+    const isNodeJS = typeof window === 'undefined' && typeof process !== 'undefined';
     
-    this.logger.info(`WebGPU available: ${webGPUAvailable}, using devices: ${deviceOptions.join(', ')}`);
+    let deviceOptions: ("cpu" | "wasm" | "webgpu")[];
+    
+    if (isNodeJS) {
+      // Node.js/Electron main process - use CPU
+      deviceOptions = ["cpu"];
+      this.logger.info(`Running in Node.js/Electron main process, using device: cpu`);
+    } else {
+      // Browser environment - check WebGPU availability
+      const webGPUAvailable = await this.isWebGPUAvailable();
+      deviceOptions = webGPUAvailable 
+        ? ["webgpu", "wasm"] 
+        : ["wasm"]; // Use only WASM if WebGPU is not available
+      
+      this.logger.info(`Running in browser, WebGPU available: ${webGPUAvailable}, using devices: ${deviceOptions.join(', ')}`);
+    }
     
     // Get compatible dtypes for this specific model
     const compatibleDtypes = this.getCompatibleDtypes(actualModelId);
@@ -270,7 +267,9 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
               
               // ============ ONNX Runtime Optimization Configuration ============
               // Usar configurações otimizadas da classe OnnxRuntimeConfig
-              session_options: OnnxRuntimeConfig.getOptimizedSessionOptions(device as 'webgpu' | 'wasm'),
+              session_options: device === 'cpu' 
+                ? OnnxRuntimeConfig.getOptimizedSessionOptions('cpu') 
+                : OnnxRuntimeConfig.getOptimizedSessionOptions(device as 'webgpu' | 'wasm'),
               
               // Configurações de cache otimizadas
               cache_dir: typeof window !== 'undefined' ? './.cache' : undefined,

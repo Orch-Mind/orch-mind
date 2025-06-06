@@ -59,7 +59,7 @@ export interface ElectronAPI {
   // 📝 Method to send prompt updates directly
   sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
 
-  importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>
+  importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, applicationMode?: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>
 }
 
 declare global {

@@ -2,8 +2,9 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { useState } from 'react';
-import { ImportMode } from '../types/interfaces';
+import { ModeService } from '../../../../services/ModeService';
 import { ToastVariant } from '../../../ui/toast';
+import { ImportMode } from '../types/interfaces';
 
 // Custom hook following Single Responsibility and Open/Closed principles
 export const useChatGptImport = (
@@ -49,10 +50,15 @@ export const useChatGptImport = (
       // Armazenar o último percentual para evitar regressão
       let lastPercent = 0;
       
+      // Get current application mode to pass to import process
+      const applicationMode = ModeService.getMode();
+      console.log('[useChatGptImport] Using applicationMode:', applicationMode);
+      
       const result = await window.electronAPI.importChatHistory({
         fileBuffer,
         mode: importMode,
         user: userName,
+        applicationMode,
         onProgress: (data: ProgressData) => {
           // Usar o percentual enviado ou calcular
           let percent = data.percentage !== undefined 

@@ -44,7 +44,11 @@ export default defineConfig(({ mode }) => ({
                 "@duckdb/node-bindings-linux-x64",
                 "@duckdb/node-bindings-win32-x64",
                 /^@duckdb\/node-bindings/,
-                /\.node$/
+                /\.node$/,
+                // HuggingFace transformers should not be bundled in main process
+                "@huggingface/transformers",
+                "onnxruntime-web",
+                "onnxruntime-node"
               ],
             },
           },

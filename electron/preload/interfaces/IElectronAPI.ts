@@ -101,6 +101,7 @@ export interface IImportManager {
     fileBuffer: Buffer | ArrayBuffer | Uint8Array;
     mode: string;
     user: string;
+    applicationMode?: string; // Basic or Advanced mode
     onProgress?: (data: { 
       processed: number; 
       total: number; 

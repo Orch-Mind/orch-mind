@@ -583,14 +583,13 @@ function setWindowDimensions(width: number, height: number): void {
 
 function loadEnvVariables() {
   if (isDev) {
-    console.log("Loading env variables from:", path.join(process.cwd(), ".env"))
-    dotenv.config({ path: path.join(process.cwd(), ".env") })
+    const envPath = path.join(process.cwd(), ".env");
+    console.log("Loading env variables from:", envPath);
+    dotenv.config({ path: envPath });
   } else {
-    console.log(
-      "Loading env variables from:",
-      path.join(process.resourcesPath, ".env")
-    )
-    dotenv.config({ path: path.join(process.resourcesPath, ".env") })
+    const envPath = path.join(process.resourcesPath, ".env");
+    console.log("Loading env variables from:", envPath);
+    dotenv.config({ path: envPath });
   }
 }
 

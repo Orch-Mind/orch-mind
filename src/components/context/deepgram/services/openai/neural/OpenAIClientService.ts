@@ -41,16 +41,29 @@ export class OpenAIClientService implements IClientManagementService {
    * Symbolic: Recuperação de credencial neural seguindo hierarquia de prioridade
    */
   async loadApiKey(): Promise<string> {
-    // Prioridade 1: Variável de ambiente (.env) via Electron API
+    // Detectar se estamos no main process ou renderer process
+    const isMainProcess = typeof window === 'undefined';
+    
+    // Prioridade 1: Variável de ambiente (.env)
+    if (isMainProcess) {
+      // Main process - acesso direto a process.env
+      if (typeof process !== 'undefined' && process.env?.OPENAI_KEY) {
+        this.apiKey = process.env.OPENAI_KEY.trim();
+        LoggingUtils.logInfo("OpenAI API key loaded from process.env (main process)");
+        return this.apiKey;
+      }
+    } else {
+      // Renderer process - via Electron API
     try {
-      const envKey = await (window as any).electronAPI.getEnv('OPENAI_KEY');
+      const envKey = await window.electronAPI.getEnv('OPENAI_KEY');
       if (envKey?.trim()) {
         this.apiKey = envKey.trim();
-        LoggingUtils.logInfo("OpenAI API key loaded from environment variables");
+          LoggingUtils.logInfo("OpenAI API key loaded from environment variables (renderer process)");
         return this.apiKey;
       }
     } catch (error) {
       LoggingUtils.logInfo("Could not load API key from environment, trying local storage");
+      }
     }
     
     // Prioridade 2: Armazenamento local (configuração do usuário)

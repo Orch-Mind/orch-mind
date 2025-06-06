@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { ModeService, OrchOSModeEnum } from '../../../services/ModeService';
 import { ChatGPTSession, ImportChatGPTParams, ImportResult } from '../interfaces/types';
 import { DeduplicationService } from '../services/deduplication/DeduplicationService';
 import { EmbeddingService } from '../services/embedding/EmbeddingService';
@@ -15,20 +16,46 @@ import { ProgressReporter } from '../utils/progressReporter';
  * Orchestrates different services following SOLID principles
  */
 export async function importChatGPTHistoryHandler(params: ImportChatGPTParams): Promise<ImportResult> {
-  const { fileBuffer, mode, openAIService, pineconeHelper, onProgress } = params;
+  const { fileBuffer, mode, applicationMode, openAIService, pineconeHelper, onProgress } = params;
   
   // Initialize services
   const logger = new Logger('[ImportChatGPT]');
   const progressReporter = new ProgressReporter(onProgress, logger);
+  
+  // Determine mode for service configuration
+  let currentMode: OrchOSModeEnum;
+  if (applicationMode) {
+    // Convert string to enum
+    if (applicationMode.toLowerCase() === 'basic') {
+      currentMode = OrchOSModeEnum.BASIC;
+    } else if (applicationMode.toLowerCase() === 'advanced') {
+      currentMode = OrchOSModeEnum.ADVANCED;
+    } else {
+      logger.warn(`🟡 Unknown applicationMode: "${applicationMode}", falling back to ModeService`);
+      currentMode = ModeService.getMode();
+    }
+    logger.info(`🔧 Using applicationMode from IPC: "${applicationMode}" -> ${currentMode}`);
+  } else {
+    currentMode = ModeService.getMode();
+    logger.info(`🔧 No applicationMode provided, using ModeService: ${currentMode}`);
+  }
+  
+  const isBasicMode = currentMode === OrchOSModeEnum.BASIC;
+  const storageType = isBasicMode ? 'DuckDB' : 'Pinecone';
+  logger.info(`🗄️ Storage mode: ${storageType} (${isBasicMode ? 'Basic' : 'Advanced'} mode)`);
+  
+  // Use the helper passed from IPC (already correct for the mode)
+  const vectorHelper = pineconeHelper;
+  
   const parser = new ChatGPTParser(progressReporter, logger);
-  const deduplicationService = new DeduplicationService(pineconeHelper, progressReporter, logger);
+  const deduplicationService = new DeduplicationService(vectorHelper, progressReporter, logger);
   const textChunker = new TextChunker();
-  const embeddingService = new EmbeddingService(openAIService, logger, progressReporter);
-  const storageService = new VectorStorageService(pineconeHelper, progressReporter, logger);
+  const embeddingService = new EmbeddingService(openAIService, logger, progressReporter, applicationMode);
+  const storageService = new VectorStorageService(vectorHelper, progressReporter, logger, isBasicMode);
   
   try {
     // Log of start
-    logger.info(`Starting ChatGPT import in ${mode} mode for primary user`);
+    logger.info(`Starting ChatGPT import in ${mode} mode with applicationMode: ${applicationMode || 'auto-detect'} using ${storageType}`);
     
     // 1. Parse the file
     const rawSessions = parser.parseBuffer(fileBuffer);
@@ -69,9 +96,9 @@ export async function importChatGPTHistoryHandler(params: ImportChatGPTParams): 
       // 5. Data cleanup (overwrite mode)
       logger.info(`PASSO 5: Starting with mode=${mode}`);
       if (mode === 'overwrite') {
-        logger.info('PASSO 5: Deleting existing data (overwrite mode)...');
+        logger.info(`PASSO 5: Deleting existing data (overwrite mode) from ${storageType}...`);
         await storageService.deleteExistingData();
-        logger.info('PASSO 5: Existing data deleted successfully');
+        logger.info(`PASSO 5: Existing data deleted successfully from ${storageType}`);
       } else {
         logger.info('PASSO 5: Increment mode - skipping data cleanup');
       }
@@ -81,12 +108,13 @@ export async function importChatGPTHistoryHandler(params: ImportChatGPTParams): 
       throw new Error(`Step 5 failed: ${error instanceof Error ? error.message : String(error)}`);
     }
     
-    // Initialize OpenAI service (default for other classes)
-    if (openAIService) {
-      logger.info('Initializing OpenAI service for embeddings...');
+    // Initialize embedding service based on mode
+    if (isBasicMode) {
+      logger.info('Initializing HuggingFace service for embeddings (Basic mode)...');
+    } else if (openAIService) {
+      logger.info('Initializing OpenAI service for embeddings (Advanced mode)...');
       const initialized = await embeddingService.ensureOpenAIInitialized();
       logger.info(`OpenAIService initialization status: ${initialized ? 'OK' : 'FAILED'}`);
-      // Agora a inicialização do OpenAI é obrigatória para gerar embeddings reais
       if (!initialized) {
         logger.error('OpenAIService could not be initialized. The OPENAI_KEY environment variable must be set.');
         logger.info('Set the OPENAI_KEY environment variable with your API key');
@@ -147,12 +175,12 @@ export async function importChatGPTHistoryHandler(params: ImportChatGPTParams): 
     }
     
     // Verification of transition between steps
-    logger.info('TRANSITION: Moving from step 7 to step 8... If the application freezes here, it might be an OpenAI issue');
+    logger.info('TRANSITION: Moving from step 7 to step 8...');
     logger.info('=========== FIM DO DIAGNÓSTICO ===========');
     logger.info('===============================================');
     
     // 8. Generate embeddings and create vectors
-    logger.info('STARTING EMBEDDINGS GENERATION... If the application freezes after this line, the issue is in embeddingService.generateEmbeddingsForChunks');
+    logger.info(`STARTING EMBEDDINGS GENERATION using ${isBasicMode ? 'HuggingFace' : 'OpenAI'}...`);
     let vectors;
     try {
       vectors = await embeddingService.generateEmbeddingsForChunks(batches, messageChunks);
@@ -162,17 +190,17 @@ export async function importChatGPTHistoryHandler(params: ImportChatGPTParams): 
       throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
     
-    // 9. Save vectors to Pinecone
-    logger.info(`[DIAGNOSTIC] Vectors to be saved: ${vectors.length}`);
+    // 9. Save vectors to appropriate storage
+    logger.info(`[DIAGNOSTIC] Vectors to be saved to ${storageType}: ${vectors.length}`);
     if (vectors.length > 0) {
       logger.info(`[DIAGNOSTIC] Example vector: ${JSON.stringify(vectors[0]).substring(0, 200)}`);
     } else {
       logger.warn('[DIAGNOSTIC] No vectors generated for saving!');
     }
     const saveResult = await storageService.saveVectors(vectors);
-    logger.info(`[DIAGNOSTIC] Save result: success=${saveResult.success}, error=${saveResult.error || 'none'}`);
+    logger.info(`[DIAGNOSTIC] Save result to ${storageType}: success=${saveResult.success}, error=${saveResult.error || 'none'}`);
     if (!saveResult.success) {
-      logger.error(`[DIAGNOSTIC] Error saving vectors: ${saveResult.error}`);
+      logger.error(`[DIAGNOSTIC] Error saving vectors to ${storageType}: ${saveResult.error}`);
     }
     
     // 10. Calculate final statistics
@@ -187,9 +215,10 @@ export async function importChatGPTHistoryHandler(params: ImportChatGPTParams): 
     logger.info(`🎉 IMPORTATION COMPLETED SUCCESSFULLY`);
     logger.info(`📊 Statistics:`);
     logger.info(`- Mode: ${mode === 'overwrite' ? 'OVERWRITE' : 'INCREMENTAL'}`);
+    logger.info(`- Storage: ${storageType} (${isBasicMode ? 'Basic' : 'Advanced'} mode)`);
     logger.info(`- Total messages in file: ${totalMessagesInFile}`);
     logger.info(`- Duplicated messages ignored: ${skipped} (${Math.round((skipped/totalMessagesInFile)*100)}%)`);
-    logger.info(`- Vectors saved to Pinecone: ${vectors.length} (${Math.round((vectors.length/totalMessagesInFile)*100)}%)`);
+    logger.info(`- Vectors saved to ${storageType}: ${vectors.length} (${Math.round((vectors.length/totalMessagesInFile)*100)}%)`);
     logger.info(`=============================================`);
     
     return { 
