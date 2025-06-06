@@ -321,7 +321,20 @@ LANGUAGE: ${language}`;
         input: text.trim(),
       });
 
-      return embeddingResponse.data[0].embedding;
+      const embedding = embeddingResponse.data[0].embedding;
+      
+      // Critical: Validate embedding for NaN/Infinity values
+      const hasInvalidValues = embedding.some(val => !Number.isFinite(val));
+      if (hasInvalidValues) {
+        LoggingUtils.logError("OpenAI returned embedding with NaN/Infinity values - cleaning...");
+        LoggingUtils.logError("Invalid values:", embedding.filter(val => !Number.isFinite(val)));
+        
+        // Clean the embedding by replacing invalid values with 0.0
+        const cleanedEmbedding = embedding.map(val => Number.isFinite(val) ? val : 0.0);
+        return cleanedEmbedding;
+      }
+
+      return embedding;
     } catch (error) {
       LoggingUtils.logError("Error creating embedding", error);
       throw error;
@@ -360,7 +373,24 @@ LANGUAGE: ${language}`;
 
       // Sort the results by index to ensure they match the input order
       const sortedData = [...embeddingResponse.data].sort((a, b) => a.index - b.index);
-      return sortedData.map(d => d.embedding);
+      
+      // Validate and clean all embeddings
+      return sortedData.map((d, index) => {
+        const embedding = d.embedding;
+        
+        // Critical: Validate embedding for NaN/Infinity values
+        const hasInvalidValues = embedding.some(val => !Number.isFinite(val));
+        if (hasInvalidValues) {
+          LoggingUtils.logError(`OpenAI returned embedding ${index} with NaN/Infinity values - cleaning...`);
+          LoggingUtils.logError("Invalid values:", embedding.filter(val => !Number.isFinite(val)));
+          
+          // Clean the embedding by replacing invalid values with 0.0
+          const cleanedEmbedding = embedding.map(val => Number.isFinite(val) ? val : 0.0);
+          return cleanedEmbedding;
+        }
+        
+        return embedding;
+      });
     } catch (error) {
       LoggingUtils.logError("Error creating embeddings in batch", error);
       throw error;

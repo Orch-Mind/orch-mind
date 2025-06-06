@@ -5,6 +5,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   testMatch: [
     '**/src/**/*.test.ts',
     '**/src/**/*.spec.ts',
@@ -15,15 +16,21 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json', 'node'],
   roots: ['<rootDir>/src'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: true, tsconfig: 'tsconfig.json' }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', { 
+      useESM: true, 
+      tsconfig: 'tsconfig.json'
+    }],
     '^.+\\.jsx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!@dqbd/tiktoken)',
+    '/node_modules/(?!(@huggingface/transformers|@dqbd/tiktoken|onnxruntime-web|onnxruntime-common|nanoid))',
   ],
   setupFiles: ['<rootDir>/jest.setup.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.silence-console.js'],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@huggingface/transformers$': '<rootDir>/test/__mocks__/@huggingface/transformers.js',
+    '^nanoid$': '<rootDir>/test/__mocks__/nanoid.js',
   },
 };

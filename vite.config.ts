@@ -118,7 +118,16 @@ export default defineConfig(({ mode }) => ({
       'Cross-Origin-Embedder-Policy': 'require-corp',
       // Additional headers for DuckDB-WASM
       'Cross-Origin-Resource-Policy': 'cross-origin',
-    }
+    },
+    // Enhanced connection stability for Electron
+    hmr: {
+      port: 54322,
+      host: 'localhost'
+    },
+    // Improve connection reliability
+    strictPort: false,
+    force: true,
+    clearScreen: false
   },
   build: {
     sourcemap: mode === 'development' ? 'inline' : false,

@@ -33,7 +33,7 @@ export class SuperpositionLayer implements ISuperpositionLayer {
   answers: ISuperposedAnswer[] = [];
 
   /**
-   * Calculate cosine similarity between two embedding vectors
+   * Calculate cosine similarity between two embedding vectors with enhanced validation
    */
   private cosineSimilarity(a: number[], b: number[]): number {
     // Handle null/undefined vectors or empty vectors
@@ -43,19 +43,38 @@ export class SuperpositionLayer implements ISuperpositionLayer {
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
+    let validCount = 0;
     
     for (let i = 0; i < a.length; i++) {
-      // Handle NaN or invalid values in vectors
-      if (isNaN(a[i]) || isNaN(b[i])) continue;
+      // Enhanced: Check for any non-finite values (NaN, Infinity, -Infinity)
+      if (!Number.isFinite(a[i]) || !Number.isFinite(b[i])) {
+        continue; // Skip invalid values
+      }
       
       dotProduct += a[i] * b[i];
       normA += a[i] * a[i];
       normB += b[i] * b[i];
+      validCount++;
     }
     
+    // If no valid values found, return 0
+    if (validCount === 0) {
+      console.warn('SuperpositionLayer: No valid values found in vectors for cosine similarity');
+      return 0;
+    }
+    
+    // Handle zero norm cases
     if (normA === 0 || normB === 0) return 0;
     
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    const similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    
+    // Final validation: ensure result is finite
+    if (!Number.isFinite(similarity)) {
+      console.warn('SuperpositionLayer: Cosine similarity calculation resulted in non-finite value');
+      return 0;
+    }
+    
+    return similarity;
   }
 
   /**

@@ -26,5 +26,13 @@
     <string>Este aplicativo precisa enviar eventos AppleScript para funcionar corretamente.</string>
     <key>NSCameraUseContinuityCameraDeviceType</key>
     <true/>
+    <key>com.apple.security.application-groups</key>
+    <array>
+      <string>com.ferrari.orch-os.shared</string>
+    </array>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
   </dict>
 </plist> 

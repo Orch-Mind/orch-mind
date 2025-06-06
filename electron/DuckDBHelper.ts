@@ -309,21 +309,38 @@ export class DuckDBHelper {
         const batch = batches[i];
         console.log(`[DUCKDB] Processing batch ${i+1}/${batches.length} with ${batch.length} vectors`);
         
-                 try {
-           // Use DuckDB Neo parameter binding with proper array handling
-           // Reference: https://duckdb.org/docs/stable/clients/node_neo/overview.html
-           for (const vector of batch) {
-             // Create array value using DuckDB's arrayValue function
-             const embeddingArray = this.arrayValue!(vector.values);
-             
-             // Execute with parameter binding - DuckDB Neo supports this properly
-             await this.connection!.run(insertSQL, [
-               vector.id, 
-               embeddingArray, 
-               JSON.stringify(vector.metadata)
-             ]);
-           }
-           console.log(`[DUCKDB] Batch ${i+1}/${batches.length} saved successfully!`);
+        try {
+          // Use DuckDB Neo parameter binding with proper array handling
+          // Reference: https://duckdb.org/docs/stable/clients/node_neo/overview.html
+          for (const vector of batch) {
+            // Critical: Validate and clean embedding values before saving
+            if (!vector.values || !Array.isArray(vector.values)) {
+              console.warn(`[DUCKDB] Skipping vector ${vector.id} - invalid values array`);
+              continue;
+            }
+            
+            // Check for NaN or infinite values
+            const hasInvalidValues = vector.values.some(val => !Number.isFinite(val));
+            if (hasInvalidValues) {
+              console.warn(`[DUCKDB] Vector ${vector.id} contains NaN/Infinity values - cleaning...`);
+              console.warn('[DUCKDB] Invalid values:', vector.values.filter(val => !Number.isFinite(val)));
+              
+              // Clean the embedding by replacing invalid values with 0.0
+              vector.values = vector.values.map(val => Number.isFinite(val) ? val : 0.0);
+              console.warn(`[DUCKDB] Cleaned vector ${vector.id} by replacing non-finite values with 0.0`);
+            }
+            
+            // Create array value using DuckDB's arrayValue function
+            const embeddingArray = this.arrayValue!(vector.values);
+            
+            // Execute with parameter binding - DuckDB Neo supports this properly
+            await this.connection!.run(insertSQL, [
+              vector.id, 
+              embeddingArray, 
+              JSON.stringify(vector.metadata)
+            ]);
+          }
+          console.log(`[DUCKDB] Batch ${i+1}/${batches.length} saved successfully!`);
         } catch (batchError) {
           console.error(`[DUCKDB] Error saving batch ${i+1}/${batches.length}:`, batchError);
           allSuccess = false;
@@ -424,10 +441,24 @@ export class DuckDBHelper {
       return { matches: [] };
     }
 
-    // Validate embedding dimensions
+    // Enhanced embedding validation with NaN detection
     if (!embedding || embedding.length === 0) {
       console.error('DuckDBHelper: Invalid embedding - empty or null');
       return { matches: [] };
+    }
+    
+    // Critical: Check for NaN values in embedding array
+    const hasNaN = embedding.some(val => !Number.isFinite(val));
+    if (hasNaN) {
+      console.error('DuckDBHelper: CRITICAL - Embedding contains NaN or infinite values. This will cause SQL errors.');
+      console.error('DuckDBHelper: Problematic embedding values:', embedding.filter(val => !Number.isFinite(val)));
+      
+      // Attempt to clean the embedding by replacing NaN/Infinity with zeros
+      const cleanedEmbedding = embedding.map(val => Number.isFinite(val) ? val : 0.0);
+      console.warn('DuckDBHelper: Cleaned embedding by replacing non-finite values with 0.0');
+      
+      // Use cleaned embedding for query
+      embedding = cleanedEmbedding;
     }
     
     // Ensure keywords is always an array for robust RAG processing

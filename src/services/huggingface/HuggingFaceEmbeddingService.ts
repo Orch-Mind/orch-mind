@@ -417,18 +417,34 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
    */
   /**
    * Helper method to convert embedding results to standard number array format
-   * Handles different result formats from HuggingFace transformers
+   * Handles different result formats from HuggingFace transformers with NaN validation
    */
   private convertEmbeddingResult(result: any): number[] {
+    let embedding: number[];
+    
     // Check if tolist is available (recommended method in documentation)
     if (typeof result.tolist === 'function') {
       // tolist() returns a nested array, we take the first element
       // and explicitly convert to number[]
-      return result.tolist()[0].map((val: unknown) => Number(val));
+      embedding = result.tolist()[0].map((val: unknown) => Number(val));
     } else {
       // Fallback for when tolist is not available
-      return Array.from(result.data).map(val => Number(val));
+      embedding = Array.from(result.data).map(val => Number(val));
     }
+    
+    // Critical: Validate embedding for NaN/Infinity values
+    const hasInvalidValues = embedding.some(val => !Number.isFinite(val));
+    if (hasInvalidValues) {
+      this.logger.error("HuggingFace returned embedding with NaN/Infinity values - cleaning...");
+      this.logger.error("Invalid values:", embedding.filter(val => !Number.isFinite(val)));
+      
+      // Clean the embedding by replacing invalid values with 0.0
+      const cleanedEmbedding = embedding.map(val => Number.isFinite(val) ? val : 0.0);
+      this.logger.warn("Cleaned embedding by replacing non-finite values with 0.0");
+      return cleanedEmbedding;
+    }
+    
+    return embedding;
   }
 
   async createEmbedding(text: string, model?: string): Promise<number[]> {

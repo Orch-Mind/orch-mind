@@ -10,3 +10,7 @@ dist
 **/package-lock.json.env
 
 out/
+
+# Debug and log files
+.debug-suppressed.log
+*.log
