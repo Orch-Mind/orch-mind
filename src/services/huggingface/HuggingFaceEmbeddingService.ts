@@ -7,6 +7,7 @@
 
 import { pipeline } from "@huggingface/transformers";
 import { IEmbeddingService } from "../../components/context/deepgram/interfaces/openai/IEmbeddingService";
+import { OnnxRuntimeConfig } from "../../config/onnxruntimeConfig";
 import { MessageChunk, PineconeVector } from "../../electron/chatgpt-import/interfaces/types";
 import { Logger } from "../../electron/chatgpt-import/utils/logging";
 import { ProgressReporter } from "../../electron/chatgpt-import/utils/progressReporter";
@@ -175,20 +176,6 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
     return true;
   }
 
-  /**
-   * Test network connectivity to HuggingFace model repository
-   * This helps diagnose network issues that might cause JSON parsing errors
-   */
-  private async testHuggingFaceConnectivity(): Promise<boolean> {
-    try {
-      // Test connectivity by fetching a small model config file
-      const response = await fetch(`https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/config.json`);
-      return response.ok;
-    } catch (error) {
-      this.logger.warn(`Network connectivity test to HuggingFace failed: ${error}`);
-      return false;
-    }
-  }
 
   /**
    * Check if WebGPU is available in the current browser environment
@@ -272,14 +259,22 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
           
           
 
-            // Configuração do pipeline com opções suportadas pelos tipos TypeScript
-            // Mantemos apenas opções válidas para evitar erros de lint
+            // Configuração otimizada do pipeline para suprimir warnings do ONNX Runtime
+            // e melhorar performance dos execution providers
             const pipelineConfig: any = {
               device,
               dtype,
               // Force local model usage when possible to avoid CSP issues
               local_files_only: false, // Allow download but prefer cache
               use_external_data_format: false, // Avoid external data dependencies
+              
+              // ============ ONNX Runtime Optimization Configuration ============
+              // Usar configurações otimizadas da classe OnnxRuntimeConfig
+              session_options: OnnxRuntimeConfig.getOptimizedSessionOptions(device as 'webgpu' | 'wasm'),
+              
+              // Configurações de cache otimizadas
+              cache_dir: typeof window !== 'undefined' ? './.cache' : undefined,
+              
               // Add progress callback for debugging
               progress_callback: (data: any) => {
                 if (data.status === 'progress') {

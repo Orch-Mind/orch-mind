@@ -24,6 +24,7 @@ import {
   ToastVariant,
   ToastViewport
 } from "./components/ui/toast";
+import { OnnxRuntimeConfig } from "./config/onnxruntimeConfig";
 import TranscriptionModule from "./features/transcription/TranscriptionModule";
 import "./styles/orchos-theme.css";
 
@@ -75,8 +76,12 @@ export default function App() {
     variant: "neutral"
   })
 
-  // Initialize performance optimizations once at application startup
+  // Initialize performance optimizations and ONNX Runtime config once at application startup
   useEffect(() => {
+    // Initialize ONNX Runtime configuration to suppress warnings and optimize performance
+    OnnxRuntimeConfig.initializeGlobalOnnxSettings();
+    OnnxRuntimeConfig.suppressHarmlessOnnxWarnings();
+    
     const cleanup = initializeQuantumPerformanceOptimizations();
     
     return cleanup;

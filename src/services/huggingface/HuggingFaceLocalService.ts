@@ -3,6 +3,7 @@
 // Processes symbolic text generation for Orch-OS in basic mode, without backend or API key.
 
 import { pipeline } from "@huggingface/transformers";
+import { OnnxRuntimeConfig } from "../../config/onnxruntimeConfig";
 import { getOption, STORAGE_KEYS } from "../StorageService";
 
 /**
@@ -67,46 +68,45 @@ export class HuggingFaceLocalService {
    * Loads a supported model for local inference with auto device/dtype fallback.
    * Symbolic: Tries WebGPU + quantized (q4), depois q8, depois fp32, depois WASM.
    * Maximizes browser compatibility and performance for Orch-OS.
+   * Uses optimized ONNX Runtime configuration to suppress warnings and improve performance.
    */
   async loadModel(modelId: string): Promise<void> {
     if (this.currentModel === modelId && this.generator) return;
     let lastError: any = null;
-    // Try WebGPU + q4
-    try {
-      this.generator = await pipeline("text-generation", modelId, { device: "webgpu", dtype: "q4" });
-      this.currentModel = modelId;
-      return;
-    } catch (e) { lastError = e; }
-    // Try WebGPU + q8
-    try {
-      this.generator = await pipeline("text-generation", modelId, { device: "webgpu", dtype: "q8" });
-      this.currentModel = modelId;
-      return;
-    } catch (e) { lastError = e; }
-    // Try WebGPU + fp32
-    try {
-      this.generator = await pipeline("text-generation", modelId, { device: "webgpu", dtype: "fp32" });
-      this.currentModel = modelId;
-      return;
-    } catch (e) { lastError = e; }
-    // Fallback: WASM + q4
-    try {
-      this.generator = await pipeline("text-generation", modelId, { device: "wasm", dtype: "q4" });
-      this.currentModel = modelId;
-      return;
-    } catch (e) { lastError = e; }
-    // Fallback: WASM + q8
-    try {
-      this.generator = await pipeline("text-generation", modelId, { device: "wasm", dtype: "q8" });
-      this.currentModel = modelId;
-      return;
-    } catch (e) { lastError = e; }
-    // Fallback: WASM + fp32
-    try {
-      this.generator = await pipeline("text-generation", modelId, { device: "wasm", dtype: "fp32" });
-      this.currentModel = modelId;
-      return;
-    } catch (e) { lastError = e; }
+    
+    // Configuration array for all device/dtype combinations with proper typing
+    const configurations: Array<{device: 'webgpu' | 'wasm', dtype: 'q4' | 'q8' | 'fp32'}> = [
+      { device: "webgpu", dtype: "q4" },
+      { device: "webgpu", dtype: "q8" },
+      { device: "webgpu", dtype: "fp32" },
+      { device: "wasm", dtype: "q4" },
+      { device: "wasm", dtype: "q8" },
+      { device: "wasm", dtype: "fp32" }
+    ];
+    
+    for (const config of configurations) {
+      try {
+        // Use optimized ONNX Runtime configuration to suppress warnings and improve performance
+        const pipelineConfig: any = {
+          device: config.device,
+          dtype: config.dtype,
+          // Apply ONNX Runtime optimizations following community best practices
+          session_options: OnnxRuntimeConfig.getOptimizedSessionOptions(config.device),
+          // Cache configuration for better performance
+          cache_dir: typeof window !== 'undefined' ? './.cache' : undefined,
+          local_files_only: false, // Allow download but prefer cache
+        };
+        
+        this.generator = await pipeline("text-generation", modelId, pipelineConfig);
+        this.currentModel = modelId;
+        console.log(`[HuggingFaceLocalService] ✅ Successfully loaded ${modelId} with ${config.device} + ${config.dtype}`);
+        return;
+      } catch (e) { 
+        lastError = e;
+        console.log(`[HuggingFaceLocalService] ⚠️ Failed to load ${modelId} with ${config.device} + ${config.dtype}, trying next configuration...`);
+      }
+    }
+    
     // If all attempts fail, throw last error
     throw new Error(`Failed to load model ${modelId} on any supported device/dtype. Last error: ${lastError}`);
   }
