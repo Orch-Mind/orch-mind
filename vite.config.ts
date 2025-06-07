@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
-import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
+import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfill";
+import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import path from "node:path";
 import { defineConfig } from "vite";
 import electron from "vite-plugin-electron/simple";
@@ -10,14 +10,17 @@ import electron from "vite-plugin-electron/simple";
 // Plugin to clean HTML for Electron (remove CSP meta tags that could conflict)
 function cleanHtmlPlugin() {
   return {
-    name: 'clean-html',
+    name: "clean-html",
     transformIndexHtml: {
-      order: 'post' as const,
+      order: "post" as const,
       handler(html: string, context: any) {
         // Remove any CSP meta tags from the HTML before serving to Electron
-        return html.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '');
-      }
-    }
+        return html.replace(
+          /<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi,
+          ""
+        );
+      },
+    },
   };
 }
 
@@ -29,8 +32,8 @@ export default defineConfig(({ mode }) => ({
         entry: "electron/main.ts",
         vite: {
           build: {
-            sourcemap: mode === 'development',
-            minify: mode === 'production',
+            sourcemap: mode === "development",
+            minify: mode === "production",
             outDir: "dist-electron",
             rollupOptions: {
               external: [
@@ -48,7 +51,7 @@ export default defineConfig(({ mode }) => ({
                 // HuggingFace transformers should not be bundled in main process
                 "@huggingface/transformers",
                 "onnxruntime-web",
-                "onnxruntime-node"
+                "onnxruntime-node",
               ],
             },
           },
@@ -58,8 +61,8 @@ export default defineConfig(({ mode }) => ({
         input: path.join(__dirname, "electron/preload/index.ts"),
         vite: {
           build: {
-            sourcemap: mode === 'development' ? 'inline' : false,
-            minify: mode === 'production',
+            sourcemap: mode === "development" ? "inline" : false,
+            minify: mode === "production",
             outDir: "dist-electron",
             rollupOptions: {
               external: [
@@ -71,7 +74,7 @@ export default defineConfig(({ mode }) => ({
                 /\.node$/,
                 // Node.js built-in modules that should not be bundled in preload
                 "fs",
-                "path", 
+                "path",
                 "os",
                 "crypto",
                 "worker_threads",
@@ -87,80 +90,83 @@ export default defineConfig(({ mode }) => ({
                 "stream",
                 "tls",
                 "v8",
-                "zlib"
+                "zlib",
               ],
             },
           },
         },
       },
       renderer: {},
-    })
+    }),
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
       // Node.js polyfills for browser compatibility (renderer only)
-      "worker_threads": path.resolve(__dirname, "src/polyfills/worker_threads.js"),
-      "events": "events",
-      "util": "util", 
-      "stream": "stream-browserify",
-      "buffer": "buffer",
-      "process": "process/browser",
-      "path": "path-browserify",
-      "crypto": "crypto-browserify",
+      worker_threads: path.resolve(
+        __dirname,
+        "src/polyfills/worker_threads.js"
+      ),
+      events: "events",
+      util: "util",
+      stream: "stream-browserify",
+      buffer: "buffer",
+      process: "process/browser",
+      path: "path-browserify",
+      crypto: "crypto-browserify",
     },
   },
   server: {
     host: "localhost",
     port: 54321,
     fs: {
-      allow: ['..']
+      allow: [".."],
     },
     headers: {
       // Ensure proper WASM serving headers for dev server
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
       // Additional headers for DuckDB-WASM
-      'Cross-Origin-Resource-Policy': 'cross-origin',
+      "Cross-Origin-Resource-Policy": "cross-origin",
     },
     // Enhanced connection stability for Electron
     hmr: {
       port: 54322,
-      host: 'localhost'
+      host: "localhost",
     },
     // Improve connection reliability
     strictPort: false,
     force: true,
-    clearScreen: false
+    clearScreen: false,
   },
   build: {
-    sourcemap: mode === 'development' ? 'inline' : false,
+    sourcemap: mode === "development" ? "inline" : false,
     rollupOptions: {
       external: [
         // External Node.js modules for Electron main process
-        'electron',
-        'fs',
-        'path',
-        'os',
-        'stubborn-fs',
-        'conf',
+        "electron",
+        "fs",
+        "path",
+        "os",
+        "stubborn-fs",
+        "conf",
         // DuckDB native modules
-        '@duckdb/node-api',
-        '@duckdb/node-bindings',
+        "@duckdb/node-api",
+        "@duckdb/node-bindings",
         /^@duckdb\/node-bindings/,
-        /\.node$/
+        /\.node$/,
       ],
       output: {
-        format: 'es',
+        format: "es",
         // Ensure WASM files are handled correctly
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith('.wasm')) {
-            return 'wasm/[name].[ext]';
+          if (assetInfo.name?.endsWith(".wasm")) {
+            return "wasm/[name].[ext]";
           }
-          if (assetInfo.name?.includes('duckdb')) {
-            return 'duckdb/[name].[ext]';
+          if (assetInfo.name?.includes("duckdb")) {
+            return "duckdb/[name].[ext]";
           }
-          return 'assets/[name]-[hash].[ext]';
+          return "assets/[name]-[hash].[ext]";
         },
       },
     },
@@ -168,16 +174,13 @@ export default defineConfig(({ mode }) => ({
     assetsInlineLimit: 0, // Don't inline WASM files
     commonjsOptions: {
       // Exclude DuckDB native bindings from CommonJS processing
-      exclude: [
-        /^@duckdb\/node-bindings/,
-        /\.node$/
-      ]
-    }
+      exclude: [/^@duckdb\/node-bindings/, /\.node$/],
+    },
   },
   esbuild: {
     supported: {
-      'top-level-await': true
-    }
+      "top-level-await": true,
+    },
   },
   optimizeDeps: {
     include: [
@@ -188,21 +191,21 @@ export default defineConfig(({ mode }) => ({
       // Node.js polyfills
       "events",
       "util",
-      "stream-browserify", 
+      "stream-browserify",
       "buffer",
-      "process/browser"
+      "process/browser",
     ],
     exclude: [
-      '@duckdb/duckdb-wasm', // Exclude from optimization to avoid bundling issues
-      '@duckdb/node-api', // Exclude DuckDB native modules
-      '@duckdb/node-bindings',
-      'stubborn-fs',
-      'conf',
-      'electron'
+      "@duckdb/duckdb-wasm", // Exclude from optimization to avoid bundling issues
+      "@duckdb/node-api", // Exclude DuckDB native modules
+      "@duckdb/node-bindings",
+      "stubborn-fs",
+      "conf",
+      "electron",
     ],
     esbuildOptions: {
       define: {
-        global: 'globalThis',
+        global: "globalThis",
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
@@ -214,9 +217,11 @@ export default defineConfig(({ mode }) => ({
     },
   },
   define: {
-    global: 'globalThis',
-    'process.env.NODE_ENV': JSON.stringify(mode === 'development' ? 'development' : 'production'),
+    global: "globalThis",
+    "process.env.NODE_ENV": JSON.stringify(
+      mode === "development" ? "development" : "production"
+    ),
     // Disable Node.js modules not available in browser
-    'process.versions.node': 'undefined',
+    "process.versions.node": "undefined",
   },
 }));

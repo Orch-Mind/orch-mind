@@ -14,11 +14,11 @@ import { getOption, STORAGE_KEYS } from "../StorageService";
  */
 // Symbolic: Supported browser models for local text-generation (must match settings UI)
 export const SUPPORTED_HF_BROWSER_MODELS = [
-  "onnx-community/Qwen2.5-0.5B-Instruct", // Qwen2.5-0.5B-Instruct (Chat, fast, recommended)
-  "Xenova/phi-3-mini-4k-instruct",        // Phi-3 Mini (Chat, experimental)
-  "Xenova/TinyLlama-1.1B-Chat-v1.0",      // TinyLlama 1.1B (Chat, lightweight)
-  "HuggingFaceTB/SmolLM2-135M-Instruct",  // SmolLM2-135M (Ultra lightweight, chat)
-  "Xenova/distilgpt2"                     // DistilGPT2 (Basic text generation)
+  "onnx-community/Llama-3.2-3B-Instruct-onnx-web", // Llama 3.2 3B Instruct (ONNX, recommended for web)
+  "onnx-community/Qwen3-1.7B-ONNX", // Qwen3 1.7B (ONNX, lightweight)
+  "onnx-community/DeepSeek-R1-Distill-Qwen-1.5B-ONNX", // DeepSeek R1 Distill Qwen 1.5B (ONNX, fast)
+  "onnx-community/Phi-3.5-mini-instruct-onnx-web", // Phi-3.5 Mini Instruct (ONNX, web optimized)
+  "onnx-community/gemma-3-1b-it-ONNX", // Gemma 3 1B Instruct (ONNX, efficient)
 ];
 
 export type HuggingFaceLocalOptions = {
@@ -26,6 +26,8 @@ export type HuggingFaceLocalOptions = {
   systemPrompt?: string;
   maxTokens?: number;
   temperature?: number;
+  dtype?: "q4f16" | "q4" | "q8" | "fp32"; // CORRECTED: Added q4f16 support
+  device?: "webgpu" | "wasm"; // CORRECTED: Added device selection
 };
 
 /**
@@ -54,7 +56,8 @@ export class HuggingFaceLocalService {
   private currentModel: string | null = null;
 
   constructor() {
-    this.initialize(); // Auto-inicializa o serviço
+    // Auto-initialize on construction
+    // this.initialize();
   }
 
   /**
@@ -63,8 +66,8 @@ export class HuggingFaceLocalService {
    * This ensures persistence of user preference across reloads.
    */
   async initialize(): Promise<void> {
-    const savedModel = getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0];
-    await this.loadModel(savedModel);
+    // Placeholder for future initialization logic
+    // Models will be loaded on-demand via loadModel()
   }
 
   /**
@@ -76,17 +79,24 @@ export class HuggingFaceLocalService {
   async loadModel(modelId: string): Promise<void> {
     if (this.currentModel === modelId && this.generator) return;
     let lastError: any = null;
-    
+
     // Configuration array for all device/dtype combinations with proper typing
-    const configurations: Array<{device: 'webgpu' | 'wasm', dtype: 'q4' | 'q8' | 'fp32'}> = [
+    // CORRECTED: Added q4f16 support based on official Llama 3.2 examples
+    const configurations: Array<{
+      device: "webgpu" | "wasm";
+      dtype: "q4f16" | "q4" | "q8" | "fp32";
+    }> = [
+      // Try q4f16 first for ONNX community models (official Llama 3.2 example)
+      { device: "webgpu", dtype: "q4f16" },
       { device: "webgpu", dtype: "q4" },
       { device: "webgpu", dtype: "q8" },
       { device: "webgpu", dtype: "fp32" },
+      { device: "wasm", dtype: "q4f16" },
       { device: "wasm", dtype: "q4" },
       { device: "wasm", dtype: "q8" },
-      { device: "wasm", dtype: "fp32" }
+      { device: "wasm", dtype: "fp32" },
     ];
-    
+
     for (const config of configurations) {
       try {
         // Use optimized ONNX Runtime configuration to suppress warnings and improve performance
@@ -94,24 +104,40 @@ export class HuggingFaceLocalService {
           device: config.device,
           dtype: config.dtype,
           // Apply ONNX Runtime optimizations following community best practices
-          session_options: OnnxRuntimeConfig.getOptimizedSessionOptions(config.device),
+          session_options: OnnxRuntimeConfig.getOptimizedSessionOptions(
+            config.device
+          ),
           // Cache configuration for better performance
-          cache_dir: typeof window !== 'undefined' ? './.cache' : undefined,
+          cache_dir: typeof window !== "undefined" ? "./.cache" : undefined,
           local_files_only: false, // Allow download but prefer cache
         };
-        
-        this.generator = await pipeline("text-generation", modelId, pipelineConfig);
+
+        console.log(
+          `[HuggingFaceLocalService] Using clean pipeline config for ${modelId} with ${config.device}/${config.dtype} - letting transformers.js handle path resolution naturally`
+        );
+
+        this.generator = await pipeline(
+          "text-generation",
+          modelId,
+          pipelineConfig
+        );
         this.currentModel = modelId;
-        console.log(`[HuggingFaceLocalService] ✅ Successfully loaded ${modelId} with ${config.device} + ${config.dtype}`);
+        console.log(
+          `[HuggingFaceLocalService] ✅ Successfully loaded ${modelId} with ${config.device} + ${config.dtype}`
+        );
         return;
-      } catch (e) { 
+      } catch (e) {
         lastError = e;
-        console.log(`[HuggingFaceLocalService] ⚠️ Failed to load ${modelId} with ${config.device} + ${config.dtype}, trying next configuration...`);
+        console.log(
+          `[HuggingFaceLocalService] ⚠️ Failed to load ${modelId} with ${config.device} + ${config.dtype}, trying next configuration...`
+        );
       }
     }
-    
+
     // If all attempts fail, throw last error
-    throw new Error(`Failed to load model ${modelId} on any supported device/dtype. Last error: ${lastError}`);
+    throw new Error(
+      `Failed to load model ${modelId} on any supported device/dtype. Last error: ${lastError}`
+    );
   }
 
   /**
@@ -130,11 +156,14 @@ export class HuggingFaceLocalService {
   ): Promise<string> {
     // Symbolic: Auto-load model if not initialized
     if (!this.generator) {
-      const modelId = opts?.model || getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0];
+      const modelId =
+        opts?.model ||
+        getOption(STORAGE_KEYS.HF_MODEL) ||
+        SUPPORTED_HF_BROWSER_MODELS[0];
       await this.loadModel(modelId);
     }
-    // Symbolic: Compose context for the LLM
-    const prompt = messages.map(m => m.content).join("\n");
+    // CORRECTED: Use messages format directly as shown in official Llama 3.2 examples
+    // Based on: https://huggingface.co/onnx-community/Llama-3.2-1B-Instruct
 
     // Import TextStreamer dynamically (for browser/Node compatibility)
     // @ts-ignore
@@ -149,12 +178,14 @@ export class HuggingFaceLocalService {
       callback_function: (text: string) => {
         accumulated += text;
         if (onToken) onToken(text);
-      }
+      },
     });
 
-    await this.generator(prompt, {
+    // Use messages format directly as shown in official examples
+    await this.generator(messages, {
+      max_new_tokens: opts?.maxTokens || 128,
       temperature: opts?.temperature || 0.7,
-      streamer
+      streamer,
     });
 
     return accumulated.trim();
@@ -184,26 +215,33 @@ export class HuggingFaceLocalService {
         name: string;
         description: string;
         parameters: Record<string, unknown>;
-      }
+      };
     }>,
     opts?: HuggingFaceLocalOptions,
     onToken?: (partial: string) => void
   ): Promise<HuggingFaceResponse> {
     // Symbolic: Auto-load model if not initialized
     if (!this.generator) {
-      const modelId = opts?.model || getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0];
+      const modelId =
+        opts?.model ||
+        getOption(STORAGE_KEYS.HF_MODEL) ||
+        SUPPORTED_HF_BROWSER_MODELS[0];
       await this.loadModel(modelId);
     }
 
     // Filter out any incoming system prompts; only user/assistant messages allowed
-    const filteredMessages = messages.filter(m => m.role !== "system");
+    const filteredMessages = messages.filter((m) => m.role !== "system");
 
     // Symbolic: Create neural schema for function activation (English, for consistency)
-    const toolsJSON = JSON.stringify(tools.map(t => ({
-      name: t.function.name,
-      description: t.function.description,
-      parameters: t.function.parameters
-    })), null, 2);
+    const toolsJSON = JSON.stringify(
+      tools.map((t) => ({
+        name: t.function.name,
+        description: t.function.description,
+        parameters: t.function.parameters,
+      })),
+      null,
+      2
+    );
 
     // Symbolic: Neural instruction pattern for symbolic function execution (prompt engineering)
     const systemPrompt = `You have access to the following functions (tools):\n${toolsJSON}\n\nIf you need to call a function, respond EXACTLY in this format:\n<function_call>\n{\n  "name": "function_name",\n  "arguments": {\n    "param1": "value1",\n    "param2": "value2"\n  }\n}\n</function_call>\n\nIf you do not need to call a function, respond with normal text.\n\nIMPORTANT: Do not invent functions or arguments. Only use the provided schema. Always use the exact format above if calling a function.`;
@@ -211,7 +249,7 @@ export class HuggingFaceLocalService {
     // Compose the full prompt: system prompt (with schema) + user/assistant messages
     const augmentedMessages = [
       { role: "system" as const, content: systemPrompt },
-      ...filteredMessages
+      ...filteredMessages,
     ];
 
     // --- Streaming logic ---
@@ -223,13 +261,20 @@ export class HuggingFaceLocalService {
     const text = await this.generate(
       augmentedMessages,
       {
-        temperature: opts?.temperature || 0.7
+        temperature: opts?.temperature || 0.7,
       },
       (partial: string) => {
         accumulatedText += partial;
         // Try to accumulate function call args in real time (simulate OpenAI tool_call streaming)
-        const match = /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/.exec(accumulatedText);
-        if (match && typeof match[1] === 'string' && match[1] !== lastFunctionCallFragment) {
+        const match =
+          /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/.exec(
+            accumulatedText
+          );
+        if (
+          match &&
+          typeof match[1] === "string" &&
+          match[1] !== lastFunctionCallFragment
+        ) {
           lastFunctionCallFragment = match[1];
           accumulatedArgs = match[1];
           if (onToken) onToken(match[1]); // Optionally send partial function call
@@ -244,17 +289,19 @@ export class HuggingFaceLocalService {
       ? [null, accumulatedArgs]
       : text.match(/<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/);
 
-    if (functionCallMatch && typeof functionCallMatch[1] === 'string') {
+    if (functionCallMatch && typeof functionCallMatch[1] === "string") {
       try {
         // Symbolic: Parse neural function signal into symbolic structure
         const functionCall = JSON.parse(functionCallMatch[1]);
         return {
-          tool_calls: [{
-            function: {
-              name: functionCall.name,
-              arguments: JSON.stringify(functionCall.arguments)
-            }
-          }]
+          tool_calls: [
+            {
+              function: {
+                name: functionCall.name,
+                arguments: JSON.stringify(functionCall.arguments),
+              },
+            },
+          ],
         };
       } catch (e) {
         console.error("Erro ao parsear chamada de função:", e);
@@ -265,4 +312,3 @@ export class HuggingFaceLocalService {
     return { content: text };
   }
 }
-

@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
+
     <!-- CSP managed by Electron main process via webRequest headers -->
     <!-- DEV_CSP_START -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; script-src-elem 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'self' blob:;">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; script-src-elem 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'self' blob:;"
+    />
     <!-- DEV_CSP_END -->
 
     <title>Orch-OS</title>
@@ -25,19 +28,19 @@
     <div id="root"></div>
     <script>
       // Polyfill for process to avoid "process is not defined" errors
-      if (typeof window !== 'undefined' && !window.process) {
+      if (typeof window !== "undefined" && !window.process) {
         window.process = {
           env: {
-            NODE_ENV: 'development'
+            NODE_ENV: "development",
           },
-          platform: 'browser',
+          platform: "browser",
           versions: {
-            node: '22.16.0'
+            node: "22.16.0",
           },
-          nextTick: function(callback) {
+          nextTick: function (callback) {
             setTimeout(callback, 0);
           },
-          browser: true
+          browser: true,
         };
       }
       // Also set global for backward compatibility

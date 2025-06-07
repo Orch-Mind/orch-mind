@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React from 'react';
-import { HuggingFaceSettingsProps } from './types';
-import { setOption, STORAGE_KEYS } from '../../../../../../services/StorageService';
-import { SUPPORTED_HF_EMBEDDING_MODELS } from '../../../../../../services/huggingface/HuggingFaceEmbeddingService';
+import React from "react";
+import {
+  setOption,
+  STORAGE_KEYS,
+} from "../../../../../../services/StorageService";
+import { SUPPORTED_HF_EMBEDDING_MODELS } from "../../../../../../services/huggingface/HuggingFaceEmbeddingService";
+import { HuggingFaceSettingsProps } from "./types";
 
 /**
  * Componente para configuração de modelos do HuggingFace
@@ -14,68 +17,103 @@ export const HuggingFaceSettings: React.FC<HuggingFaceSettingsProps> = ({
   hfModel,
   setHfModel,
   hfEmbeddingModel,
-  setHfEmbeddingModel
+  setHfEmbeddingModel,
 }) => {
   // AI model options for HuggingFace
   const HF_MODELS = [
-    { id: "onnx-community/Qwen2.5-0.5B-Instruct", label: "Qwen2.5-0.5B-Instruct (Chat, fast, recommended)" },
-    { id: "Xenova/phi-3-mini-4k-instruct", label: "Phi-3 Mini (Chat, experimental)" },
-    { id: "Xenova/TinyLlama-1.1B-Chat-v1.0", label: "TinyLlama 1.1B (Chat, lightweight)" },
-    { id: "HuggingFaceTB/SmolLM2-135M-Instruct", label: "SmolLM2-135M (Ultra lightweight, chat)" },
-    { id: "Xenova/distilgpt2", label: "DistilGPT2 (Basic text generation)" }
+    {
+      id: "onnx-community/Llama-3.2-3B-Instruct-onnx-web",
+      label: "Llama 3.2 3B Instruct (ONNX, recommended for web)",
+    },
+    {
+      id: "onnx-community/Qwen3-1.7B-ONNX",
+      label: "Qwen3 1.7B (ONNX, lightweight)",
+    },
+    {
+      id: "onnx-community/DeepSeek-R1-Distill-Qwen-1.5B-ONNX",
+      label: "DeepSeek R1 Distill Qwen 1.5B (ONNX, fast)",
+    },
+    {
+      id: "onnx-community/Phi-3.5-mini-instruct-onnx-web",
+      label: "Phi-3.5 Mini Instruct (ONNX, web optimized)",
+    },
+    {
+      id: "onnx-community/gemma-3-1b-it-ONNX",
+      label: "Gemma 3 1B Instruct (ONNX, efficient)",
+    },
   ];
 
   return (
     <div className="space-y-4">
       <div className="bg-black/40 p-4 rounded-md">
-        <h4 className="text-cyan-400 font-medium mb-2">Hugging Face Text Models</h4>
-        <p className="text-white/70 text-sm">Select a local text-generation model for your Orch-OS instance. Only browser-compatible models are shown.</p>
+        <h4 className="text-cyan-400 font-medium mb-2">
+          Hugging Face Text Models
+        </h4>
+        <p className="text-white/70 text-sm">
+          Select a local text-generation model for your Orch-OS instance. Only
+          browser-compatible models are shown.
+        </p>
         <div className="mt-3">
           <select
             className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
             title="Select HuggingFace Model"
             aria-label="Select HuggingFace Model"
             value={hfModel}
-            onChange={e => {
+            onChange={(e) => {
               setHfModel(e.target.value);
               setOption(STORAGE_KEYS.HF_MODEL, e.target.value);
             }}
           >
-            {HF_MODELS.map(m => (
-              <option key={m.id} value={m.id}>{m.label}</option>
+            {HF_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
             ))}
           </select>
         </div>
       </div>
-      
+
       <div className="bg-black/40 p-4 rounded-md">
-        <h4 className="text-cyan-400 font-medium mb-2">Hugging Face Embedding Models <span className="text-xs text-cyan-500/70">(Basic Mode)</span></h4>
-        <p className="text-white/70 text-sm">Select a local model for generating vector embeddings in the neural memory database.</p>
+        <h4 className="text-cyan-400 font-medium mb-2">
+          Hugging Face Embedding Models{" "}
+          <span className="text-xs text-cyan-500/70">(Basic Mode)</span>
+        </h4>
+        <p className="text-white/70 text-sm">
+          Select a local model for generating vector embeddings in the neural
+          memory database.
+        </p>
         <div className="mt-3">
           <select
             className="w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30"
             title="Select HuggingFace Embedding Model"
             aria-label="Select HuggingFace Embedding Model"
             value={hfEmbeddingModel}
-            onChange={e => {
+            onChange={(e) => {
               setHfEmbeddingModel(e.target.value);
               setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, e.target.value);
             }}
           >
-            {SUPPORTED_HF_EMBEDDING_MODELS.map(model => (
-              <option key={model} value={model}>{model}</option>
+            {SUPPORTED_HF_EMBEDDING_MODELS.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
             ))}
           </select>
-          <p className="text-xs text-cyan-400/60 mt-1">Modelo utilizado para gerar embeddings e busca semântica na memória no modo básico.</p>
+          <p className="text-xs text-cyan-400/60 mt-1">
+            Modelo utilizado para gerar embeddings e busca semântica na memória
+            no modo básico.
+          </p>
         </div>
       </div>
-      
+
       <div className="bg-black/40 p-4 rounded-md">
         <h4 className="text-cyan-400 font-medium mb-2">Local Storage</h4>
-        <p className="text-white/70 text-sm">Storage location for your neural memory database.</p>
+        <p className="text-white/70 text-sm">
+          Storage location for your neural memory database.
+        </p>
         <div className="mt-3 flex">
-          <input 
-            type="text" 
+          <input
+            type="text"
             className="flex-1 p-2 rounded-l bg-black/40 text-white/90 border border-cyan-500/30"
             value="./orch-os-memory"
             readOnly
