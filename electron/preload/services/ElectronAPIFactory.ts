@@ -3,17 +3,17 @@
 
 /**
  * Electron API Factory
- * 
+ *
  * Dependency Inversion: Creates API by composing services that depend on abstractions
  * Factory Pattern: Centralized creation and configuration of the complete API
  * Single Responsibility: Only responsible for API composition and dependency injection
  */
 
-import { ipcRenderer } from 'electron';
-import { IElectronAPI } from '../interfaces/IElectronAPI';
-import { ErrorHandler } from '../utils/ErrorHandler';
-import { Logger } from '../utils/Logger';
-import { WindowManagerService } from './WindowManagerService';
+import { ipcRenderer } from "electron";
+import { IElectronAPI } from "../interfaces/IElectronAPI";
+import { ErrorHandler } from "../utils/ErrorHandler";
+import { Logger } from "../utils/Logger";
+import { WindowManagerService } from "./WindowManagerService";
 
 // Processing events constants
 export const PROCESSING_EVENTS = {
@@ -41,7 +41,7 @@ export class ElectronAPIFactory {
   private errorHandler: ErrorHandler;
 
   constructor(logger: Logger) {
-    this.logger = logger.createChild('APIFactory');
+    this.logger = logger.createChild("APIFactory");
     this.errorHandler = new ErrorHandler(logger);
   }
 
@@ -49,13 +49,19 @@ export class ElectronAPIFactory {
    * Create the complete Electron API by composing specialized services
    */
   async createAPI(): Promise<IElectronAPI> {
-    this.logger.info('Building Neural Electron API...');
+    this.logger.info("Building Neural Electron API...");
 
     // Create specialized services
-    const windowManager = new WindowManagerService(this.logger, this.errorHandler);
+    const windowManager = new WindowManagerService(
+      this.logger,
+      this.errorHandler
+    );
     // Create DuckDB service for sandboxed environment
-    const { DuckDBServiceSandboxed } = await import('./DuckDBServiceSandboxed');
-    const duckdbService = DuckDBServiceSandboxed.getInstance(this.logger, this.errorHandler);
+    const { DuckDBServiceSandboxed } = await import("./DuckDBServiceSandboxed");
+    const duckdbService = DuckDBServiceSandboxed.getInstance(
+      this.logger,
+      this.errorHandler
+    );
 
     // Compose the complete API
     const api: IElectronAPI = {
@@ -77,9 +83,6 @@ export class ElectronAPIFactory {
       // Environment Management
       ...this.createEnvironmentManager(),
 
-      // Communication Management
-      ...this.createCommunicationManager(),
-
       // Import Management
       ...this.createImportManager(),
 
@@ -90,7 +93,7 @@ export class ElectronAPIFactory {
       ...this.createLegacyVectorDatabaseAPI(),
     };
 
-    this.logger.success('Neural Electron API composition completed');
+    this.logger.success("Neural Electron API composition completed");
     return api;
   }
 
@@ -98,7 +101,10 @@ export class ElectronAPIFactory {
    * Set up focus restoration for enhanced UX
    */
   setupFocusRestoration(): void {
-    const windowManager = new WindowManagerService(this.logger, this.errorHandler);
+    const windowManager = new WindowManagerService(
+      this.logger,
+      this.errorHandler
+    );
     windowManager.setupFocusRestoration();
   }
 
@@ -108,57 +114,75 @@ export class ElectronAPIFactory {
   private createNeuralProcessor() {
     return {
       startTranscriptNeural: async () => {
-        return this.errorHandler.wrapAsync(async () => {
-          await ipcRenderer.invoke(PROCESSING_EVENTS.NEURAL_START);
-          return { success: true };
-        }, {
-          component: 'NeuralProcessor',
-          operation: 'startTranscript',
-          severity: 'medium'
-        });
+        return this.errorHandler.wrapAsync(
+          async () => {
+            await ipcRenderer.invoke(PROCESSING_EVENTS.NEURAL_START);
+            return { success: true };
+          },
+          {
+            component: "NeuralProcessor",
+            operation: "startTranscript",
+            severity: "medium",
+          }
+        );
       },
 
       stopTranscriptNeural: async () => {
-        return this.errorHandler.wrapAsync(async () => {
-          await ipcRenderer.invoke(PROCESSING_EVENTS.NEURAL_STOP);
-          return { success: true };
-        }, {
-          component: 'NeuralProcessor',
-          operation: 'stopTranscript',
-          severity: 'medium'
-        });
+        return this.errorHandler.wrapAsync(
+          async () => {
+            await ipcRenderer.invoke(PROCESSING_EVENTS.NEURAL_STOP);
+            return { success: true };
+          },
+          {
+            component: "NeuralProcessor",
+            operation: "stopTranscript",
+            severity: "medium",
+          }
+        );
       },
 
       sendNeuralPrompt: async (temporaryContext?: string) => {
-        return this.errorHandler.wrapAsync(async () => {
-          await ipcRenderer.invoke(PROCESSING_EVENTS.PROMPT_SEND, temporaryContext);
-          return { success: true };
-        }, {
-          component: 'NeuralProcessor',
-          operation: 'sendPrompt',
-          severity: 'medium'
-        });
+        return this.errorHandler.wrapAsync(
+          async () => {
+            await ipcRenderer.invoke(
+              PROCESSING_EVENTS.PROMPT_SEND,
+              temporaryContext
+            );
+            return { success: true };
+          },
+          {
+            component: "NeuralProcessor",
+            operation: "sendPrompt",
+            severity: "medium",
+          }
+        );
       },
 
       clearNeuralTranscription: async () => {
-        return this.errorHandler.wrapAsync(async () => {
-          await ipcRenderer.invoke(PROCESSING_EVENTS.CLEAR_TRANSCRIPTION);
-          return { success: true };
-        }, {
-          component: 'NeuralProcessor',
-          operation: 'clearTranscription',
-          severity: 'low'
-        });
+        return this.errorHandler.wrapAsync(
+          async () => {
+            await ipcRenderer.invoke(PROCESSING_EVENTS.CLEAR_TRANSCRIPTION);
+            return { success: true };
+          },
+          {
+            component: "NeuralProcessor",
+            operation: "clearTranscription",
+            severity: "low",
+          }
+        );
       },
 
       setDeepgramLanguage: (lang: string) => {
-        this.errorHandler.wrapSync(() => {
-          ipcRenderer.invoke(PROCESSING_EVENTS.SET_DEEPGRAM_LANGUAGE, lang);
-        }, {
-          component: 'NeuralProcessor',
-          operation: 'setLanguage',
-          severity: 'low'
-        });
+        this.errorHandler.wrapSync(
+          () => {
+            ipcRenderer.invoke(PROCESSING_EVENTS.SET_DEEPGRAM_LANGUAGE, lang);
+          },
+          {
+            component: "NeuralProcessor",
+            operation: "setLanguage",
+            severity: "low",
+          }
+        );
       },
     };
   }
@@ -176,9 +200,9 @@ export class ElectronAPIFactory {
             this.logger.error(`Error in ${eventName} callback`, error);
           }
         };
-        
+
         ipcRenderer.on(eventName, subscription);
-        
+
         return () => {
           ipcRenderer.removeListener(eventName, subscription);
         };
@@ -186,18 +210,26 @@ export class ElectronAPIFactory {
     };
 
     return {
-      onRealtimeTranscription: createEventHandler(PROCESSING_EVENTS.REALTIME_TRANSCRIPTION),
+      onRealtimeTranscription: createEventHandler(
+        PROCESSING_EVENTS.REALTIME_TRANSCRIPTION
+      ),
       onNeuralStarted: createEventHandler(PROCESSING_EVENTS.NEURAL_STARTED),
       onNeuralStopped: createEventHandler(PROCESSING_EVENTS.NEURAL_STOPPED),
       onNeuralError: createEventHandler(PROCESSING_EVENTS.NEURAL_ERROR),
       onPromptSend: createEventHandler(PROCESSING_EVENTS.ON_PROMPT_SEND),
       onPromptSending: createEventHandler(PROCESSING_EVENTS.PROMPT_SENDING),
-      onPromptPartialResponse: createEventHandler(PROCESSING_EVENTS.PROMPT_PARTIAL_RESPONSE),
+      onPromptPartialResponse: createEventHandler(
+        PROCESSING_EVENTS.PROMPT_PARTIAL_RESPONSE
+      ),
       onPromptSuccess: createEventHandler(PROCESSING_EVENTS.PROMPT_SUCCESS),
       onPromptError: createEventHandler(PROCESSING_EVENTS.PROMPT_ERROR),
-      onClearTranscription: createEventHandler(PROCESSING_EVENTS.CLEAR_TRANSCRIPTION),
+      onClearTranscription: createEventHandler(
+        PROCESSING_EVENTS.CLEAR_TRANSCRIPTION
+      ),
       onSendChunk: createEventHandler(PROCESSING_EVENTS.SEND_CHUNK),
-      toogleNeuralRecording: createEventHandler(PROCESSING_EVENTS.TOOGLE_RECORDING),
+      toogleNeuralRecording: createEventHandler(
+        PROCESSING_EVENTS.TOOGLE_RECORDING
+      ),
     };
   }
 
@@ -207,24 +239,33 @@ export class ElectronAPIFactory {
   private createAudioProcessor() {
     return {
       sendAudioChunk: async (chunk: Uint8Array) => {
-        return this.errorHandler.wrapAsync(async () => {
-          const result = await ipcRenderer.invoke(PROCESSING_EVENTS.SEND_CHUNK, chunk);
-          return result;
-        }, {
-          component: 'AudioProcessor',
-          operation: 'sendChunk',
-          severity: 'low'
-        });
+        return this.errorHandler.wrapAsync(
+          async () => {
+            const result = await ipcRenderer.invoke(
+              PROCESSING_EVENTS.SEND_CHUNK,
+              chunk
+            );
+            return result;
+          },
+          {
+            component: "AudioProcessor",
+            operation: "sendChunk",
+            severity: "low",
+          }
+        );
       },
 
       sendAudioTranscription: (text: string) => {
-        this.errorHandler.wrapSync(() => {
-          ipcRenderer.send(PROCESSING_EVENTS.REALTIME_TRANSCRIPTION, text);
-        }, {
-          component: 'AudioProcessor',
-          operation: 'sendTranscription',
-          severity: 'low'
-        });
+        this.errorHandler.wrapSync(
+          () => {
+            ipcRenderer.send(PROCESSING_EVENTS.REALTIME_TRANSCRIPTION, text);
+          },
+          {
+            component: "AudioProcessor",
+            operation: "sendTranscription",
+            severity: "low",
+          }
+        );
       },
     };
   }
@@ -235,40 +276,40 @@ export class ElectronAPIFactory {
   private createEnvironmentManager() {
     return {
       getEnv: async (key: string) => {
-        return this.errorHandler.wrapAsync(async () => {
-          return await ipcRenderer.invoke("get-env", key);
-        }, {
-          component: 'EnvironmentManager',
-          operation: 'getEnv',
-          severity: 'low'
-        });
-      },
-    };
-  }
-
-  /**
-   * Create Communication Management service methods
-   */
-  private createCommunicationManager() {
-    return {
-      sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => {
-        this.errorHandler.wrapSync(() => {
-          switch (type) {
-            case 'partial':
-              ipcRenderer.send(PROCESSING_EVENTS.PROMPT_PARTIAL_RESPONSE, content);
-              break;
-            case 'complete':
-              ipcRenderer.send(PROCESSING_EVENTS.PROMPT_SUCCESS, content);
-              break;
-            case 'error':
-              ipcRenderer.send(PROCESSING_EVENTS.PROMPT_ERROR, content);
-              break;
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke("get-env", key);
+          },
+          {
+            component: "EnvironmentManager",
+            operation: "getEnv",
+            severity: "low",
           }
-        }, {
-          component: 'CommunicationManager',
-          operation: 'sendPromptUpdate',
-          severity: 'low'
-        });
+        );
+      },
+      getPath: async (name: "userData" | "temp" | "desktop" | "documents") => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke("get-path", name);
+          },
+          {
+            component: "EnvironmentManager",
+            operation: "getPath",
+            severity: "low",
+          }
+        );
+      },
+      requestMicrophonePermission: async () => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke("request-microphone-permission");
+          },
+          {
+            component: "EnvironmentManager",
+            operation: "requestMicrophonePermission",
+            severity: "medium",
+          }
+        );
       },
     };
   }
@@ -278,7 +319,13 @@ export class ElectronAPIFactory {
    */
   private createImportManager() {
     return {
-      importChatHistory: async ({ fileBuffer, mode, user, applicationMode, onProgress }: {
+      importChatHistory: async ({
+        fileBuffer,
+        mode,
+        user,
+        applicationMode,
+        onProgress,
+      }: {
         fileBuffer: Buffer | ArrayBuffer | Uint8Array;
         mode: string;
         user: string;
@@ -290,39 +337,61 @@ export class ElectronAPIFactory {
           stage?: string;
         }) => void;
       }) => {
-        return this.errorHandler.wrapAsync(async () => {
-          this.logger.info(`Starting ChatGPT import: mode=${mode}, user=${user}, applicationMode=${applicationMode}`);
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.info(
+              `Starting ChatGPT import: mode=${mode}, user=${user}, applicationMode=${applicationMode}`
+            );
 
-          if (onProgress) {
-            const progressListener = (_event: Electron.IpcRendererEvent, data: any) => {
+            if (onProgress) {
+              const progressListener = (
+                _event: Electron.IpcRendererEvent,
+                data: any
+              ) => {
+                try {
+                  const percent =
+                    data.percentage ??
+                    Math.floor(
+                      (data.processed / Math.max(1, data.total)) * 100
+                    );
+                  document.title = `Import: ${percent}%`;
+                  onProgress(data);
+                  document.dispatchEvent(
+                    new CustomEvent("import-progress-event", { detail: data })
+                  );
+                } catch (error) {
+                  this.logger.error("Error processing progress event", error);
+                }
+              };
+
+              ipcRenderer.on("import-progress", progressListener);
+
               try {
-                const percent = data.percentage ?? Math.floor((data.processed / Math.max(1, data.total)) * 100);
-                document.title = `Import: ${percent}%`;
-                onProgress(data);
-                document.dispatchEvent(new CustomEvent('import-progress-event', { detail: data }));
+                const result = await ipcRenderer.invoke(
+                  "import-chatgpt-history",
+                  { fileBuffer, mode, user, applicationMode }
+                );
+                ipcRenderer.removeListener("import-progress", progressListener);
+                return result;
               } catch (error) {
-                this.logger.error('Error processing progress event', error);
+                ipcRenderer.removeListener("import-progress", progressListener);
+                throw error;
               }
-            };
-
-            ipcRenderer.on("import-progress", progressListener);
-
-            try {
-              const result = await ipcRenderer.invoke("import-chatgpt-history", { fileBuffer, mode, user, applicationMode });
-              ipcRenderer.removeListener("import-progress", progressListener);
-              return result;
-            } catch (error) {
-              ipcRenderer.removeListener("import-progress", progressListener);
-              throw error;
+            } else {
+              return await ipcRenderer.invoke("import-chatgpt-history", {
+                fileBuffer,
+                mode,
+                user,
+                applicationMode,
+              });
             }
-          } else {
-            return await ipcRenderer.invoke("import-chatgpt-history", { fileBuffer, mode, user, applicationMode });
+          },
+          {
+            component: "ImportManager",
+            operation: "importChatHistory",
+            severity: "medium",
           }
-        }, {
-          component: 'ImportManager',
-          operation: 'importChatHistory',
-          severity: 'medium'
-        });
+        );
       },
     };
   }
@@ -333,41 +402,89 @@ export class ElectronAPIFactory {
   private createLegacyVectorDatabaseAPI() {
     return {
       // Pinecone Legacy Support
-      queryPinecone: async (embedding: number[], topK = 5, keywords: string[] = [], filters = {}) => {
-        return this.errorHandler.wrapAsync(async () => {
-          return await ipcRenderer.invoke('query-pinecone', embedding, topK, keywords, filters);
-        }, {
-          component: 'LegacyVectorDB',
-          operation: 'queryPinecone',
-          severity: 'medium'
-        });
+      queryPinecone: async (
+        embedding: number[],
+        topK = 5,
+        keywords: string[] = [],
+        filters = {}
+      ) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke(
+              "query-pinecone",
+              embedding,
+              topK,
+              keywords,
+              filters
+            );
+          },
+          {
+            component: "LegacyVectorDB",
+            operation: "queryPinecone",
+            severity: "medium",
+          }
+        );
       },
 
-      saveToPinecone: async (vectors: Array<{ id: string; values: number[]; metadata: Record<string, unknown> }>) => {
-        return this.errorHandler.wrapAsync(async () => {
-          return await ipcRenderer.invoke('save-pinecone', vectors);
-        }, {
-          component: 'LegacyVectorDB',
-          operation: 'saveToPinecone',
-          severity: 'medium'
-        });
+      saveToPinecone: async (
+        vectors: Array<{
+          id: string;
+          values: number[];
+          metadata: Record<string, unknown>;
+        }>
+      ) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke("save-pinecone", vectors);
+          },
+          {
+            component: "LegacyVectorDB",
+            operation: "saveToPinecone",
+            severity: "medium",
+          }
+        );
       },
 
       // DuckDB Legacy Support (IPC mode)
-      queryDuckDB: async (embedding: number[], limit = 5, keywords: string[] = [], filters = {}, threshold?: number) => {
+      queryDuckDB: async (
+        embedding: number[],
+        limit = 5,
+        keywords: string[] = [],
+        filters = {},
+        threshold?: number
+      ) => {
         try {
-          return await ipcRenderer.invoke('query-duckdb', embedding, limit, keywords, filters, threshold);
+          return await ipcRenderer.invoke(
+            "query-duckdb",
+            embedding,
+            limit,
+            keywords,
+            filters,
+            threshold
+          );
         } catch (error) {
-          this.logger.error('DuckDB query failed', { error, operation: 'queryDuckDB' });
+          this.logger.error("DuckDB query failed", {
+            error,
+            operation: "queryDuckDB",
+          });
           return { matches: [] };
         }
       },
 
-      saveDuckDB: async (vectors: Array<{ id: string; values: number[]; metadata: Record<string, unknown> }>) => {
+      saveDuckDB: async (
+        vectors: Array<{
+          id: string;
+          values: number[];
+          metadata: Record<string, unknown>;
+        }>
+      ) => {
         try {
-          return await ipcRenderer.invoke('save-duckdb', vectors);
+          return await ipcRenderer.invoke("save-duckdb", vectors);
         } catch (error) {
-          this.logger.error('DuckDB save failed', { error, operation: 'saveDuckDB' });
+          this.logger.error("DuckDB save failed", {
+            error,
+            operation: "saveDuckDB",
+          });
           return { success: false, error: String(error) };
         }
       },
@@ -375,29 +492,38 @@ export class ElectronAPIFactory {
       // New DuckDB test functions
       testDuckDB: async () => {
         try {
-          this.logger.info('🧪 Running DuckDB test...');
-          return await ipcRenderer.invoke('test-duckdb');
+          this.logger.info("🧪 Running DuckDB test...");
+          return await ipcRenderer.invoke("test-duckdb");
         } catch (error) {
-          this.logger.error('DuckDB test failed', { error, operation: 'testDuckDB' });
+          this.logger.error("DuckDB test failed", {
+            error,
+            operation: "testDuckDB",
+          });
           return { success: false, error: String(error) };
         }
       },
 
       getDuckDBInfo: async () => {
         try {
-          return await ipcRenderer.invoke('get-duckdb-info');
+          return await ipcRenderer.invoke("get-duckdb-info");
         } catch (error) {
-          this.logger.error('Get DuckDB info failed', { error, operation: 'getDuckDBInfo' });
+          this.logger.error("Get DuckDB info failed", {
+            error,
+            operation: "getDuckDBInfo",
+          });
           return { success: false, error: String(error) };
         }
       },
 
       clearDuckDB: async () => {
         try {
-          this.logger.info('🗑️ Clearing DuckDB...');
-          return await ipcRenderer.invoke('clear-duckdb');
+          this.logger.info("🗑️ Clearing DuckDB...");
+          return await ipcRenderer.invoke("clear-duckdb");
         } catch (error) {
-          this.logger.error('Clear DuckDB failed', { error, operation: 'clearDuckDB' });
+          this.logger.error("Clear DuckDB failed", {
+            error,
+            operation: "clearDuckDB",
+          });
           return { success: false, error: String(error) };
         }
       },
@@ -405,10 +531,13 @@ export class ElectronAPIFactory {
       // Directory selection for DuckDB path
       selectDirectory: async () => {
         try {
-          this.logger.info('📁 Opening directory selection dialog...');
-          return await ipcRenderer.invoke('select-directory');
+          this.logger.info("📁 Opening directory selection dialog...");
+          return await ipcRenderer.invoke("select-directory");
         } catch (error) {
-          this.logger.error('Directory selection failed', { error, operation: 'selectDirectory' });
+          this.logger.error("Directory selection failed", {
+            error,
+            operation: "selectDirectory",
+          });
           return { success: false, error: String(error) };
         }
       },
@@ -417,22 +546,34 @@ export class ElectronAPIFactory {
       reinitializeDuckDB: async (newPath: string) => {
         try {
           this.logger.info(`🔄 Reinitializing DuckDB with path: ${newPath}`);
-          return await ipcRenderer.invoke('reinitialize-duckdb', newPath);
+          return await ipcRenderer.invoke("reinitialize-duckdb", newPath);
         } catch (error) {
-          this.logger.error('DuckDB reinitialization failed', { error, operation: 'reinitializeDuckDB' });
+          this.logger.error("DuckDB reinitialization failed", {
+            error,
+            operation: "reinitializeDuckDB",
+          });
           return { success: false, error: String(error) };
         }
       },
 
       // Legacy alias for backward compatibility
-      saveToDuckDB: async (vectors: Array<{ id: string; values: number[]; metadata: Record<string, unknown> }>) => {
+      saveToDuckDB: async (
+        vectors: Array<{
+          id: string;
+          values: number[];
+          metadata: Record<string, unknown>;
+        }>
+      ) => {
         try {
-          return await ipcRenderer.invoke('save-duckdb', vectors);
+          return await ipcRenderer.invoke("save-duckdb", vectors);
         } catch (error) {
-          this.logger.error('DuckDB save failed', { error, operation: 'saveToDuckDB' });
+          this.logger.error("DuckDB save failed", {
+            error,
+            operation: "saveToDuckDB",
+          });
           return { success: false, error: String(error) };
         }
       },
     };
   }
-} 
+}

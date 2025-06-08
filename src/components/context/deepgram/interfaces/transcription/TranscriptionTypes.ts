@@ -40,16 +40,6 @@ export interface SpeakerTranscriptionLog {
   transcriptions: { text: string; timestamp: string }[];
 }
 
-export interface AIResponseMeta {
-  response: string;
-  tone: string;
-  style: string;
-  type: string;
-  improvised: boolean;
-  language: string;
-  confidence: number;
-}
-
 // Interface for service configuration
 export interface TranscriptionServiceConfig {
   primaryUserSpeaker: string;
@@ -72,7 +62,9 @@ export const MEMORY_EXTERNAL_HEADER = "📦 External Memory";
 // Interface for IPC events
 export interface IPCHandlers {
   getEnv?: (key: string) => Promise<string>;
-  sendPromptUpdate?: (status: string, text: string) => void;
+  onPromptPartialResponse?: (text: string) => void;
+  onPromptSuccess?: (text: string) => void;
+  onPromptError?: (text: string) => void;
   sendNeuralPrompt?: (context?: string) => void;
   queryPinecone?: (embedding: number[]) => Promise<Record<string, unknown>>;
   saveToPinecone?: (entries: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>;

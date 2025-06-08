@@ -6,7 +6,6 @@ import {
   setOption,
   STORAGE_KEYS,
 } from "../../../../../../services/StorageService";
-import { SUPPORTED_HF_EMBEDDING_MODELS } from "../../../../../../services/huggingface/HuggingFaceEmbeddingService";
 import { HuggingFaceSettingsProps } from "./types";
 
 /**
@@ -93,9 +92,9 @@ export const HuggingFaceSettings: React.FC<HuggingFaceSettingsProps> = ({
               setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, e.target.value);
             }}
           >
-            {SUPPORTED_HF_EMBEDDING_MODELS.map((model) => (
-              <option key={model} value={model}>
-                {model}
+            {HF_MODELS.map((model, i) => (
+              <option key={i} value={model.id}>
+                {model.label}
               </option>
             ))}
           </select>

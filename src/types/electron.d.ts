@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { DuckDBMatch } from "../../electron/DuckDBHelper";
+
 export interface ElectronAPI {
   // Core window methods
 
-  toggleMainWindow: () => Promise<{ success: boolean; error?: string }>
-  getPlatform: () => string
+  toggleMainWindow: () => Promise<{ success: boolean; error?: string }>;
+  getPlatform: () => string;
   minimizeWindow: () => void;
   closeWindow: () => void;
 
   // 🔥 Functions for neural transcription
   startTranscriptNeural: () => Promise<{ success: boolean; error?: string }>;
   stopTranscriptNeural: () => Promise<{ success: boolean; error?: string }>;
-  sendNeuralPrompt: (temporaryContext?: string) => Promise<{ success: boolean; error?: string }>;
+  sendNeuralPrompt: (
+    temporaryContext?: string
+  ) => Promise<{ success: boolean; error?: string }>;
   clearNeuralTranscription: () => Promise<{ success: boolean; error?: string }>;
 
   // 📝 Events for neural transcription
@@ -30,18 +34,51 @@ export interface ElectronAPI {
 
   // 📝 Method to get environment variables
   getEnv: (key: string) => Promise<string | null>;
-  sendAudioChunk: (chunk: Uint8Array) => Promise<{ success: boolean; error?: string }>;
+  getPath: (
+    name: "userData" | "temp" | "desktop" | "documents"
+  ) => Promise<string>;
+  requestMicrophonePermission: () => Promise<{
+    success: boolean;
+    status: string;
+    error?: string;
+  }>;
+  sendAudioChunk: (
+    chunk: Uint8Array
+  ) => Promise<{ success: boolean; error?: string }>;
   sendAudioTranscription: (text: string) => void;
   toogleNeuralRecording: (callback: () => void) => () => void;
 
-  setDeepgramLanguage: (lang: string) => void
+  setDeepgramLanguage: (lang: string) => void;
 
   // Pinecone IPC methods
-  queryPinecone: (embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>) => Promise<{ matches: Array<{ metadata?: Record<string, unknown> }> }>;
-  saveToPinecone: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>;
+  queryPinecone: (
+    embedding: number[],
+    topK?: number,
+    keywords?: string[],
+    filters?: Record<string, unknown>
+  ) => Promise<{ matches: Array<{ metadata?: Record<string, unknown> }> }>;
+  saveToPinecone: (
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
+    }>
+  ) => Promise<void>;
   // DuckDB IPC methods (simplified)
-  queryDuckDB: (embedding: number[], limit?: number, keywords?: string[], filters?: Record<string, unknown>, threshold?: number) => Promise<{ matches: DuckDBMatch[] }>;
-  saveToDuckDB: (vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<{ success: boolean; error?: string }>
+  queryDuckDB: (
+    embedding: number[],
+    limit?: number,
+    keywords?: string[],
+    filters?: Record<string, unknown>,
+    threshold?: number
+  ) => Promise<{ matches: DuckDBMatch[] }>;
+  saveToDuckDB: (
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
+    }>
+  ) => Promise<{ success: boolean; error?: string }>;
 
   // Directory selection for DuckDB path
   selectDirectory: () => Promise<{
@@ -51,33 +88,44 @@ export interface ElectronAPI {
     error?: string;
   }>;
 
-  // Reinitialize DuckDB with new path  
+  // Reinitialize DuckDB with new path
   reinitializeDuckDB: (newPath: string) => Promise<{
     success: boolean;
     error?: string;
   }>;
-  // 📝 Method to send prompt updates directly
-  sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
-
-  importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, applicationMode?: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>
+  importChatHistory: (params: {
+    fileBuffer: Buffer | ArrayBuffer | Uint8Array;
+    mode: string;
+    user: string;
+    applicationMode?: string;
+    onProgress?: (data: {
+      processed: number;
+      total: number;
+      percentage?: number;
+      stage?: string;
+    }) => void;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+    imported?: number;
+    skipped?: number;
+  }>;
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI
+    electronAPI: ElectronAPI;
     electron: {
       ipcRenderer: {
-        on: (channel: string, func: (...args: unknown[]) => void) => void
+        on: (channel: string, func: (...args: unknown[]) => void) => void;
         removeListener: (
           channel: string,
           func: (...args: unknown[]) => void
-        ) => void
-      }
-    }
-    __LANGUAGE__: string
-    signalMonitoringInterval: NodeJS.Timeout
-    audioSignalDetected: boolean
+        ) => void;
+      };
+    };
+    __LANGUAGE__: string;
+    signalMonitoringInterval: NodeJS.Timeout;
+    audioSignalDetected: boolean;
   }
 }
-
-export { ElectronAPI };

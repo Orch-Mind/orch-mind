@@ -3,7 +3,7 @@
 
 /**
  * Segregated Interfaces for Electron API
- * 
+ *
  * Following Interface Segregation Principle:
  * - Each interface focuses on a specific domain
  * - Clients depend only on interfaces they actually use
@@ -36,7 +36,7 @@ export interface IWindowManager {
   getPlatform(): string;
 }
 
-// Neural Processing Interface  
+// Neural Processing Interface
 export interface INeuralProcessor {
   startTranscriptNeural(): Promise<NeuralResponse>;
   stopTranscriptNeural(): Promise<NeuralResponse>;
@@ -70,17 +70,17 @@ export interface IAudioProcessor {
 // Vector Database Interface
 export interface IVectorDatabase {
   queryVectors(
-    embedding: number[], 
-    topK?: number, 
-    keywords?: string[], 
+    embedding: number[],
+    topK?: number,
+    keywords?: string[],
     filters?: Record<string, unknown>
   ): Promise<{ matches: NormalizedMatch[] }>;
-  
+
   saveVectors(
-    vectors: Array<{ 
-      id: string; 
-      values: number[]; 
-      metadata: Record<string, unknown> 
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
     }>
   ): Promise<void>;
 }
@@ -88,11 +88,12 @@ export interface IVectorDatabase {
 // Environment Interface
 export interface IEnvironmentManager {
   getEnv(key: string): Promise<string | null>;
-}
-
-// Communication Interface
-export interface ICommunicationManager {
-  sendPromptUpdate(type: 'partial' | 'complete' | 'error', content: string): void;
+  getPath(name: "userData" | "temp" | "desktop" | "documents"): Promise<string>;
+  requestMicrophonePermission(): Promise<{
+    success: boolean;
+    status: string;
+    error?: string;
+  }>;
 }
 
 // Import Interface
@@ -102,17 +103,17 @@ export interface IImportManager {
     mode: string;
     user: string;
     applicationMode?: string; // Basic or Advanced mode
-    onProgress?: (data: { 
-      processed: number; 
-      total: number; 
-      percentage?: number; 
-      stage?: string 
+    onProgress?: (data: {
+      processed: number;
+      total: number;
+      percentage?: number;
+      stage?: string;
     }) => void;
-  }): Promise<{ 
-    success: boolean; 
-    error?: string; 
-    imported?: number; 
-    skipped?: number 
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    imported?: number;
+    skipped?: number;
   }>;
 }
 
@@ -122,45 +123,43 @@ export interface IDuckDBCommander {
 }
 
 // Complete Electron API Interface
-export interface IElectronAPI extends 
-  IWindowManager,
-  INeuralProcessor,
-  IEventSubscriber,
-  IAudioProcessor,
-  IEnvironmentManager,
-  ICommunicationManager,
-  IImportManager,
-  IDuckDBCommander {
-  
+export interface IElectronAPI
+  extends IWindowManager,
+    INeuralProcessor,
+    IEventSubscriber,
+    IAudioProcessor,
+    IEnvironmentManager,
+    IImportManager,
+    IDuckDBCommander {
   // Legacy support for existing vector databases
   queryPinecone(
-    embedding: number[], 
-    topK?: number, 
-    keywords?: string[], 
+    embedding: number[],
+    topK?: number,
+    keywords?: string[],
     filters?: Record<string, unknown>
   ): Promise<{ matches: NormalizedMatch[] }>;
-  
+
   saveToPinecone(
-    vectors: Array<{ 
-      id: string; 
-      values: number[]; 
-      metadata: Record<string, unknown> 
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
     }>
   ): Promise<void>;
-  
+
   queryDuckDB(
-    embedding: number[], 
-    limit?: number, 
-    keywords?: string[], 
-    filters?: Record<string, unknown>, 
-    threshold?: number  // Optional - will be determined dynamically based on context
+    embedding: number[],
+    limit?: number,
+    keywords?: string[],
+    filters?: Record<string, unknown>,
+    threshold?: number // Optional - will be determined dynamically based on context
   ): Promise<{ matches: DuckDBMatch[] }>;
-  
+
   saveDuckDB(
-    vectors: Array<{ 
-      id: string; 
-      values: number[]; 
-      metadata: Record<string, unknown> 
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
     }>
   ): Promise<{ success: boolean; error?: string }>;
 
@@ -205,12 +204,12 @@ export interface IElectronAPI extends
     error?: string;
   }>;
 
-  // Legacy alias for backward compatibility  
+  // Legacy alias for backward compatibility
   saveToDuckDB(
-    vectors: Array<{ 
-      id: string; 
-      values: number[]; 
-      metadata: Record<string, unknown> 
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
     }>
   ): Promise<{ success: boolean; error?: string }>;
-} 
+}

@@ -2,9 +2,21 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import dotenv from "dotenv";
-import { app, BrowserWindow, ipcMain, screen, shell } from "electron";
-import path from "path";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  net,
+  protocol,
+  screen,
+  shell,
+  systemPreferences,
+} from "electron";
+import path, { join } from "path";
+import { IOpenAIService } from "../src/components/context/deepgram/interfaces/openai/IOpenAIService";
+import { HuggingFaceServiceFacade } from "../src/components/context/deepgram/services/huggingface/HuggingFaceServiceFacade";
 import { OpenAIServiceFacade } from "../src/components/context/deepgram/services/openai/OpenAIServiceFacade";
+import { getOption, STORAGE_KEYS } from "../src/services/StorageService";
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { initializeIpcHandlers } from "./ipcHandlers";
@@ -15,6 +27,18 @@ dotenv.config();
 
 // Immediate console log to verify script execution
 console.log("📱 Electron main.ts is executing...");
+
+// Memory optimization for AI/ML workloads - Set Node.js heap limits
+// These must be set early before any heavy allocations
+if (process.env.NODE_OPTIONS) {
+  process.env.NODE_OPTIONS +=
+    " --max-old-space-size=8192 --max-semi-space-size=256";
+} else {
+  process.env.NODE_OPTIONS =
+    "--max-old-space-size=8192 --max-semi-space-size=256";
+}
+
+console.log("🧠 Memory optimization enabled - V8 heap limit: 8GB");
 
 // Constants
 const isDev = !app.isPackaged;
@@ -37,7 +61,8 @@ const state = {
   shortcutsHelper: null as ShortcutsHelper | null,
   pineconeHelper: null as PineconeHelper | null,
   duckDBHelper: null as DuckDBHelper | null,
-  openAIService: null as OpenAIServiceFacade | null,
+  openAIService: null as IOpenAIService | null,
+  huggingFaceService: null as HuggingFaceServiceFacade | null,
 
   // Processing events
   PROCESSING_EVENTS: {
@@ -74,7 +99,7 @@ export interface IIpcHandlerDeps {
   duckDBHelper: DuckDBHelper | null;
   PROCESSING_EVENTS: typeof state.PROCESSING_EVENTS;
   toggleMainWindow: () => void;
-  openAIService: OpenAIServiceFacade | null;
+  openAIService: IOpenAIService | null;
 }
 
 // Initialize helpers
@@ -110,41 +135,47 @@ function initializeHelpers() {
     state.duckDBHelper = new DuckDBHelper();
   }
 
-  state.openAIService = new OpenAIServiceFacade();
+  // Initialize both services
+  const openAIServiceFacade = new OpenAIServiceFacade();
+  const huggingFaceServiceFacade = new HuggingFaceServiceFacade();
+  state.huggingFaceService = huggingFaceServiceFacade;
+
+  // Set the appropriate service based on application mode
+  const mode = getOption(STORAGE_KEYS.APPLICATION_MODE) || "advanced";
+  if (mode === "basic") {
+    state.openAIService = huggingFaceServiceFacade;
+    console.log("🧠 [MAIN] Using HuggingFaceServiceFacade (Basic mode)");
+  } else {
+    state.openAIService = openAIServiceFacade;
+    console.log("🧠 [MAIN] Using OpenAIServiceFacade (Advanced mode)");
+  }
 }
 
 // Enhanced Chromium flags for WASM, WebGPU compatibility and error suppression
 // Reference: https://www.electronjs.org/docs/latest/development/build-instructions-macos
 console.log("🔧 Configuring Chromium flags...");
 
-// Common flags for all environments
+// Simplified flags to avoid crashes and compatibility issues
 const commonFlags = [
-  // Performance and compatibility
-  "enable-features=SharedArrayBuffer,VaapiVideoDecodeLinuxGL",
-  "enable-unsafe-webgpu",
-  "enable-features=Vulkan",
-  "enable-webgl2-compute-context",
+  // Essential for ONNX and transformers.js
+  "enable-features=SharedArrayBuffer", // Required for WASM threads
+  "enable-unsafe-webgpu", // Required for WebGPU models
 
-  // Suppress DevTools console errors - Updated for latest Electron
-  "disable-features=AutofillAssistant,Autofill",
-  "disable-autofill-assistant-logging",
-  "disable-component-extensions-with-background-pages",
-  "silent-debugger-extension-api",
+  // Memory optimization for AI workloads (more conservative)
+  "max-old-space-size=4096", // Reduce to 4GB to avoid memory issues
+  "max-semi-space-size=128", // More conservative semi-space
 
-  // Dawn/WebGPU fixes - Updated API usage
-  "enable-dawn-features=allow_unsafe_apis,use_dxc",
-  "disable-dawn-features=disallow_unsafe_apis",
-  "use-adapter-properties-subgroups", // Replace deprecated DawnExperimentalSubgroupLimits
+  // Network and fetch improvements for model loading
+  "disable-web-security", // Allow CORS for HuggingFace models in development
+  "disable-features=VizDisplayCompositor", // Reduces GPU crashes
 
-  // macOS specific fixes - Enhanced for latest macOS
+  // macOS specific fixes for crashes
   ...(process.platform === "darwin"
     ? [
-        "disable-background-mode",
-        "disable-application-cache",
-        "disable-dev-shm-usage",
         "no-sandbox", // Helps with SetApplicationIsDaemon errors
-        "disable-site-isolation-trials",
-        "disable-setuid-sandbox",
+        "disable-gpu-sandbox", // Prevent GPU process crashes
+        "disable-dev-shm-usage", // Prevent shared memory issues
+        "disable-software-rasterizer", // Use hardware acceleration
       ]
     : []),
 ];
@@ -266,6 +297,17 @@ async function handleAuthCallback(url: string, win: BrowserWindow | null) {
   }
 }
 
+// Set up environment variables for HuggingFace and transformers.js cache
+const userDataPath = app.getPath("userData");
+process.env.HF_HOME = join(userDataPath, "huggingface");
+process.env.TRANSFORMERS_CACHE = join(userDataPath, "transformers-cache");
+process.env.HF_HUB_CACHE = join(userDataPath, "huggingface", "hub");
+
+console.log("🔧 [Electron] Environment variables set:");
+console.log("  HF_HOME:", process.env.HF_HOME);
+console.log("  TRANSFORMERS_CACHE:", process.env.TRANSFORMERS_CACHE);
+console.log("  HF_HUB_CACHE:", process.env.HF_HUB_CACHE);
+
 // Window management functions
 async function createWindow(): Promise<void> {
   if (state.mainWindow) {
@@ -322,10 +364,21 @@ async function createWindow(): Promise<void> {
       // DevTools error suppression
       devTools: isDev,
 
-      // Additional WebPreferences to suppress errors
+      // Memory optimization for large AI models
+      spellcheck: false, // Disable spellcheck to save memory
+      enableBlinkFeatures: "SharedArrayBuffer,WebAssembly", // Enable required features
+
+      // Additional WebPreferences to suppress errors and optimize memory
       additionalArguments: [
         "--disable-features=AutofillAssistant",
         "--disable-autofill-assistant-logging",
+        // Memory and performance flags specific to renderer process
+        "--max-old-space-size=4096", // 4GB for renderer process
+        "--initial-old-space-size=1024", // 1GB initial for renderer
+        "--expose-gc", // Allow garbage collection in renderer
+        "--enable-precise-memory-info", // Enable memory monitoring
+        "--aggressive-cache-discard", // Discard unused caches
+        "--enable-gpu-memory-buffer-video-frames", // Use GPU memory for video
       ],
     },
     show: true,
@@ -404,8 +457,8 @@ async function createWindow(): Promise<void> {
         "Cross-Origin-Resource-Policy": ["cross-origin"],
         "Content-Security-Policy": [
           isDev
-            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; script-src-elem 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'self' blob:;"
-            : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; script-src-elem 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'self' blob:;",
+            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://unpkg.com; script-src-elem 'self' 'unsafe-inline' blob: data: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://hf.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net https://unpkg.com; child-src 'self' blob:; object-src 'self' blob:; media-src 'self' data: blob:; manifest-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; frame-src 'none';"
+            : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://unpkg.com; script-src-elem 'self' blob: data: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://hf.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net https://unpkg.com; child-src 'self' blob:; object-src 'self' blob:; media-src 'self' data: blob:; manifest-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; frame-src 'none';",
         ],
       };
 
@@ -548,6 +601,52 @@ async function createWindow(): Promise<void> {
       state.mainWindow.close();
     }
   });
+
+  // Configure session with enhanced security and cache settings
+  state.mainWindow.webContents.session.setPermissionRequestHandler(
+    (webContents, permission, callback) => {
+      console.log(`🔒 [MAIN] Permission request for: ${permission}`);
+
+      // Allow specific permissions needed for audio/video capture
+      const allowedPermissions = [
+        "camera",
+        "microphone",
+        "media",
+        "audioCapture",
+        "videoCapture",
+        "desktop-capture",
+      ];
+
+      const granted = allowedPermissions.includes(permission);
+      console.log(
+        `🔒 [MAIN] Permission ${permission}: ${granted ? "GRANTED" : "DENIED"}`
+      );
+
+      callback(granted);
+    }
+  );
+
+  // Also set permission check handler for additional safety
+  state.mainWindow.webContents.session.setPermissionCheckHandler(
+    (webContents, permission, requestingOrigin) => {
+      console.log(
+        `🔍 [MAIN] Permission check for ${permission} from ${requestingOrigin}`
+      );
+
+      const allowedPermissions = [
+        "camera",
+        "microphone",
+        "media",
+        "audioCapture",
+        "videoCapture",
+      ];
+
+      return allowedPermissions.includes(permission);
+    }
+  );
+
+  // Note: CSP is already configured via webContents.session.webRequest.onHeadersReceived above
+  // This section removed to prevent conflicting CSP headers
 }
 
 // Window visibility functions
@@ -679,6 +778,107 @@ ipcMain.handle("get-env", (_event, key) => {
   return process.env[key] || null;
 });
 
+ipcMain.handle(
+  "get-path",
+  (_event, name: "userData" | "temp" | "desktop" | "documents") => {
+    try {
+      return app.getPath(name);
+    } catch (error) {
+      console.error(`Failed to get path for '${name}':`, error);
+      return null;
+    }
+  }
+);
+
+// Handle microphone permission requests
+ipcMain.handle("request-microphone-permission", async () => {
+  return await requestMicrophonePermission();
+});
+
+// Add new function to request microphone permissions for macOS
+async function requestMicrophonePermission(): Promise<{
+  success: boolean;
+  status: string;
+  error?: string;
+}> {
+  try {
+    if (process.platform !== "darwin") {
+      // On non-macOS platforms, permissions are handled by the browser
+      return { success: true, status: "granted" };
+    }
+
+    console.log("🎤 [MAIN] Checking microphone permission on macOS...");
+
+    // Check current permission status
+    const status = systemPreferences.getMediaAccessStatus("microphone");
+    console.log(`🎤 [MAIN] Current microphone permission status: ${status}`);
+
+    if (status === "granted") {
+      return { success: true, status: "granted" };
+    }
+
+    if (status === "denied") {
+      return {
+        success: false,
+        status: "denied",
+        error:
+          "Microphone access denied. Please enable microphone access in System Preferences > Security & Privacy > Privacy > Microphone and add this application.",
+      };
+    }
+
+    if (status === "not-determined") {
+      console.log("🎤 [MAIN] Requesting microphone permission...");
+
+      try {
+        const granted = await systemPreferences.askForMediaAccess("microphone");
+
+        if (granted) {
+          console.log("✅ [MAIN] Microphone permission granted by user");
+          return { success: true, status: "granted" };
+        } else {
+          console.log("❌ [MAIN] Microphone permission denied by user");
+          return {
+            success: false,
+            status: "denied",
+            error:
+              "User denied microphone access. Please grant permission when prompted or enable it in System Preferences.",
+          };
+        }
+      } catch (permissionError) {
+        console.error(
+          "❌ [MAIN] Error requesting microphone permission:",
+          permissionError
+        );
+        return {
+          success: false,
+          status: "error",
+          error: `Failed to request microphone permission: ${
+            permissionError instanceof Error
+              ? permissionError.message
+              : "Unknown error"
+          }`,
+        };
+      }
+    }
+
+    // Unknown status
+    return {
+      success: false,
+      status: "unknown",
+      error: `Unknown permission status: ${status}`,
+    };
+  } catch (error) {
+    console.error("❌ [MAIN] Error checking microphone permissions:", error);
+    return {
+      success: false,
+      status: "error",
+      error: `Permission check failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
+    };
+  }
+}
+
 app.on("activate", () => {
   console.log("🔄 App activated");
   if (BrowserWindow.getAllWindows().length === 0) {
@@ -711,10 +911,26 @@ export {
   toggleMainWindow,
 };
 
+// Register custom protocol schemes before app is ready
+protocol.registerSchemesAsPrivileged([
+  { scheme: "model", privileges: { bypassCSP: false, supportFetchAPI: true } },
+]);
+
 console.log("🔄 Setting up app.whenReady() handler...");
 app
   .whenReady()
   .then(() => {
+    // Register protocol handler after app is ready
+    protocol.handle("model", (request) => {
+      // request.url === "model://onnx-community/Llama-3.2-3B-Instruct-onnx-web/onnx/model_q4.onnx"
+      const url = new URL(request.url);
+      // url.pathname === "/onnx-community/Llama-3.2-3B-Instruct-onnx-web/onnx/model_q4.onnx"
+      const relative = url.pathname.replace(/^\/+/, "");
+      const filePath = path.join(app.getPath("userData"), "models", relative);
+      // devolve um Response que o protocolo entende
+      return net.fetch(`file://${filePath}`);
+    });
+
     console.log("✅ App is ready! Calling initializeApp...");
     return initializeApp();
   })

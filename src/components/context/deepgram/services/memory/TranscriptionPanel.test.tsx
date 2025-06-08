@@ -114,8 +114,7 @@ beforeAll(() => {
     onStopTTS: jest.fn(),
     setDeepgramLanguage: jest.fn(),
     queryPinecone: jest.fn(),
-    saveToPinecone: jest.fn(),
-    sendPromptUpdate: jest.fn(),
+    saveToPinecone: jest.fn()
   };
 });
 
@@ -206,8 +205,8 @@ describe("TranscriptionPanel Importação E2E", () => {
     );
 
     // Wait for the import conversations button to appear
-    await waitFor(() => expect(screen.getByRole("button", { name: /import chatgpt conversations/i })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: /import chatgpt conversations/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /import neural data/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /import neural data/i }));
 
     // Debug: log DOM after opening modal
     // eslint-disable-next-line no-console

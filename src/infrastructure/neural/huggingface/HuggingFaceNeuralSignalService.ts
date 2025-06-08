@@ -8,7 +8,8 @@ import { ISemanticEnricher } from '../../../domain/core/neural/ISemanticEnricher
 import { NeuralSignalResponse } from '../../../components/context/deepgram/interfaces/neural/NeuralSignalTypes';
 import { buildSystemPrompt, buildUserPrompt } from '../../../shared/utils/neuralPromptBuilder';
 import { parseNeuralSignal, extractNeuralSignalJsons } from '../../../shared/utils/neuralSignalParser';
-import { HuggingFaceLocalService } from '../../../services/huggingface/HuggingFaceLocalService';
+import { HuggingFaceServiceFacade } from "../../../components/context/deepgram/services/huggingface/HuggingFaceServiceFacade";
+import { getOption, STORAGE_KEYS } from "../../../services/StorageService";
 
 /**
  * Symbolic: HuggingFace implementation of neural signal service
@@ -17,9 +18,9 @@ import { HuggingFaceLocalService } from '../../../services/huggingface/HuggingFa
  */
 export class HuggingFaceNeuralSignalService implements INeuralSignalService, ISemanticEnricher {
   /**
-   * Constructor with dependency injection for HuggingFaceLocalService
+   * Constructor with dependency injection for HuggingFaceServiceFacade
    */
-  constructor(private huggingFaceClient: HuggingFaceLocalService) {}
+  constructor(private huggingFaceClient: HuggingFaceServiceFacade) {}
 
   /**
    * Symbolic: Extracts neural signals using HuggingFace
@@ -117,19 +118,23 @@ export class HuggingFaceNeuralSignalService implements INeuralSignalService, ISe
         { role: 'system' as const, content: systemPromptContent },
         { role: 'user' as const, content: userPromptContent }
       ];
+      const response = await this.huggingFaceClient.callOpenAIWithFunctions({
+        model: getOption(STORAGE_KEYS.HF_MODEL) || "onnx-community/Llama-3.2-3B-Instruct-onnx-web",
+        messages,
+        tools: tools,
+        tool_choice: { type: 'function', function: { name: 'activateBrainArea' } },
+        temperature: 0.2
+      });
       
-      const response = await this.huggingFaceClient.generateWithFunctions(messages, tools);
-      
-      // Parse neural signals from the response
+      const toolCalls = response.choices?.[0]?.message?.tool_calls;
       let signals: NeuralSignalResponse['signals'] = [];
-      if (response.tool_calls && Array.isArray(response.tool_calls)) {
-        signals = response.tool_calls
-          .filter(call => call.function?.name === 'activateBrainArea')
-          .map(call => {
+      if (toolCalls && Array.isArray(toolCalls)) {
+        signals = toolCalls
+          .filter((call: any) => call.function?.name === 'activateBrainArea')
+          .map((call: any): any => {
             try {
               const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {};
-              // Create a properly structured neural signal with core quantum properties
-              const baseSignal: Partial<NeuralSignalResponse['signals'][0]> = {
+              const baseSignal: Partial<any> = {
                 core: args.core,
                 intensity: Math.max(0, Math.min(1, args.intensity ?? 0.5)),
                 symbolic_query: { query: args.query ?? '' }
@@ -139,19 +144,19 @@ export class HuggingFaceNeuralSignalService implements INeuralSignalService, ISe
               if (typeof args.expand === 'boolean') baseSignal.expand = args.expand;
               if (args.symbolicInsights) baseSignal.symbolicInsights = args.symbolicInsights;
               if (typeof args.topK !== 'undefined') baseSignal.topK = args.topK;
-              // Only return signals with valid core activation
-              return typeof baseSignal.core !== 'undefined' ? baseSignal as NeuralSignalResponse['signals'][0] : undefined;
+              if (typeof baseSignal.core !== 'undefined') return baseSignal;
+              return undefined;
             } catch {
               return undefined;
             }
           })
-          .filter((signal): signal is NeuralSignalResponse['signals'][0] => !!signal && typeof signal.core !== 'undefined');
+          .filter((signal: any): signal is any => !!signal && typeof signal.core !== 'undefined');
       }
       
       // If unable to extract function calls, try to extract text-based signals
-      if (signals.length === 0 && response.content) {
+      if (signals.length === 0 && response.choices?.[0]?.message?.content) {
         // Parse neural signals using the utility parsers
-        const extractedSignals = extractNeuralSignalJsons(response.content)
+        const extractedSignals = extractNeuralSignalJsons(response.choices?.[0]?.message?.content)
           .map(parseNeuralSignal)
           .filter((signal): signal is NeuralSignalResponse['signals'][0] => signal !== null);
         signals = extractedSignals;
@@ -239,42 +244,29 @@ LANGUAGE: ${language}`;
         { role: 'user' as const, content: userPromptText }
       ];
       
-      const response = await this.huggingFaceClient.generateWithFunctions(messages, [enrichmentTool]);
+      const response = await this.huggingFaceClient.callOpenAIWithFunctions(
+        {
+          model: getOption(STORAGE_KEYS.HF_MODEL) || "onnx-community/Llama-3.2-3B-Instruct-onnx-web",
+          messages: messages,
+          tools: [enrichmentTool],
+          tool_choice: { type: 'function', function: { name: 'enrichSemanticQuery' } },
+          temperature: 0.2
+        }
+      );
       
       // Symbolic: Use central neural signal parser for all JSON arguments (tool_calls)
-      if (response.tool_calls && Array.isArray(response.tool_calls) && response.tool_calls[0]?.function?.arguments) {
-        const signal = parseNeuralSignal(response.tool_calls[0].function.arguments);
+      const toolCalls = response.choices?.[0]?.message?.tool_calls;
+      if (toolCalls && Array.isArray(toolCalls) && toolCalls[0]?.function?.arguments) {
+        const signal = parseNeuralSignal(toolCalls[0].function.arguments);
         if (signal && signal.symbolic_query?.query) {
           return {
             enrichedQuery: signal.symbolic_query.query,
-            keywords: signal.keywords || []
+            keywords: signal.keywords || [],
           };
         } else {
           return { enrichedQuery: query, keywords: [] };
         }
       }
-      
-      // Symbolic: Quantum collapse to extract meaning if function structure failed
-      // Fallback to simple text extraction if no tool_calls are present
-      if (response.content) {
-        // Symbolic: Use central neural signal parser for all JSON content
-        const jsonMatch = response.content.match(/\{[\s\S]*?\}/);
-        if (jsonMatch) {
-          const signal = parseNeuralSignal(jsonMatch[0]);
-          if (signal && signal.symbolic_query?.query) {
-            return {
-              enrichedQuery: signal.symbolic_query.query,
-              keywords: signal.keywords || []
-            };
-          }
-        }
-        // Simple extraction of enriched text as fallback
-        return {
-          enrichedQuery: response.content.trim() || query,
-          keywords: []
-        };
-      }
-      
       return { enrichedQuery: query, keywords: [] };
     } catch (error) {
       // Handle general service errors with original query fallback

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { IMemoryService } from '../../../interfaces/memory/IMemoryService';
-import { IOpenAIService } from '../../../interfaces/openai/IOpenAIService';
-import { Message } from '../../../interfaces/transcription/TranscriptionTypes';
-import { LoggingUtils } from '../../../utils/LoggingUtils';
-import symbolicCognitionTimelineLogger from '../../utils/SymbolicCognitionTimelineLoggerSingleton';
-import { ProcessorMode } from './NeuralSignalEnricher';
+import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
+import { IOpenAIService } from "../../../interfaces/openai/IOpenAIService";
+import { Message } from "../../../interfaces/transcription/TranscriptionTypes";
+import { LoggingUtils } from "../../../utils/LoggingUtils";
+import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
+import { ProcessorMode } from "./NeuralSignalEnricher";
 
 // HuggingFace service interface (for dependency inversion)
 interface IHuggingFaceService {
-  generateResponse(messages: Message[]): Promise<{response: string}>;
+  generateResponse(messages: Message[]): Promise<{ response: string }>;
 }
 
 /**
@@ -28,24 +28,26 @@ export class ResponseGenerator {
    * Generate response using the selected backend
    */
   async generateResponse(
-    mode: ProcessorMode, 
-    integratedPrompt: string, 
+    mode: ProcessorMode,
+    integratedPrompt: string,
     temporaryContext?: string
   ): Promise<string> {
-    
     symbolicCognitionTimelineLogger.logFusionInitiated();
 
     // Prepare context messages (shared by both backends)
     const contextMessages = this._prepareContextMessages(temporaryContext);
-    
+
     if (contextMessages.length > 0) {
       this.memoryService.addContextToHistory(contextMessages);
     }
 
     const conversationHistory = this.memoryService.getConversationHistory();
-    const messages = this.memoryService.buildPromptMessagesForModel(integratedPrompt, conversationHistory);
+    const messages = this.memoryService.buildPromptMessagesForModel(
+      integratedPrompt,
+      conversationHistory
+    );
 
-    if (mode === 'huggingface') {
+    if (mode === "huggingface") {
       return await this._generateWithHuggingFace(messages);
     } else {
       return await this._generateWithOpenAI(messages);
@@ -57,14 +59,14 @@ export class ResponseGenerator {
    */
   private _prepareContextMessages(temporaryContext?: string): Message[] {
     const contextMessages: Message[] = [];
-    
+
     if (temporaryContext?.trim()) {
       contextMessages.push({
         role: "developer",
-        content: `🧠 Temporary instructions:\n${temporaryContext.trim()}`
+        content: `🧠 Temporary instructions:\n${temporaryContext.trim()}`,
       });
     }
-    
+
     return contextMessages;
   }
 
@@ -76,9 +78,10 @@ export class ResponseGenerator {
       const response = await this.huggingFaceService.generateResponse(messages);
       return response.response;
     } else {
-      // Fallback: use OpenAI service
-      LoggingUtils.logInfo("HuggingFace service not available - falling back to OpenAI");
-      return await this._generateWithOpenAI(messages);
+      // NO FALLBACK: Throw error if HuggingFace service is not available
+      throw new Error(
+        "HuggingFace service not available and NO FALLBACK to OpenAI will be attempted as per user requirements"
+      );
     }
   }
 
@@ -88,17 +91,22 @@ export class ResponseGenerator {
   private async _generateWithOpenAI(messages: Message[]): Promise<string> {
     try {
       const response = await this.openAIService.streamOpenAIResponse(messages);
-      return response.response;
+      return response.responseText;
     } catch (error: any) {
-      if (error.message?.includes('does not have access to model')) {
-        LoggingUtils.logError("Invalid model detected, falling back to gpt-4o-mini", error);
+      if (error.message?.includes("does not have access to model")) {
+        LoggingUtils.logError(
+          "Invalid model detected, falling back to gpt-4o-mini",
+          error
+        );
         // Clear invalid model and retry with default
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.removeItem('chatgptModel');
+        if (typeof window !== "undefined" && window.localStorage) {
+          window.localStorage.removeItem("chatgptModel");
         }
-        throw new Error("Invalid model configuration. Please restart the application.");
+        throw new Error(
+          "Invalid model configuration. Please restart the application."
+        );
       }
       throw error;
     }
   }
-} 
+}

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { NormalizedPineconeMatch } from "../electron/PineconeHelper";
+import { DuckDBMatch } from "../electron/DuckDBHelper";
+
 // <reference types="vite/client" />
 
 interface ElectronAPI {
@@ -55,6 +58,5 @@ interface ElectronAPI {
     success: boolean;
     error?: string;
   }>;
-    sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
     importChatHistory: (params: { fileBuffer: Buffer | ArrayBuffer | Uint8Array, mode: string, user: string, applicationMode?: string, onProgress?: (data: { processed: number; total: number; percentage?: number; stage?: string }) => void }) => Promise<{ success: boolean; error?: string; imported?: number; skipped?: number }>
 }

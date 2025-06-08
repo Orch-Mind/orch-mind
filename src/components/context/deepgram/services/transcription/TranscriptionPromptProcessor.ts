@@ -1,39 +1,51 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { NeuralProcessingResult, NeuralSignalResponse } from '../../interfaces/neural/NeuralSignalTypes';
-import { Message } from '../../interfaces/transcription/TranscriptionTypes';
-import { NeuralSignalExtractor } from '../../symbolic-cortex/activation/NeuralSignalExtractor';
-import { LoggingUtils } from '../../utils/LoggingUtils';
-import symbolicCognitionTimelineLogger from '../utils/SymbolicCognitionTimelineLoggerSingleton';
-import { getOption, STORAGE_KEYS } from './../../../../../services/StorageService';
+import {
+  NeuralProcessingResult,
+  NeuralSignalResponse,
+} from "../../interfaces/neural/NeuralSignalTypes";
+import { Message } from "../../interfaces/transcription/TranscriptionTypes";
+import { NeuralSignalExtractor } from "../../symbolic-cortex/activation/NeuralSignalExtractor";
+import { LoggingUtils } from "../../utils/LoggingUtils";
+import symbolicCognitionTimelineLogger from "../utils/SymbolicCognitionTimelineLoggerSingleton";
+import {
+  getOption,
+  STORAGE_KEYS,
+} from "./../../../../../services/StorageService";
 
 // Services interfaces
-import { IMemoryService } from '../../interfaces/memory/IMemoryService';
-import { IOpenAIService } from '../../interfaces/openai/IOpenAIService';
-import { ITranscriptionStorageService } from '../../interfaces/transcription/ITranscriptionStorageService';
-import { ISpeakerIdentificationService } from '../../interfaces/utils/ISpeakerIdentificationService';
-import { IUIUpdateService } from '../../interfaces/utils/IUIUpdateService';
-import { INeuralIntegrationService } from '../../symbolic-cortex/integration/INeuralIntegrationService';
+import { IMemoryService } from "../../interfaces/memory/IMemoryService";
+import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
+import { ITranscriptionStorageService } from "../../interfaces/transcription/ITranscriptionStorageService";
+import { ISpeakerIdentificationService } from "../../interfaces/utils/ISpeakerIdentificationService";
+import { IUIUpdateService } from "../../interfaces/utils/IUIUpdateService";
+import { INeuralIntegrationService } from "../../symbolic-cortex/integration/INeuralIntegrationService";
 
 // Neural processors
 import {
-    NeuralConfigurationBuilder,
-    NeuralMemoryRetriever,
-    NeuralSignalEnricher,
-    ProcessingResultsSaver,
-    ProcessorMode,
-    ResponseGenerator,
-    SessionManager,
-    TranscriptionExtractor
-} from './processors';
+  NeuralConfigurationBuilder,
+  NeuralMemoryRetriever,
+  NeuralSignalEnricher,
+  ProcessingResultsSaver,
+  ProcessorMode,
+  ResponseGenerator,
+  SessionManager,
+  TranscriptionExtractor,
+} from "./processors";
 
-// HuggingFace service interface (placeholder for future implementation)
+// HuggingFace service interface compatible with HuggingFaceServiceFacade
 interface IHuggingFaceService {
-  ensureHuggingFaceClient(): Promise<boolean>;
-  enrichSemanticQueryForSignal(core: string, query: string, intensity: number, context?: string, language?: string): Promise<{enrichedQuery: string, keywords: string[]}>;
-  queryMemory(query: string, keywords?: string[], topK?: number, filters?: any): Promise<string[]>;
-  generateResponse(messages: Message[]): Promise<{response: string}>;
+  ensureOpenAIClient(): Promise<boolean>;
+  enrichSemanticQueryForSignal(
+    core: string,
+    query: string,
+    intensity: number,
+    context?: string,
+    language?: string
+  ): Promise<{ enrichedQuery: string; keywords: string[] }>;
+  streamOpenAIResponse(messages: Message[]): Promise<any>;
+  isInitialized(): boolean;
 }
 
 /**
@@ -75,7 +87,7 @@ export class TranscriptionPromptProcessor {
     private neuralIntegrationService: INeuralIntegrationService,
     private huggingFaceService?: IHuggingFaceService // Optional for future implementation
   ) {
-    this.currentLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR';
+    this.currentLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR";
     this._neuralSignalExtractor = new NeuralSignalExtractor(this.openAIService);
 
     // Initialize specialized processors
@@ -86,9 +98,11 @@ export class TranscriptionPromptProcessor {
    * Initialize all specialized neural processors following SOLID principles
    */
   private _initializeProcessors(): void {
-    this.transcriptionExtractor = new TranscriptionExtractor(this.storageService);
+    this.transcriptionExtractor = new TranscriptionExtractor(
+      this.storageService
+    );
     this.sessionManager = new SessionManager();
-    
+
     this.configurationBuilder = new NeuralConfigurationBuilder(
       this.storageService,
       this.memoryService,
@@ -98,18 +112,15 @@ export class TranscriptionPromptProcessor {
 
     this.signalEnricher = new NeuralSignalEnricher(
       this.openAIService,
-      this.huggingFaceService
     );
 
     this.memoryRetriever = new NeuralMemoryRetriever(
       this.memoryService,
-      this.huggingFaceService
     );
 
     this.responseGenerator = new ResponseGenerator(
       this.memoryService,
-      this.openAIService,
-      this.huggingFaceService
+      this.openAIService
     );
 
     this.resultsSaver = new ProcessingResultsSaver(
@@ -125,7 +136,7 @@ export class TranscriptionPromptProcessor {
    * Full neural processing with symbolic cognition
    */
   async processWithOpenAI(temporaryContext?: string): Promise<void> {
-    await this._processTranscriptionPrompt('openai', temporaryContext);
+    await this._processTranscriptionPrompt("openai", temporaryContext);
   }
 
   /**
@@ -133,26 +144,33 @@ export class TranscriptionPromptProcessor {
    * Local neural processing with enhanced privacy
    */
   async processWithHuggingFace(temporaryContext?: string): Promise<void> {
-    await this._processTranscriptionPrompt('huggingface', temporaryContext);
+    await this._processTranscriptionPrompt("huggingface", temporaryContext);
   }
 
   /**
    * Main transcription processing orchestration - adaptable to different backends
    */
-  private async _processTranscriptionPrompt(mode: ProcessorMode, temporaryContext?: string): Promise<void> {
+  private async _processTranscriptionPrompt(
+    mode: ProcessorMode,
+    temporaryContext?: string
+  ): Promise<void> {
     // Prevent concurrent processing
     if (this.isProcessingPrompt) {
-      LoggingUtils.logWarning("Blocking prompt request: Already processing another prompt");
+      LoggingUtils.logWarning(
+        "Blocking prompt request: Already processing another prompt"
+      );
       return;
     }
 
-    if (window.electronAPI.sendPromptUpdate) {
-      window.electronAPI.sendPromptUpdate('partial', "Processing...");
+    if (window.electronAPI.onPromptPartialResponse) {
+      window.electronAPI.onPromptPartialResponse(() => {
+        this.uiService.updateUI({ aiResponse: "Processing..." });
+      });
     }
 
     try {
       this.isProcessingPrompt = true;
-      
+
       // Validate transcription availability
       const hasTranscriptions = this.storageService.hasValidTranscriptions();
 
@@ -161,7 +179,9 @@ export class TranscriptionPromptProcessor {
 
         // Verify if there is text in lastTranscription (it might not have gone to transcriptionList)
         if (this.storageService.getLastTranscription()) {
-          LoggingUtils.logInfo(`Using last known transcription: "${this.storageService.getLastTranscription()}"`);
+          LoggingUtils.logInfo(
+            `Using last known transcription: "${this.storageService.getLastTranscription()}"`
+          );
         } else if (!temporaryContext) {
           // Notify error if there is no transcription or context
           LoggingUtils.logInfo(`No transcription detected for processing`);
@@ -170,14 +190,16 @@ export class TranscriptionPromptProcessor {
       }
 
       // Initialize backend service based on mode
-      if (mode === 'openai') {
-        if (!await this.openAIService.ensureOpenAIClient()) return;
-      } else if (mode === 'huggingface') {
+      if (mode === "openai") {
+        if (!(await this.openAIService.ensureOpenAIClient())) return;
+      } else if (mode === "huggingface") {
         if (!this.huggingFaceService) {
-          LoggingUtils.logError("HuggingFace service not available. Initialize with HuggingFace service in constructor.");
+          LoggingUtils.logError(
+            "HuggingFace service not available. Initialize with HuggingFace service in constructor."
+          );
           return;
         }
-        if (!await this.huggingFaceService.ensureHuggingFaceClient()) return;
+        if (!(await this.huggingFaceService.ensureOpenAIClient())) return;
       }
 
       // Notify processing start
@@ -196,17 +218,23 @@ export class TranscriptionPromptProcessor {
         symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
       }
 
-      LoggingUtils.logInfo(`Processing transcription: "${transcriptionToSend.substring(0, 50)}..."`);
+      LoggingUtils.logInfo(
+        `Processing transcription: "${transcriptionToSend.substring(0, 50)}..."`
+      );
 
       // Process using orchestrated pipeline
-      const result = await this._executeProcessingPipeline(mode, transcriptionToSend, temporaryContext);
+      const result = await this._executeProcessingPipeline(
+        mode,
+        transcriptionToSend,
+        temporaryContext
+      );
 
       // Update UI and complete processing
       this.uiService.updateUI({ aiResponse: result.response });
       this.uiService.notifyPromptComplete(result.response);
-
     } catch (error: Error | unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       LoggingUtils.logError("Error processing prompt", error);
       this.uiService.updateUI({ aiResponse: `Error: ${errorMessage}` });
       this.uiService.notifyPromptError(errorMessage);
@@ -220,31 +248,39 @@ export class TranscriptionPromptProcessor {
    * Execute the full neural processing pipeline using specialized processors
    */
   private async _executeProcessingPipeline(
-    mode: ProcessorMode, 
-    transcriptionToSend: string, 
+    mode: ProcessorMode,
+    transcriptionToSend: string,
     temporaryContext?: string
   ): Promise<TranscriptionProcessingResponse> {
-    
     // PHASE 1: Neural Signal Extraction
-    LoggingUtils.logInfo("🧠 Starting neural system: Phase 1 - Sensory analysis...");
-    
-    const extractionConfig = await this.configurationBuilder.buildExtractionConfig(
-      transcriptionToSend, 
-      temporaryContext,
-      this.currentLanguage
+    LoggingUtils.logInfo(
+      "🧠 Starting neural system: Phase 1 - Sensory analysis..."
     );
-    const neuralActivation = await this._neuralSignalExtractor.extractNeuralSignals(extractionConfig);
+
+    const extractionConfig =
+      await this.configurationBuilder.buildExtractionConfig(
+        transcriptionToSend,
+        temporaryContext,
+        this.currentLanguage
+      );
+    const neuralActivation =
+      await this._neuralSignalExtractor.extractNeuralSignals(extractionConfig);
 
     // PHASE 2: Query Enrichment & Memory Retrieval
     const enrichedSignals = await this.signalEnricher.enrichSignals(
-      neuralActivation.signals, 
-      mode, 
+      neuralActivation.signals,
+      mode,
       this.currentLanguage
     );
-    const processingResults = await this.memoryRetriever.processSignals(enrichedSignals, mode);
+    const processingResults = await this.memoryRetriever.processSignals(
+      enrichedSignals,
+      mode
+    );
 
     // PHASE 3: Neural Integration
-    LoggingUtils.logInfo("💥 Third phase - Integrating neural processing into final prompt...");
+    LoggingUtils.logInfo(
+      "💥 Third phase - Integrating neural processing into final prompt..."
+    );
     const integratedPrompt = await this.neuralIntegrationService.integrate(
       processingResults,
       transcriptionToSend,
@@ -255,28 +291,31 @@ export class TranscriptionPromptProcessor {
     symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
       summary: integratedPrompt, // summary is required in SymbolicContext
       fusionPrompt: integratedPrompt,
-      modules: processingResults.map(r => ({ core: r.core, intensity: r.intensity }))
+      modules: processingResults.map((r) => ({
+        core: r.core,
+        intensity: r.intensity,
+      })),
     });
 
     // PHASE 4: Generate Response
     const response = await this.responseGenerator.generateResponse(
-      mode, 
-      integratedPrompt, 
+      mode,
+      integratedPrompt,
       temporaryContext
     );
 
     // PHASE 5: Save and Log Results
     await this.resultsSaver.saveResults(
-      transcriptionToSend, 
-      response, 
-      neuralActivation, 
+      transcriptionToSend,
+      response,
+      neuralActivation,
       processingResults
     );
 
     return {
       response,
       neuralActivation,
-      processingResults
+      processingResults,
     };
   }
 
@@ -309,4 +348,4 @@ export class TranscriptionPromptProcessor {
     this.transcriptionExtractor.reset();
     this.sessionManager.resetSession();
   }
-} 
+}

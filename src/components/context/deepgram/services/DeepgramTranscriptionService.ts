@@ -1,43 +1,51 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-import { getOption, STORAGE_KEYS } from './../../../../services/StorageService';
+import { getOption, STORAGE_KEYS } from "./../../../../services/StorageService";
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // DeepgramTranscriptionService.ts
 // Main transcription service for Deepgram that orchestrates other services
 
-import { getPrimaryUser } from '../../../../config/UserConfig';
+import { getPrimaryUser } from "../../../../config/UserConfig";
+import { ModeService, OrchOSModeEnum } from "../../../../services/ModeService";
 import { IDeepgramTranscriptionService } from "../interfaces/deepgram/IDeepgramService";
 import { IMemoryService } from "../interfaces/memory/IMemoryService";
 import { IOpenAIService } from "../interfaces/openai/IOpenAIService";
 import { ITranscriptionStorageService } from "../interfaces/transcription/ITranscriptionStorageService";
-import { SpeakerTranscription, SpeakerTranscriptionLog, UIUpdater } from "../interfaces/transcription/TranscriptionTypes";
+import {
+  SpeakerTranscription,
+  SpeakerTranscriptionLog,
+  UIUpdater,
+} from "../interfaces/transcription/TranscriptionTypes";
 import { ISpeakerIdentificationService } from "../interfaces/utils/ISpeakerIdentificationService";
 import { IUIUpdateService } from "../interfaces/utils/IUIUpdateService";
 import { DefaultNeuralIntegrationService } from "../symbolic-cortex/integration/DefaultNeuralIntegrationService";
 import { INeuralIntegrationService } from "../symbolic-cortex/integration/INeuralIntegrationService";
 import { LoggingUtils } from "../utils/LoggingUtils";
+import { HuggingFaceServiceFacade } from "./huggingface/HuggingFaceServiceFacade";
 import { MemoryService } from "./memory/MemoryService";
-import { OpenAIServiceFacade } from "./openai/OpenAIServiceFacade";
 import { TranscriptionPromptProcessor } from "./transcription/TranscriptionPromptProcessor";
 import { TranscriptionStorageService } from "./transcription/TranscriptionStorageService";
 import { SpeakerIdentificationService } from "./utils/SpeakerIdentificationService";
 import { UIUpdateService } from "./utils/UIUpdateService";
 
-export class DeepgramTranscriptionService implements IDeepgramTranscriptionService {
-
-
+export class DeepgramTranscriptionService
+  implements IDeepgramTranscriptionService
+{
   // Essential services
   private speakerService: ISpeakerIdentificationService;
   private storageService: ITranscriptionStorageService;
   private memoryService: IMemoryService;
   private openAIService: IOpenAIService;
+  private huggingFaceService: HuggingFaceServiceFacade;
   private uiService: IUIUpdateService;
 
   // Configuration
-  private model: string = getOption(STORAGE_KEYS.DEEPGRAM_MODEL) || "nova-2-general";
+  private model: string =
+    getOption(STORAGE_KEYS.DEEPGRAM_MODEL) || "nova-2-general";
   private interimResultsEnabled: boolean = true;
   private useSimplifiedHistory: boolean = false;
-  private currentLanguage: string = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || 'pt-BR';
+  private currentLanguage: string =
+    getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR";
 
   // Properties for the neural system (kept for backward compatibility)
   private _neuralMemory: Array<{
@@ -61,27 +69,37 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   // Transcription prompt processor
   private transcriptionPromptProcessor: TranscriptionPromptProcessor;
 
-  constructor(setTexts: UIUpdater, primaryUserSpeaker: string = getPrimaryUser()) {
+  constructor(
+    setTexts: UIUpdater,
+    aiService: IOpenAIService,
+    primaryUserSpeaker: string = getPrimaryUser()
+  ) {
     // Initialize services
     this.speakerService = new SpeakerIdentificationService(primaryUserSpeaker);
-    this.storageService = new TranscriptionStorageService(this.speakerService, setTexts);
-    this.openAIService = new OpenAIServiceFacade();
+    this.storageService = new TranscriptionStorageService(
+      this.speakerService,
+      setTexts
+    );
+    this.openAIService = aiService;
+    this.huggingFaceService = new HuggingFaceServiceFacade();
     this.memoryService = new MemoryService(this.openAIService);
     this.uiService = new UIUpdateService(setTexts);
 
     // Initialize the neural integration service
-    this.neuralIntegrationService = new DefaultNeuralIntegrationService(this.openAIService);
+    this.neuralIntegrationService = new DefaultNeuralIntegrationService(
+      this.openAIService
+    );
 
     // Initialize the transcription prompt processor
-    // Note: HuggingFace service is optional and can be added when available
+    // Now includes HuggingFace service for basic mode support
     this.transcriptionPromptProcessor = new TranscriptionPromptProcessor(
       this.storageService,
       this.memoryService,
       this.openAIService,
       this.uiService,
       this.speakerService,
-      this.neuralIntegrationService
-      // TODO: Add HuggingFace service when implemented: , this.huggingFaceService
+      this.neuralIntegrationService,
+      this.huggingFaceService
     );
 
     // Set reference back to this service in the storage service to enable auto-triggering
@@ -152,7 +170,9 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
    * Verifies if only the primary user speaker is speaking
    */
   isOnlyUserSpeaking(): boolean {
-    return this.speakerService.isOnlyUserSpeaking(this.storageService.getSpeakerTranscriptions());
+    return this.speakerService.isOnlyUserSpeaking(
+      this.storageService.getSpeakerTranscriptions()
+    );
   }
 
   /**
@@ -161,7 +181,9 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   setSimplifiedHistoryMode(enabled: boolean): void {
     this.useSimplifiedHistory = enabled;
     this.memoryService.setSimplifiedHistoryMode(enabled);
-    LoggingUtils.logInfo(`Simplified history mode: ${enabled ? "activated" : "deactivated"}`);
+    LoggingUtils.logInfo(
+      `Simplified history mode: ${enabled ? "activated" : "deactivated"}`
+    );
   }
 
   /**
@@ -180,21 +202,37 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
     return this.transcriptionPromptProcessor.getCurrentLanguage();
   }
 
-
-
   /**
-   * Processes the transcription using OpenAI backend (default behavior)
-   * For HuggingFace processing, use sendTranscriptionPromptWithHuggingFace
+   * Processes the transcription using the appropriate AI service based on current mode
+   * Automatically selects between OpenAI (advanced mode) and HuggingFace (basic mode)
    */
   async sendTranscriptionPrompt(temporaryContext?: string): Promise<void> {
-    return await this.transcriptionPromptProcessor.processWithOpenAI(temporaryContext);
+    const currentMode = ModeService.getMode();
+
+    if (currentMode === OrchOSModeEnum.BASIC) {
+      LoggingUtils.logInfo("🤖 Using HuggingFace service (Basic mode)");
+      return await this.transcriptionPromptProcessor.processWithHuggingFace(
+        temporaryContext
+      );
+    } else {
+      LoggingUtils.logInfo("🧠 Using OpenAI service (Advanced mode)");
+      return await this.transcriptionPromptProcessor.processWithOpenAI(
+        temporaryContext
+      );
+    }
   }
 
   /**
-   * Processes the transcription using HuggingFace backend for enhanced privacy
+   * Processes the transcription using HuggingFace backend specifically
+   * Always uses HuggingFace regardless of the current mode
    */
-  async sendTranscriptionPromptWithHuggingFace(temporaryContext?: string): Promise<void> {
-    return await this.transcriptionPromptProcessor.processWithHuggingFace(temporaryContext);
+  async sendTranscriptionPromptWithHuggingFace(
+    temporaryContext?: string
+  ): Promise<void> {
+    LoggingUtils.logInfo("🤖 Explicitly using HuggingFace service");
+    return await this.transcriptionPromptProcessor.processWithHuggingFace(
+      temporaryContext
+    );
   }
 
   /**
@@ -211,7 +249,9 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
       this.currentLanguage = language;
       this.transcriptionPromptProcessor.setLanguage(language);
     }
-    LoggingUtils.logInfo(`Connecting transcription service. Language: ${this.currentLanguage}`);
+    LoggingUtils.logInfo(
+      `Connecting transcription service. Language: ${this.currentLanguage}`
+    );
     return Promise.resolve();
   }
 
@@ -239,7 +279,9 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
 
   toggleInterimResults(enabled: boolean): void {
     this.interimResultsEnabled = enabled;
-    LoggingUtils.logInfo(`Interim results: ${enabled ? "enabled" : "disabled"}`);
+    LoggingUtils.logInfo(
+      `Interim results: ${enabled ? "enabled" : "disabled"}`
+    );
   }
 
   // ... (rest of the code remains the same)
@@ -259,7 +301,9 @@ export class DeepgramTranscriptionService implements IDeepgramTranscriptionServi
   setAutoQuestionDetection(enabled: boolean): void {
     if (this.storageService instanceof TranscriptionStorageService) {
       this.storageService.setAutoQuestionDetection(enabled);
-      LoggingUtils.logInfo(`Auto-question detection ${enabled ? 'enabled' : 'disabled'}`);
+      LoggingUtils.logInfo(
+        `Auto-question detection ${enabled ? "enabled" : "disabled"}`
+      );
     }
   }
 }

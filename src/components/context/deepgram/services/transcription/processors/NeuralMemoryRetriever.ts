@@ -19,8 +19,7 @@ interface IHuggingFaceService {
  */
 export class NeuralMemoryRetriever {
   constructor(
-    private memoryService: IMemoryService,
-    private huggingFaceService?: IHuggingFaceService
+    private memoryService: IMemoryService
   ) {}
 
   /**
@@ -85,11 +84,7 @@ export class NeuralMemoryRetriever {
     const start = Date.now();
 
     try {
-      if (mode === 'huggingface') {
-        results = await this._retrieveWithHuggingFace(signal);
-      } else {
-        results = await this._retrieveWithMemoryService(signal);
-      }
+      results = await this._retrieveWithMemoryService(signal);
       matchCount = results.length;
     } catch (memoryError) {
       LoggingUtils.logError(`Error searching memories for core ${signal.core} with ${mode}`, memoryError);
@@ -97,24 +92,6 @@ export class NeuralMemoryRetriever {
 
     const durationMs = Date.now() - start;
     return { results, matchCount, durationMs };
-  }
-
-  /**
-   * Retrieve memories using HuggingFace backend
-   */
-  private async _retrieveWithHuggingFace(signal: NeuralSignal): Promise<string[]> {
-    if (this.huggingFaceService) {
-      return await this.huggingFaceService.queryMemory(
-        signal.symbolic_query?.query || '',
-        signal.keywords,
-        signal.topK,
-        signal.filters
-      );
-    } else {
-      // Fallback to standard memory service
-      LoggingUtils.logInfo("HuggingFace service not available - using standard memory retrieval");
-      return await this._retrieveWithMemoryService(signal);
-    }
   }
 
   /**

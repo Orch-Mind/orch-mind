@@ -8,7 +8,6 @@ import {
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 
-import { SUPPORTED_HF_EMBEDDING_MODELS } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
 import {
   ApiNavigation,
   BasicModeSettings,
@@ -146,7 +145,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
           hfEmbeddingModel={hfEmbeddingModel}
           setHfEmbeddingModel={handleHfEmbeddingModelChange}
           hfModelOptions={HF_MODELS}
-          hfEmbeddingModelOptions={SUPPORTED_HF_EMBEDDING_MODELS}
+          hfEmbeddingModelOptions={HF_MODELS.map((model) => model.id)}
         />
       );
     }

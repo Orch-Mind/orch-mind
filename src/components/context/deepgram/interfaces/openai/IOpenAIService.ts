@@ -5,7 +5,8 @@
 // Interface para o serviço de comunicação com a API OpenAI
 
 import { NeuralSignalResponse } from "../neural/NeuralSignalTypes";
-import { AIResponseMeta, Message } from "../transcription/TranscriptionTypes";
+import { Message } from "../transcription/TranscriptionTypes";
+import { ModelStreamResponse } from "./ICompletionService";
 
 export interface IOpenAIService {
   /**
@@ -26,7 +27,7 @@ export interface IOpenAIService {
   /**
    * Envia requisição para OpenAI e processa o stream de resposta
    */
-  streamOpenAIResponse(messages: Message[]): Promise<AIResponseMeta>;
+  streamOpenAIResponse(messages: Message[]): Promise<ModelStreamResponse>;
   
   /**
    * Cria embeddings para o texto fornecido

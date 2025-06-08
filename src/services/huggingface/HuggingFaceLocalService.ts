@@ -1,314 +1,377 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-// HuggingFaceLocalService.ts
-// Symbolic cortex: Provides local inference using Hugging Face Transformers.js in the browser.
-// Processes symbolic text generation for Orch-OS in basic mode, without backend or API key.
-
-import { pipeline } from "@huggingface/transformers";
-import { OnnxRuntimeConfig } from "../../config/onnxruntimeConfig";
 import { getOption, STORAGE_KEYS } from "../StorageService";
 
-/**
- * Symbolic: Supported browser models for local inference (expand as needed)
- */
-// Symbolic: Supported browser models for local text-generation (must match settings UI)
+// só os cinco modelos que você quer suportar
 export const SUPPORTED_HF_BROWSER_MODELS = [
-  "onnx-community/Llama-3.2-3B-Instruct-onnx-web", // Llama 3.2 3B Instruct (ONNX, recommended for web)
-  "onnx-community/Qwen3-1.7B-ONNX", // Qwen3 1.7B (ONNX, lightweight)
-  "onnx-community/DeepSeek-R1-Distill-Qwen-1.5B-ONNX", // DeepSeek R1 Distill Qwen 1.5B (ONNX, fast)
-  "onnx-community/Phi-3.5-mini-instruct-onnx-web", // Phi-3.5 Mini Instruct (ONNX, web optimized)
-  "onnx-community/gemma-3-1b-it-ONNX", // Gemma 3 1B Instruct (ONNX, efficient)
-];
+  "onnx-community/Llama-3.2-3B-Instruct-onnx-web",
+  "onnx-community/Qwen3-1.7B-ONNX",
+  "onnx-community/DeepSeek-R1-Distill-Qwen-1.5B-ONNX",
+  "onnx-community/Phi-3.5-mini-instruct-onnx-web",
+  "onnx-community/gemma-3-1b-it-ONNX",
+] as const;
 
 export type HuggingFaceLocalOptions = {
-  model?: string;
-  systemPrompt?: string;
+  model?: (typeof SUPPORTED_HF_BROWSER_MODELS)[number];
   maxTokens?: number;
   temperature?: number;
-  dtype?: "q4f16" | "q4" | "q8" | "fp32"; // CORRECTED: Added q4f16 support
-  device?: "webgpu" | "wasm"; // CORRECTED: Added device selection
+  dtype?: "q4" | "q4f16" | "q8" | "fp32" | "fp16"; // Ordered by performance vs. quality
+  device?: "webgpu" | "wasm" | "auto";
+  forceReload?: boolean; // Force reload model even if already loaded
 };
 
-/**
- * Interface matching the expected function tool call format from OpenAI
- * Symbolic: Represents the neural signal schema for function execution
- */
-export interface ToolCall {
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-/**
- * Response format that matches OpenAI function calling API
- * Symbolic: Neural response pattern with potential tool activation
- */
-export interface HuggingFaceResponse {
-  content?: string;
-  tool_calls?: ToolCall[];
-}
-
 export class HuggingFaceLocalService {
-  // Using 'any' to avoid TypeScript union complexity errors with pipeline()
   private generator: any = null;
   private currentModel: string | null = null;
+  private initialized = false;
+  private isLoading = false;
 
   constructor() {
-    // Auto-initialize on construction
-    // this.initialize();
+    // Initialize environment asynchronously
+    this.initializeEnvironment().catch((error) => {
+      console.error("[HFS] Environment initialization failed:", error);
+    });
   }
 
   /**
-   * Symbolic: Initializes the service by loading the user-selected HuggingFace model from storage.
-   * If no model is set, loads the default model.
-   * This ensures persistence of user preference across reloads.
+   * Initialize transformers.js environment using centralized configuration
    */
-  async initialize(): Promise<void> {
-    // Placeholder for future initialization logic
-    // Models will be loaded on-demand via loadModel()
+  private async initializeEnvironment() {
+    if (this.initialized) return;
+
+    try {
+      console.log("[HFS] Initializing transformers.js environment...");
+
+      // Use the centralized transformers environment configuration
+      const { initializeTransformersEnvironment } = await import(
+        "../../utils/transformersEnvironment"
+      );
+      await initializeTransformersEnvironment();
+
+      this.initialized = true;
+      console.log("✅ [HFS] Environment initialized successfully");
+    } catch (error) {
+      console.error(
+        "❌ [HFS] Failed to initialize transformers environment:",
+        error
+      );
+      throw new Error(
+        `Environment initialization failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 
   /**
-   * Loads a supported model for local inference with auto device/dtype fallback.
-   * Symbolic: Tries WebGPU + quantized (q4), depois q8, depois fp32, depois WASM.
-   * Maximizes browser compatibility and performance for Orch-OS.
-   * Uses optimized ONNX Runtime configuration to suppress warnings and improve performance.
+   * Load model using centralized configuration with enhanced error handling
    */
-  async loadModel(modelId: string): Promise<void> {
-    if (this.currentModel === modelId && this.generator) return;
-    let lastError: any = null;
+  async loadModel(opts: {
+    modelId: string;
+    device: HuggingFaceLocalOptions["device"];
+    dtype: HuggingFaceLocalOptions["dtype"];
+    forceReload?: boolean;
+  }) {
+    const { modelId, device, dtype, forceReload } = opts;
 
-    // Configuration array for all device/dtype combinations with proper typing
-    // CORRECTED: Added q4f16 support based on official Llama 3.2 examples
-    const configurations: Array<{
-      device: "webgpu" | "wasm";
-      dtype: "q4f16" | "q4" | "q8" | "fp32";
-    }> = [
-      // Try q4f16 first for ONNX community models (official Llama 3.2 example)
-      { device: "webgpu", dtype: "q4f16" },
-      { device: "webgpu", dtype: "q4" },
-      { device: "webgpu", dtype: "q8" },
-      { device: "webgpu", dtype: "fp32" },
-      { device: "wasm", dtype: "q4f16" },
-      { device: "wasm", dtype: "q4" },
-      { device: "wasm", dtype: "q8" },
-      { device: "wasm", dtype: "fp32" },
-    ];
+    // Prevent concurrent loading
+    if (this.isLoading) {
+      console.log("[HFS] Model loading already in progress, waiting...");
+      return;
+    }
 
-    for (const config of configurations) {
-      try {
-        // Use optimized ONNX Runtime configuration to suppress warnings and improve performance
-        const pipelineConfig: any = {
-          device: config.device,
-          dtype: config.dtype,
-          // Apply ONNX Runtime optimizations following community best practices
-          session_options: OnnxRuntimeConfig.getOptimizedSessionOptions(
-            config.device
-          ),
-          // Cache configuration for better performance
-          cache_dir: typeof window !== "undefined" ? "./.cache" : undefined,
-          local_files_only: false, // Allow download but prefer cache
-        };
+    // Check if model is already loaded
+    if (this.currentModel === modelId && this.generator && !forceReload) {
+      console.log(`[HFS] Model ${modelId} already loaded`);
+      return;
+    }
 
-        console.log(
-          `[HuggingFaceLocalService] Using clean pipeline config for ${modelId} with ${config.device}/${config.dtype} - letting transformers.js handle path resolution naturally`
-        );
+    // Validate model is supported
+    if (!SUPPORTED_HF_BROWSER_MODELS.includes(modelId as any)) {
+      throw new Error(
+        `Unsupported model: ${modelId}. Supported models: ${SUPPORTED_HF_BROWSER_MODELS.join(
+          ", "
+        )}`
+      );
+    }
 
-        this.generator = await pipeline(
-          "text-generation",
-          modelId,
-          pipelineConfig
-        );
-        this.currentModel = modelId;
-        console.log(
-          `[HuggingFaceLocalService] ✅ Successfully loaded ${modelId} with ${config.device} + ${config.dtype}`
-        );
-        return;
-      } catch (e) {
-        lastError = e;
-        console.log(
-          `[HuggingFaceLocalService] ⚠️ Failed to load ${modelId} with ${config.device} + ${config.dtype}, trying next configuration...`
-        );
+    // Ensure environment is initialized
+    if (!this.initialized) {
+      await this.initializeEnvironment();
+    }
+
+    this.isLoading = true;
+    console.log(
+      `[HFS] Loading model: ${modelId} with device: ${device}, dtype: ${dtype}`
+    );
+
+    try {
+      // Clean up previous model if exists
+      if (this.generator && forceReload) {
+        await this.dispose();
       }
-    }
 
-    // If all attempts fail, throw last error
-    throw new Error(
-      `Failed to load model ${modelId} on any supported device/dtype. Last error: ${lastError}`
-    );
-  }
+      // Use loadModelWithOptimalConfig from centralized configuration
+      const { loadModelWithOptimalConfig } = await import(
+        "../../utils/transformersEnvironment"
+      );
 
-  /**
-   * Generates a completion using the loaded model and messages (system+user), streaming output in real time.
-   * Symbolic: Each message is a neuron; the cortex fuses them for context. Emits tokens/chunks as they are generated.
-   *
-   * @param messages - Array of messages (system/user/assistant)
-   * @param opts - Generation options (maxTokens, temperature, etc)
-   * @param onToken - Optional callback invoked with each new piece of text generated
-   * @returns The full accumulated output as a string
-   */
-  async generate(
-    messages: { role: "system" | "user" | "assistant"; content: string }[],
-    opts?: HuggingFaceLocalOptions,
-    onToken?: (text: string) => void
-  ): Promise<string> {
-    // Symbolic: Auto-load model if not initialized
-    if (!this.generator) {
-      const modelId =
-        opts?.model ||
-        getOption(STORAGE_KEYS.HF_MODEL) ||
-        SUPPORTED_HF_BROWSER_MODELS[0];
-      await this.loadModel(modelId);
-    }
-    // CORRECTED: Use messages format directly as shown in official Llama 3.2 examples
-    // Based on: https://huggingface.co/onnx-community/Llama-3.2-1B-Instruct
+      const additionalOptions = {
+        // Enhanced progress callback for better user feedback
+        progress_callback: (data: any) => {
+          if (data.status === "downloading") {
+            console.log(
+              `[HFS] Downloading: ${data.name || data.file} - ${Math.round(
+                data.progress || 0
+              )}%`
+            );
+          } else if (data.status === "loading") {
+            console.log(`[HFS] Loading: ${data.name || data.file}`);
+          } else if (data.status === "ready") {
+            console.log(`[HFS] Ready: ${data.name || data.file}`);
+          }
+        },
 
-    // Import TextStreamer dynamically (for browser/Node compatibility)
-    // @ts-ignore
-    const { TextStreamer } = await import("@huggingface/transformers");
-    // @ts-ignore
-    const tokenizer = this.generator.tokenizer;
+        // Force specific device and dtype if provided
+        ...(device !== "auto" && { device }),
+        ...(dtype && { dtype }),
 
-    let accumulated = "";
-    const streamer = new TextStreamer(tokenizer, {
-      skip_prompt: true,
-      skip_special_tokens: true,
-      callback_function: (text: string) => {
-        accumulated += text;
-        if (onToken) onToken(text);
-      },
-    });
+        // Enhanced session options for better performance
+        session_options: {
+          logSeverityLevel: 3, // Reduce logging noise
+          graphOptimizationLevel: "all",
+          enableMemPattern: true,
+          enableCpuMemArena: true,
+          // Execution providers in order of preference
+          executionProviders:
+            device === "webgpu" ? ["webgpu", "webgl", "wasm"] : ["wasm"],
+        },
 
-    // Use messages format directly as shown in official examples
-    await this.generator(messages, {
-      max_new_tokens: opts?.maxTokens || 128,
-      temperature: opts?.temperature || 0.7,
-      streamer,
-    });
+        // Cache configuration - allow downloads but prefer cache
+        cache_dir: undefined, // Use environment default
+        local_files_only: false, // Allow downloads if not in cache
+        use_auth_token: false,
 
-    return accumulated.trim();
-  }
-
-  /**
-   * Generates a completion with function calling capabilities using the loaded model .
-   * Symbolic: This method ALWAYS constructs the system prompt (including the function schema/tools) itself, in English.
-   * Only user/assistant messages should be passed in; any upstream system prompt will be ignored.
-   * This is prompt engineering to simulate function calling, NOT native function calling (transformers.js local does not support tools argument).
-   */
-  /**
-   * Generates a completion with simulated function calling, supporting streaming output.
-   * Symbolic: Streams both direct content and function call arguments in real time for UI/UX parity with OpenAI.
-   *
-   * @param messages - Array of user/assistant messages (system prompt is constructed internally)
-   * @param tools - Function schemas (see OpenAI format)
-   * @param opts - Generation options
-   * @param onToken - Optional callback for streaming partial output
-   * @returns HuggingFaceResponse (tool_calls or content)
-   */
-  async generateWithFunctions(
-    messages: { role: "system" | "user" | "assistant"; content: string }[],
-    tools: Array<{
-      type: string;
-      function: {
-        name: string;
-        description: string;
-        parameters: Record<string, unknown>;
+        // Retry configuration for network issues
+        max_retries: 3,
+        retry_delay: 1000, // 1 second delay between retries
       };
-    }>,
-    opts?: HuggingFaceLocalOptions,
-    onToken?: (partial: string) => void
-  ): Promise<HuggingFaceResponse> {
-    // Symbolic: Auto-load model if not initialized
-    if (!this.generator) {
-      const modelId =
-        opts?.model ||
-        getOption(STORAGE_KEYS.HF_MODEL) ||
-        SUPPORTED_HF_BROWSER_MODELS[0];
-      await this.loadModel(modelId);
-    }
 
-    // Filter out any incoming system prompts; only user/assistant messages allowed
-    const filteredMessages = messages.filter((m) => m.role !== "system");
+      console.log(`[HFS] Loading with configuration:`, {
+        modelId,
+        device,
+        dtype,
+        cache_dir: "using environment default",
+        local_files_only: additionalOptions.local_files_only,
+      });
 
-    // Symbolic: Create neural schema for function activation (English, for consistency)
-    const toolsJSON = JSON.stringify(
-      tools.map((t) => ({
-        name: t.function.name,
-        description: t.function.description,
-        parameters: t.function.parameters,
-      })),
-      null,
-      2
-    );
+      this.generator = await loadModelWithOptimalConfig(
+        modelId,
+        "text-generation",
+        additionalOptions
+      );
 
-    // Symbolic: Neural instruction pattern for symbolic function execution (prompt engineering)
-    const systemPrompt = `You have access to the following functions (tools):\n${toolsJSON}\n\nIf you need to call a function, respond EXACTLY in this format:\n<function_call>\n{\n  "name": "function_name",\n  "arguments": {\n    "param1": "value1",\n    "param2": "value2"\n  }\n}\n</function_call>\n\nIf you do not need to call a function, respond with normal text.\n\nIMPORTANT: Do not invent functions or arguments. Only use the provided schema. Always use the exact format above if calling a function.`;
+      this.currentModel = modelId;
+      console.log(
+        `[HFS] ✅ Model loaded successfully: ${modelId} (${device}/${dtype})`
+      );
+    } catch (error) {
+      console.error(`[HFS] ❌ Failed to load model ${modelId}:`, error);
 
-    // Compose the full prompt: system prompt (with schema) + user/assistant messages
-    const augmentedMessages = [
-      { role: "system" as const, content: systemPrompt },
-      ...filteredMessages,
-    ];
-
-    // --- Streaming logic ---
-    let accumulatedText = "";
-    let accumulatedArgs = "";
-    let lastFunctionCallFragment = "";
-
-    // Symbolic: Generate neural response with potential function activation, streaming partials
-    const text = await this.generate(
-      augmentedMessages,
-      {
-        temperature: opts?.temperature || 0.7,
-      },
-      (partial: string) => {
-        accumulatedText += partial;
-        // Try to accumulate function call args in real time (simulate OpenAI tool_call streaming)
-        const match =
-          /<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/.exec(
-            accumulatedText
+      // Enhanced error messages with specific guidance
+      if (error instanceof Error) {
+        if (error.message.includes("<!DOCTYPE")) {
+          throw new Error(
+            `Model loading failed: Server returned HTML instead of model files. ` +
+              `This usually means:\n` +
+              `1. The model "${modelId}" doesn't exist or isn't available\n` +
+              `2. Network connectivity issues\n` +
+              `3. HuggingFace server issues\n` +
+              `Try a different model or check your internet connection.`
           );
-        if (
-          match &&
-          typeof match[1] === "string" &&
-          match[1] !== lastFunctionCallFragment
+        } else if (error.message.includes("CORS")) {
+          throw new Error(
+            `CORS error loading model ${modelId}. This may be due to:\n` +
+              `1. Network configuration issues\n` +
+              `2. Proxy server problems\n` +
+              `3. Browser security settings\n` +
+              `Try refreshing the application or check network settings.`
+          );
+        } else if (
+          error.message.includes("fetch") ||
+          error.message.includes("NetworkError")
         ) {
-          lastFunctionCallFragment = match[1];
-          accumulatedArgs = match[1];
-          if (onToken) onToken(match[1]); // Optionally send partial function call
-        } else {
-          if (onToken) onToken(accumulatedText);
+          throw new Error(
+            `Network error loading model ${modelId}. Please:\n` +
+              `1. Check your internet connection\n` +
+              `2. Verify the model exists on HuggingFace\n` +
+              `3. Try again in a few moments\n` +
+              `4. Consider using a smaller model for testing`
+          );
+        } else if (
+          error.message.includes("quota") ||
+          error.message.includes("storage")
+        ) {
+          throw new Error(
+            `Storage error loading model ${modelId}. This may be due to:\n` +
+              `1. Insufficient disk space\n` +
+              `2. Cache directory permissions\n` +
+              `3. Storage quota exceeded\n` +
+              `Try clearing cache or freeing up disk space.`
+          );
         }
       }
-    );
 
-    // Symbolic: Extract potential function call from neural response
-    const functionCallMatch = accumulatedArgs
-      ? [null, accumulatedArgs]
-      : text.match(/<function_call>\s*(\{[\s\S]*?\})\s*<\/function_call>/);
+      throw new Error(
+        `Failed to load model "${modelId}": ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      this.isLoading = false;
+    }
+  }
 
-    if (functionCallMatch && typeof functionCallMatch[1] === "string") {
+  /**
+   * Generate text with enhanced error handling and streaming support
+   */
+  async generate(
+    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+    opts: HuggingFaceLocalOptions = {}
+  ): Promise<string> {
+    const modelId =
+      opts.model ||
+      (getOption(STORAGE_KEYS.HF_MODEL) as string) ||
+      SUPPORTED_HF_BROWSER_MODELS[0]; // Default to smallest model
+
+    const device = opts.device || "auto";
+    const dtype = opts.dtype || "q4"; // Default to best performance/quality balance
+
+    console.log(`[HFS] Generating text with model: ${modelId}`);
+
+    try {
+      await this.loadModel({
+        modelId,
+        device,
+        dtype,
+        forceReload: opts.forceReload,
+      });
+
+      if (!this.generator) {
+        throw new Error("Model not loaded properly");
+      }
+
+      // Enhanced generation parameters
+      const generationOptions = {
+        max_new_tokens: opts.maxTokens ?? 256, // Increased default for better responses
+        temperature: opts.temperature ?? 0.7,
+        return_full_text: false,
+        do_sample: true,
+        top_p: 0.9, // Add nucleus sampling for better quality
+        repetition_penalty: 1.1, // Reduce repetitive outputs
+        pad_token_id: 50256, // Common padding token
+        eos_token_id: 50256, // End of sequence token
+      };
+
+      console.log(`[HFS] Generating with options:`, generationOptions);
+
+      // Generate text with timeout protection
+      const generateWithTimeout = (timeout: number = 30000) => {
+        return Promise.race([
+          this.generator(messages, generationOptions),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Generation timeout")), timeout)
+          ),
+        ]);
+      };
+
+      const result: any[] = await generateWithTimeout();
+
+      if (!result || !Array.isArray(result) || result.length === 0) {
+        throw new Error("No generation result received");
+      }
+
+      const generatedText = result[0]?.generated_text;
+      if (typeof generatedText !== "string") {
+        throw new Error("Invalid generation result format");
+      }
+
+      const cleanedText = generatedText.trim();
+      console.log(`[HFS] ✅ Generated ${cleanedText.length} characters`);
+
+      return cleanedText;
+    } catch (error) {
+      console.error(`[HFS] ❌ Generation error:`, error);
+
+      // Provide helpful error messages
+      if (error instanceof Error) {
+        if (error.message.includes("timeout")) {
+          throw new Error(
+            "Text generation timed out. Try using a smaller model or reducing max_tokens."
+          );
+        } else if (
+          error.message.includes("memory") ||
+          error.message.includes("OOM")
+        ) {
+          throw new Error(
+            "Out of memory during generation. Try using a quantized model (q4/q8) or reducing max_tokens."
+          );
+        }
+      }
+
+      throw new Error(
+        `Text generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  /**
+   * Get current model status
+   */
+  getStatus(): {
+    initialized: boolean;
+    currentModel: string | null;
+    isLoading: boolean;
+  } {
+    return {
+      initialized: this.initialized,
+      currentModel: this.currentModel,
+      isLoading: this.isLoading,
+    };
+  }
+
+  /**
+   * Dispose of current model and free resources
+   */
+  async dispose() {
+    console.log("[HFS] Disposing model and cleaning up resources...");
+
+    if (this.generator?.dispose) {
       try {
-        // Symbolic: Parse neural function signal into symbolic structure
-        const functionCall = JSON.parse(functionCallMatch[1]);
-        return {
-          tool_calls: [
-            {
-              function: {
-                name: functionCall.name,
-                arguments: JSON.stringify(functionCall.arguments),
-              },
-            },
-          ],
-        };
-      } catch (e) {
-        console.error("Erro ao parsear chamada de função:", e);
-        return { content: text };
+        await this.generator.dispose();
+        console.log("[HFS] ✅ Model disposed successfully");
+      } catch (error) {
+        console.warn("[HFS] ⚠️ Error disposing model:", error);
       }
     }
-    // If no function call detected, return as normal content
-    return { content: text };
+
+    this.generator = null;
+    this.currentModel = null;
+    this.isLoading = false;
+  }
+
+  /**
+   * Force reload the current model (useful for troubleshooting)
+   */
+  async forceReload(): Promise<void> {
+    if (this.currentModel) {
+      const currentModelId = this.currentModel;
+      await this.dispose();
+      // Will reload on next generate() call
+      console.log(`[HFS] Forced reload prepared for model: ${currentModelId}`);
+    }
   }
 }

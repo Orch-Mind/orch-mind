@@ -6,7 +6,7 @@
 
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { ModelStreamResponse } from "../../interfaces/openai/ICompletionService";
-import { AIResponseMeta, Message } from "../../interfaces/transcription/TranscriptionTypes";
+import { Message } from "../../interfaces/transcription/TranscriptionTypes";
 import { NeuralSignalResponse } from "../../interfaces/neural/NeuralSignalTypes";
 import { OpenAIClientService } from "./neural/OpenAIClientService";
 import { OpenAICompletionService } from "./neural/OpenAICompletionService";
@@ -59,26 +59,15 @@ export class OpenAIServiceFacade implements IOpenAIService {
    * Envia requisição para OpenAI e processa o stream de resposta
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
-  async streamOpenAIResponse(messages: Message[]): Promise<AIResponseMeta> {
+  async streamOpenAIResponse(messages: Message[]): Promise<ModelStreamResponse> {
     // Mapear as mensagens para o formato esperado pelo serviço de completion
     const mappedMessages = messages.map(m => ({
       role: m.role,
       content: m.content
     }));
     
-    // Chamar o serviço de completion e adaptar o retorno para o formato AIResponseMeta
-    const streamResponse = await this.completionService.streamModelResponse(mappedMessages);
-    
-    // Adaptar o retorno ModelStreamResponse para AIResponseMeta
-    return {
-      response: streamResponse.responseText,
-      tone: "neutral",     // Valor padrão - poderia ser inferido do texto
-      style: "informative", // Valor padrão
-      type: "completion",  // Indica que é uma resposta de completion
-      improvised: false,   // Não é improviso
-      language: "auto",    // Linguagem automática
-      confidence: 0.9      // Valor padrão de confiança alta
-    };
+    return await this.completionService.streamModelResponse(mappedMessages);
+
   }
   
   /**

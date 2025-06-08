@@ -5,11 +5,6 @@ import { NeuralSignal } from '../../../interfaces/neural/NeuralSignalTypes';
 import { IOpenAIService } from '../../../interfaces/openai/IOpenAIService';
 import { LoggingUtils } from '../../../utils/LoggingUtils';
 
-// HuggingFace service interface (for dependency inversion)
-interface IHuggingFaceService {
-  enrichSemanticQueryForSignal(core: string, query: string, intensity: number, context?: string, language?: string): Promise<{enrichedQuery: string, keywords: string[]}>;
-}
-
 /**
  * Processor mode: OpenAI or HuggingFace
  */
@@ -21,8 +16,7 @@ export type ProcessorMode = 'openai' | 'huggingface';
  */
 export class NeuralSignalEnricher {
   constructor(
-    private openAIService: IOpenAIService,
-    private huggingFaceService?: IHuggingFaceService
+    private openAIService: IOpenAIService
   ) {}
 
   /**
@@ -34,11 +28,7 @@ export class NeuralSignalEnricher {
         try {
           let enrichment: {enrichedQuery: string, keywords: string[]};
           
-          if (mode === 'huggingface') {
-            enrichment = await this._enrichWithHuggingFace(signal, currentLanguage);
-          } else {
-            enrichment = await this._enrichWithOpenAI(signal, currentLanguage);
-          }
+          enrichment = await this._enrichWithOpenAI(signal, currentLanguage);
 
           let topK = signal.topK;
           if (typeof topK !== 'number' || isNaN(topK)) {
@@ -64,28 +54,6 @@ export class NeuralSignalEnricher {
         }
       })
     );
-  }
-
-  /**
-   * Enrich signal using HuggingFace backend
-   */
-  private async _enrichWithHuggingFace(signal: NeuralSignal, currentLanguage: string): Promise<{enrichedQuery: string, keywords: string[]}> {
-    if (this.huggingFaceService) {
-      return await this.huggingFaceService.enrichSemanticQueryForSignal(
-        signal.core,
-        signal.symbolic_query?.query || '',
-        signal.intensity,
-        (typeof signal === 'object' && signal && 'context' in signal) ? (signal.context as string) : undefined,
-        currentLanguage
-      );
-    } else {
-      // Fallback: basic enrichment without external service
-      LoggingUtils.logInfo("HuggingFace service not available - using basic enrichment");
-      return {
-        enrichedQuery: signal.symbolic_query?.query || signal.core,
-        keywords: [signal.core]
-      };
-    }
   }
 
   /**

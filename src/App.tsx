@@ -6,14 +6,14 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   DeepgramProvider,
   MicrophoneProvider,
-  TranscriptionProvider
+  TranscriptionProvider,
 } from "./components/context";
 import { CognitionLogProvider } from "./components/context/CognitionLogContext";
 import { LanguageProvider } from "./components/context/LanguageContext";
-import { initializeQuantumPerformanceOptimizations } from './components/shared/QuantumVisualization/utils/performance';
+import { initializeQuantumPerformanceOptimizations } from "./components/shared/QuantumVisualization/utils/performance";
 import {
   useGlobalPassiveEventOptimization,
-  useHeavyTaskManager
+  useHeavyTaskManager,
 } from "./components/shared/QuantumVisualization/utils/performanceOptimizations";
 import {
   Toast,
@@ -22,9 +22,8 @@ import {
   ToastProvider,
   ToastTitle,
   ToastVariant,
-  ToastViewport
+  ToastViewport,
 } from "./components/ui/toast";
-import { OnnxRuntimeConfig } from "./config/onnxruntimeConfig";
 import TranscriptionModule from "./features/transcription/TranscriptionModule";
 import "./styles/orchos-theme.css";
 
@@ -34,62 +33,71 @@ const queryClient = new QueryClient({
       staleTime: 0,
       gcTime: Infinity,
       retry: 1,
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: false,
     },
     mutations: {
-      retry: 1
-    }
-  }
-})
+      retry: 1,
+    },
+  },
+});
 
 interface ToastContextType {
-  showToast: (title: string, description: string, variant: ToastVariant) => void
+  showToast: (
+    title: string,
+    description: string,
+    variant: ToastVariant
+  ) => void;
 }
 
 export const ToastContext = createContext<ToastContextType | undefined>(
   undefined
-)
+);
 
 export function useToast() {
-  const context = useContext(ToastContext)
+  const context = useContext(ToastContext);
   if (!context) {
-    throw new Error("useToast must be used within a ToastProvider")
+    throw new Error("useToast must be used within a ToastProvider");
   }
-  return context
+  return context;
 }
 
 // Helper function to safely update language
 export function updateLanguage(newLanguage: string) {
   async () => {
-    window.__LANGUAGE__ = newLanguage
-  }
+    window.__LANGUAGE__ = newLanguage;
+  };
 }
 
 // This component has been moved to TranscriptionModule
 
 export default function App() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [toastOpen, setToastOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<ToastMessage>({
     title: "",
     description: "",
-    variant: "neutral"
-  })
+    variant: "neutral",
+  });
 
   // Initialize performance optimizations and ONNX Runtime config once at application startup
   useEffect(() => {
-    // Initialize ONNX Runtime configuration to suppress warnings and optimize performance
-    OnnxRuntimeConfig.initializeGlobalOnnxSettings();
-    OnnxRuntimeConfig.suppressHarmlessOnnxWarnings();
-    
     const cleanup = initializeQuantumPerformanceOptimizations();
-    
+
+    // Initialize transformers.js environment for better HuggingFace model loading
+    import("./utils/transformersEnvironment")
+      .then(({ initializeTransformersEnvironment }) => {
+        return initializeTransformersEnvironment();
+      })
+      .catch((error) => {
+        console.error("Failed to initialize transformers environment:", error);
+      });
+
     return cleanup;
   }, []);
 
   // Apply global passive event optimization to resolve OrbitControls violations
   useGlobalPassiveEventOptimization();
-  
+
   // Apply heavy task management to coordinate HuggingFace + 3D rendering
   const { queueHeavyTask } = useHeavyTaskManager();
 
@@ -98,14 +106,14 @@ export default function App() {
     description: string,
     variant: ToastVariant
   ) => {
-    setToastMessage({ title, description, variant })
-    setToastOpen(true)
-  }
+    setToastMessage({ title, description, variant });
+    setToastOpen(true);
+  };
 
   // Provide heavy task manager to child components via context if needed
   const contextValue = {
     showToast,
-    queueHeavyTask // Make available for HuggingFace service coordination
+    queueHeavyTask, // Make available for HuggingFace service coordination
   };
 
   return (
@@ -127,7 +135,9 @@ export default function App() {
                       duration={3000}
                     >
                       <ToastTitle>{toastMessage.title}</ToastTitle>
-                      <ToastDescription>{toastMessage.description}</ToastDescription>
+                      <ToastDescription>
+                        {toastMessage.description}
+                      </ToastDescription>
                     </Toast>
                     <ToastViewport />
                   </ToastProvider>
@@ -138,5 +148,5 @@ export default function App() {
         </LanguageProvider>
       </QueryClientProvider>
     </div>
-  )
+  );
 }

@@ -117,10 +117,8 @@ export class EmbeddingService {
    */
   private createEmbeddingService(): IEmbeddingService {
     if (this.isBasicMode) {
-      // In basic mode, use HuggingFace with the selected model
-      const hfModel = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL);
-      this.logger.info(`[EmbeddingService] Creating HuggingFaceEmbeddingService with model: ${hfModel || 'default'} for Basic mode`);
-      const service = new HuggingFaceEmbeddingService(hfModel);
+      this.logger.info(`[EmbeddingService] Creating HuggingFaceEmbeddingService for Basic mode`);
+      const service = new HuggingFaceEmbeddingService();
       // Use the service's method to get the embedding dimension
       this.updateEmbeddingDimension(service);
       return service;

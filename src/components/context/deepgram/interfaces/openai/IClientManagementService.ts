@@ -5,6 +5,7 @@
 // Symbolic: Neural interface for LLM client management and initialization
 
 import OpenAI from "openai";
+import { HuggingFaceLocalService } from "../../../../../services/huggingface/HuggingFaceLocalService";
 
 /**
  * Interface para o serviço de gerenciamento do cliente do modelo de linguagem
@@ -41,7 +42,7 @@ export interface IClientManagementService {
    * @returns Cliente inicializado do modelo de linguagem
    * @throws Erro se o cliente não estiver inicializado
    */
-  getClient(): OpenAI;
+  getClient(): OpenAI | HuggingFaceLocalService;
 
   /**
    * Cria embeddings para o texto fornecido
