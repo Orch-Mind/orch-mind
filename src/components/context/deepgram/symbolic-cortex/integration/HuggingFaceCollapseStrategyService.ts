@@ -7,11 +7,13 @@ import {
   CollapseStrategyDecision,
 } from "./ICollapseStrategyService";
 
+import { SUPPORTED_HF_BROWSER_MODELS } from "../../../../../services/huggingface/HuggingFaceLocalService";
 import {
   getOption,
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
+import { toHuggingFaceTools } from "../../../../../utils/hfToolUtils";
 
 // Types for OpenAI function calling
 interface AIFunctionResponse {
@@ -244,15 +246,40 @@ Carefully analyze the activated cores and overall patterns to identify possible 
 - "Excessive repetition" if the same information is presented in multiple ways
 - "Severe content redundancy" when multiple types of repetition are detected`;
 
-      // Make the OpenAI call with function calling
+      // For HuggingFace models, enhance the prompt to be more explicit about JSON output
+      const enhancedUserPrompt = userPrompt + `
+
+IMPORTANT: Respond ONLY with a JSON object in this exact format:
+{
+  "deterministic": true or false,
+  "temperature": number between 0.1 and 1.5,
+  "justification": "your reasoning here",
+  "userIntent": {
+    "practical": 0.0 to 1.0,
+    "analytical": 0.0 to 1.0,
+    "reflective": 0.0 to 1.0,
+    "existential": 0.0 to 1.0,
+    "symbolic": 0.0 to 1.0,
+    "emotional": 0.0 to 1.0,
+    "narrative": 0.0 to 1.0,
+    "mythic": 0.0 to 1.0,
+    "trivial": 0.0 to 1.0,
+    "ambiguous": 0.0 to 1.0
+  },
+  "emergentProperties": []
+}`;
+
+      // Make the HuggingFace call with centralized tool handling
+      const hfTools = toHuggingFaceTools(tools);
+
       const response: AIFunctionResponse =
-        await this.huggingFaceService.callOpenAIWithFunctions({
-          model: getOption(STORAGE_KEYS.CHATGPT_MODEL) || "gpt-4o-mini", // Model with function calling support
+        await this.huggingFaceService.callModelWithFunctions({
+          model: getOption(STORAGE_KEYS.HF_MODEL) || SUPPORTED_HF_BROWSER_MODELS[0], // Use HuggingFace model
           messages: [
             { role: "developer", content: systemPrompt },
-            { role: "user", content: userPrompt },
+            { role: "user", content: enhancedUserPrompt },
           ],
-          tools: tools,
+          tools: hfTools as any,
           tool_choice: {
             type: "function",
             function: { name: "decideCollapseStrategy" },
@@ -286,12 +313,12 @@ Carefully analyze the activated cores and overall patterns to identify possible 
         return decision;
       }
 
-      // Simple fallback if function calling fails
+      // Use fallback strategy for HuggingFace models that don't support complex function calling
+      // This is expected behavior, not an error
       const fallbackDecision: CollapseStrategyDecision = {
         deterministic: params.averageEmotionalWeight < 0.5,
         temperature: params.averageEmotionalWeight < 0.5 ? 0.7 : 1.4,
-        justification:
-          "Fallback strategy based on emotional weight due to OpenAI function calling failure.",
+        justification: "Using emotion-based strategy for HuggingFace model.",
       };
 
       // Return fallback strategy - logging will be handled in DefaultNeuralIntegrationService
@@ -300,7 +327,7 @@ Carefully analyze the activated cores and overall patterns to identify possible 
       // Handle error with simple fallback strategy
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("Error in OpenAI collapse strategy decision:", error);
+      console.error("Error in HuggingFace collapse strategy decision:", error);
 
       const errorFallbackDecision: CollapseStrategyDecision = {
         deterministic: params.averageEmotionalWeight < 0.5,

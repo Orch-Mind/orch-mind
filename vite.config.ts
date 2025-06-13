@@ -8,6 +8,7 @@ import path from "node:path";
 import serveStatic from "serve-static";
 import { defineConfig } from "vite";
 import electron from "vite-plugin-electron/simple";
+import commonjs from "@rollup/plugin-commonjs";
 
 // Plugin para remover meta-CSP do index.html gerado pela Vite
 function cleanHtmlPlugin() {
@@ -32,10 +33,47 @@ export default defineConfig(({ mode }) => {
 
   return {
     publicDir: "public",
-    assetsInclude: ["**/*.onnx", "**/*.onnx_data"],
+    assetsInclude: [
+      "**/*.onnx",
+      "**/*.onnx_data",
+      "**/*.bin",
+      "**/*.safetensors",
+    ],
 
     plugins: [
+      // Custom plugin to clean default CSP tags (managed elsewhere)
       cleanHtmlPlugin(),
+      // Custom plugin to add proper CSP for ONNX models
+      {
+        name: "vite-plugin-csp-onnx",
+        transformIndexHtml: {
+          enforce: "post",
+          transform(html) {
+            // Add CSP meta tag with proper ONNX permissions
+            const cspContent = `default-src 'self';
+              script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net;
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+              img-src 'self' data: blob:;
+              font-src 'self' data: https://fonts.gstatic.com;
+              connect-src 'self' ws: wss: http://localhost:* https://huggingface.co https://*.huggingface.co 
+                https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co 
+                https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co;
+              worker-src 'self' blob: data:;
+              child-src 'self' blob:;
+              object-src 'self' blob:`;
+
+            // Find the end of the <head> section
+            const headEndPos = html.indexOf("</head>");
+            if (headEndPos !== -1) {
+              const cspTag = `<meta http-equiv="Content-Security-Policy" content="${cspContent}">\n  `;
+              return (
+                html.slice(0, headEndPos) + cspTag + html.slice(headEndPos)
+              );
+            }
+            return html;
+          },
+        },
+      },
       electron({
         main: {
           entry: "electron/main.ts",
@@ -52,6 +90,11 @@ export default defineConfig(({ mode }) => {
                   /\.node$/,
                   "onnxruntime-node",
                 ],
+              },
+            },
+            resolve: {
+              alias: {
+                sharp: path.resolve(__dirname, "src/polyfills/sharpStub.js"),
               },
             },
           },
@@ -90,6 +133,11 @@ export default defineConfig(({ mode }) => {
                 ],
               },
             },
+            resolve: {
+              alias: {
+                sharp: path.resolve(__dirname, "src/polyfills/sharpStub.js"),
+              },
+            },
           },
         },
         renderer: {},
@@ -110,17 +158,41 @@ export default defineConfig(({ mode }) => {
         process: "process/browser",
         path: "path-browserify",
         crypto: "crypto-browserify",
+        sharp: path.resolve(__dirname, "src/polyfills/sharpStub.js"),
       },
     },
 
     // SERVE MODE: monte BEFORE o fallback da SPA
     configureServer(server) {
-      // 1) sirva /models a partir de public/models
+      // 1) sirva /models a partir de public/models com MIME types corretos
       server.middlewares.use(
         "/models",
         serveStatic(path.resolve(__dirname, "public/models"), {
           index: false,
-          extensions: ["onnx", "onnx_data"],
+          extensions: ["onnx", "onnx_data", "bin", "safetensors"],
+          setHeaders: (res, path) => {
+            // Set correct MIME types for ONNX files
+            if (path.endsWith(".onnx")) {
+              res.setHeader("Content-Type", "application/octet-stream");
+            } else if (path.endsWith(".onnx_data")) {
+              res.setHeader("Content-Type", "application/octet-stream");
+            } else if (path.endsWith(".bin") || path.endsWith(".safetensors")) {
+              res.setHeader("Content-Type", "application/octet-stream");
+            }
+
+            // Set CORS headers for model files
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+            res.setHeader(
+              "Access-Control-Allow-Headers",
+              "Content-Type, Accept, Range, If-None-Match, If-Modified-Since"
+            );
+            res.setHeader(
+              "Access-Control-Expose-Headers",
+              "Content-Length, Content-Range, Content-Type"
+            );
+            res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+          },
         })
       );
 
@@ -160,6 +232,7 @@ export default defineConfig(({ mode }) => {
       fs: {
         allow: ["..", path.resolve(__dirname, "public/models")],
       },
+      // CORS and CSP headers are defined below
       proxy: {
         // Proxy HuggingFace requests to avoid CORS issues
         "/api/huggingface": {
@@ -197,21 +270,30 @@ export default defineConfig(({ mode }) => {
         },
       },
       headers: {
+        // CORS policies for cross-origin resource sharing
         "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
         "Cross-Origin-Embedder-Policy": "credentialless",
         "Cross-Origin-Resource-Policy": "cross-origin",
+
+        // Cache configuration for better performance
         "Cache-Control": "public, max-age=31536000",
+
+        // CORS headers for model files
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
         "Access-Control-Allow-Headers":
-          "Content-Type, Accept, Authorization, X-Requested-With, Range",
+          "Content-Type, Accept, Authorization, X-Requested-With, Range, If-None-Match, If-Modified-Since",
+        "Access-Control-Expose-Headers":
+          "Content-Length, Content-Range, Content-Type",
         "Access-Control-Allow-Credentials": "true",
+
+        // Security headers
         "Referrer-Policy": "no-referrer-when-downgrade",
-        // Additional headers for better HuggingFace model loading
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "SAMEORIGIN",
         "Permissions-Policy": "interest-cohort=()",
-        // Enable SharedArrayBuffer for better WASM performance
+
+        // Enable SharedArrayBuffer for WASM performance
         "Document-Policy": "js-profiling",
       },
       hmr: {

@@ -50,6 +50,9 @@ export interface ElectronAPI {
 
   setDeepgramLanguage: (lang: string) => void;
 
+  // 📝 Method to send prompt updates directly
+  sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
+
   // Pinecone IPC methods
   queryPinecone: (
     embedding: number[],

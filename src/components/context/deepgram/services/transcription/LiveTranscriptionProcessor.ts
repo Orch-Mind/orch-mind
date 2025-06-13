@@ -111,12 +111,12 @@ export class LiveTranscriptionProcessor {
           try {
             if (this.transcriptionStorageService) {
               // Ensure the method exists before calling
-              if (typeof this.transcriptionStorageService.updateTranscriptionUI === 'function') {
+              if (typeof this.transcriptionStorageService.addTranscription === 'function') {
                 console.log(`📝 [PROCESS] Sending directly to TranscriptionStorageService: "${transcriptText}"`);
-                this.transcriptionStorageService.updateTranscriptionUI(transcriptText);
+                this.transcriptionStorageService.addTranscription(transcriptText);
                 console.log(`✅ [PROCESS] Transcription successfully sent to storageService`);
               } else {
-                console.error(`❌ [PROCESS] updateTranscriptionUI NOT available in service!`);
+                console.error(`❌ [PROCESS] addTranscription NOT available in service!`);
               }
             } else {
               console.warn(`⚠️ [PROCESS] TranscriptionStorageService NOT available during transcription processing`);
@@ -212,11 +212,15 @@ export class LiveTranscriptionProcessor {
               transcriptText.trim() && transcriptText !== buffer.lastFlushedText) {
             try {
               console.log(`📢 [PROCESS] Sending final transcription via IPC: "${transcriptText}"`);
-              // Use the new method to send transcriptions
               window.electronAPI.sendAudioTranscription(transcriptText);
             } catch (error) {
               console.error("❌ [PROCESS] Error sending via IPC:", error);
             }
+          }
+          
+          // Also forward to storage service for unified processing
+          if (this.transcriptionStorageService) {
+            this.transcriptionStorageService.addTranscription(transcriptText);
           }
           
           // Also send via callback for compatibility

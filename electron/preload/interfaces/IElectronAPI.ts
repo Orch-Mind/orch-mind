@@ -96,6 +96,11 @@ export interface IEnvironmentManager {
   }>;
 }
 
+// Communication Interface
+export interface ICommunicationManager {
+  sendPromptUpdate(type: 'partial' | 'complete' | 'error', content: string): void;
+}
+
 // Import Interface
 export interface IImportManager {
   importChatHistory(params: {

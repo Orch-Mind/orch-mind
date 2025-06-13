@@ -6,12 +6,6 @@ import { IOpenAIService } from "../../../interfaces/openai/IOpenAIService";
 import { Message } from "../../../interfaces/transcription/TranscriptionTypes";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
-import { ProcessorMode } from "./NeuralSignalEnricher";
-
-// HuggingFace service interface (for dependency inversion)
-interface IHuggingFaceService {
-  generateResponse(messages: Message[]): Promise<{ response: string }>;
-}
 
 /**
  * Neural response cognitive generator
@@ -20,15 +14,13 @@ interface IHuggingFaceService {
 export class ResponseGenerator {
   constructor(
     private memoryService: IMemoryService,
-    private openAIService: IOpenAIService,
-    private huggingFaceService?: IHuggingFaceService
+    private openAIService: IOpenAIService
   ) {}
 
   /**
    * Generate response using the selected backend
    */
   async generateResponse(
-    mode: ProcessorMode,
     integratedPrompt: string,
     temporaryContext?: string
   ): Promise<string> {
@@ -42,17 +34,16 @@ export class ResponseGenerator {
     }
 
     const conversationHistory = this.memoryService.getConversationHistory();
+    
     const messages = this.memoryService.buildPromptMessagesForModel(
       integratedPrompt,
       conversationHistory
     );
 
-    if (mode === "huggingface") {
-      return await this._generateWithHuggingFace(messages);
-    } else {
-      return await this._generateWithOpenAI(messages);
-    }
+    return await this._generate(messages);
   }
+
+
 
   /**
    * Prepare context messages for processing
@@ -71,24 +62,9 @@ export class ResponseGenerator {
   }
 
   /**
-   * Generate response using HuggingFace backend
-   */
-  private async _generateWithHuggingFace(messages: Message[]): Promise<string> {
-    if (this.huggingFaceService) {
-      const response = await this.huggingFaceService.generateResponse(messages);
-      return response.response;
-    } else {
-      // NO FALLBACK: Throw error if HuggingFace service is not available
-      throw new Error(
-        "HuggingFace service not available and NO FALLBACK to OpenAI will be attempted as per user requirements"
-      );
-    }
-  }
-
-  /**
    * Generate response using OpenAI backend
    */
-  private async _generateWithOpenAI(messages: Message[]): Promise<string> {
+  private async _generate(messages: Message[]): Promise<string> {
     try {
       const response = await this.openAIService.streamOpenAIResponse(messages);
       return response.responseText;

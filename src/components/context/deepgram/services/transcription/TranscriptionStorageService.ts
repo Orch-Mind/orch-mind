@@ -185,6 +185,12 @@ export class TranscriptionStorageService implements ITranscriptionStorageService
       timestamp: new Date().toISOString()
     });
     
+    // 👉 Additionally update the UI transcription list so that prompt extraction
+    //    (which relies on uiTranscriptionList via getUITranscriptionText) has
+    //    the latest lines. This avoids the gap where a prompt is triggered but
+    //    no lines are extracted because we never pushed to the UI list.
+    this.updateUI({ transcription: text.trim() });
+    
     // Check if we should auto-trigger a prompt based on question detection
     this.detectQuestionAndTriggerPrompt(text.trim(), speaker);
   }

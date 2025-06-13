@@ -21,7 +21,6 @@ import { IUIUpdateService } from "../interfaces/utils/IUIUpdateService";
 import { DefaultNeuralIntegrationService } from "../symbolic-cortex/integration/DefaultNeuralIntegrationService";
 import { INeuralIntegrationService } from "../symbolic-cortex/integration/INeuralIntegrationService";
 import { LoggingUtils } from "../utils/LoggingUtils";
-import { HuggingFaceServiceFacade } from "./huggingface/HuggingFaceServiceFacade";
 import { MemoryService } from "./memory/MemoryService";
 import { TranscriptionPromptProcessor } from "./transcription/TranscriptionPromptProcessor";
 import { TranscriptionStorageService } from "./transcription/TranscriptionStorageService";
@@ -36,7 +35,6 @@ export class DeepgramTranscriptionService
   private storageService: ITranscriptionStorageService;
   private memoryService: IMemoryService;
   private openAIService: IOpenAIService;
-  private huggingFaceService: HuggingFaceServiceFacade;
   private uiService: IUIUpdateService;
 
   // Configuration
@@ -80,8 +78,7 @@ export class DeepgramTranscriptionService
       this.speakerService,
       setTexts
     );
-    this.openAIService = aiService;
-    this.huggingFaceService = new HuggingFaceServiceFacade();
+    this.openAIService = aiService; // May be HuggingFaceServiceFacade in Basic mode
     this.memoryService = new MemoryService(this.openAIService);
     this.uiService = new UIUpdateService(setTexts);
 
@@ -91,15 +88,13 @@ export class DeepgramTranscriptionService
     );
 
     // Initialize the transcription prompt processor
-    // Now includes HuggingFace service for basic mode support
     this.transcriptionPromptProcessor = new TranscriptionPromptProcessor(
       this.storageService,
       this.memoryService,
       this.openAIService,
       this.uiService,
       this.speakerService,
-      this.neuralIntegrationService,
-      this.huggingFaceService
+      this.neuralIntegrationService
     );
 
     // Set reference back to this service in the storage service to enable auto-triggering

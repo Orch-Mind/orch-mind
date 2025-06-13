@@ -88,6 +88,9 @@ export const STORAGE_KEYS = {
   // ===== Configurações de banco de dados local =====
   DUCKDB_PATH: 'duckdbPath', // Caminho personalizado para o banco DuckDB
   
+  // ===== Configurações de ferramentas (tools) =====
+  TOOLS_ENABLED: 'toolsEnabled', // Habilita/desabilita ferramentas no modo básico
+  
   // ===== Configurações de debugging =====
   DEBUG_MODE: 'debugMode',
   LOG_LEVEL: 'logLevel'

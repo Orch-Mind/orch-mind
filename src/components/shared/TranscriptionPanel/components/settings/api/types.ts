@@ -38,7 +38,7 @@ export interface HuggingFaceSettingsProps extends BaseApiSettingsProps {
   hfEmbeddingModel: string;
   setHfEmbeddingModel: (value: string) => void;
   hfModelOptions?: Array<{id: string, label: string}>;
-  hfEmbeddingModelOptions?: string[];
+  hfEmbeddingModelOptions?: Array<{id: string, label: string}>;
   setApplicationMode?: (mode: OrchOSMode) => void; // Adicionado para suportar o botão no BasicModeSettings
 }
 

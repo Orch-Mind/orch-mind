@@ -83,6 +83,9 @@ export class ElectronAPIFactory {
       // Environment Management
       ...this.createEnvironmentManager(),
 
+      // Communication Management
+      ...this.createCommunicationManager(),
+
       // Import Management
       ...this.createImportManager(),
 
@@ -313,6 +316,33 @@ export class ElectronAPIFactory {
       },
     };
   }
+
+    /**
+   * Create Communication Management service methods
+   */
+    private createCommunicationManager() {
+      return {
+        sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => {
+          this.errorHandler.wrapSync(() => {
+            switch (type) {
+              case 'partial':
+                ipcRenderer.send(PROCESSING_EVENTS.PROMPT_PARTIAL_RESPONSE, content);
+                break;
+              case 'complete':
+                ipcRenderer.send(PROCESSING_EVENTS.PROMPT_SUCCESS, content);
+                break;
+              case 'error':
+                ipcRenderer.send(PROCESSING_EVENTS.PROMPT_ERROR, content);
+                break;
+            }
+          }, {
+            component: 'CommunicationManager',
+            operation: 'sendPromptUpdate',
+            severity: 'low'
+          });
+        },
+      };
+    }
 
   /**
    * Create Import Management service methods

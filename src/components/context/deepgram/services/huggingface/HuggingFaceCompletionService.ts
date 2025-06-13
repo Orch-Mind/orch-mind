@@ -10,6 +10,7 @@ import {
 } from "../../interfaces/openai/ICompletionService";
 import { LoggingUtils } from "../../utils/LoggingUtils";
 import { HuggingFaceClientService } from "./neural/HuggingFaceClientService";
+import { toHuggingFaceTools } from "../../../../../utils/hfToolUtils";
 
 /**
  * Serviço responsável por gerar completions com function calling usando HuggingFace
@@ -59,20 +60,12 @@ export class HuggingFaceCompletionService implements ICompletionService {
         content: m.content,
       }));
 
-      // Convert tools to HuggingFace format if provided
-      const tools = options.tools?.map((tool) => ({
-        type: tool.type,
-        function: {
-          name: tool.function.name,
-          description: tool.function.description,
-          parameters: tool.function.parameters,
-        },
-      }));
+      const hfTools = toHuggingFaceTools(options.tools);
 
       // Call HuggingFace service with function calling support
       const response = await this.clientService
         .getClient()
-        .generateWithFunctions(formattedMessages, tools || [], {
+        .generateWithFunctions(formattedMessages, hfTools as any, {
           temperature: options.temperature || 0.7,
           maxTokens: options.max_tokens || 500,
         });

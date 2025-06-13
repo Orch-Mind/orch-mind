@@ -12,8 +12,7 @@ import { getModelDimensions } from "../../../../../../utils/EmbeddingUtils";
 import { HuggingFaceSettingsProps } from "./types";
 
 const HF_EMBEDDING_MODELS = [
-  "onnx-community/Qwen3-Embedding-0.6B-ONNX",
-  "onnx-community/gte-multilingual-base",
+  "Xenova/all-MiniLM-L6-v2"
 ];
 
 /**
@@ -28,11 +27,16 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
   hfEmbeddingModel,
   setHfEmbeddingModel,
   hfModelOptions = [],
-  hfEmbeddingModelOptions = HF_EMBEDDING_MODELS,
+  hfEmbeddingModelOptions = [],
 }) => {
   // Estado para o caminho do DuckDB
   const [duckDbPath, setDuckDbPath] = useState<string>(
     () => getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || "./orch-os-memory"
+  );
+  
+  // Estado para ferramentas habilitadas
+  const [toolsEnabled, setToolsEnabled] = useState<boolean>(
+    () => getOption<boolean>(STORAGE_KEYS.TOOLS_ENABLED) ?? true
   );
 
   // Carregar configuração salva na inicialização
@@ -197,8 +201,8 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
               }}
             >
               {hfEmbeddingModelOptions.map((model) => (
-                <option key={model} value={model}>
-                  {model} ({getModelDimensions(model)}d)
+                <option key={model.id} value={model.id}>
+                  {model.label} ({getModelDimensions(model.id)}d)
                 </option>
               ))}
             </select>

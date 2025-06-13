@@ -14,8 +14,7 @@
  */
 export const getModelDimensions = (model: string): number => {
   // ONNX Community models - novos modelos ONNX otimizados disponíveis na UI
-  if (model.includes("Qwen3-Embedding-0.6B-ONNX")) return 1024;
-  if (model.includes("gte-multilingual-base")) return 768;
+  if (model.includes("all-MiniLM-L6-v2")) return 384;
 
   // OpenAI models - modelos padrão do serviço OpenAI
   if (model.includes("text-embedding-3-large")) return 3072;

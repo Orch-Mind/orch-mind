@@ -2,10 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
-import {
-  checkTransformersCapabilities,
-  initializeTransformersEnvironment,
-} from "../../utils/transformersEnvironment";
 
 export const TransformersTest: React.FC = () => {
   const [isTestingEnv, setIsTestingEnv] = useState(false);
@@ -25,15 +21,6 @@ export const TransformersTest: React.FC = () => {
     addResult("🔧 Iniciando teste de ambiente...");
 
     try {
-      // Initialize transformers environment
-      await initializeTransformersEnvironment();
-      addResult("✅ Ambiente transformers.js inicializado!");
-
-      // Check capabilities
-      const capabilities = await checkTransformersCapabilities();
-      addResult(
-        `📊 Capacidades detectadas: WebGPU: ${capabilities.webgpu}, WebGL: ${capabilities.webgl}, SharedArrayBuffer: ${capabilities.sharedArrayBuffer}`
-      );
 
       addResult("✅ Teste de ambiente passou!");
     } catch (error) {
@@ -52,8 +39,6 @@ export const TransformersTest: React.FC = () => {
     addResult("🧪 Iniciando teste básico...");
 
     try {
-      // Simple test - just check if the environment can be initialized
-      await initializeTransformersEnvironment();
       addResult("✅ Ambiente inicializado com sucesso!");
 
       // Check if we can access Electron APIs
@@ -84,14 +69,6 @@ export const TransformersTest: React.FC = () => {
     addResult("🚀 Iniciando todos os testes...");
 
     try {
-      // Run environment test
-      addResult("Executando teste de ambiente...");
-      await initializeTransformersEnvironment();
-      const capabilities = await checkTransformersCapabilities();
-      addResult(
-        `✅ Ambiente OK - WebGPU: ${capabilities.webgpu}, SharedArrayBuffer: ${capabilities.sharedArrayBuffer}`
-      );
-
       // Small delay
       await new Promise((resolve) => setTimeout(resolve, 500));
 

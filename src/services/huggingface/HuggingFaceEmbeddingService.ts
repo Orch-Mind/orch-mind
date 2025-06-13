@@ -5,8 +5,8 @@ import { IEmbeddingService } from "../../components/context/deepgram/interfaces/
 import { getOption, STORAGE_KEYS } from "../StorageService";
 
 const ALLOWED_EMBEDDERS = [
-  "onnx-community/Qwen3-Embedding-0.6B-ONNX",
-  "onnx-community/gte-multilingual-base",
+  // Prefer lighter MiniLM model (384-d) for faster embeddings
+  "Xenova/all-MiniLM-L6-v2"
 ] as const;
 type AllowedEmbedderId = (typeof ALLOWED_EMBEDDERS)[number];
 
@@ -29,11 +29,6 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
     if (this.initialized) return;
 
     try {
-      const { initializeTransformersEnvironment } = await import(
-        "../../utils/transformersEnvironment"
-      );
-      await initializeTransformersEnvironment();
-
       this.initialized = true;
       console.log(
         "✅ [HFE] Environment initialized using centralized configuration"
@@ -61,7 +56,7 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
   /** Carrega UM dos dois modelos de embedding permitidos */
   async loadModel(
     modelId: AllowedEmbedderId,
-    device: "webgpu" | "wasm" = "webgpu"
+    device: "wasm" = "wasm"
   ) {
     // Ensure environment is initialized before loading models
     if (!this.initialized) {
@@ -82,7 +77,7 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
       "feature-extraction",
       {
         device,
-        dtype: "fp32",
+        dtype: "fp32", // Use fp32 for better compatibility with all models
       }
     );
     this.modelId = modelId;

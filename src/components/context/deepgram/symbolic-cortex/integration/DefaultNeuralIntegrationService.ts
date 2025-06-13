@@ -85,7 +85,7 @@ export class DefaultNeuralIntegrationService
           hfModel || "default"
         } for Basic mode`
       );
-      return new HuggingFaceEmbeddingService(hfModel);
+      return new HuggingFaceEmbeddingService();
     } else {
       // In advanced mode, use OpenAI with the selected model
       const openaiModel = getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL);

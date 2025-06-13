@@ -21,24 +21,27 @@ export const HuggingFaceSettings: React.FC<HuggingFaceSettingsProps> = ({
   // AI model options for HuggingFace
   const HF_MODELS = [
     {
-      id: "onnx-community/Llama-3.2-3B-Instruct-onnx-web",
-      label: "Llama 3.2 3B Instruct (ONNX, recommended for web)",
+      id: "Xenova/llama2.c-stories15M",
+      label: "Llama2.c Stories (~15MB) - Ultra pequeno",
     },
     {
-      id: "onnx-community/Qwen3-1.7B-ONNX",
-      label: "Qwen3 1.7B (ONNX, lightweight)",
+      id: "Xenova/distilgpt2",
+      label: "DistilGPT-2 (~353MB) - Otimizado",
     },
     {
-      id: "onnx-community/DeepSeek-R1-Distill-Qwen-1.5B-ONNX",
-      label: "DeepSeek R1 Distill Qwen 1.5B (ONNX, fast)",
+      id: "Xenova/gpt2",
+      label: "GPT-2 Base (~548MB) - Estável",
     },
     {
-      id: "onnx-community/Phi-3.5-mini-instruct-onnx-web",
-      label: "Phi-3.5 Mini Instruct (ONNX, web optimized)",
+      id: "Xenova/TinyLlama-1.1B-Chat-v1.0",
+      label: "TinyLlama Chat (~1.1B) - Modelo de chat",
     },
+  ];
+
+  const HF_EMBEDDING_MODELS = [
     {
-      id: "onnx-community/gemma-3-1b-it-ONNX",
-      label: "Gemma 3 1B Instruct (ONNX, efficient)",
+      id: "Xenova/all-MiniLM-L6-v2",
+      label: "all-MiniLM-L6-v2 (MiniLM 384d) — Recomendado",
     },
   ];
 
@@ -92,9 +95,9 @@ export const HuggingFaceSettings: React.FC<HuggingFaceSettingsProps> = ({
               setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, e.target.value);
             }}
           >
-            {HF_MODELS.map((model, i) => (
-              <option key={i} value={model.id}>
-                {model.label}
+            {HF_EMBEDDING_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
               </option>
             ))}
           </select>

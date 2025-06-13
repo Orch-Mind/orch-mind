@@ -40,7 +40,7 @@ export const useApiSettings = () => {
   const [hfEmbeddingModel, setHfEmbeddingModel] = useState<string>(
     () =>
       getOption<string>(STORAGE_KEYS.HF_EMBEDDING_MODEL) ||
-      "onnx-community/Qwen3-Embedding-0.6B-ONNX"
+      "Xenova/all-MiniLM-L6-v2"
   );
 
   // Deepgram

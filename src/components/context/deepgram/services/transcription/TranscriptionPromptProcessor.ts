@@ -34,20 +34,6 @@ import {
   TranscriptionExtractor,
 } from "./processors";
 
-// HuggingFace service interface compatible with HuggingFaceServiceFacade
-interface IHuggingFaceService {
-  ensureOpenAIClient(): Promise<boolean>;
-  enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
-    language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }>;
-  streamOpenAIResponse(messages: Message[]): Promise<any>;
-  isInitialized(): boolean;
-}
-
 /**
  * Response from transcription processing
  */
@@ -84,8 +70,7 @@ export class TranscriptionPromptProcessor {
     private openAIService: IOpenAIService,
     private uiService: IUIUpdateService,
     private speakerService: ISpeakerIdentificationService,
-    private neuralIntegrationService: INeuralIntegrationService,
-    private huggingFaceService?: IHuggingFaceService // Optional for future implementation
+    private neuralIntegrationService: INeuralIntegrationService
   ) {
     this.currentLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR";
     this._neuralSignalExtractor = new NeuralSignalExtractor(this.openAIService);
@@ -162,11 +147,7 @@ export class TranscriptionPromptProcessor {
       return;
     }
 
-    if (window.electronAPI.onPromptPartialResponse) {
-      window.electronAPI.onPromptPartialResponse(() => {
-        this.uiService.updateUI({ aiResponse: "Processing..." });
-      });
-    }
+    this.uiService.updateUI({ aiResponse: "Processing..." });
 
     try {
       this.isProcessingPrompt = true;
@@ -184,48 +165,49 @@ export class TranscriptionPromptProcessor {
           );
         } else if (!temporaryContext) {
           // Notify error if there is no transcription or context
+          this.uiService.notifyPromptError("No transcription detected for processing");
           LoggingUtils.logInfo(`No transcription detected for processing`);
           return;
+        } else {
+          this.uiService.notifyPromptError("No transcription detected for processing");
         }
       }
 
-      // Initialize backend service based on mode
-      if (mode === "openai") {
-        if (!(await this.openAIService.ensureOpenAIClient())) return;
-      } else if (mode === "huggingface") {
-        if (!this.huggingFaceService) {
-          LoggingUtils.logError(
-            "HuggingFace service not available. Initialize with HuggingFace service in constructor."
-          );
-          return;
-        }
-        if (!(await this.huggingFaceService.ensureOpenAIClient())) return;
-      }
+      // Ensure backend client is ready (same call for both modes; BASIC mode service implements same interface)
+      if (!(await this.openAIService.ensureOpenAIClient())) return;
 
       // Notify processing start
       this.uiService.notifyPromptProcessingStarted(temporaryContext);
 
-      // Extract new transcription lines using specialized processor
-      const transcriptionToSend = this.transcriptionExtractor.extractNewLines();
-      if (!transcriptionToSend) {
-        LoggingUtils.logInfo("No new transcription to send.");
-        return;
+      // Extract new transcription lines or fallback to temporary context (manual prompt)
+      const extractedLines = this.transcriptionExtractor.extractNewLines();
+      let promptText: string | null = extractedLines;
+
+      if (!promptText || promptText.trim().length === 0) {
+        // Use temporaryContext as fallback when in Basic mode (manual prompt input)
+        if (temporaryContext?.trim()?.length) {
+          promptText = temporaryContext.trim();
+          LoggingUtils.logInfo("Using temporary context as prompt input.");
+        } else {
+          LoggingUtils.logInfo("No new transcription or temporary context to send.");
+          return;
+        }
       }
 
       // Log cognitive activities
-      symbolicCognitionTimelineLogger.logRawPrompt(transcriptionToSend);
+      symbolicCognitionTimelineLogger.logRawPrompt(promptText);
       if (temporaryContext?.trim()) {
         symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
       }
 
       LoggingUtils.logInfo(
-        `Processing transcription: "${transcriptionToSend.substring(0, 50)}..."`
+        `Processing transcription: "${promptText.substring(0, 50)}..."`
       );
 
       // Process using orchestrated pipeline
       const result = await this._executeProcessingPipeline(
         mode,
-        transcriptionToSend,
+        promptText,
         temporaryContext
       );
 
@@ -299,7 +281,6 @@ export class TranscriptionPromptProcessor {
 
     // PHASE 4: Generate Response
     const response = await this.responseGenerator.generateResponse(
-      mode,
       integratedPrompt,
       temporaryContext
     );

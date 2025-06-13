@@ -36,7 +36,7 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
       "Initialized HuggingFace Service Facade with specialized neural services"
     );
   }
-
+  
   /**
    * Inicializa o cliente HuggingFace
    * Symbolic: Estabelecimento de conexão neural com modelos locais
@@ -173,31 +173,6 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
     return this.completionService.callModelWithFunctions(options);
   }
 
-  /**
-   * Query memory using HuggingFace backend (placeholder for future implementation)
-   * For now, returns empty results since we don't have local memory search
-   * TODO: Implement actual memory search with HuggingFace embeddings
-   */
-  async queryMemory(
-    query: string,
-    keywords?: string[],
-    topK?: number,
-    filters?: any
-  ): Promise<string[]> {
-    try {
-      // For now, return empty results as we focus on neural processing
-      // In the future, this could use HuggingFace embeddings to search local memory
-      LoggingUtils.logInfo(
-        `HuggingFace memory query: "${query}" with ${
-          keywords?.length || 0
-        } keywords`
-      );
-      return [];
-    } catch (error) {
-      LoggingUtils.logError("Error in HuggingFace memory query", error);
-      return [];
-    }
-  }
 
   /**
    * Generate response using HuggingFace backend
@@ -224,7 +199,7 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
       // Ensure client is initialized first
       await this.ensureOpenAIClient();
       const client = this.clientService.getClient();
-      this.neuralSignalService = new HuggingFaceNeuralSignalService(client);
+      this.neuralSignalService = new HuggingFaceNeuralSignalService(this);
     }
     return this.neuralSignalService;
   }

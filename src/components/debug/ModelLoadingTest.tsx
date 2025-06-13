@@ -2,11 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
-import {
-  checkTransformersEnvironment,
-  initializeTransformersEnvironment,
-  loadModelWithOptimalConfig,
-} from "../../utils/transformersEnvironment";
+import { loadModelWithOptimalConfig } from "../../utils/transformersEnvironment";
 
 interface ModelTestResult {
   success: boolean;
@@ -38,31 +34,119 @@ export const ModelLoadingTest: React.FC = () => {
         message: "Testando inicialização do ambiente transformers.js...",
       });
 
-      await initializeTransformersEnvironment();
-
-      const isInitialized = checkTransformersEnvironment();
-      if (isInitialized) {
+      // Teste 1: Verificar se transformers.js está disponível
+      try {
         addResult({
           success: true,
-          message: "Ambiente transformers.js inicializado com sucesso",
+          message: "🔍 Verificando disponibilidade do transformers.js...",
         });
-      } else {
+
+        const { pipeline, env } = await import("@huggingface/transformers");
+
+        addResult({
+          success: true,
+          message: "✅ Transformers.js importado com sucesso",
+          details: {
+            pipelineAvailable: typeof pipeline === "function",
+            envAvailable: typeof env === "object",
+          },
+        });
+
+        // Teste 2: Verificar configuração do ambiente
+        addResult({
+          success: true,
+          message: "🔧 Verificando configuração do ambiente...",
+        });
+
+        addResult({
+          success: true,
+          message: `✅ Ambiente configurado - Cache: ${
+            env.cacheDir || "browser cache"
+          }`,
+          details: {
+            cacheDir: env.cacheDir,
+            backends: env.backends,
+            allowLocalModels: env.allowLocalModels,
+            allowRemoteModels: env.allowRemoteModels,
+          },
+        });
+
+        // Teste 3: Verificar conectividade (opcional)
+        addResult({
+          success: true,
+          message: "🌐 Verificando conectividade com Hugging Face Hub...",
+        });
+
+        // Teste simples de conectividade
+        try {
+          const response = await fetch(
+            "https://huggingface.co/api/models/Xenova/llama2.c-stories15M",
+            {
+              method: "HEAD",
+              mode: "cors",
+            }
+          );
+
+          if (response.ok) {
+            addResult({
+              success: true,
+              message: "✅ Conectividade com Hugging Face Hub OK",
+            });
+          } else {
+            addResult({
+              success: false,
+              message: `⚠️ Conectividade limitada (status: ${response.status})`,
+              details: {
+                status: response.status,
+                statusText: response.statusText,
+              },
+            });
+          }
+        } catch (fetchError) {
+          addResult({
+            success: false,
+            message: "⚠️ Erro de conectividade - modelos podem não carregar",
+            details: {
+              error:
+                fetchError instanceof Error
+                  ? fetchError.message
+                  : String(fetchError),
+              suggestion: "Verifique sua conexão com a internet",
+            },
+          });
+        }
+      } catch (importError) {
         addResult({
           success: false,
-          message: "Falha na verificação do ambiente transformers.js",
+          message: "❌ Erro na importação do transformers.js",
+          details: {
+            error:
+              importError instanceof Error
+                ? importError.message
+                : String(importError),
+            stack: importError instanceof Error ? importError.stack : undefined,
+            suggestions: [
+              "Verifique se @huggingface/transformers está instalado",
+              "Execute: npm install @huggingface/transformers",
+              "Verifique se não há conflitos de dependências",
+            ],
+          },
         });
+        return;
       }
 
       addResult({
         success: true,
-        message: "Informações de cache: Browser cache habilitado",
-        details: { cacheType: "browser" },
+        message: "🎉 Ambiente inicializado com sucesso!",
       });
     } catch (error) {
       addResult({
         success: false,
-        message: "Erro na inicialização do ambiente",
-        details: error instanceof Error ? error.message : String(error),
+        message: "❌ Erro na inicialização do ambiente",
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
       });
     }
   };
@@ -74,57 +158,99 @@ export const ModelLoadingTest: React.FC = () => {
         message: "Testando carregamento de modelo pequeno (tokenizer)...",
       });
 
-      // Teste com um modelo muito pequeno primeiro
-      const modelId = "Xenova/gpt2"; // Modelo pequeno para teste
+      // Teste com um modelo muito pequeno primeiro - usar modelo ultra-pequeno para navegador
+      const modelId = "Xenova/llama2.c-stories15M"; // Modelo de ~15MB, muito confiável para navegador
       const task = "text-generation";
 
       addResult({
         success: true,
-        message: `Iniciando carregamento: ${modelId}`,
+        message: `Iniciando carregamento: ${modelId} (~15MB)`,
       });
 
-      const model = await loadModelWithOptimalConfig(modelId, task, {
-        // Forçar quantização para reduzir tamanho
-        dtype: "q4",
-        revision: "main",
-      });
-
-      if (model) {
-        addResult({
-          success: true,
-          message: `Modelo ${modelId} carregado com sucesso!`,
-          details: {
-            modelType: typeof model,
-            hasGenerate: typeof model.generate === "function",
-          },
+      try {
+        const model = await loadModelWithOptimalConfig(modelId, task, {
+          // Configuração específica para modelos tiny
+          dtype: "fp32", // Usar fp32 para modelos tiny (mais compatível)
+          device: "wasm", // Forçar WASM para compatibilidade máxima
+          use_external_data_format: false, // Modelos tiny geralmente não precisam
+          local_files_only: false, // Permitir download
         });
 
-        // Teste básico de geração
-        try {
-          const testInput = "Hello, world!";
+        if (model) {
           addResult({
             success: true,
-            message: `Testando geração com input: "${testInput}"`,
+            message: `Modelo ${modelId} carregado com sucesso!`,
+            details: {
+              modelType: typeof model,
+              hasGenerate: typeof model.generate === "function",
+              modelInfo: model.constructor?.name || "Unknown",
+            },
           });
 
-          // Nota: Este é apenas um teste de carregamento, não vamos fazer geração real
-          addResult({ success: true, message: "Modelo está pronto para uso" });
-        } catch (genError) {
+          // Teste básico de geração com modelo tiny
+          try {
+            const testInput = "Hello";
+            addResult({
+              success: true,
+              message: `Testando geração com input: "${testInput}"`,
+            });
+
+            // Teste real de geração com modelo tiny
+            const result = await model(testInput, {
+              max_new_tokens: 3,
+              do_sample: false,
+              temperature: 0.1,
+            });
+
+            addResult({
+              success: true,
+              message: `✅ Geração funcionou! Output: ${JSON.stringify(
+                result
+              ).substring(0, 100)}...`,
+            });
+          } catch (genError) {
+            addResult({
+              success: false,
+              message: "Erro no teste de geração",
+              details: {
+                error:
+                  genError instanceof Error
+                    ? genError.message
+                    : String(genError),
+                stack: genError instanceof Error ? genError.stack : undefined,
+              },
+            });
+          }
+        } else {
           addResult({
             success: false,
-            message: "Erro no teste de geração",
-            details:
-              genError instanceof Error ? genError.message : String(genError),
+            message: "Modelo retornado é null",
+            details: { modelId, task },
           });
         }
-      } else {
-        addResult({ success: false, message: "Modelo retornado é null" });
+      } catch (loadError) {
+        addResult({
+          success: false,
+          message: `Erro específico no carregamento do modelo ${modelId}`,
+          details: {
+            error:
+              loadError instanceof Error
+                ? loadError.message
+                : String(loadError),
+            stack: loadError instanceof Error ? loadError.stack : undefined,
+            modelId,
+            task,
+          },
+        });
       }
     } catch (error) {
       addResult({
         success: false,
-        message: "Erro no carregamento do modelo pequeno",
-        details: error instanceof Error ? error.message : String(error),
+        message: "Erro geral no carregamento do modelo pequeno",
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
       });
     }
   };
@@ -133,139 +259,204 @@ export const ModelLoadingTest: React.FC = () => {
     try {
       addResult({
         success: true,
-        message: "Testando carregamento do modelo target (Phi-3.5)...",
+        message:
+          "Testando carregamento de modelos ultra-pequenos para navegador...",
       });
 
-      // DIFERENÇAS ENTRE MODELOS:
-      // - Xenova: Modelos plug-and-play, funcionam com configuração padrão
-      // - onnx-community: Requerem configurações específicas:
-      //   * use_external_data_format: true (obrigatório)
-      //   * dtype: "q4f16" (específico para cada modelo)
-      //   * device: "webgpu" (recomendado para performance)
+      // Lista de modelos ultra-pequenos que funcionam no navegador
+      const tinyModels = [
+        {
+          id: "Xenova/llama2.c-stories15M",
+          size: "~15MB",
+          description: "Llama2.c Stories (ultra pequeno)",
+          config: {
+            dtype: "fp32" as const,
+            device: "wasm" as const,
+            use_external_data_format: false,
+          },
+        },
+        {
+          id: "Xenova/distilgpt2",
+          size: "~353MB",
+          description: "DistilGPT-2 otimizado",
+          config: {
+            dtype: "fp32" as const,
+            device: "wasm" as const,
+            use_external_data_format: false,
+          },
+        },
+        {
+          id: "Xenova/gpt2",
+          size: "~548MB",
+          description: "GPT-2 base (médio)",
+          config: {
+            dtype: "fp32" as const,
+            device: "wasm" as const,
+            use_external_data_format: true,
+          },
+        },
+        {
+          id: "Xenova/TinyLlama-1.1B-Chat-v1.0",
+          size: "~1.1B",
+          description: "TinyLlama Chat (grande)",
+          config: {
+            dtype: "fp32" as const,
+            device: "wasm" as const,
+            use_external_data_format: true,
+          },
+        },
+      ];
 
-      // Test primary ONNX-community model com abordagem simplificada (conforme docs HF)
-      const primaryModelId = "onnx-community/Phi-3.5-mini-instruct-onnx-web";
-      const task = "text-generation";
-
-      addResult({
-        success: true,
-        message: `🚀 Testando abordagem SIMPLIFICADA (conforme docs HF): ${primaryModelId}`,
-      });
-
-      try {
-        // Usar abordagem exata da documentação HuggingFace - SEM configurações extras
-        const { pipeline } = await import("@huggingface/transformers");
-
-        addResult({
-          success: true,
-          message: "📦 Importação do transformers.js concluída",
-        });
-
-        // Create pipeline exactly as shown in HF docs
-        const generator = await pipeline("text-generation", primaryModelId);
-
-        addResult({
-          success: true,
-          message: "✅ Modelo carregado com sucesso (abordagem HF docs)!",
-        });
-
-        // Test message exactly as in docs
-        const messages = [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user", content: "Say hello in one word." },
-        ];
-
-        addResult({
-          success: true,
-          message: "🧪 Testando geração de texto...",
-        });
-
-        const output = await generator(messages, {
-          max_new_tokens: 10,
-          do_sample: false,
-        });
-
-        addResult({
-          success: true,
-          message: `🎉 Teste SUCESSO! Resposta: ${JSON.stringify(
-            output
-          ).substring(0, 100)}...`,
-        });
-
-        return;
-      } catch (primaryError) {
-        console.error("Primary model failed:", primaryError);
-        addResult({
-          success: false,
-          message: `❌ Abordagem simplificada falhou: ${
-            primaryError instanceof Error
-              ? primaryError.message
-              : String(primaryError)
-          }`,
-        });
-      }
-
-      // Se falhar, tentar com configuração manual
-      addResult({
-        success: true,
-        message: "🔄 Tentando com configuração manual...",
-      });
-
-      try {
-        const model = await loadModelWithOptimalConfig(primaryModelId, task, {
-          dtype: "q4f16",
-          device: "webgpu",
-          use_external_data_format: true,
-          revision: "main",
-        });
-
-        if (model) {
+      for (const modelInfo of tinyModels) {
+        try {
           addResult({
             success: true,
-            message: "✅ Modelo carregado com configuração manual!",
-          });
-
-          const testMessages = [
-            { role: "system", content: "You are a helpful assistant." },
-            { role: "user", content: "Hello" },
-          ];
-
-          const result = await model(testMessages, {
-            max_new_tokens: 5,
-            do_sample: false,
+            message: `🧪 Testando ${modelInfo.id} (${modelInfo.size}) - ${modelInfo.description}`,
           });
 
           addResult({
             success: true,
-            message: `🎉 Teste com config manual SUCESSO! ${
-              result[0]?.generated_text || "Resposta gerada"
-            }`,
+            message: `📦 Importando transformers.js...`,
           });
 
+          const { pipeline } = await import("@huggingface/transformers");
+
+          addResult({
+            success: true,
+            message: `✅ Transformers.js importado com sucesso`,
+          });
+
+          // Para modelos de texto, usar text-generation
+          const task = modelInfo.id.includes("distilbert")
+            ? "feature-extraction"
+            : "text-generation";
+
+          addResult({
+            success: true,
+            message: `📦 Criando pipeline ${task} para ${modelInfo.id}...`,
+          });
+
+          // Usar configuração específica para cada modelo
+          const generator = await pipeline(task, modelInfo.id, {
+            ...modelInfo.config,
+            local_files_only: false, // Permitir download
+            progress_callback: (data: any) => {
+              if (data.status === "downloading") {
+                addResult({
+                  success: true,
+                  message: `📥 Baixando: ${
+                    data.name || data.file
+                  } - ${Math.round(data.progress || 0)}%`,
+                });
+              }
+            },
+          } as any);
+
+          addResult({
+            success: true,
+            message: `✅ ${modelInfo.id} carregado com sucesso!`,
+            details: {
+              modelType: typeof generator,
+              task: task,
+              modelInfo: generator.constructor?.name || "Unknown",
+              config: modelInfo.config,
+            },
+          });
+
+          // Teste básico dependendo do tipo de modelo
+          if (task === "text-generation") {
+            addResult({
+              success: true,
+              message: `🧪 Testando geração de texto...`,
+            });
+
+            const testOutput = await generator("Hello world", {
+              max_new_tokens: 5,
+              do_sample: false,
+            });
+
+            addResult({
+              success: true,
+              message: `🎉 Geração funcionou! ${modelInfo.id}: ${JSON.stringify(
+                testOutput
+              ).substring(0, 80)}...`,
+              details: {
+                fullOutput: testOutput,
+                outputType: typeof testOutput,
+                outputLength: Array.isArray(testOutput) ? testOutput.length : 1,
+              },
+            });
+          } else {
+            // Para feature-extraction, apenas testar se carrega
+            addResult({
+              success: true,
+              message: `✅ ${modelInfo.id} pronto para feature extraction!`,
+              details: {
+                task: task,
+                ready: true,
+              },
+            });
+          }
+
+          // Parar no primeiro modelo que funcionar
+          addResult({
+            success: true,
+            message: `🎯 SUCESSO! Modelo ${modelInfo.id} está funcionando perfeitamente no navegador!`,
+          });
           return;
+        } catch (modelError) {
+          addResult({
+            success: false,
+            message: `❌ ${modelInfo.id} falhou: ${
+              modelError instanceof Error
+                ? modelError.message
+                : String(modelError)
+            }`,
+            details: {
+              error:
+                modelError instanceof Error
+                  ? modelError.message
+                  : String(modelError),
+              stack: modelError instanceof Error ? modelError.stack : undefined,
+              modelId: modelInfo.id,
+              modelSize: modelInfo.size,
+              config: modelInfo.config,
+            },
+          });
+
+          // Continuar para o próximo modelo
+          continue;
         }
-      } catch (manualError) {
-        console.error("Manual config failed:", manualError);
-        addResult({
-          success: false,
-          message: `❌ Configuração manual falhou: ${
-            manualError instanceof Error
-              ? manualError.message
-              : String(manualError)
-          }`,
-        });
       }
+
+      // Se chegou aqui, nenhum modelo funcionou
+      addResult({
+        success: false,
+        message:
+          "❌ Nenhum dos modelos ultra-pequenos funcionou. Problema pode ser de configuração do ambiente.",
+        details: {
+          testedModels: tinyModels.map((m) => m.id),
+          suggestions: [
+            "Verifique se o transformers.js está instalado corretamente",
+            "Limpe o cache do navegador",
+            "Verifique a conexão com a internet",
+            "Tente recarregar a página",
+            "Verifique o console do navegador para erros detalhados",
+          ],
+        },
+      });
     } catch (error) {
       addResult({
         success: false,
-        message: "❌ Erro no carregamento do modelo Phi-3.5",
+        message: "❌ Erro geral no teste de modelos pequenos",
         details: {
           error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
           suggestions: [
-            "Verifique sua conexão com a internet",
-            "Confirme se o modelo existe no HuggingFace Hub",
-            "Tente limpar o cache do navegador",
-            "Verifique se há bloqueios de CORS ou firewall",
+            "Problema pode ser na importação do transformers.js",
+            "Verifique se todas as dependências estão instaladas",
+            "Confirme se o ambiente está configurado corretamente",
+            "Verifique se há bloqueios de CORS ou rede",
           ],
         },
       });
@@ -316,6 +507,34 @@ export const ModelLoadingTest: React.FC = () => {
     setResults([]);
   };
 
+  const clearStoredModel = () => {
+    // Limpar qualquer modelo armazenado e forçar o uso do tiny-gpt2
+    const {
+      setOption,
+      getOption,
+      STORAGE_KEYS,
+    } = require("../../services/StorageService");
+
+    const currentModel = getOption(STORAGE_KEYS.HF_MODEL);
+    addResult({
+      success: true,
+      message: `🗑️ Modelo atual no storage: ${currentModel || "nenhum"}`,
+    });
+
+    // Limpar o storage e definir o modelo tiny
+    setOption(STORAGE_KEYS.HF_MODEL, "Xenova/llama2.c-stories15M");
+
+    addResult({
+      success: true,
+      message: `✅ Modelo definido para: Xenova/llama2.c-stories15M`,
+    });
+
+    addResult({
+      success: true,
+      message: `💡 Agora execute o teste novamente para usar o modelo correto`,
+    });
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-white">
@@ -352,7 +571,7 @@ export const ModelLoadingTest: React.FC = () => {
           disabled={isLoading}
           className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
         >
-          🎯 Testar Phi-3.5
+          🧪 Testar Modelos Tiny
         </button>
 
         <button
@@ -360,6 +579,13 @@ export const ModelLoadingTest: React.FC = () => {
           className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
         >
           🗑️ Limpar
+        </button>
+
+        <button
+          onClick={clearStoredModel}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          🗑️ Limpar Modelo Armazenado
         </button>
       </div>
 
@@ -412,11 +638,16 @@ export const ModelLoadingTest: React.FC = () => {
         <p>
           💡 <strong>Dica:</strong> Execute "Testar Ambiente" primeiro, depois
           "Testar Modelo Pequeno" para verificar se tudo funciona antes de
-          tentar o modelo maior.
+          tentar os modelos tiny ultra-compatíveis.
         </p>
         <p>
           🔍 <strong>Debug:</strong> Verifique o console do navegador para logs
           detalhados durante o carregamento.
+        </p>
+        <p>
+          🧪 <strong>Modelos Testados:</strong> Xenova/llama2.c-stories15M
+          (~15MB), Xenova/distilgpt2 (~353MB), Xenova/gpt2 (~548MB),
+          Xenova/TinyLlama-1.1B-Chat-v1.0 (~1.1B)
         </p>
       </div>
     </div>

@@ -83,15 +83,6 @@ export default function App() {
   useEffect(() => {
     const cleanup = initializeQuantumPerformanceOptimizations();
 
-    // Initialize transformers.js environment for better HuggingFace model loading
-    import("./utils/transformersEnvironment")
-      .then(({ initializeTransformersEnvironment }) => {
-        return initializeTransformersEnvironment();
-      })
-      .catch((error) => {
-        console.error("Failed to initialize transformers environment:", error);
-      });
-
     return cleanup;
   }, []);
 

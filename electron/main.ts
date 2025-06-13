@@ -922,9 +922,7 @@ app
   .then(() => {
     // Register protocol handler after app is ready
     protocol.handle("model", (request) => {
-      // request.url === "model://onnx-community/Llama-3.2-3B-Instruct-onnx-web/onnx/model_q4.onnx"
       const url = new URL(request.url);
-      // url.pathname === "/onnx-community/Llama-3.2-3B-Instruct-onnx-web/onnx/model_q4.onnx"
       const relative = url.pathname.replace(/^\/+/, "");
       const filePath = path.join(app.getPath("userData"), "models", relative);
       // devolve um Response que o protocolo entende

@@ -35,6 +35,7 @@ interface ElectronAPI {
     onRepeatResponse: (callback: () => void) => () => void
     onStopTTS: (callback: () => void) => () => void
     setDeepgramLanguage: (lang: string) => void
+    sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
     queryPinecone: (
         embedding: number[],
         topK?: number,

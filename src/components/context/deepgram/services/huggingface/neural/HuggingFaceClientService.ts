@@ -13,11 +13,13 @@ import {
 } from "../../../../../../services/huggingface/HuggingFaceLocalService";
 import { IClientManagementService } from "../../../interfaces/openai/IClientManagementService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
-
 export class HuggingFaceClientService implements IClientManagementService {
   private huggingFaceLocal: HuggingFaceLocalService | null = null;
   private embeddingService: HuggingFaceEmbeddingService | null = null;
   private configuration: Record<string, any> = {};
+  // Guard flags to prevent concurrent/double initialization
+  private initializing = false;
+  private initialized = false;
 
   initializeClient(_apiKey: string): void {
     // dispara a inicialização assíncrona mas não bloqueante
@@ -33,29 +35,7 @@ export class HuggingFaceClientService implements IClientManagementService {
       "🔧 [HFC] Initializing HuggingFace client with optimized configuration..."
     );
 
-    // Configure transformers.js environment first
-    const { env } = await import("@huggingface/transformers");
-    env.allowRemoteModels = true;
-    env.allowLocalModels = false;
-    env.useBrowserCache = true;
-    env.useFSCache = false;
-
-    // Configure WASM backend safely
-    if (env.backends?.onnx?.wasm) {
-      env.backends.onnx.wasm.proxy = false;
-      env.backends.onnx.wasm.wasmPaths =
-        "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
-      env.backends.onnx.wasm.numThreads = Math.min(
-        4,
-        navigator.hardwareConcurrency || 4
-      );
-    }
-
-    // Configure remote host and paths for better reliability
-    env.remoteHost = "https://huggingface.co";
-    env.remotePathTemplate = "{model}/resolve/{revision}/";
-
-    LoggingUtils.logInfo("✅ [HFC] Environment configured successfully");
+    //    await initializeTransformersEnvironment();
 
     // 1) cria o serviço local
     this.huggingFaceLocal = new HuggingFaceLocalService();
@@ -75,49 +55,41 @@ export class HuggingFaceClientService implements IClientManagementService {
       );
     }
 
-    // Try different dtypes in order of preference if q4 fails
-    const dtypes = ["q4", "q4f16", "q8", "fp32"];
-    let loadSuccess = false;
+    // Load model using default configuration - let model-specific configs handle optimization
+    try {
+      LoggingUtils.logInfo(
+        `[HFC] Loading ${textModel} with model-specific configuration...`
+      );
 
-    for (const dtype of dtypes) {
-      try {
-        LoggingUtils.logInfo(
-          `[HFC] Attempting to load ${textModel} with ${dtype} quantization...`
-        );
+      await this.huggingFaceLocal.loadModel({
+        modelId: textModel,
+        device: "wasm", // Use wasm for better compatibility
+        dtype: "fp32", // Use fp32 as default - model-specific configs will take precedence
+      });
 
-        await this.huggingFaceLocal.loadModel({
-          modelId: textModel,
-          device: "auto",
-          dtype: dtype as any,
-        });
+      LoggingUtils.logInfo(
+        `✅ [HFC] Model loaded successfully with optimized configuration`
+      );
+    } catch (err) {
+      LoggingUtils.logError(`❌ [HFC] Failed to load model: ${err}`);
 
-        loadSuccess = true;
-        LoggingUtils.logInfo(
-          `✅ [HFC] Model loaded successfully with ${dtype} quantization`
-        );
-        break;
-      } catch (err) {
-        LoggingUtils.logError(`❌ [HFC] Failed to load with ${dtype}: ${err}`);
-
-        // Log specific error types for debugging
-        if (err instanceof Error) {
-          if (err.message.includes("<!DOCTYPE")) {
-            LoggingUtils.logError(
-              `[HFC] HTML response detected - likely network/CDN issue`
-            );
-          } else if (err.message.includes("CORS")) {
-            LoggingUtils.logError(`[HFC] CORS issue detected`);
-          } else if (err.message.includes("fetch")) {
-            LoggingUtils.logError(`[HFC] Network fetch issue detected`);
-          }
+      // Log specific error types for debugging
+      if (err instanceof Error) {
+        if (err.message.includes("<!DOCTYPE")) {
+          LoggingUtils.logError(
+            `[HFC] HTML response detected - likely network/CDN issue`
+          );
+        } else if (err.message.includes("CORS")) {
+          LoggingUtils.logError(`[HFC] CORS issue detected`);
+        } else if (err.message.includes("fetch")) {
+          LoggingUtils.logError(`[HFC] Network fetch issue detected`);
         }
-        continue;
       }
-    }
 
-    if (!loadSuccess) {
       throw new Error(
-        `Failed to load model ${textModel} with any supported quantization`
+        `Failed to load model ${textModel}: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
       );
     }
 
@@ -146,21 +118,33 @@ export class HuggingFaceClientService implements IClientManagementService {
   }
 
   async ensureClient(): Promise<boolean> {
-    if (this.isInitialized()) return true;
+    if (this.initialized) return true;
+    if (this.initializing) {
+      // Wait until current initialization finishes
+      while (this.initializing) {
+        await new Promise((res) => setTimeout(res, 100));
+      }
+      return this.initialized;
+    }
+
+    this.initializing = true;
     try {
       await this.loadConfiguration();
       await this.initializeHuggingFaceClient(this.configuration);
-      return this.isInitialized();
+      this.initialized = true;
+      return true;
     } catch (err) {
       LoggingUtils.logError(
         `❌ [HFC] Failed to ensure HuggingFace client: ${err}`
       );
       return false;
+    } finally {
+      this.initializing = false;
     }
   }
 
   isInitialized(): boolean {
-    return !!this.huggingFaceLocal && !!this.embeddingService;
+    return this.initialized;
   }
 
   getClient(): HuggingFaceLocalService {
