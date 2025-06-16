@@ -32,8 +32,30 @@ export function parseNeuralSignal(json: string): NeuralSignal | undefined {
 }
 
 /**
- * Extracts all JSON-like objects from a string (for multiple signals in one output).
+ * Extracts all JSON-like objects (or JSON code blocks) from a string.
+ * Accepts objects that appear anywhere in the text, including inside ```json``` blocks.
  */
 export function extractNeuralSignalJsons(text: string): string[] {
-  return text.match(/\{[\s\S]*?\}(?=\s*$)/g) || [];
+  const matches: string[] = [];
+
+  if (!text || typeof text !== 'string') return matches;
+
+  // 1. Capture fenced ```json``` blocks
+  const codeBlockRegex = /```(?:json)?[\s\n]*([\s\S]*?)```/gi;
+  let codeMatch: RegExpExecArray | null;
+  while ((codeMatch = codeBlockRegex.exec(text)) !== null) {
+    if (codeMatch[1]) {
+      matches.push(codeMatch[1].trim());
+    }
+  }
+
+  // 2. Capture standalone JSON objects { ... } that may appear outside blocks
+  //    This regex is intentionally simple; deeper validation is performed during JSON.parse.
+  const objectRegex = /\{[^\{\}]*\}/g;
+  const objectMatches = text.match(objectRegex);
+  if (objectMatches) {
+    matches.push(...objectMatches.map((m) => m.trim()));
+  }
+
+  return matches;
 }

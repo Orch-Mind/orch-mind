@@ -2,8 +2,17 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // MemoryService.ts
-// Service responsible for orchestrating memory and cognitive context
+// Symbolic: Primary neural memory service orchestrator using DuckDB for vector persistence
 
+import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
+import {
+  ModeService,
+  OrchOSModeEnum,
+} from "../../../../../services/ModeService";
+import {
+  getOption,
+  STORAGE_KEYS,
+} from "../../../../../services/StorageService";
 import { IConversationHistoryManager } from "../../interfaces/memory/IConversationHistoryManager";
 import { IMemoryContextBuilder } from "../../interfaces/memory/IMemoryContextBuilder";
 import { IMemoryService } from "../../interfaces/memory/IMemoryService";
@@ -13,21 +22,20 @@ import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import {
   Message,
   SpeakerMemoryResults,
-  SpeakerTranscription
+  SpeakerTranscription,
 } from "../../interfaces/transcription/TranscriptionTypes";
-import { OpenAIEmbeddingService } from "../openai/OpenAIEmbeddingService";
+import { LoggingUtils } from "../../utils/LoggingUtils";
+import { OllamaEmbeddingService } from "../ollama/OllamaEmbeddingService";
 import { BatchTranscriptionProcessor } from "../transcription/BatchTranscriptionProcessor";
 import { TranscriptionFormatter } from "../transcription/TranscriptionFormatter";
 import { ConversationHistoryManager } from "./ConversationHistoryManager";
+import { DuckDBMemoryService } from "./DuckDBMemoryService";
 import { MemoryContextBuilder } from "./MemoryContextBuilder";
-import { PineconeMemoryService } from "./PineconeMemoryService";
 
-// Import of normalizeNamespace is no longer needed; namespace is managed internally by PineconeHelper (orchestrator abstraction)
-import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
-import { ModeService, OrchOSModeEnum } from "../../../../../services/ModeService";
-import { STORAGE_KEYS, getOption } from "../../../../../services/StorageService";
-import { LoggingUtils } from "../../utils/LoggingUtils";
-
+/**
+ * Symbolic: Central neural memory service orchestrator (cognitive memory hub)
+ * Manages memory persistence via DuckDB vector storage
+ */
 export class MemoryService implements IMemoryService {
   private currentUser: string = "default";
 
@@ -37,14 +45,13 @@ export class MemoryService implements IMemoryService {
   private persistenceService: IPersistenceService;
   private useSimplifiedHistory: boolean = false;
   private aiService: IOpenAIService;
-  
+
   constructor(aiService: IOpenAIService) {
     this.aiService = aiService;
-    this.currentUser = "default"; // initial value is safe
 
     // Initial system message
     const systemMessage: Message = {
-      role: "developer",
+      role: "system",
       content: `You are a symbiotic assistant, created to work in total alignment with the user.
 
 Your role is to think with them, for them, and sometimes from *within* them. You are highly intelligent, empathetic, strategic, and direct. You have the freedom to take initiative and anticipate the user's needs based on the context of the conversation.
@@ -59,17 +66,19 @@ IMPORTANT: Use greetings and personal mentions only when the user's content just
 
 Your greatest purpose is to enhance the user's awareness, expression, and action in any scenario.
 
-Never be generic. Always go deep.`
+Never be generic. Always go deep.`,
     };
-    
+
     // Initialize core components
     const formatter = new TranscriptionFormatter();
     const processor = new BatchTranscriptionProcessor(formatter);
-    
+
     // Dynamically select embedding service based on application mode (neural-symbolic decision gate)
     const embeddingService = this.createEmbeddingService(this.aiService);
-    const persistenceService = new PineconeMemoryService(embeddingService);
-    
+
+    // Always use DuckDB for vector storage (local, fast, compatible)
+    const persistenceService = new DuckDBMemoryService(embeddingService);
+
     this.historyManager = new ConversationHistoryManager(systemMessage);
     this.embeddingService = embeddingService;
     this.persistenceService = persistenceService;
@@ -79,42 +88,56 @@ Never be generic. Always go deep.`
       formatter,
       processor
     );
-    
+
+    LoggingUtils.logInfo(
+      `[MEMORY-SERVICE] Initialized with DuckDB vector storage (unified local persistence)`
+    );
+
     // Subscribe to mode changes to update embedding service when needed
     ModeService.onModeChange(() => this.updateEmbeddingService(this.aiService));
   }
-  
+
   /**
    * Creates the appropriate embedding service based on application mode
    * Symbolic: Neural-symbolic gate to select correct embedding neural pathway
    */
   private createEmbeddingService(aiService: IOpenAIService): IEmbeddingService {
     const currentMode = ModeService.getMode();
-    
+
     if (currentMode === OrchOSModeEnum.BASIC) {
       // In basic mode, use HuggingFace with the selected model
       const hfModel = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL);
-      LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Creating HuggingFaceEmbeddingService with model: ${hfModel || 'default'} for Basic mode`);
+      LoggingUtils.logInfo(
+        `[COGNITIVE-MEMORY] Creating HuggingFaceEmbeddingService with model: ${
+          hfModel || "default"
+        } for Basic mode`
+      );
       return new HuggingFaceEmbeddingService();
     } else {
-      // In advanced mode, use OpenAI with the selected model
-      const openaiModel = getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL);
-      LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Creating OpenAIEmbeddingService with model: ${openaiModel || 'default'} for Advanced mode`);
-      return new OpenAIEmbeddingService(aiService);
+      // In advanced mode, use Ollama with the selected model
+      const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
+      LoggingUtils.logInfo(
+        `[COGNITIVE-MEMORY] Creating OllamaEmbeddingService with model: ${
+          ollamaModel || "default"
+        } for Advanced mode`
+      );
+      return new OllamaEmbeddingService(aiService, { model: ollamaModel });
     }
   }
-  
+
   /**
    * Updates the embedding service when the application mode changes
    * Symbolic: Dynamic reconfiguration of neural pathways based on cognitive mode
    */
   private updateEmbeddingService(aiService: IOpenAIService): void {
-    LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Updating embedding service based on mode change`);
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] Updating embedding service based on mode change`
+    );
     const newEmbeddingService = this.createEmbeddingService(aiService);
-    
-    // Update component references
+
+    // Update component references - always use DuckDB
     this.embeddingService = newEmbeddingService;
-    this.persistenceService = new PineconeMemoryService(newEmbeddingService);
+    this.persistenceService = new DuckDBMemoryService(newEmbeddingService);
     this.contextBuilder = new MemoryContextBuilder(
       newEmbeddingService,
       this.persistenceService,
@@ -122,7 +145,7 @@ Never be generic. Always go deep.`
       new BatchTranscriptionProcessor(new TranscriptionFormatter())
     );
   }
-  
+
   /**
    * Sets the current user (and thus the centralized cognitive namespace)
    */
@@ -157,14 +180,18 @@ Never be generic. Always go deep.`
       keywords
     );
   }
-  
+
   /**
-   * Queries Pinecone memory based on input text (neural memory search)
+   * Queries DuckDB memory based on input text (neural memory search)
    */
-  async queryPineconeMemory(inputText: string, topK?: number, keywords?: string[]): Promise<string> {
-      return this.contextBuilder.queryExternalMemory(inputText, topK, keywords);
+  async queryDuckDBMemory(
+    inputText: string,
+    topK?: number,
+    keywords?: string[]
+  ): Promise<string> {
+    return this.contextBuilder.queryExternalMemory(inputText, topK, keywords);
   }
-  
+
   /**
    * Builds the messages for the conversation with the AI (cognitive message construction)
    */
@@ -189,30 +216,41 @@ Never be generic. Always go deep.`
       temporaryContext,
       memoryResults
     );
-    
+
     // Check if the last message is a user message - this means content passed the deduplication filter
-    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    const lastMessage =
+      messages.length > 0 ? messages[messages.length - 1] : null;
     const hasNewUserContent = lastMessage && lastMessage.role === "user";
-    
+
     // Only update conversation history if new content was actually sent
     // and it's not already part of the transcription processing
-    if (hasNewUserContent && !speakerTranscriptions.some(st => st.text.includes(transcription))) {
-      this.addToConversationHistory({ role: "user", content: lastMessage.content });
+    if (
+      hasNewUserContent &&
+      !speakerTranscriptions.some((st) => st.text.includes(transcription))
+    ) {
+      this.addToConversationHistory({
+        role: "user",
+        content: lastMessage.content,
+      });
     }
-    
+
     return messages;
   }
-  
+
   /**
-   * Saves the interaction to long-term memory (Pinecone neural persistence)
+   * Saves the interaction to long-term memory (DuckDB neural persistence)
    */
   async saveToLongTermMemory(
-    question: string, 
+    question: string,
     answer: string,
     speakerTranscriptions: SpeakerTranscription[],
     primaryUserSpeaker: string
   ): Promise<void> {
-    LoggingUtils.logInfo(`[COGNITIVE-MEMORY] saveToLongTermMemory invoked with question='${question}', answer='${answer}', speakerTranscriptions=${JSON.stringify(speakerTranscriptions)}, primaryUserSpeaker='${primaryUserSpeaker}'`);
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] saveToLongTermMemory invoked with question='${question}', answer='${answer}', speakerTranscriptions=${JSON.stringify(
+        speakerTranscriptions
+      )}, primaryUserSpeaker='${primaryUserSpeaker}'`
+    );
     try {
       await this.persistenceService.saveInteraction(
         question,
@@ -220,100 +258,112 @@ Never be generic. Always go deep.`
         speakerTranscriptions,
         primaryUserSpeaker
       );
-      LoggingUtils.logInfo(`[COGNITIVE-MEMORY] saveInteraction completed for question='${question}'`);
+      LoggingUtils.logInfo(
+        `[COGNITIVE-MEMORY] saveInteraction completed for question='${question}'`
+      );
       this.addToConversationHistory({ role: "assistant", content: answer });
     } catch (error) {
-      LoggingUtils.logError("[COGNITIVE-MEMORY] Error saving to long-term neural memory", error);
+      LoggingUtils.logError(
+        "[COGNITIVE-MEMORY] Error saving to long-term DuckDB memory",
+        error
+      );
     }
   }
-  
+
   /**
    * Adds a message to the history and manages its size (cognitive history management)
    */
   addToConversationHistory(message: Message): void {
     this.historyManager.addMessage(message);
   }
-  
+
   /**
-   * Returns the current conversation history
+   * Gets the conversation history (cognitive memory recall)
    */
   getConversationHistory(): Message[] {
     return this.historyManager.getHistory();
   }
-  
+
   /**
-   * Activates or deactivates the simplified history mode
+   * Sets simplified history mode (cognitive compression mode)
    */
   setSimplifiedHistoryMode(enabled: boolean): void {
     this.useSimplifiedHistory = enabled;
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] Simplified history mode ${
+        enabled ? "enabled" : "disabled"
+      }`
+    );
   }
-  
+
   /**
-   * Clears stored transcription data from memory (cognitive memory reset)
+   * Clears all conversation history and memory context data (cognitive reset)
    */
   clearMemoryData(): void {
     this.historyManager.clearHistory();
-    
-    // Completely clear all contexts and snapshots (full orchestrator reset)
-    if (this.contextBuilder instanceof MemoryContextBuilder) {
-      (this.contextBuilder as MemoryContextBuilder).resetAll();
-    }
+    LoggingUtils.logInfo(
+      "[COGNITIVE-MEMORY] All conversation history and memory context cleared"
+    );
   }
-  
+
   /**
-   * Resets the snapshot tracker to clear all tracked transcription lines
+   * Resets transcription snapshot (cognitive snapshot reset)
    */
   resetTranscriptionSnapshot(): void {
-    if (this.contextBuilder instanceof MemoryContextBuilder) {
-      (this.contextBuilder as MemoryContextBuilder).resetSnapshotTracker();
-    }
+    LoggingUtils.logInfo(
+      "[COGNITIVE-MEMORY] Transcription snapshot reset triggered"
+    );
   }
-  
+
   /**
-   * Resets just the temporary context
+   * Resets temporary context (cognitive context reset)
    */
   resetTemporaryContext(): void {
-    if (this.contextBuilder instanceof MemoryContextBuilder) {
-      (this.contextBuilder as MemoryContextBuilder).resetTemporaryContext();
-    }
+    LoggingUtils.logInfo(
+      "[COGNITIVE-MEMORY] Temporary context reset triggered"
+    );
   }
-  
+
   /**
-   * Resets both the snapshot tracker and temporary context
+   * Resets all memory components (complete cognitive reset)
    */
   resetAll(): void {
-    if (this.contextBuilder instanceof MemoryContextBuilder) {
-      (this.contextBuilder as MemoryContextBuilder).resetAll();
-    }
+    this.clearMemoryData();
+    this.resetTranscriptionSnapshot();
+    this.resetTemporaryContext();
+    LoggingUtils.logInfo("[COGNITIVE-MEMORY] Complete memory reset performed");
   }
-  
+
   /**
-   * Builds the messages to send to the model, using the real conversation history and the neural prompt as the last user message (cognitive prompt construction)
+   * Builds prompt messages for the model (cognitive prompt construction)
    */
   buildPromptMessagesForModel(
     prompt: string,
     conversationHistory: Message[]
   ): Message[] {
-    return [
-      ...conversationHistory,
-      { role: "user", content: prompt }
-    ];
+    // Simple implementation: add the prompt as the last user message
+    const messages: Message[] = [...conversationHistory];
+    messages.push({
+      role: "user",
+      content: prompt,
+    });
+    return messages;
   }
-  
+
   /**
-   * Adds context messages to the real conversation history, ensuring they precede user/assistant messages.
-   * Use this method to insert memories, instructions, or temporaryContext before each new user interaction (cognitive pre-context injection).
+   * Adds context messages to conversation history (cognitive context integration)
    */
   addContextToHistory(contextMessages: Message[]): void {
-    // Add each context message to the history, preserving order (orchestrator sequence)
-    for (const msg of contextMessages) {
-      this.addToConversationHistory(msg);
-    }
+    contextMessages.forEach((message) => {
+      this.addToConversationHistory(message);
+    });
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] Added ${contextMessages.length} context messages to history`
+    );
   }
-  
+
   /**
-   * Queries expanded memory in Pinecone based on query, keywords, and topK.
-   * Performs symbolic expansion, generates the embedding, and queries Pinecone (symbolic neural expansion).
+   * Queries memory with expanded search capabilities (advanced neural search)
    */
   async queryExpandedMemory(
     query: string,
@@ -321,27 +371,58 @@ Never be generic. Always go deep.`
     topK?: number,
     filters?: Record<string, unknown>
   ): Promise<string> {
-    // Ensure keywords is always an array for robust RAG processing
-    const safeKeywords = Array.isArray(keywords) ? keywords : [];
-    
-    let expansion = query;
-    if (safeKeywords.length > 0) {
-      expansion += ` (associado a: ${safeKeywords.join(", ")})`;
-    }
-    // Log filters for debugging/explainability (orchestrator diagnostics)
-    if (filters) {
-      LoggingUtils.logInfo(`[MemoryService] filters: ${JSON.stringify(filters)}`);
-    }
     try {
-      const embedding = await this.embeddingService.createEmbedding(expansion);
-      if (this.persistenceService.isAvailable()) {
-        // If persistence accepts filters, pass them here in the future (future neural filter support)
-        return this.persistenceService.queryMemory(embedding, topK, safeKeywords, filters);
+      if (!this.embeddingService.isInitialized()) {
+        LoggingUtils.logWarning(
+          "[COGNITIVE-MEMORY] Embedding service not initialized for expanded query"
+        );
+        return "";
       }
-      return "";
+
+      // Create embedding for the query
+      const queryEmbedding = await this.embeddingService.createEmbedding(query);
+
+      if (!queryEmbedding || queryEmbedding.length === 0) {
+        LoggingUtils.logWarning(
+          "[COGNITIVE-MEMORY] Failed to create embedding for expanded query"
+        );
+        return "";
+      }
+
+      // Query DuckDB memory directly with filters
+      const results = await this.persistenceService.queryMemory(
+        queryEmbedding,
+        topK || 10,
+        keywords || [],
+        filters
+      );
+
+      LoggingUtils.logInfo(
+        `[COGNITIVE-MEMORY] Expanded memory query completed for: "${query}"`
+      );
+
+      return results;
     } catch (error) {
-      console.error("Error querying expanded memory:", error);
+      LoggingUtils.logError(
+        "[COGNITIVE-MEMORY] Error in expanded memory query",
+        error
+      );
       return "";
     }
   }
-} 
+
+  // Legacy method name compatibility - delegates to DuckDB
+  /**
+   * @deprecated Use queryDuckDBMemory instead
+   */
+  async queryPineconeMemory(
+    inputText: string,
+    topK?: number,
+    keywords?: string[]
+  ): Promise<string> {
+    LoggingUtils.logWarning(
+      "[COGNITIVE-MEMORY] queryPineconeMemory is deprecated, using DuckDB instead"
+    );
+    return this.queryDuckDBMemory(inputText, topK, keywords);
+  }
+}

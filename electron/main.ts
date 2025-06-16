@@ -14,14 +14,17 @@ import {
 } from "electron";
 import path, { join } from "path";
 import { IOpenAIService } from "../src/components/context/deepgram/interfaces/openai/IOpenAIService";
+import { HuggingFaceCompletionService } from "../src/components/context/deepgram/services/huggingface/HuggingFaceCompletionService";
 import { HuggingFaceServiceFacade } from "../src/components/context/deepgram/services/huggingface/HuggingFaceServiceFacade";
-import { OpenAIServiceFacade } from "../src/components/context/deepgram/services/openai/OpenAIServiceFacade";
+import { HuggingFaceClientService } from "../src/components/context/deepgram/services/huggingface/neural/HuggingFaceClientService";
+import { OllamaServiceFacade } from "../src/components/context/deepgram/services/ollama/OllamaServiceFacade";
 import { getOption, STORAGE_KEYS } from "../src/services/StorageService";
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { initializeIpcHandlers } from "./ipcHandlers";
-import { PineconeHelper } from "./PineconeHelper";
+
 import { ShortcutsHelper } from "./shortcuts";
+import VllmManager from "./VllmManager";
 
 dotenv.config();
 
@@ -59,10 +62,10 @@ const state = {
 
   // Application helpers
   shortcutsHelper: null as ShortcutsHelper | null,
-  pineconeHelper: null as PineconeHelper | null,
   duckDBHelper: null as DuckDBHelper | null,
   openAIService: null as IOpenAIService | null,
   huggingFaceService: null as HuggingFaceServiceFacade | null,
+  vllmManager: null as VllmManager | null,
 
   // Processing events
   PROCESSING_EVENTS: {
@@ -95,23 +98,24 @@ export interface IShortcutsHelperDeps {
 export interface IIpcHandlerDeps {
   getMainWindow: () => BrowserWindow | null;
   setWindowDimensions: (width: number, height: number) => void;
-  pineconeHelper: PineconeHelper | null;
   duckDBHelper: DuckDBHelper | null;
   PROCESSING_EVENTS: typeof state.PROCESSING_EVENTS;
   toggleMainWindow: () => void;
   openAIService: IOpenAIService | null;
+  vllmManager: VllmManager | null;
 }
 
 // Initialize helpers
 function initializeHelpers() {
+  // Initialize vLLM manager (using singleton pattern)
+  state.vllmManager = VllmManager.getInstance();
   state.shortcutsHelper = new ShortcutsHelper({
     getMainWindow,
     isVisible: () => state.isWindowVisible,
     toggleMainWindow,
   });
 
-  // Initialize memory services (Pinecone for cloud, DuckDB for local)
-  state.pineconeHelper = new PineconeHelper();
+  // Initialize memory services (DuckDB for local storage)
 
   // Initialize DuckDB with custom path if configured
   try {
@@ -136,8 +140,15 @@ function initializeHelpers() {
   }
 
   // Initialize both services
-  const openAIServiceFacade = new OpenAIServiceFacade();
-  const huggingFaceServiceFacade = new HuggingFaceServiceFacade();
+  const ollamaServiceFacade = new OllamaServiceFacade();
+
+  // Create the required dependencies for HuggingFaceServiceFacade
+  const clientService = new HuggingFaceClientService();
+  const completionService = new HuggingFaceCompletionService(clientService);
+  const huggingFaceServiceFacade = new HuggingFaceServiceFacade(
+    completionService
+  );
+
   state.huggingFaceService = huggingFaceServiceFacade;
 
   // Set the appropriate service based on application mode
@@ -146,8 +157,8 @@ function initializeHelpers() {
     state.openAIService = huggingFaceServiceFacade;
     console.log("🧠 [MAIN] Using HuggingFaceServiceFacade (Basic mode)");
   } else {
-    state.openAIService = openAIServiceFacade;
-    console.log("🧠 [MAIN] Using OpenAIServiceFacade (Advanced mode)");
+    state.openAIService = ollamaServiceFacade;
+    console.log("🦙 [MAIN] Using OllamaServiceFacade (Advanced mode)");
   }
 }
 
@@ -729,13 +740,13 @@ async function initializeApp() {
     console.log("✅ Helpers initialized");
 
     initializeIpcHandlers({
-      getMainWindow,
+      getMainWindow: () => state.mainWindow,
       setWindowDimensions,
-      pineconeHelper: state.pineconeHelper,
       duckDBHelper: state.duckDBHelper,
       PROCESSING_EVENTS: state.PROCESSING_EVENTS,
       toggleMainWindow,
       openAIService: state.openAIService,
+      vllmManager: state.vllmManager,
     });
     console.log("✅ IPC handlers initialized");
 
@@ -891,10 +902,6 @@ function getMainWindow(): BrowserWindow | null {
   return state.mainWindow;
 }
 
-function getPineconeHelper(): PineconeHelper | null {
-  return state.pineconeHelper;
-}
-
 function getDuckDBHelper(): DuckDBHelper | null {
   return state.duckDBHelper;
 }
@@ -903,7 +910,6 @@ export {
   createWindow,
   getDuckDBHelper,
   getMainWindow,
-  getPineconeHelper,
   handleAuthCallback,
   hideMainWindow,
   setWindowDimensions,

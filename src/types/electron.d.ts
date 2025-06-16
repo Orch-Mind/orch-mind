@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { DuckDBMatch } from "../../electron/DuckDBHelper";
+import { DuckDBMatch } from "../../electron/vector-database/interfaces/IVectorDatabase";
+import type { VllmStatus } from "../../electron/preload/interfaces/IElectronAPI";
 
 export interface ElectronAPI {
   // Core window methods
@@ -51,7 +52,10 @@ export interface ElectronAPI {
   setDeepgramLanguage: (lang: string) => void;
 
   // 📝 Method to send prompt updates directly
-  sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => void;
+  sendPromptUpdate: (
+    type: "partial" | "complete" | "error",
+    content: string
+  ) => void;
 
   // Pinecone IPC methods
   queryPinecone: (
@@ -113,6 +117,75 @@ export interface ElectronAPI {
     imported?: number;
     skipped?: number;
   }>;
+
+  // VLLM APIs
+  vllm?: {
+    modelStatus: () => Promise<{
+      success: boolean;
+      status?: VllmStatus;
+      error?: string;
+    }>;
+    startModel: (
+      modelId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+    generate: (
+      payload: any
+    ) => Promise<{ success: boolean; data?: any; error?: string }>;
+    stopModel: () => Promise<{ success: boolean; error?: string }>;
+    downloadModelOnly: (
+      modelId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+  };
+
+  // Ollama APIs
+  ollama?: {
+    listModels: () => Promise<
+      Array<{ name: string; id: string; size?: string }>
+    >;
+    pullModel: (
+      modelId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+    deleteModel: (
+      modelId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+    generate: (options: {
+      model: string;
+      prompt: string;
+      stream?: boolean;
+      temperature?: number;
+      max_tokens?: number;
+    }) => Promise<{ success: boolean; response?: string; error?: string }>;
+    chat: (options: {
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      stream?: boolean;
+      temperature?: number;
+      max_tokens?: number;
+    }) => Promise<{ success: boolean; response?: string; error?: string }>;
+    embeddings: (options: {
+      model: string;
+      prompt: string;
+    }) => Promise<{ success: boolean; embedding?: number[]; error?: string }>;
+    isRunning: () => Promise<{
+      success: boolean;
+      running?: boolean;
+      error?: string;
+    }>;
+  };
+
+  // Legacy VLLM methods (deprecated, use vllm.* instead)
+  vllmModelStatus: () => Promise<{
+    success: boolean;
+    status?: VllmStatus;
+    error?: string;
+  }>;
+  vllmStartModel: (
+    modelId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  vllmGenerate: (
+    payload: any
+  ) => Promise<{ success: boolean; data?: any; error?: string }>;
+  vllmStopModel: () => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

@@ -5,19 +5,24 @@
 // Symbolic: Processamento de completions e function calling com HuggingFace local
 
 import {
+  getOption,
+  STORAGE_KEYS,
+} from "../../../../../services/StorageService";
+import { toHuggingFaceTools } from "../../../../../utils/hfToolUtils";
+import { IClientManagementService } from "../../interfaces/openai/IClientManagementService";
+import {
   ICompletionService,
   ModelStreamResponse,
 } from "../../interfaces/openai/ICompletionService";
 import { LoggingUtils } from "../../utils/LoggingUtils";
-import { HuggingFaceClientService } from "./neural/HuggingFaceClientService";
-import { toHuggingFaceTools } from "../../../../../utils/hfToolUtils";
+import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
 
 /**
  * Serviço responsável por gerar completions com function calling usando HuggingFace
  * Symbolic: Neurônio especializado em processamento de texto local e chamadas de funções
  */
 export class HuggingFaceCompletionService implements ICompletionService {
-  constructor(private clientService: HuggingFaceClientService) {}
+  constructor(private clientService: IClientManagementService) {}
 
   /**
    * Envia uma requisição ao modelo local HuggingFace com suporte a function calling
@@ -44,7 +49,7 @@ export class HuggingFaceCompletionService implements ICompletionService {
         tool_calls?: Array<{
           function: {
             name: string;
-            arguments: string;
+            arguments: string | Record<string, any>;
           };
         }>;
       };
@@ -60,28 +65,86 @@ export class HuggingFaceCompletionService implements ICompletionService {
         content: m.content,
       }));
 
+      // Detect if the chosen model is a LOCAL vLLM model (desktop Electron)
+      const selectedModel = getOption(STORAGE_KEYS.HF_MODEL) as string | null;
+      const isLocal =
+        !!selectedModel &&
+        //   AVAILABLE_MODELS.some((m) => m.id === selectedModel) &&
+        typeof window !== "undefined" &&
+        (window as any).electronAPI?.vllmGenerate;
+
+      if (isLocal) {
+        // ---------- Local vLLM branch ----------
+        const electronAPI = (window as any).electronAPI;
+        // Wait until model is ready (max 30 seconds)
+        for (let i = 0; i < 30; i++) {
+          const statusRes = await electronAPI.vllmModelStatus();
+          if (statusRes.success && statusRes.status?.state === "ready") break;
+          await new Promise((res) => setTimeout(res, 1000));
+          if (i === 29) {
+            throw new Error("Local model not ready after 30s timeout");
+          }
+        }
+        const payload: any = {
+          model: selectedModel,
+          messages: formattedMessages,
+          temperature: options.temperature ?? 0.7,
+          max_tokens: options.max_tokens ?? 500,
+        };
+        if (options.tools && options.tools.length)
+          payload.tools = options.tools;
+        if (options.tool_choice) payload.tool_choice = options.tool_choice;
+
+        const genRes = await electronAPI.vllmGenerate(payload);
+        if (!genRes.success) {
+          throw new Error(genRes.error || "vLLM generation failed");
+        }
+
+        // Clean think tags from vLLM response
+        const choices = genRes.data?.choices ?? [];
+        const cleanedChoices = choices.map((choice: any) => ({
+          ...choice,
+          message: {
+            ...choice.message,
+            content: choice.message?.content
+              ? cleanThinkTags(choice.message.content)
+              : choice.message?.content,
+          },
+        }));
+
+        return {
+          choices: cleanedChoices,
+        };
+      }
+
+      // ---------- Browser (transformers.js) branch ----------
       const hfTools = toHuggingFaceTools(options.tools);
+      const hfService = (window as any).hfLocalService;
 
-      // Call HuggingFace service with function calling support
-      const response = await this.clientService
-        .getClient()
-        .generateWithFunctions(formattedMessages, hfTools as any, {
-          temperature: options.temperature || 0.7,
-          maxTokens: options.max_tokens || 500,
-        });
+      if (!hfService) {
+        throw new Error("HuggingFace local service not available");
+      }
 
-      // Convert HuggingFace response to expected format
+      const result = await hfService.generateWithFunctions(
+        formattedMessages,
+        hfTools,
+        {
+          temperature: options.temperature,
+          maxTokens: options.max_tokens,
+        }
+      );
+
+      // Clean think tags from browser response
+      const cleanedContent = result.response
+        ? cleanThinkTags(result.response)
+        : result.response;
+
       return {
         choices: [
           {
             message: {
-              content: response.content || undefined,
-              tool_calls: response.tool_calls?.map((toolCall: any) => ({
-                function: {
-                  name: toolCall.function.name,
-                  arguments: toolCall.function.arguments,
-                },
-              })),
+              content: result.tool_calls ? undefined : cleanedContent,
+              tool_calls: result.tool_calls,
             },
           },
         ],
@@ -115,15 +178,18 @@ export class HuggingFaceCompletionService implements ICompletionService {
         content: m.content,
       }));
 
-      // Generate response using HuggingFace service
-      const response = await this.clientService
-        .getClient()
-        .generateResponse(formattedMessages);
+      const hfService = (window as any).hfLocalService;
+      if (!hfService) {
+        throw new Error("HuggingFace local service not available");
+      }
 
-      // Since HuggingFace service doesn't support true streaming yet,
-      // we simulate the streaming response format
+      const response = await hfService.generateResponse(formattedMessages);
+
+      // Clean think tags from streaming response
+      const cleanedResponse = cleanThinkTags(response.response);
+
       return {
-        responseText: response.response,
+        responseText: cleanedResponse,
         messageId: Date.now().toString(),
         isComplete: true,
         isDone: true,

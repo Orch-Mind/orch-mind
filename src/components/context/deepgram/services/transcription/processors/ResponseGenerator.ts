@@ -5,6 +5,7 @@ import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
 import { IOpenAIService } from "../../../interfaces/openai/IOpenAIService";
 import { Message } from "../../../interfaces/transcription/TranscriptionTypes";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
+import { cleanThinkTags } from "../../../utils/ThinkTagCleaner";
 import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
 
 /**
@@ -14,7 +15,7 @@ import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimeli
 export class ResponseGenerator {
   constructor(
     private memoryService: IMemoryService,
-    private openAIService: IOpenAIService
+    private llmService: IOpenAIService
   ) {}
 
   /**
@@ -34,7 +35,7 @@ export class ResponseGenerator {
     }
 
     const conversationHistory = this.memoryService.getConversationHistory();
-    
+
     const messages = this.memoryService.buildPromptMessagesForModel(
       integratedPrompt,
       conversationHistory
@@ -42,8 +43,6 @@ export class ResponseGenerator {
 
     return await this._generate(messages);
   }
-
-
 
   /**
    * Prepare context messages for processing
@@ -66,8 +65,12 @@ export class ResponseGenerator {
    */
   private async _generate(messages: Message[]): Promise<string> {
     try {
-      const response = await this.openAIService.streamOpenAIResponse(messages);
-      return response.responseText;
+      const response = await this.llmService.streamOpenAIResponse(messages);
+
+      // Clean think tags from the final response
+      const cleanedResponse = cleanThinkTags(response.responseText);
+
+      return cleanedResponse;
     } catch (error: any) {
       if (error.message?.includes("does not have access to model")) {
         LoggingUtils.logError(

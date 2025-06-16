@@ -5,19 +5,19 @@
 // Symbolic Intent: Central neuron for controlling Orch-OS operational mode (basic/advanced)
 // Responsibilities: Exposes current mode, persists mode, notifies listeners, enforces symbolic clarity
 // IMPORTANT: Use ModeService.getMode() to determine which AI backend to use in all services:
-// - 'basic': Use HuggingFace (local models, no Deepgram, no Pinecone)
-// - 'advanced': Use OpenAI/ChatGPT, Deepgram, Pinecone, full features
+// - 'basic': Use HuggingFace (local models, no Deepgram, DuckDB storage)
+// - 'advanced': Use Ollama, Deepgram, DuckDB storage, full features
 
-import { getOption, setOption } from './StorageService'; // Use symbolic storage neurons
+import { getOption, setOption } from "./StorageService"; // Use symbolic storage neurons
 
 // Symbolic enum for Orch-OS operational modes
 export enum OrchOSModeEnum {
-  BASIC = 'basic',
-  ADVANCED = 'advanced'
+  BASIC = "basic",
+  ADVANCED = "advanced",
 }
 export type OrchOSMode = OrchOSModeEnum.BASIC | OrchOSModeEnum.ADVANCED;
 
-import { STORAGE_KEYS } from './StorageService';
+import { STORAGE_KEYS } from "./StorageService";
 const MODE_STORAGE_KEY = STORAGE_KEYS.APPLICATION_MODE;
 const DEFAULT_MODE: OrchOSMode = OrchOSModeEnum.ADVANCED;
 
@@ -36,13 +36,18 @@ export class ModeService {
       storedMode = getOption(MODE_STORAGE_KEY) as OrchOSMode | null;
     } catch (e) {
       // StorageService may not be ready; fallback to localStorage
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== "undefined" && window.localStorage) {
         // Fallback to localStorage if storage service is not available
-        storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as OrchOSMode | null;
+        storedMode = window.localStorage.getItem(
+          MODE_STORAGE_KEY
+        ) as OrchOSMode | null;
       }
     }
     // Validate stored mode and update internal state
-    if (storedMode === OrchOSModeEnum.BASIC || storedMode === OrchOSModeEnum.ADVANCED) {
+    if (
+      storedMode === OrchOSModeEnum.BASIC ||
+      storedMode === OrchOSModeEnum.ADVANCED
+    ) {
       this.mode = storedMode;
     }
     this.initialized = true;
@@ -61,11 +66,11 @@ export class ModeService {
       try {
         setOption(MODE_STORAGE_KEY, mode);
       } catch (e) {
-        if (typeof window !== 'undefined' && window.localStorage) {
+        if (typeof window !== "undefined" && window.localStorage) {
           window.localStorage.setItem(MODE_STORAGE_KEY, mode);
         }
       }
-      this.listeners.forEach(listener => listener(mode));
+      this.listeners.forEach((listener) => listener(mode));
     }
   }
 
@@ -74,7 +79,7 @@ export class ModeService {
     this.listeners.push(listener);
     // Return unsubscribe function
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners = this.listeners.filter((l) => l !== listener);
     };
   }
 }

@@ -29,8 +29,10 @@ import {
 } from "./interfaces/deepgram/IDeepgramService";
 import { IOpenAIService } from "./interfaces/openai/IOpenAIService";
 import { DeepgramTranscriptionService } from "./services/DeepgramTranscriptionService";
+import { HuggingFaceCompletionService } from "./services/huggingface/HuggingFaceCompletionService";
 import { HuggingFaceServiceFacade } from "./services/huggingface/HuggingFaceServiceFacade";
-import { OpenAIServiceFacade } from "./services/openai/OpenAIServiceFacade";
+import { HuggingFaceClientService } from "./services/huggingface/neural/HuggingFaceClientService";
+import { OllamaServiceFacade } from "./services/ollama/OllamaServiceFacade";
 
 // Initial state - obter idioma do storage
 const initialState = {
@@ -87,7 +89,7 @@ export const useDeepgram = () => {
 
 /**
  * Creates the appropriate AI service based on application mode
- * Centralizes the decision logic for dependency injection
+ * Now uses Ollama by default in advanced mode
  */
 function createAIService(): IOpenAIService {
   const mode = ModeService.getMode();
@@ -96,12 +98,15 @@ function createAIService(): IOpenAIService {
     console.log(
       "🧠 [DeepgramProvider] Using HuggingFaceServiceFacade (Basic mode)"
     );
-    return new HuggingFaceServiceFacade();
+    // Create the required dependencies for HuggingFaceServiceFacade
+    const clientService = new HuggingFaceClientService();
+    const completionService = new HuggingFaceCompletionService(clientService);
+    return new HuggingFaceServiceFacade(completionService);
   } else {
     console.log(
-      "🧠 [DeepgramProvider] Using OpenAIServiceFacade (Advanced mode)"
+      "🦙 [DeepgramProvider] Using OllamaServiceFacade (Advanced mode)"
     );
-    return new OpenAIServiceFacade();
+    return new OllamaServiceFacade();
   }
 }
 

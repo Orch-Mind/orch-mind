@@ -11,9 +11,7 @@ import {
 import { getModelDimensions } from "../../../../../../utils/EmbeddingUtils";
 import { HuggingFaceSettingsProps } from "./types";
 
-const HF_EMBEDDING_MODELS = [
-  "Xenova/all-MiniLM-L6-v2"
-];
+const HF_EMBEDDING_MODELS = ["Xenova/all-MiniLM-L6-v2"];
 
 /**
  * Componente para configurações do modo básico
@@ -33,7 +31,7 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
   const [duckDbPath, setDuckDbPath] = useState<string>(
     () => getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || "./orch-os-memory"
   );
-  
+
   // Estado para ferramentas habilitadas
   const [toolsEnabled, setToolsEnabled] = useState<boolean>(
     () => getOption<boolean>(STORAGE_KEYS.TOOLS_ENABLED) ?? true
@@ -248,12 +246,12 @@ export const BasicModeSettings: React.FC<HuggingFaceSettingsProps> = ({
       <div className="mt-3 flex justify-end">
         <button
           type="button"
-          className="w-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg py-2 mt-3 hover:from-cyan-500/30 hover:to-blue-500/30 transition-all shadow-[0_0_10px_rgba(0,200,255,0.2)] backdrop-blur-sm"
+          className="w-full bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-purple-300 border border-purple-500/30 rounded-lg py-2 mt-3 hover:from-purple-500/30 hover:to-cyan-500/30 transition-all shadow-[0_0_10px_rgba(200,0,255,0.2)] backdrop-blur-sm"
           onClick={() =>
             setApplicationMode && setApplicationMode(OrchOSModeEnum.ADVANCED)
           }
         >
-          Switch to Advanced Mode
+          🦙 Switch to Advanced Mode (Ollama)
         </button>
       </div>
     </div>

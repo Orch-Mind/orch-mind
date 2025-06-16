@@ -16,19 +16,19 @@ export type ProcessorMode = 'openai' | 'huggingface';
  */
 export class NeuralSignalEnricher {
   constructor(
-    private openAIService: IOpenAIService
+    private llmService: IOpenAIService
   ) {}
 
   /**
    * Enrich neural signals with semantic queries based on selected backend
    */
-  async enrichSignals(signals: NeuralSignal[], mode: ProcessorMode, currentLanguage: string): Promise<NeuralSignal[]> {
+  async enrichSignals(signals: NeuralSignal[], currentLanguage: string): Promise<NeuralSignal[]> {
     return await Promise.all(
       signals.map(async (signal: NeuralSignal) => {
         try {
           let enrichment: {enrichedQuery: string, keywords: string[]};
           
-          enrichment = await this._enrichWithOpenAI(signal, currentLanguage);
+          enrichment = await this._enrichWithLLM(signal, currentLanguage);
 
           let topK = signal.topK;
           if (typeof topK !== 'number' || isNaN(topK)) {
@@ -36,7 +36,7 @@ export class NeuralSignalEnricher {
           }
 
           // Symbolic enrichment logging
-          LoggingUtils.logInfo(`[${mode.toUpperCase()} Enrichment] Core: ${signal.core} | Query: ${enrichment.enrichedQuery} | Keywords: ${JSON.stringify(enrichment.keywords)} | Filters: ${JSON.stringify(signal.filters || {})} | topK: ${topK}`);
+          LoggingUtils.logInfo(`[ Enrichment] Core: ${signal.core} | Query: ${enrichment.enrichedQuery} | Keywords: ${JSON.stringify(enrichment.keywords)} | Filters: ${JSON.stringify(signal.filters || {})} | topK: ${topK}`);
           
           return {
             ...signal,
@@ -49,7 +49,7 @@ export class NeuralSignalEnricher {
             topK
           };
         } catch (err) {
-          LoggingUtils.logError(`Error enriching query for core ${signal.core} with ${mode}`, err);
+          LoggingUtils.logError(`Error enriching query for core ${signal.core}`, err);
           return signal;
         }
       })
@@ -57,10 +57,10 @@ export class NeuralSignalEnricher {
   }
 
   /**
-   * Enrich signal using OpenAI backend
+   * Enrich signal using LLM backend
    */
-  private async _enrichWithOpenAI(signal: NeuralSignal, currentLanguage: string): Promise<{enrichedQuery: string, keywords: string[]}> {
-    return await this.openAIService.enrichSemanticQueryForSignal(
+  private async _enrichWithLLM(signal: NeuralSignal, currentLanguage: string): Promise<{enrichedQuery: string, keywords: string[]}> {
+    return await this.llmService.enrichSemanticQueryForSignal(
       signal.core,
       signal.symbolic_query?.query || '',
       signal.intensity,

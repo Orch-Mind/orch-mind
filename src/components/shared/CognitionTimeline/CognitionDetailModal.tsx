@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React from 'react';
-import { CognitionEvent } from '../../context/deepgram/types/CognitionEvent';
-import { SymbolicInsight } from '../../context/deepgram/types/SymbolicInsight';
+import React from "react";
+import { CognitionEvent } from "../../context/deepgram/types/CognitionEvent";
+import { SymbolicInsight } from "../../context/deepgram/types/SymbolicInsight";
 
 interface CognitionDetailModalProps {
   isOpen: boolean;
@@ -11,10 +11,10 @@ interface CognitionDetailModalProps {
   event: CognitionEvent | null;
 }
 
-const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  event 
+const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
+  isOpen,
+  onClose,
+  event,
 }) => {
   if (!event) return null;
 
@@ -22,14 +22,14 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
   React.useEffect(() => {
     const toggleBodyScroll = (disable: boolean) => {
       if (disable) {
-        document.body.classList.add('overflow-hidden');
+        document.body.classList.add("overflow-hidden");
       } else {
-        document.body.classList.remove('overflow-hidden');
+        document.body.classList.remove("overflow-hidden");
       }
     };
-    
+
     toggleBodyScroll(isOpen);
-    
+
     return () => {
       toggleBodyScroll(false);
     };
@@ -45,35 +45,77 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
   // Format event type for display
   const formatEventType = (type: string): string => {
     return type
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .replace(/_/g, " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   // Get event color for display
-  const getEventTypeStyles = (type: string): { bgColor: string; textColor: string; borderColor: string } => {
+  const getEventTypeStyles = (
+    type: string
+  ): { bgColor: string; textColor: string; borderColor: string } => {
     switch (type) {
-      case 'raw_prompt':
-        return { bgColor: 'bg-blue-700', textColor: 'text-blue-100', borderColor: 'border-blue-500' };
-      case 'temporary_context':
-        return { bgColor: 'bg-purple-700', textColor: 'text-purple-100', borderColor: 'border-purple-500' };
-      case 'neural_signal':
-        return { bgColor: 'bg-amber-700', textColor: 'text-amber-100', borderColor: 'border-amber-500' };
-      case 'neural_collapse':
-        return { bgColor: 'bg-pink-700', textColor: 'text-pink-100', borderColor: 'border-pink-500' };
-      case 'symbolic_retrieval':
-        return { bgColor: 'bg-green-700', textColor: 'text-green-100', borderColor: 'border-green-500' };
-      case 'fusion_initiated':
-        return { bgColor: 'bg-orange-700', textColor: 'text-orange-100', borderColor: 'border-orange-500' };
-      case 'symbolic_context_synthesized':
-        return { bgColor: 'bg-indigo-700', textColor: 'text-indigo-100', borderColor: 'border-indigo-500' };
-      case 'gpt_response':
-        return { bgColor: 'bg-red-700', textColor: 'text-red-100', borderColor: 'border-red-500' };
-      case 'emergent_patterns':
-        return { bgColor: 'bg-teal-700', textColor: 'text-teal-100', borderColor: 'border-teal-500' };
+      case "raw_prompt":
+        return {
+          bgColor: "bg-blue-700",
+          textColor: "text-blue-100",
+          borderColor: "border-blue-500",
+        };
+      case "temporary_context":
+        return {
+          bgColor: "bg-purple-700",
+          textColor: "text-purple-100",
+          borderColor: "border-purple-500",
+        };
+      case "neural_signal":
+        return {
+          bgColor: "bg-amber-700",
+          textColor: "text-amber-100",
+          borderColor: "border-amber-500",
+        };
+      case "neural_collapse":
+        return {
+          bgColor: "bg-pink-700",
+          textColor: "text-pink-100",
+          borderColor: "border-pink-500",
+        };
+      case "symbolic_retrieval":
+        return {
+          bgColor: "bg-green-700",
+          textColor: "text-green-100",
+          borderColor: "border-green-500",
+        };
+      case "fusion_initiated":
+        return {
+          bgColor: "bg-orange-700",
+          textColor: "text-orange-100",
+          borderColor: "border-orange-500",
+        };
+      case "symbolic_context_synthesized":
+        return {
+          bgColor: "bg-indigo-700",
+          textColor: "text-indigo-100",
+          borderColor: "border-indigo-500",
+        };
+      case "gpt_response":
+        return {
+          bgColor: "bg-red-700",
+          textColor: "text-red-100",
+          borderColor: "border-red-500",
+        };
+      case "emergent_patterns":
+        return {
+          bgColor: "bg-teal-700",
+          textColor: "text-teal-100",
+          borderColor: "border-teal-500",
+        };
       default:
-        return { bgColor: 'bg-gray-700', textColor: 'text-gray-100', borderColor: 'border-gray-600' };
+        return {
+          bgColor: "bg-gray-700",
+          textColor: "text-gray-100",
+          borderColor: "border-gray-600",
+        };
     }
   };
 
@@ -93,6 +135,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
           // Handle SymbolicInsight objects
           else if (insight && typeof insight === 'object' && 'type' in insight) {
             const insightObj = insight as SymbolicInsight;
+
             return (
               <li key={i} className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700">
                 <span className="text-teal-400 font-medium">{insightObj.type}</span>: {' '}
@@ -116,7 +159,10 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
     return (
       <ul className="space-y-2 mt-3">
         {patterns.map((pattern, i) => (
-          <li key={i} className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700 text-teal-300">
+          <li
+            key={i}
+            className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700 text-teal-300"
+          >
             {pattern}
           </li>
         ))}
@@ -129,7 +175,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
     if (!event) return null;
 
     switch (event.type) {
-      case 'raw_prompt':
+      case "raw_prompt":
         return (
           <div className="space-y-4">
             <div className="text-lg text-blue-300 font-medium">Raw Prompt</div>
@@ -138,48 +184,52 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
             </div>
           </div>
         );
-      
-      case 'temporary_context':
+
+      case "temporary_context":
         return (
           <div className="space-y-4">
-            <div className="text-lg text-purple-300 font-medium">Temporary Context</div>
+            <div className="text-lg text-purple-300 font-medium">
+              Temporary Context
+            </div>
             <div className="p-4 bg-gray-800/50 rounded-lg border border-purple-500/30 whitespace-pre-wrap text-gray-200">
               {event.context}
             </div>
           </div>
         );
-      
-      case 'neural_signal':
+
+      case "neural_signal":
         return (
           <div className="space-y-4">
-            <div className="text-lg text-amber-300 font-medium">Neural Signal</div>
-            
+            <div className="text-lg text-amber-300 font-medium">
+              Neural Signal
+            </div>
+
             <div className="flex flex-wrap gap-4">
               <div className="bg-gray-800/50 p-3 rounded-lg border border-amber-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Core</div>
                 <div className="text-white font-medium">{event.core}</div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-amber-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Intensity</div>
                 <div className="text-amber-400 font-medium text-xl">
                   {Math.round(event.intensity * 100)}%
                 </div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-amber-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Top K</div>
                 <div className="text-white font-medium">{event.topK}</div>
               </div>
             </div>
-            
+
             <div>
               <div className="text-gray-400 mb-2">Symbolic Query</div>
               <div className="p-4 bg-gray-800/50 rounded-lg border border-amber-500/30 whitespace-pre-wrap text-gray-200">
                 {JSON.stringify(event.symbolic_query, null, 2)}
               </div>
             </div>
-            
+
             {Object.keys(event.params).length > 0 && (
               <div>
                 <div className="text-gray-400 mb-2">Parameters</div>
@@ -190,35 +240,43 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
             )}
           </div>
         );
-      
-      case 'emergent_patterns':
+
+      case "emergent_patterns":
         return (
           <div className="space-y-4">
-            <div className="text-lg text-teal-300 font-medium">Emergent Patterns</div>
-            
+            <div className="text-lg text-teal-300 font-medium">
+              Emergent Patterns
+            </div>
+
             {event.metrics && (
               <div className="flex flex-wrap gap-4">
                 {event.metrics.archetypalStability !== undefined && (
                   <div className="bg-gray-800/50 p-3 rounded-lg border border-teal-500/30 flex-1">
-                    <div className="text-gray-400 text-sm mb-1">Archetypal Stability</div>
+                    <div className="text-gray-400 text-sm mb-1">
+                      Archetypal Stability
+                    </div>
                     <div className="text-teal-400 font-medium text-xl">
                       {event.metrics.archetypalStability.toFixed(3)}
                     </div>
                   </div>
                 )}
-                
+
                 {event.metrics.cycleEntropy !== undefined && (
                   <div className="bg-gray-800/50 p-3 rounded-lg border border-amber-500/30 flex-1">
-                    <div className="text-gray-400 text-sm mb-1">Cycle Entropy</div>
+                    <div className="text-gray-400 text-sm mb-1">
+                      Cycle Entropy
+                    </div>
                     <div className="text-amber-400 font-medium text-xl">
                       {event.metrics.cycleEntropy.toFixed(3)}
                     </div>
                   </div>
                 )}
-                
+
                 {event.metrics.insightDepth !== undefined && (
                   <div className="bg-gray-800/50 p-3 rounded-lg border border-cyan-500/30 flex-1">
-                    <div className="text-gray-400 text-sm mb-1">Insight Depth</div>
+                    <div className="text-gray-400 text-sm mb-1">
+                      Insight Depth
+                    </div>
                     <div className="text-cyan-400 font-medium text-xl">
                       {event.metrics.insightDepth.toFixed(3)}
                     </div>
@@ -226,7 +284,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
                 )}
               </div>
             )}
-            
+
             {event.patterns.length > 0 ? (
               <div>
                 <div className="text-gray-400 mb-2">Detected Patterns</div>
@@ -240,25 +298,29 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
           </div>
         );
 
-      case 'symbolic_retrieval':
+      case "symbolic_retrieval":
         return (
           <div className="space-y-4">
-            <div className="text-lg text-green-300 font-medium">Symbolic Retrieval</div>
-            
+            <div className="text-lg text-green-300 font-medium">
+              Symbolic Retrieval
+            </div>
+
             <div className="flex flex-wrap gap-4">
               <div className="bg-gray-800/50 p-3 rounded-lg border border-green-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Core</div>
                 <div className="text-white font-medium">{event.core}</div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-green-500/30 flex-1">
-                <div className="text-gray-400 text-sm mb-1">Matches</div>
+                <div className="text-gray-400 text-sm mb-1">Memory Matches</div>
                 <div className="text-white font-medium">{event.matchCount}</div>
               </div>
               
               <div className="bg-gray-800/50 p-3 rounded-lg border border-green-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Duration</div>
-                <div className="text-green-400 font-medium">{event.durationMs}ms</div>
+                <div className="text-green-400 font-medium">
+                  {event.durationMs}ms
+                </div>
               </div>
             </div>
             
@@ -266,54 +328,92 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
               <div>
                 <div className="text-blue-400 mb-2 font-medium">Insights</div>
                 {renderInsights(event.insights)}
+
+                {/* 🔧 CORREÇÃO: Mostrar keywords dos insights se disponíveis */}
+                {event.insights.some(
+                  (insight: any) =>
+                    insight.keywords && insight.keywords.length > 0
+                ) && (
+                  <div className="mt-4">
+                    <div className="text-gray-400 mb-2">Keywords</div>
+                    <div className="flex flex-wrap gap-2">
+                      {event.insights
+                        .filter(
+                          (insight: any) =>
+                            insight.keywords && insight.keywords.length > 0
+                        )
+                        .flatMap((insight: any) => insight.keywords)
+                        .filter(
+                          (keyword: string, index: number, arr: string[]) =>
+                            arr.indexOf(keyword) === index
+                        ) // Remove duplicatas
+                        .map((keyword: string, i: number) => (
+                          <span
+                            key={i}
+                            className="px-2 py-1 bg-gray-800 rounded-full text-xs text-green-300 border border-green-500/30"
+                          >
+                            "{keyword}"
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         );
-      
-      case 'neural_collapse':
+
+      case "neural_collapse":
         return (
           <div className="space-y-4">
-            <div className="text-lg text-pink-300 font-medium">Neural Collapse</div>
-            
+            <div className="text-lg text-pink-300 font-medium">
+              Neural Collapse
+            </div>
+
             <div className="flex flex-wrap gap-4">
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Selected Core</div>
-                <div className="text-white font-medium">{event.selectedCore}</div>
+                <div className="text-white font-medium">
+                  {event.selectedCore}
+                </div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Process</div>
                 <div className="text-white font-medium">
-                  {event.isDeterministic ? 'Deterministic' : 'Stochastic'}
+                  {event.isDeterministic ? "Deterministic" : "Stochastic"}
                 </div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Candidates</div>
-                <div className="text-white font-medium">{event.numCandidates}</div>
+                <div className="text-white font-medium">
+                  {event.numCandidates}
+                </div>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-4">
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Emotional Weight</div>
                 <div className="text-pink-400 font-medium">{event.emotionalWeight.toFixed(2)}</div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Contradiction Score</div>
                 <div className="text-pink-400 font-medium">{event.contradictionScore.toFixed(2)}</div>
               </div>
-              
+
               {event.temperature !== undefined && (
                 <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
                   <div className="text-gray-400 text-sm mb-1">Temperature</div>
-                  <div className="text-pink-400 font-medium">{event.temperature.toFixed(2)}</div>
+                  <div className="text-pink-400 font-medium">
+                    {event.temperature.toFixed(2)}
+                  </div>
                 </div>
               )}
             </div>
-            
+
             {event.justification && (
               <div>
                 <div className="text-gray-400 mb-2">Justification</div>
@@ -322,42 +422,47 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
                 </div>
               </div>
             )}
-            
+
             {event.insights && event.insights.length > 0 && (
               <div>
                 <div className="text-blue-400 mb-2 font-medium">Insights</div>
                 {renderInsights(event.insights)}
               </div>
             )}
-            
-            {event.emergentProperties && event.emergentProperties.length > 0 && (
-              <div>
-                <div className="text-teal-400 mb-2 font-medium">Emergent Properties</div>
-                {renderPatterns(event.emergentProperties)}
-              </div>
-            )}
+
+            {event.emergentProperties &&
+              event.emergentProperties.length > 0 && (
+                <div>
+                  <div className="text-teal-400 mb-2 font-medium">
+                    Emergent Properties
+                  </div>
+                  {renderPatterns(event.emergentProperties)}
+                </div>
+              )}
           </div>
         );
-      
-      case 'symbolic_context_synthesized':
+
+      case "symbolic_context_synthesized":
         return (
           <div className="space-y-4">
-            <div className="text-lg text-indigo-300 font-medium">Symbolic Context Synthesized</div>
+            <div className="text-lg text-indigo-300 font-medium">
+              Symbolic Context Synthesized
+            </div>
             <div className="p-4 bg-gray-800/50 rounded-lg border border-indigo-500/30 whitespace-pre-wrap text-gray-200 font-mono text-sm">
               {JSON.stringify(event.context, null, 2)}
             </div>
           </div>
         );
-      
-      case 'gpt_response':
+
+      case "gpt_response":
         return (
           <div className="space-y-4">
             <div className="text-lg text-red-300 font-medium">GPT Response</div>
-            
+
             <div className="p-4 bg-gray-800/50 rounded-lg border border-red-500/30 whitespace-pre-wrap text-gray-200">
               {event.response}
             </div>
-            
+
             {event.symbolicTopics && event.symbolicTopics.length > 0 && (
               <div>
                 <div className="text-gray-400 mb-2">Symbolic Topics</div>
@@ -370,7 +475,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
                 </div>
               </div>
             )}
-            
+
             {event.insights && event.insights.length > 0 && (
               <div>
                 <div className="text-blue-400 mb-2 font-medium">Insights</div>
@@ -379,17 +484,19 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
             )}
           </div>
         );
-      
-      case 'fusion_initiated':
+
+      case "fusion_initiated":
         return (
           <div className="p-4 bg-gray-800/50 rounded-lg border border-orange-500/30 text-center">
-            <div className="text-orange-300 font-medium text-lg mb-2">Fusion Process Initiated</div>
+            <div className="text-orange-300 font-medium text-lg mb-2">
+              Fusion Process Initiated
+            </div>
             <div className="text-gray-400">
               The neural-symbolic fusion process has been triggered
             </div>
           </div>
         );
-      
+
       default:
         return (
           <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700 text-gray-400">
@@ -404,45 +511,61 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
   return (
     <>
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 pt-[2vh] pb-[2vh]"
           onClick={handleBackdropClick}
         >
-          <div 
+          <div
             className={`relative bg-gray-900 rounded-lg shadow-2xl max-w-3xl w-full border-t-4 flex flex-col max-h-[96vh] animate-in fade-in slide-in-from-bottom-4 duration-300 ${typeStyle.borderColor}`}
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
               <div className="flex items-center">
-                <span className={`inline-block px-3 py-1 rounded text-sm font-medium mr-3 ${typeStyle.bgColor} ${typeStyle.textColor}`}>
+                <span
+                  className={`inline-block px-3 py-1 rounded text-sm font-medium mr-3 ${typeStyle.bgColor} ${typeStyle.textColor}`}
+                >
                   {formatEventType(event.type)}
                 </span>
                 <span className="text-gray-400 text-sm">
                   {new Date(event.timestamp).toLocaleTimeString()}.
-                  {new Date(event.timestamp).getMilliseconds().toString().padStart(3, '0')}
+                  {new Date(event.timestamp)
+                    .getMilliseconds()
+                    .toString()
+                    .padStart(3, "0")}
                 </span>
               </div>
-              <button 
-                onClick={onClose} 
+              <button
+                onClick={onClose}
                 className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full p-1"
                 aria-label="Close modal"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
-            
+
             {/* Modal content - event details */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
               {renderEventDetails()}
             </div>
-            
+
             {/* Modal footer */}
             <div className="px-6 py-4 border-t border-gray-800 flex justify-end">
-              <button 
-                onClick={onClose} 
+              <button
+                onClick={onClose}
                 className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 Close

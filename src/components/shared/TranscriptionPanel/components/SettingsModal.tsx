@@ -2,17 +2,13 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import { useSettingsState } from './settings/useSettingsState';
-import { SettingsModalProps } from './settings/types';
-import ApiSettings from './settings/ApiSettings';
-import {
-  AudioSettings,
-  GeneralSettings,
-  InterfaceSettings
-} from './settings';
-import SettingsHeader from './settings/SettingsHeader';
-import SettingsNavigation from './settings/SettingsNavigation';
-import SettingsFooter from './settings/SettingsFooter';
+import { AudioSettings, GeneralSettings, InterfaceSettings } from "./settings";
+import ApiSettings from "./settings/ApiSettings";
+import SettingsFooter from "./settings/SettingsFooter";
+import SettingsHeader from "./settings/SettingsHeader";
+import SettingsNavigation from "./settings/SettingsNavigation";
+import { SettingsModalProps } from "./settings/types";
+import { useSettingsState } from "./settings/useSettingsState";
 
 /**
  * Modal de configurações do Orch-OS
@@ -21,13 +17,10 @@ import SettingsFooter from './settings/SettingsFooter';
  * - SOLID (componentes com responsabilidade única)
  * - KISS (simplificação da lógica)
  */
-const SettingsModal: React.FC<SettingsModalProps> = ({
-  show,
-  onClose
-}) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
   // Usando o hook customizado para gerenciar todo o estado
   const settings = useSettingsState(show);
-  
+
   // Se não for exibido, não renderizar nada
   if (!show) return null;
 
@@ -36,17 +29,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="bg-gray-900/90 rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative backdrop-blur-lg ring-2 ring-cyan-400/10">
         {/* Cabeçalho */}
         <SettingsHeader onClose={onClose} />
-        
+
         {/* Navegação */}
-        <SettingsNavigation 
-          activeTab={settings.activeTab} 
-          setActiveTab={settings.setActiveTab} 
+        <SettingsNavigation
+          activeTab={settings.activeTab}
+          setActiveTab={settings.setActiveTab}
         />
-        
+
         {/* Conteúdo das abas */}
         <div className="mb-4">
           {/* General Tab */}
-          {settings.activeTab === 'general' && (
+          {settings.activeTab === "general" && (
             <GeneralSettings
               name={settings.name}
               setName={settings.setName}
@@ -62,9 +55,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               setEnableAnimations={settings.setEnableAnimations}
             />
           )}
-          
+
           {/* Interface Tab */}
-          {settings.activeTab === 'interface' && (
+          {settings.activeTab === "interface" && (
             <InterfaceSettings
               darkMode={settings.darkMode}
               setDarkMode={settings.setDarkMode}
@@ -78,9 +71,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               setColorTheme={settings.setColorTheme}
             />
           )}
-          
+
           {/* Audio Tab */}
-          {settings.activeTab === 'audio' && (
+          {settings.activeTab === "audio" && (
             <AudioSettings
               enhancedPunctuation={settings.enhancedPunctuation}
               setEnhancedPunctuation={settings.setEnhancedPunctuation}
@@ -96,40 +89,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               setEchoCancellation={settings.setEchoCancellation}
             />
           )}
-          
+
           {/* Advanced Tab */}
-          {settings.activeTab === 'advanced' && (
+          {settings.activeTab === "advanced" && (
             <ApiSettings
               applicationMode={settings.applicationMode}
               setApplicationMode={settings.setApplicationMode}
-              pineconeApiKey={settings.pineconeApiKey}
-              setPineconeApiKey={settings.setPineconeApiKey}
-              chatgptApiKey={settings.chatgptApiKey}
-              setChatgptApiKey={settings.setChatgptApiKey}
-              chatgptModel={settings.chatgptModel}
-              setChatgptModel={settings.setChatgptModel}
-              openaiEmbeddingModel={settings.openaiEmbeddingModel}
-              setOpenaiEmbeddingModel={settings.setOpenaiEmbeddingModel}
-              hfModel={settings.hfModel}
-              setHfModel={settings.setHfModel}
-              hfEmbeddingModel={settings.hfEmbeddingModel}
-              setHfEmbeddingModel={settings.setHfEmbeddingModel}
-              deepgramApiKey={settings.deepgramApiKey}
-              setDeepgramApiKey={settings.setDeepgramApiKey}
-              deepgramModel={settings.deepgramModel}
-              setDeepgramModel={settings.setDeepgramModel}
-              deepgramLanguage={settings.deepgramLanguage}
-              setDeepgramLanguage={settings.setDeepgramLanguage}
-              openSection={settings.openSection}
-              setOpenSection={settings.setOpenSection}
+              ollamaModel={settings.ollamaModel}
+              setOllamaModel={settings.setOllamaModel}
+              ollamaEmbeddingModel={settings.ollamaEmbeddingModel}
+              setOllamaEmbeddingModel={settings.setOllamaEmbeddingModel}
+              ollamaEnabled={settings.ollamaEnabled}
+              setOllamaEnabled={settings.setOllamaEnabled}
             />
           )}
         </div>
-        
+
         {/* Footer com botões de ação */}
-        <SettingsFooter 
-          onClose={onClose} 
-          saveSettings={settings.saveSettings} 
+        <SettingsFooter
+          onClose={onClose}
+          saveSettings={settings.saveSettings}
         />
       </div>
     </div>

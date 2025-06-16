@@ -1,75 +1,80 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-// OpenAIServiceFacade.ts
+// OllamaServiceFacade.ts
 // Symbolic: Fachada neural que integra e coordena diferentes serviços neurais especializados
 
-import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
-import { ModelStreamResponse } from "../../interfaces/openai/ICompletionService";
-import { Message } from "../../interfaces/transcription/TranscriptionTypes";
+import { OllamaNeuralSignalService } from "../../infrastructure/neural/ollama/OllamaNeuralSignalService";
 import { NeuralSignalResponse } from "../../interfaces/neural/NeuralSignalTypes";
-import { OpenAIClientService } from "./neural/OpenAIClientService";
-import { OpenAICompletionService } from "./neural/OpenAICompletionService";
-import { OpenAINeuralSignalService } from "../../../../../infrastructure/neural/openai/OpenAINeuralSignalService";
+import { ModelStreamResponse } from "../../interfaces/openai/ICompletionService";
+import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
+import { Message } from "../../interfaces/transcription/TranscriptionTypes";
 import { LoggingUtils } from "../../utils/LoggingUtils";
+import { OllamaClientService } from "./neural/OllamaClientService";
+import { OllamaCompletionService } from "./neural/OllamaCompletionService";
 
 /**
  * Fachada que implementa IOpenAIService e coordena os serviços especializados
  * Symbolic: Córtex de integração neural que combina neurônios especializados
  */
-export class OpenAIServiceFacade implements IOpenAIService {
-  private clientService: OpenAIClientService;
-  private completionService: OpenAICompletionService;
-  private neuralSignalService: OpenAINeuralSignalService;
-  
+export class OllamaServiceFacade implements IOpenAIService {
+  private clientService: OllamaClientService;
+  private completionService: OllamaCompletionService;
+  private neuralSignalService: OllamaNeuralSignalService;
+
   constructor() {
     // Inicializar os serviços especializados
-    this.clientService = new OpenAIClientService();
-    this.completionService = new OpenAICompletionService(this.clientService);
-    this.neuralSignalService = new OpenAINeuralSignalService(this.completionService);
-    
-    LoggingUtils.logInfo("Initialized OpenAI Service Facade with specialized neural services");
+    this.clientService = new OllamaClientService();
+    this.completionService = new OllamaCompletionService(this.clientService);
+    this.neuralSignalService = new OllamaNeuralSignalService(
+      this.completionService
+    );
+
+    LoggingUtils.logInfo(
+      "Initialized Ollama Service Facade with specialized neural services"
+    );
   }
 
   /**
-   * Inicializa o cliente OpenAI
-   * Symbolic: Estabelecimento de conexão neural com modelo externo
+   * Inicializa o cliente Ollama
+   * Symbolic: Estabelecimento de conexão neural com modelo local
    */
-  initializeOpenAI(apiKey: string): void {
-    this.clientService.initializeClient(apiKey);
+  initializeOpenAI(config?: string): void {
+    this.clientService.initializeClient(config);
   }
-  
+
   /**
-   * Carrega a chave da API do OpenAI do armazenamento
+   * Carrega a configuração do Ollama do armazenamento
    * Symbolic: Recuperação de credencial neural
    */
   async loadApiKey(): Promise<void> {
     await this.clientService.loadApiKey();
   }
-  
+
   /**
-   * Garante que o cliente OpenAI está disponível
+   * Garante que o cliente Ollama está disponível
    * Symbolic: Verificação de integridade do caminho neural
    */
   async ensureOpenAIClient(): Promise<boolean> {
     return this.clientService.ensureClient();
   }
-  
+
   /**
-   * Envia requisição para OpenAI e processa o stream de resposta
+   * Envia requisição para Ollama e processa o stream de resposta
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
-  async streamOpenAIResponse(messages: Message[]): Promise<ModelStreamResponse> {
+  async streamOpenAIResponse(
+    messages: Message[]
+  ): Promise<ModelStreamResponse> {
     // Mapear as mensagens para o formato esperado pelo serviço de completion
-    const mappedMessages = messages.map(m => ({
+    const mappedMessages = messages.map((m) => ({
       role: m.role,
-      content: m.content
+      content: m.content,
     }));
-    
-    return await this.completionService.streamModelResponse(mappedMessages);
 
+    return await this.completionService.streamModelResponse(mappedMessages);
   }
-  
+
   /**
    * Cria embeddings para o texto fornecido
    * Symbolic: Transformação de texto em representação neural vetorial
@@ -77,7 +82,7 @@ export class OpenAIServiceFacade implements IOpenAIService {
   async createEmbedding(text: string): Promise<number[]> {
     return this.clientService.createEmbedding(text);
   }
-  
+
   /**
    * Cria embeddings para um lote de textos (processamento em batch)
    * Symbolic: Transformação em massa de textos em vetores neurais
@@ -85,53 +90,67 @@ export class OpenAIServiceFacade implements IOpenAIService {
   async createEmbeddings(texts: string[]): Promise<number[][]> {
     return this.clientService.createEmbeddings(texts);
   }
-  
+
   /**
-   * Verifica se o cliente OpenAI está inicializado
+   * Verifica se o cliente Ollama está inicializado
    * Symbolic: Consulta do estado de conexão neural
    */
   isInitialized(): boolean {
     return this.clientService.isInitialized();
   }
-  
+
   /**
    * Gera sinais neurais simbólicos baseados em um prompt
    * Symbolic: Extração de padrões de ativação neural a partir de estímulo de linguagem
    */
-  async generateNeuralSignal(prompt: string, temporaryContext?: string, language?: string): Promise<NeuralSignalResponse> {
-    return this.neuralSignalService.generateNeuralSignal(prompt, temporaryContext, language);
+  async generateNeuralSignal(
+    prompt: string,
+    temporaryContext?: string,
+    language?: string
+  ): Promise<NeuralSignalResponse> {
+    return this.neuralSignalService.generateNeuralSignal(
+      prompt,
+      temporaryContext,
+      language
+    );
   }
-  
+
   /**
    * Expande semanticamente a query de um núcleo cerebral
    * Symbolic: Expansão de campo semântico para ativação cortical específica
    */
   async enrichSemanticQueryForSignal(
-    core: string, 
-    query: string, 
-    intensity: number, 
-    context?: string, 
+    core: string,
+    query: string,
+    intensity: number,
+    context?: string,
     language?: string
-  ): Promise<{ enrichedQuery: string, keywords: string[] }> {
-    return this.neuralSignalService.enrichSemanticQueryForSignal(core, query, intensity, context, language);
+  ): Promise<{ enrichedQuery: string; keywords: string[] }> {
+    return this.neuralSignalService.enrichSemanticQueryForSignal(
+      core,
+      query,
+      intensity,
+      context,
+      language
+    );
   }
-  
+
   /**
-   * Envia uma requisição ao OpenAI com suporte a function calling
+   * Envia uma requisição ao Ollama com suporte a function calling
    * Symbolic: Processamento neural para geração de texto ou execução de função
    */
   async callOpenAIWithFunctions(options: {
     model: string;
-    messages: Array<{role: string; content: string}>;
+    messages: Array<{ role: string; content: string }>;
     tools?: Array<{
       type: string;
       function: {
         name: string;
         description: string;
         parameters: Record<string, unknown>;
-      }
+      };
     }>;
-    tool_choice?: {type: string; function: {name: string}};
+    tool_choice?: { type: string; function: { name: string } };
     temperature?: number;
     max_tokens?: number;
   }): Promise<{
@@ -141,11 +160,11 @@ export class OpenAIServiceFacade implements IOpenAIService {
         tool_calls?: Array<{
           function: {
             name: string;
-            arguments: string;
-          }
-        }>
-      }
-    }>
+            arguments: string | Record<string, any>;
+          };
+        }>;
+      };
+    }>;
   }> {
     return this.completionService.callModelWithFunctions(options);
   }

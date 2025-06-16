@@ -9,5 +9,6 @@ export interface SymbolicInsight {
   type: string;
   content?: string;
   core?: string;
+  keywords?: string[];
   [key: string]: string | number | boolean | object | undefined;
 }

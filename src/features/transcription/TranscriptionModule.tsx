@@ -9,6 +9,7 @@ import {
 } from "../../components/context";
 import { ConnectionState } from "../../components/context/deepgram/interfaces/deepgram/IDeepgramService";
 import ModelLoadingTest from "../../components/debug/ModelLoadingTest";
+import LocalModelManager from "../../components/debug/LocalModelManager";
 import { TransformersTest } from "../../components/debug/TransformersTest";
 import TranscriptionPanel from "../../components/shared/TranscriptionPanel/TranscriptionPanel";
 
@@ -164,7 +165,7 @@ export const TranscriptionModule: React.FC = () => {
           </div>
         ) : (
           <div className="h-full overflow-auto bg-gray-900">
-            <ModelLoadingTest />
+            <LocalModelManager />
           </div>
         )}
       </div>

@@ -5,7 +5,6 @@ import {
   NeuralProcessingResult,
   NeuralSignalResponse,
 } from "../../interfaces/neural/NeuralSignalTypes";
-import { Message } from "../../interfaces/transcription/TranscriptionTypes";
 import { NeuralSignalExtractor } from "../../symbolic-cortex/activation/NeuralSignalExtractor";
 import { LoggingUtils } from "../../utils/LoggingUtils";
 import symbolicCognitionTimelineLogger from "../utils/SymbolicCognitionTimelineLoggerSingleton";
@@ -23,6 +22,7 @@ import { IUIUpdateService } from "../../interfaces/utils/IUIUpdateService";
 import { INeuralIntegrationService } from "../../symbolic-cortex/integration/INeuralIntegrationService";
 
 // Neural processors
+import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
 import {
   NeuralConfigurationBuilder,
   NeuralMemoryRetriever,
@@ -46,7 +46,7 @@ export interface TranscriptionProcessingResponse {
 /**
  * Neural transcription cognitive orchestrator
  * Coordinates specialized processors for transcription prompt processing
- * Supports both OpenAI and HuggingFace backends for cognitive diversity
+ * Supports both Ollama and HuggingFace backends for cognitive diversity
  */
 export class TranscriptionPromptProcessor {
   private isProcessingPrompt: boolean = false;
@@ -67,15 +67,15 @@ export class TranscriptionPromptProcessor {
   constructor(
     private storageService: ITranscriptionStorageService,
     private memoryService: IMemoryService,
-    private openAIService: IOpenAIService,
+    private llmService: IOpenAIService, // Pode ser Ollama ou HuggingFace, já abstraído
     private uiService: IUIUpdateService,
     private speakerService: ISpeakerIdentificationService,
     private neuralIntegrationService: INeuralIntegrationService
   ) {
     this.currentLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR";
-    this._neuralSignalExtractor = new NeuralSignalExtractor(this.openAIService);
+    this._neuralSignalExtractor = new NeuralSignalExtractor(this.llmService);
 
-    // Initialize specialized processors
+    // Inicializa os processors com a instância já abstraída (Ollama ou HuggingFace)
     this._initializeProcessors();
   }
 
@@ -95,17 +95,13 @@ export class TranscriptionPromptProcessor {
       this.sessionManager
     );
 
-    this.signalEnricher = new NeuralSignalEnricher(
-      this.openAIService,
-    );
+    this.signalEnricher = new NeuralSignalEnricher(this.llmService);
 
-    this.memoryRetriever = new NeuralMemoryRetriever(
-      this.memoryService,
-    );
+    this.memoryRetriever = new NeuralMemoryRetriever(this.memoryService);
 
     this.responseGenerator = new ResponseGenerator(
       this.memoryService,
-      this.openAIService
+      this.llmService
     );
 
     this.resultsSaver = new ProcessingResultsSaver(
@@ -117,7 +113,7 @@ export class TranscriptionPromptProcessor {
   }
 
   /**
-   * Process transcription with OpenAI backend
+   * Process transcription with LLM backend (Ollama in Advanced mode, OpenAI compatible)
    * Full neural processing with symbolic cognition
    */
   async processWithOpenAI(temporaryContext?: string): Promise<void> {
@@ -165,16 +161,20 @@ export class TranscriptionPromptProcessor {
           );
         } else if (!temporaryContext) {
           // Notify error if there is no transcription or context
-          this.uiService.notifyPromptError("No transcription detected for processing");
+          this.uiService.notifyPromptError(
+            "No transcription detected for processing"
+          );
           LoggingUtils.logInfo(`No transcription detected for processing`);
           return;
         } else {
-          this.uiService.notifyPromptError("No transcription detected for processing");
+          this.uiService.notifyPromptError(
+            "No transcription detected for processing"
+          );
         }
       }
 
-      // Ensure backend client is ready (same call for both modes; BASIC mode service implements same interface)
-      if (!(await this.openAIService.ensureOpenAIClient())) return;
+      // Garante que o backend já abstraído está pronto (Ollama ou HuggingFace)
+      if (!(await this.llmService.ensureOpenAIClient())) return;
 
       // Notify processing start
       this.uiService.notifyPromptProcessingStarted(temporaryContext);
@@ -189,7 +189,9 @@ export class TranscriptionPromptProcessor {
           promptText = temporaryContext.trim();
           LoggingUtils.logInfo("Using temporary context as prompt input.");
         } else {
-          LoggingUtils.logInfo("No new transcription or temporary context to send.");
+          LoggingUtils.logInfo(
+            "No new transcription or temporary context to send."
+          );
           return;
         }
       }
@@ -251,12 +253,10 @@ export class TranscriptionPromptProcessor {
     // PHASE 2: Query Enrichment & Memory Retrieval
     const enrichedSignals = await this.signalEnricher.enrichSignals(
       neuralActivation.signals,
-      mode,
       this.currentLanguage
     );
     const processingResults = await this.memoryRetriever.processSignals(
       enrichedSignals,
-      mode
     );
 
     // PHASE 3: Neural Integration
@@ -269,10 +269,10 @@ export class TranscriptionPromptProcessor {
       this.currentLanguage
     );
 
-    // Symbolic context synthesis log
+    // Symbolic context synthesis log (clean think tags before logging)
+    const cleanIntegratedPrompt = cleanThinkTags(integratedPrompt);
     symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
-      summary: integratedPrompt, // summary is required in SymbolicContext
-      fusionPrompt: integratedPrompt,
+      summary: cleanIntegratedPrompt, // summary is required in SymbolicContext
       modules: processingResults.map((r) => ({
         core: r.core,
         intensity: r.intensity,
@@ -280,10 +280,12 @@ export class TranscriptionPromptProcessor {
     });
 
     // PHASE 4: Generate Response
-    const response = await this.responseGenerator.generateResponse(
-      integratedPrompt,
+    const fullResponse = await this.responseGenerator.generateResponse(
+      cleanIntegratedPrompt,
       temporaryContext
     );
+
+    const response = cleanThinkTags(fullResponse);
 
     // PHASE 5: Save and Log Results
     await this.resultsSaver.saveResults(

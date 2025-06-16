@@ -34,7 +34,8 @@ export class DeepgramTranscriptionService
   private speakerService: ISpeakerIdentificationService;
   private storageService: ITranscriptionStorageService;
   private memoryService: IMemoryService;
-  private openAIService: IOpenAIService;
+  // Generic LLM service (could be Ollama or HuggingFace facade)
+  private llmService: IOpenAIService;
   private uiService: IUIUpdateService;
 
   // Configuration
@@ -69,7 +70,7 @@ export class DeepgramTranscriptionService
 
   constructor(
     setTexts: UIUpdater,
-    aiService: IOpenAIService,
+    llmService: IOpenAIService,
     primaryUserSpeaker: string = getPrimaryUser()
   ) {
     // Initialize services
@@ -78,20 +79,20 @@ export class DeepgramTranscriptionService
       this.speakerService,
       setTexts
     );
-    this.openAIService = aiService; // May be HuggingFaceServiceFacade in Basic mode
-    this.memoryService = new MemoryService(this.openAIService);
+    this.llmService = llmService; // May be HuggingFaceServiceFacade in Basic mode
+    this.memoryService = new MemoryService(this.llmService);
     this.uiService = new UIUpdateService(setTexts);
 
     // Initialize the neural integration service
     this.neuralIntegrationService = new DefaultNeuralIntegrationService(
-      this.openAIService
+      this.llmService
     );
 
     // Initialize the transcription prompt processor
     this.transcriptionPromptProcessor = new TranscriptionPromptProcessor(
       this.storageService,
       this.memoryService,
-      this.openAIService,
+      this.llmService,
       this.uiService,
       this.speakerService,
       this.neuralIntegrationService
@@ -199,7 +200,7 @@ export class DeepgramTranscriptionService
 
   /**
    * Processes the transcription using the appropriate AI service based on current mode
-   * Automatically selects between OpenAI (advanced mode) and HuggingFace (basic mode)
+   * Automatically selects between Ollama (advanced mode) and HuggingFace (basic mode)
    */
   async sendTranscriptionPrompt(temporaryContext?: string): Promise<void> {
     const currentMode = ModeService.getMode();
@@ -210,7 +211,7 @@ export class DeepgramTranscriptionService
         temporaryContext
       );
     } else {
-      LoggingUtils.logInfo("🧠 Using OpenAI service (Advanced mode)");
+      LoggingUtils.logInfo("🧠 Using Ollama service (Advanced mode)");
       return await this.transcriptionPromptProcessor.processWithOpenAI(
         temporaryContext
       );
@@ -231,10 +232,10 @@ export class DeepgramTranscriptionService
   }
 
   /**
-   * Loads the OpenAI API key from the environment
+   * Loads the LLM service API key from the environment
    */
   private async loadApiKey(): Promise<void> {
-    await this.openAIService.loadApiKey();
+    await this.llmService.loadApiKey();
   }
 
   // Implementation of IDeepgramTranscriptionService methods

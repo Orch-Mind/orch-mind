@@ -16,11 +16,6 @@ export const getModelDimensions = (model: string): number => {
   // ONNX Community models - novos modelos ONNX otimizados disponíveis na UI
   if (model.includes("all-MiniLM-L6-v2")) return 384;
 
-  // OpenAI models - modelos padrão do serviço OpenAI
-  if (model.includes("text-embedding-3-large")) return 3072;
-  if (model.includes("text-embedding-3-small")) return 1536;
-  if (model.includes("text-embedding-ada-002")) return 1536;
-
   // Default para modelos desconhecidos - dimensão intermediária mais comum
   return 768;
 };

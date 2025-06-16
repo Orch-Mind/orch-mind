@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { PineconeHelper } from '../../../../electron/PineconeHelper';
-import { IOpenAIService } from '../../../components/context/deepgram/interfaces/openai/IOpenAIService';
+import { IOpenAIService } from "../../../components/context/deepgram/interfaces/openai/IOpenAIService";
 
 // ChatGPT data interfaces for artificial brain memory import
 export interface ChatGPTMessageContent {
@@ -11,7 +10,7 @@ export interface ChatGPTMessageContent {
 }
 
 export interface ChatGPTMessageAuthor {
-  role: 'user' | 'assistant' | 'developer' | string;
+  role: "user" | "assistant" | "developer" | string;
   name?: string;
 }
 
@@ -68,16 +67,16 @@ export interface ProgressInfo {
   processed: number;
   total: number;
   percentage: number;
-  stage: 'parsing' | 'deduplicating' | 'generating_embeddings' | 'saving';
+  stage: "parsing" | "deduplicating" | "generating_embeddings" | "saving";
 }
 
-// Interface for import parameters
+// Interface for import parameters (using DuckDB helper with legacy name for compatibility)
 export interface ImportChatGPTParams {
   fileBuffer: Buffer;
-  mode: 'increment' | 'overwrite';
-  applicationMode?: 'basic' | 'advanced'; // Mode passed from renderer process
+  mode: "increment" | "overwrite";
+  applicationMode?: "basic" | "advanced"; // Mode passed from renderer process
   openAIService?: IOpenAIService | null;
-  pineconeHelper: PineconeHelper;
+  pineconeHelper: any; // DuckDB helper with legacy interface name for compatibility
   onProgress?: (info: ProgressInfo) => void;
 }
 
@@ -87,6 +86,6 @@ export interface ImportResult {
   imported: number;
   skipped: number;
   totalMessagesInFile: number;
-  mode: 'increment' | 'overwrite';
+  mode: "increment" | "overwrite";
   error?: string;
 }

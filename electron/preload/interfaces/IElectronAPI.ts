@@ -10,23 +10,20 @@
  * - Easier to test and maintain
  */
 
+// Import interfaces from our modular vector database architecture
+import {
+  DuckDBMatch,
+  VectorData,
+} from "../../vector-database/interfaces/IVectorDatabase";
+
 // Base types
 export interface NeuralResponse {
   success: boolean;
   error?: string;
 }
 
-export interface NormalizedMatch {
-  id: string;
-  score: number;
-  metadata: Record<string, unknown>;
-}
-
-export interface DuckDBMatch {
-  id: string;
-  score: number;
-  metadata: Record<string, unknown>;
-}
+// Legacy compatibility type alias
+export interface NormalizedMatch extends DuckDBMatch {}
 
 // Window Management Interface
 export interface IWindowManager {
@@ -76,13 +73,7 @@ export interface IVectorDatabase {
     filters?: Record<string, unknown>
   ): Promise<{ matches: NormalizedMatch[] }>;
 
-  saveVectors(
-    vectors: Array<{
-      id: string;
-      values: number[];
-      metadata: Record<string, unknown>;
-    }>
-  ): Promise<void>;
+  saveVectors(vectors: VectorData[]): Promise<void>;
 }
 
 // Environment Interface
@@ -98,7 +89,10 @@ export interface IEnvironmentManager {
 
 // Communication Interface
 export interface ICommunicationManager {
-  sendPromptUpdate(type: 'partial' | 'complete' | 'error', content: string): void;
+  sendPromptUpdate(
+    type: "partial" | "complete" | "error",
+    content: string
+  ): void;
 }
 
 // Import Interface
@@ -127,6 +121,92 @@ export interface IDuckDBCommander {
   duckdbCommand(command: string, data: any): Promise<any>;
 }
 
+// vLLM Support Types & Interface
+export interface HardwareInfo {
+  cpuCores: number;
+  ramGB: number;
+  gpu?: {
+    vendor: string;
+    model: string;
+    vramGB: number;
+    cuda: boolean;
+  };
+}
+
+// vLLM Support Types & Interface
+export interface VllmStatus {
+  state:
+    | "idle"
+    | "downloading"
+    | "pulling_image"
+    | "starting"
+    | "ready"
+    | "error";
+  progress?: number;
+  message?: string;
+  modelId?: string;
+}
+
+export interface IVllmManager {
+  vllmStartModel(modelId: string): Promise<NeuralResponse>;
+  vllmModelStatus(): Promise<{
+    success: boolean;
+    status?: VllmStatus;
+    error?: string;
+  }>;
+  vllmGenerate(
+    payload: any
+  ): Promise<{ success: boolean; data?: any; error?: string }>;
+  vllmStopModel(): Promise<NeuralResponse>;
+  vllmHardwareInfo(): Promise<{
+    success: boolean;
+    info?: HardwareInfo;
+    error?: string;
+  }>;
+  vllmListLibrary(): Promise<{
+    success: boolean;
+    models?: any[];
+    error?: string;
+  }>;
+  vllmDownloadModel(modelId: string): Promise<NeuralResponse>;
+  vllmRefreshLibrary(): Promise<{
+    success: boolean;
+    models?: any[];
+    error?: string;
+  }>;
+  vllmTestConnection(): Promise<{
+    success: boolean;
+    message?: string;
+    latency?: number;
+    error?: string;
+  }>;
+}
+
+// Ollama Support Types & Interface
+export interface OllamaModel {
+  id: string;
+  name: string;
+  description?: string;
+  size?: string;
+  category?: "main" | "embedding";
+}
+
+export interface IOllamaManager {
+  listModels(): Promise<OllamaModel[]>;
+  getAvailableModels(): Promise<OllamaModel[]>;
+  downloadModel(
+    modelId: string,
+    onProgress?: (progress: number, speed: string, eta: string) => void
+  ): Promise<boolean>;
+  cancelDownload(modelId: string): Promise<void>;
+  removeModel(modelId: string): Promise<void>;
+  testConnection(): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }>;
+}
+
 // Complete Electron API Interface
 export interface IElectronAPI
   extends IWindowManager,
@@ -135,7 +215,9 @@ export interface IElectronAPI
     IAudioProcessor,
     IEnvironmentManager,
     IImportManager,
-    IDuckDBCommander {
+    IDuckDBCommander,
+    IVllmManager,
+    IOllamaManager {
   // Legacy support for existing vector databases
   queryPinecone(
     embedding: number[],
@@ -144,13 +226,7 @@ export interface IElectronAPI
     filters?: Record<string, unknown>
   ): Promise<{ matches: NormalizedMatch[] }>;
 
-  saveToPinecone(
-    vectors: Array<{
-      id: string;
-      values: number[];
-      metadata: Record<string, unknown>;
-    }>
-  ): Promise<void>;
+  saveToPinecone(vectors: VectorData[]): Promise<void>;
 
   queryDuckDB(
     embedding: number[],
@@ -161,11 +237,7 @@ export interface IElectronAPI
   ): Promise<{ matches: DuckDBMatch[] }>;
 
   saveDuckDB(
-    vectors: Array<{
-      id: string;
-      values: number[];
-      metadata: Record<string, unknown>;
-    }>
+    vectors: VectorData[]
   ): Promise<{ success: boolean; error?: string }>;
 
   // New DuckDB test and utility functions
@@ -211,10 +283,6 @@ export interface IElectronAPI
 
   // Legacy alias for backward compatibility
   saveToDuckDB(
-    vectors: Array<{
-      id: string;
-      values: number[];
-      metadata: Record<string, unknown>;
-    }>
+    vectors: VectorData[]
   ): Promise<{ success: boolean; error?: string }>;
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { OrchOSMode } from '../../../../../services/ModeService';
+import { OrchOSMode } from "../../../../../services/ModeService";
 
 // Interfaces para props compartilhados entre componentes
 
@@ -24,9 +24,14 @@ export interface SettingsFooterProps {
   saveSettings: () => void;
 }
 
-export type TabType = 'general' | 'interface' | 'audio' | 'advanced';
+export type TabType = "general" | "interface" | "audio" | "advanced";
 
-export type OpenSectionType = 'pinecone' | 'chatgpt' | 'deepgram' | null;
+export type OpenSectionType =
+  | "pinecone"
+  | "chatgpt"
+  | "deepgram"
+  | "ollama"
+  | null;
 
 // Interface para o state completo das configurações
 export interface SettingsState {
@@ -35,7 +40,7 @@ export interface SettingsState {
   setOpenSection: (section: OpenSectionType) => void;
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
-  
+
   // General
   name: string;
   setName: (name: string) => void;
@@ -47,7 +52,7 @@ export interface SettingsState {
   setEnableEffects: (enable: boolean) => void;
   enableAnimations: boolean;
   setEnableAnimations: (enable: boolean) => void;
-  
+
   // Interface
   darkMode: boolean;
   setDarkMode: (enable: boolean) => void;
@@ -59,7 +64,7 @@ export interface SettingsState {
   setPanelTransparency: (transparency: number) => void;
   colorTheme: string;
   setColorTheme: (theme: string) => void;
-  
+
   // Audio
   audioQuality: number;
   setAudioQuality: (quality: number) => void;
@@ -85,13 +90,13 @@ export interface SettingsState {
   setChatgptMaxTokens: (tokens: number) => void;
   openaiEmbeddingModel: string;
   setOpenaiEmbeddingModel: (model: string) => void;
-  
+
   // HuggingFace
   hfModel: string;
   setHfModel: (model: string) => void;
   hfEmbeddingModel: string;
   setHfEmbeddingModel: (model: string) => void;
-  
+
   // Deepgram
   deepgramApiKey: string;
   setDeepgramApiKey: (key: string) => void;
@@ -101,13 +106,21 @@ export interface SettingsState {
   setDeepgramLanguage: (language: string) => void;
   deepgramTier: string;
   setDeepgramTier: (tier: string) => void;
-  
+
+  // Ollama
+  ollamaModel: string;
+  setOllamaModel: (model: string) => void;
+  ollamaEmbeddingModel: string;
+  setOllamaEmbeddingModel: (model: string) => void;
+  ollamaEnabled: boolean;
+  setOllamaEnabled: (enabled: boolean) => void;
+
   // Transcrição
   transcriptionEnabled: boolean;
   setTranscriptionEnabled: (enable: boolean) => void;
   speakerIdentification: boolean;
   setSpeakerIdentification: (enable: boolean) => void;
-  
+
   // Pinecone
   pineconeApiKey: string;
   setPineconeApiKey: (key: string) => void;
@@ -115,7 +128,7 @@ export interface SettingsState {
   setPineconeEnvironment: (env: string) => void;
   pineconeIndex: string;
   setPineconeIndex: (index: string) => void;
-  
+
   // Interface adicional
   theme: string;
   setTheme: (theme: string) => void;
@@ -123,17 +136,17 @@ export interface SettingsState {
   setUiDensity: (density: string) => void;
   showAdvancedSettings: boolean;
   setShowAdvancedSettings: (show: boolean) => void;
-  
+
   // Debug
   debugMode: boolean;
   setDebugMode: (enable: boolean) => void;
   logLevel: string;
   setLogLevel: (level: string) => void;
-  
+
   // Orch-OS Mode
   applicationMode: OrchOSMode;
   setApplicationMode: (mode: OrchOSMode) => void;
-  
+
   // Métodos
   saveSettings: () => void;
 }
@@ -160,6 +173,13 @@ export interface ApiSettingsProps {
   setDeepgramModel: (model: string) => void;
   deepgramLanguage: string;
   setDeepgramLanguage: (language: string) => void;
+  // Ollama
+  ollamaModel: string;
+  setOllamaModel: (model: string) => void;
+  ollamaEmbeddingModel: string;
+  setOllamaEmbeddingModel: (model: string) => void;
+  ollamaEnabled: boolean;
+  setOllamaEnabled: (enabled: boolean) => void;
   openSection: OpenSectionType;
   setOpenSection: (section: OpenSectionType) => void;
 }

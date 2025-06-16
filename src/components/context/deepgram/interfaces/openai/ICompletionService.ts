@@ -26,16 +26,16 @@ export interface ICompletionService {
    */
   callModelWithFunctions(options: {
     model: string;
-    messages: Array<{role: string; content: string}>;
+    messages: Array<{ role: string; content: string }>;
     tools?: Array<{
       type: string;
       function: {
         name: string;
         description: string;
         parameters: Record<string, unknown>;
-      }
+      };
     }>;
-    tool_choice?: {type: string; function: {name: string}};
+    tool_choice?: { type: string; function: { name: string } };
     temperature?: number;
     max_tokens?: number;
   }): Promise<{
@@ -45,18 +45,18 @@ export interface ICompletionService {
         tool_calls?: Array<{
           function: {
             name: string;
-            arguments: string;
-          }
-        }>
-      }
-    }>
+            arguments: string | Record<string, any>;
+          };
+        }>;
+      };
+    }>;
   }>;
 
   /**
    * Envia requisição para o modelo e processa o stream de resposta
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
-  streamModelResponse(messages: Array<{role: string; content: string}>): Promise<ModelStreamResponse>;
+  streamModelResponse(
+    messages: Array<{ role: string; content: string }>
+  ): Promise<ModelStreamResponse>;
 }
-
-

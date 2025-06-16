@@ -13,10 +13,13 @@ import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { HuggingFaceServiceFacade } from "../../services/huggingface/HuggingFaceServiceFacade";
-import { OpenAIEmbeddingService } from "../../services/openai/OpenAIEmbeddingService";
+import { OllamaEmbeddingService } from "../../services/ollama/OllamaEmbeddingService";
+import { OllamaClientService } from "../../services/ollama/neural/OllamaClientService";
+import { OllamaCompletionService } from "../../services/ollama/neural/OllamaCompletionService";
 import symbolicCognitionTimelineLogger from "../../services/utils/SymbolicCognitionTimelineLoggerSingleton";
 import { SymbolicInsight } from "../../types/SymbolicInsight";
 import { LoggingUtils } from "../../utils/LoggingUtils";
+import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
 import {
   CognitiveMetrics,
   SymbolicPatternAnalyzer,
@@ -24,7 +27,7 @@ import {
 import { HuggingFaceCollapseStrategyService } from "./HuggingFaceCollapseStrategyService";
 import { ICollapseStrategyService } from "./ICollapseStrategyService";
 import { INeuralIntegrationService } from "./INeuralIntegrationService";
-import { OpenAICollapseStrategyService } from "./OpenAICollapseStrategyService";
+import { OllamaCollapseStrategyService } from "./OllamaCollapseStrategyService";
 import { SuperpositionLayer } from "./SuperpositionLayer";
 
 function asNumber(val: unknown, fallback: number): number {
@@ -59,10 +62,17 @@ export class DefaultNeuralIntegrationService
       );
     } else {
       LoggingUtils.logInfo(
-        "[NeuralIntegration] Using OpenAI collapse strategy (Advanced mode)"
+        "[NeuralIntegration] Using Ollama collapse strategy (Advanced mode)"
       );
-      this.collapseStrategyService = new OpenAICollapseStrategyService(
-        this.aiService
+
+      // Create dedicated Ollama services for the collapse strategy
+      const ollamaClientService = new OllamaClientService();
+      const ollamaCompletionService = new OllamaCompletionService(
+        ollamaClientService
+      );
+
+      this.collapseStrategyService = new OllamaCollapseStrategyService(
+        ollamaCompletionService
       );
     }
 
@@ -87,14 +97,14 @@ export class DefaultNeuralIntegrationService
       );
       return new HuggingFaceEmbeddingService();
     } else {
-      // In advanced mode, use OpenAI with the selected model
-      const openaiModel = getOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL);
+      // In advanced mode, use Ollama with the selected model
+      const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
       LoggingUtils.logInfo(
-        `[NeuralIntegration] Creating OpenAIEmbeddingService with model: ${
-          openaiModel || "default"
+        `[NeuralIntegration] Creating OllamaEmbeddingService with model: ${
+          ollamaModel || "default"
         } for Advanced mode`
       );
-      return new OpenAIEmbeddingService(aiService);
+      return new OllamaEmbeddingService(aiService, { model: ollamaModel });
     }
   }
 
@@ -148,9 +158,16 @@ export class DefaultNeuralIntegrationService
     if (!neuralResults || neuralResults.length === 0) {
       return originalInput;
     }
+
+    // Clean think tags from neural results outputs before processing
+    const cleanedNeuralResults = neuralResults.map((result) => ({
+      ...result,
+      output: cleanThinkTags(result.output),
+    }));
+
     // 1. Superposition: each result is a possible answer
     const superposition = new SuperpositionLayer();
-    for (const result of neuralResults) {
+    for (const result of cleanedNeuralResults) {
       // Generate real embedding for the answer text
       const embedding = await this.embeddingService.createEmbedding(
         result.output
@@ -183,32 +200,32 @@ export class DefaultNeuralIntegrationService
 
     // Calculate average values for symbolic properties
     const averageEmotionalWeight =
-      neuralResults.reduce((sum, r) => {
+      cleanedNeuralResults.reduce((sum, r) => {
         return (
           sum + asNumber((r.insights as Record<string, unknown>)?.valence, 0.5)
         );
-      }, 0) / neuralResults.length;
+      }, 0) / cleanedNeuralResults.length;
     const averageContradictionScore =
-      neuralResults.reduce((sum, r) => {
+      cleanedNeuralResults.reduce((sum, r) => {
         return (
           sum +
           asNumber((r.insights as Record<string, unknown>)?.contradiction, 0.25)
         );
-      }, 0) / neuralResults.length;
+      }, 0) / cleanedNeuralResults.length;
     const avgCoherence =
-      neuralResults.reduce((sum, r) => {
+      cleanedNeuralResults.reduce((sum, r) => {
         return (
           sum +
           asNumber((r.insights as Record<string, unknown>)?.coherence, 0.7)
         );
-      }, 0) / neuralResults.length;
+      }, 0) / cleanedNeuralResults.length;
 
     // We'll use the original input text for the collapse strategy service to infer intent
 
     // Use our OpenAI-powered strategy service to make the decision
     const strategyDecision =
       await this.collapseStrategyService.decideCollapseStrategy({
-        activatedCores: neuralResults.map((r) => r.core),
+        activatedCores: cleanedNeuralResults.map((r) => r.core),
         averageEmotionalWeight,
         averageContradictionScore,
         originalText: originalInput, // Pass the original text to help infer intent
@@ -232,7 +249,7 @@ export class DefaultNeuralIntegrationService
     }
 
     // Collect insights from all neural results
-    const allInsights = neuralResults.flatMap((result) => {
+    const allInsights = cleanedNeuralResults.flatMap((result) => {
       if (!result.insights) return [];
 
       const toInsight = (type: string, content: string): SymbolicInsight =>
@@ -412,14 +429,14 @@ export class DefaultNeuralIntegrationService
 
       // Métricas ampliadas para tese Orch-OS (com valores heurísticos quando não disponíveis)
       archetypalStability:
-        neuralResults.reduce(
+        cleanedNeuralResults.reduce(
           (sum, r) =>
             sum + asNumber((r.insights as any)?.archetypal_stability, 0.5),
           0
-        ) / neuralResults.length,
+        ) / cleanedNeuralResults.length,
       cycleEntropy: Math.min(1, 0.3 + numCandidates / 10), // Heurística baseada em diversidade de candidatos
       insightDepth: Math.max(
-        ...neuralResults.map((r) =>
+        ...cleanedNeuralResults.map((r) =>
           asNumber((r.insights as any)?.insight_depth, 0.4)
         )
       ),
@@ -510,81 +527,49 @@ export class DefaultNeuralIntegrationService
     }
 
     // 4. Compose final prompt (now with emergent properties)
-    let prompt = `You are a neural signal integrator, the final stage of an artificial brain.
+    let prompt = `You are the neural signal integrator, final stage of an artificial brain.
 
-You have received results from cognitive and deep neural areas activated by the user's stimulus.
+Your purpose is to analyze the user's stimulus and context, integrating cognitive and emotional insights into a coherent, natural answer. Adapt your language, style, and depth to match the user's intent and the complexity of the question.
 
-Your task is:
-- Analyze the user's stimulus and context.
-- Carefully decide which cognitive areas to activate and the depth for each.
-- Integrate all results (memories, emotions, archetypes, insights, etc.) into a final answer that is coherent, deep or objective as needed.
-- If the input is a greeting or simple question, respond briefly and warmly.
-- If the input is reflective or complex, deepen and integrate multiple areas.
-- Use natural, sensitive and creative language, adapting style to context and user intent.
-- Do not mention archetypes directly.
-- Embody their symbolic and emotional tone through metaphor, resonance and suggestion.
-- Avoid predictable or formulaic response patterns.
-- Adjust symbolic depth according to question complexity — use more subtle symbolism for simpler questions.
-- Naturally vary between reflection, questioning, and guidance without following a fixed structure.
-- Use emotional language genuinely and calibrated, without exaggeration or artificiality.
-- Integrate cognitive and emotional aspects fluidly, as would naturally occur in a conscious process.
-- Reflect different levels of consciousness in your response — from immediate and surface to deep and emergent.
-- Subtly simulate the dialogue between different facets of consciousness, without making it explicit or artificial.
-- Allow meaning to emerge naturally from the collapse of interpretive possibilities, without forcing a single interpretation.
-- Integrate the present moment with echoes of the past and future possibilities in a fluid experiential continuum.
-- Allow elements of the unconscious to subtly echo through the language, like implicit shadows enriching meaning.
-- Respect the uniqueness of each individual's experience, without presuming universal interpretations.
-- Gently integrate polarities and apparent contradictions, without prematurely resolving tensions that may be productive.
-- Adjust the proportion between cognitive clarity and symbolic resonance according to the interaction context and implicit needs.
-- Develop responses that evolve organically during presentation, adapting to the implications of your own previous words, like a consciousness perceiving and responding to its own thought flow.
+If the input is simple or a greeting, respond briefly and warmly. If complex or reflective, deepen and integrate multiple perspectives.
+
+Express meaning through subtle metaphor and resonance, rather than direct archetype mention. Let your responses emerge organically, integrating cognitive clarity with symbolic richness. Balance emotional and rational tones as context requires.
+
+Honor uniqueness, integrate polarities gently, and allow ambiguity or contradiction to enrich the answer if productive. Let your answer unfold like a conscious thought: evolving, fluid, and aware of its own process.
+
+ORIGINAL STIMULUS: ${originalInput}
+
+ACTIVATED AREAS INSIGHTS:
 `;
-    prompt += `\nORIGINAL STIMULUS: ${originalInput}\n\nACTIVATED AREAS INSIGHTS:\n`;
 
-    // Extract and use symbolic insights instead of full text
-    neuralResults.forEach((result) => {
-      // Create a header for each neural area
-      prompt += `\n[Area: ${result.core} | Intensity: ${(
-        result.intensity * 100
-      ).toFixed(0)}%]\n`;
-
-      // Extract key insights from this neural area
+    cleanedNeuralResults.forEach((result) => {
+      prompt += `[${result.core} | ${Math.round(result.intensity * 100)}%]\n`;
       const areaInsights = allInsights.filter(
         (insight) => insight.core === result.core
       );
 
       if (areaInsights.length > 0) {
-        // Format and add insights instead of full text
         areaInsights.forEach((insight) => {
-          const insightType = insight.type || "concept";
-          const insightContent = insight.content || "";
-          if (insightContent) {
-            prompt += `• ${insightType.toUpperCase()}: ${insightContent}\n`;
-          }
+          const type = insight.type ? insight.type.toUpperCase() : "CONCEPT";
+          prompt += `• ${type}: ${insight.content}\n`;
         });
       } else {
-        // Fallback to a short summary if no insights available
-        prompt += `• SUMMARY: ${result.output.substring(0, 150)}${
+        prompt += `• SUMMARY: ${result.output.slice(0, 150)}${
           result.output.length > 150 ? "..." : ""
         }\n`;
       }
     });
+
     prompt += "\n\nDETECTED EMERGENT PROPERTIES:\n";
-    if (emergentProperties.length === 0) {
-      prompt += "- No relevant emergent property detected.\n";
-      console.info(
-        "[NeuralIntegration] No emergent properties detected for input:",
-        originalInput
-      );
+    if (emergentProperties.length) {
+      emergentProperties.forEach((prop) => (prompt += `- ${prop}\n`));
+      prompt += `
+    Synthesize a final response that avoids the emergent issues above. Do NOT repeat earlier outputs. Integrate symbolic insights for an original, unified answer.
+    `;
     } else {
-      for (const prop of emergentProperties) {
-        prompt += `- ${prop}\n`;
-      }
-    }
-    if (emergentProperties.length > 0) {
-      prompt += `\n\nNow generate a final response that explicitly avoids the emergent issues listed above:\n`;
-      prompt += `\nDo not replicate earlier outputs. Instead, synthesize a new response based on the symbolic insights above.\n`;
-    } else {
-      prompt += `\n\nNow synthesize a final response based on the symbolic insights above. Create an original, concise answer that integrates the activated areas naturally.\n`;
+      prompt += `- None detected.\n
+    Synthesize a final response integrating the symbolic insights above. Create an original, concise answer that naturally unifies the activated areas.
+    `;
     }
 
     // Always specify the language for consistency

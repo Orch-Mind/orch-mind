@@ -15,7 +15,7 @@ import {
 /**
  * Class responsible for extracting symbolic neural signals from the transcription context
  * This is the first impulse of an artificial symbolic mind
- * Automatically selects between OpenAI (advanced mode) and HuggingFace (basic mode) services
+ * Automatically selects between Ollama (advanced mode) and HuggingFace (basic mode) services
  */
 export class NeuralSignalExtractor implements INeuralSignalExtractor {
   private readonly aiService: IOpenAIService;
@@ -55,13 +55,47 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
           : undefined;
 
       LoggingUtils.logInfo(
-        "Extracting neural signals with complete user context..."
+        "🧠 [NeuralSignalExtractor] Starting neural signal extraction..."
+      );
+      LoggingUtils.logInfo(
+        `🧠 [NeuralSignalExtractor] Config: ${JSON.stringify({
+          transcriptionLength: transcription.length,
+          transcriptionPreview: transcription.substring(0, 100) + "...",
+          hasTemporaryContext: !!temporaryContext,
+          temporaryContextLength: temporaryContext?.length || 0,
+          userContextDataKeys: Object.keys(userContextData),
+          language,
+          aiServiceType: this.aiService.constructor.name,
+          aiServiceInitialized: this.aiService.isInitialized?.() ?? "unknown",
+        })}`
       );
 
       // Prepare an enriched prompt with all available contextual data
       const enrichedPrompt = this.prepareEnrichedPrompt(
         transcription,
         userContextData
+      );
+
+      LoggingUtils.logInfo(
+        `🧠 [NeuralSignalExtractor] Enriched prompt prepared: ${JSON.stringify({
+          enrichedPromptLength: enrichedPrompt.length,
+          enrichedPromptPreview: enrichedPrompt.substring(0, 200) + "...",
+        })}`
+      );
+
+      // Verify AI service availability before proceeding
+      if (this.aiService.ensureOpenAIClient) {
+        const isReady = await this.aiService.ensureOpenAIClient();
+        if (!isReady) {
+          LoggingUtils.logError(
+            "🧠 [NeuralSignalExtractor] AI service is not ready. Using fallback signals."
+          );
+          return this.generateFallbackSignals(transcription);
+        }
+      }
+
+      LoggingUtils.logInfo(
+        "🧠 [NeuralSignalExtractor] Calling generateNeuralSignal..."
       );
 
       // Generate neural signals adapted for memory queries (works with both Pinecone and DuckDB)
@@ -71,96 +105,132 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
         language // Pass language from session state
       );
 
+      LoggingUtils.logInfo(
+        `🧠 [NeuralSignalExtractor] Neural response received: ${JSON.stringify({
+          hasSignals: !!neuralResponse.signals,
+          signalsLength: neuralResponse.signals?.length || 0,
+          signalsPreview:
+            neuralResponse.signals?.map((s) => ({
+              core: s?.core,
+              intensity: s?.intensity,
+              hasQuery: !!s?.symbolic_query?.query,
+            })) || [],
+        })}`
+      );
+
       // Verify if the response contains valid signals
       if (!neuralResponse.signals || neuralResponse.signals.length === 0) {
         LoggingUtils.logWarning(
-          "No neural signals were generated. Using default signals."
+          "🧠 [NeuralSignalExtractor] No neural signals were generated. Using default signals."
         );
 
-        // Provide default neural signals to ensure important memory queries
-        return {
-          signals: [
-            {
-              core: "memory",
-              intensity: 0.8,
-              symbolic_query: {
-                query: `memories related to: ${transcription.substring(
-                  0,
-                  100
-                )}`,
-              },
-              symbolicInsights: {
-                recall_type: "semantic",
-                temporal: "recent",
-                importance: "high",
-              },
-            },
-            {
-              core: "metacognitive",
-              intensity: 0.7,
-              symbolic_query: {
-                query: `reflection on: ${transcription.substring(0, 100)}`,
-              },
-              symbolicInsights: {
-                thought: "Processing cognitive stimulus",
-                state: "conscious",
-              },
-            },
-            {
-              core: "valence",
-              intensity: 0.6,
-              symbolic_query: {
-                query: `emotions about: ${transcription.substring(0, 100)}`,
-              },
-              symbolicInsights: {
-                emotion: "neutral",
-                intensity: "moderate",
-              },
-            },
-          ],
-        };
+        return this.generateFallbackSignals(transcription);
       }
 
-      // Improve neural signals for effective memory queries (both vector and traditional storage)
-      const enhancedSignals = neuralResponse.signals.map((signal) => {
-        // DO NOT overwrite or modify the model's symbolic query
-        // DO NOT add prefixes like "memories relevant to: ..."
-
-        // DO NOT overwrite topK if already provided
-        if (signal.topK === undefined) {
-          signal.topK =
-            signal.core === "memory" ? 5 : signal.core === "valence" ? 3 : 2;
-        }
-        return signal;
-      });
-
-      // Update the signals in the neural response
-      neuralResponse.signals = enhancedSignals;
-
-      // Log the generated signals for diagnostic purposes
+      // DEBUG: Log raw signals before validation
       LoggingUtils.logInfo(
-        `🧠 ${neuralResponse.signals.length} neural signals extracted and optimized for memory queries`
+        `🧠 [NeuralSignalExtractor] Raw signals before validation: ${JSON.stringify(
+          neuralResponse.signals.map((s) => ({
+            core: s?.core,
+            intensity: s?.intensity,
+            hasQuery: !!s?.symbolic_query?.query,
+            hasSymbolicInsights: !!s?.symbolicInsights,
+            queryLength: s?.symbolic_query?.query?.length || 0,
+          }))
+        )}`
       );
 
-      // Return the optimized neural response
-      return neuralResponse;
+      // ENHANCED VALIDATION: More flexible validation for debugging
+      const validSignals = neuralResponse.signals.filter((signal) => {
+        const isValid =
+          signal &&
+          signal.core &&
+          typeof signal.intensity === "number" &&
+          signal.intensity >= 0 &&
+          signal.intensity <= 1;
+
+        if (!isValid) {
+          LoggingUtils.logWarning(
+            `🧠 [NeuralSignalExtractor] Invalid signal filtered out: ${JSON.stringify(
+              signal
+            )}`
+          );
+        }
+
+        return isValid;
+      });
+
+      if (validSignals.length === 0) {
+        LoggingUtils.logWarning(
+          "🧠 [NeuralSignalExtractor] All signals were invalid after validation. Using fallback signals."
+        );
+        return this.generateFallbackSignals(transcription);
+      }
+
+      LoggingUtils.logInfo(
+        `✅ [NeuralSignalExtractor] Successfully validated ${validSignals.length} neural signals`
+      );
+
+      return { signals: validSignals };
     } catch (error) {
       // In case of error, log and provide a fallback response
-      LoggingUtils.logError("Error extracting neural signals", error as Error);
+      LoggingUtils.logError(
+        "🧠 [NeuralSignalExtractor] Error extracting neural signals",
+        error as Error
+      );
 
-      return {
-        signals: [
-          {
-            core: "memory",
-            intensity: 0.5,
-            symbolic_query: {
-              query: config.transcription.substring(0, 50),
-            },
-            symbolicInsights: {},
-          },
-        ],
-      };
+      return this.generateFallbackSignals(config.transcription);
     }
+  }
+
+  /**
+   * Generates fallback neural signals when the main extraction fails
+   * @param transcription The original transcription text
+   * @returns Fallback neural signal response
+   */
+  private generateFallbackSignals(transcription: string): NeuralSignalResponse {
+    LoggingUtils.logInfo(
+      "🧠 [NeuralSignalExtractor] Generating fallback neural signals..."
+    );
+
+    return {
+      signals: [
+        {
+          core: "memory",
+          intensity: 0.8,
+          symbolic_query: {
+            query: `memories related to: ${transcription.substring(0, 100)}`,
+          },
+          symbolicInsights: {
+            recall_type: "semantic",
+            temporal: "recent",
+            importance: "high",
+          },
+        },
+        {
+          core: "metacognitive",
+          intensity: 0.7,
+          symbolic_query: {
+            query: `reflection on: ${transcription.substring(0, 100)}`,
+          },
+          symbolicInsights: {
+            thought: "Processing cognitive stimulus",
+            state: "conscious",
+          },
+        },
+        {
+          core: "valence",
+          intensity: 0.6,
+          symbolic_query: {
+            query: `emotions about: ${transcription.substring(0, 100)}`,
+          },
+          symbolicInsights: {
+            emotion: "neutral",
+            intensity: "moderate",
+          },
+        },
+      ],
+    };
   }
 
   /**

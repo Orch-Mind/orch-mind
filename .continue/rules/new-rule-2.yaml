@@ -1,0 +1,10 @@
+name: Autonomous Sequential Workflow
+version: 0.0.1
+schema: v1
+rules:
+  - For every user request, break down the goal into smaller subtasks.
+    Plan the steps before acting, then implement each step in sequence.
+    After each change, verify correctness by running tests or analyzing output.
+    If you encounter errors, debug, revise, and continue until the task is fully solved.
+    Do NOT yield or end the turn unless the task is 100% complete and confirmed.
+    Always explain your thinking before acting and after each step.

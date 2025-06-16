@@ -4,7 +4,6 @@
 // PineconeMemoryService.ts
 // Implementation of IPersistenceService using Pinecone or DuckDB (for basic mode)
 
-import { ModeService, OrchOSModeEnum } from "../../../../../services/ModeService";
 import { IPersistenceService } from "../../interfaces/memory/IPersistenceService";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { SpeakerTranscription } from "../../interfaces/transcription/TranscriptionTypes";
@@ -13,7 +12,7 @@ import { countTokens } from "./utils/tokenUtils";
 
 // Normaliza keywords para lowercase e remove espaços extras
 function normalizeKeywords(keywords: string[] = []): string[] {
-  return keywords.map(k => k.trim().toLowerCase()).filter(Boolean);
+  return keywords.map((k) => k.trim().toLowerCase()).filter(Boolean);
 }
 
 export class PineconeMemoryService implements IPersistenceService {
@@ -29,40 +28,49 @@ export class PineconeMemoryService implements IPersistenceService {
       messages: string[];
       lastUpdated: number;
     };
-    external: Record<string, {
-      messages: string[];
-      lastUpdated: number;
-    }>;
+    external: Record<
+      string,
+      {
+        messages: string[];
+        lastUpdated: number;
+      }
+    >;
     lastFlushTime: number;
   } = {
-      primaryUser: {
-        messages: [],
-        lastUpdated: Date.now()
-      },
-      external: {},
-      lastFlushTime: Date.now()
-    };
+    primaryUser: {
+      messages: [],
+      lastUpdated: Date.now(),
+    },
+    external: {},
+    lastFlushTime: Date.now(),
+  };
 
   // Buffer configuration (cognitive buffer tuning)
   private bufferConfig = {
-    maxBufferAgeMs: 5 * 60 * 1000,     // 5 minutes
+    maxBufferAgeMs: 5 * 60 * 1000, // 5 minutes
     inactivityThresholdMs: 5 * 60 * 1000, // 5 minutes de inatividade força um flush
-    minTokensBeforeFlush: 100,        // Minimum tokens before considering flush
-    maxTokensBeforeFlush: 150        // Maximum token limit
+    minTokensBeforeFlush: 100, // Minimum tokens before considering flush
+    maxTokensBeforeFlush: 150, // Maximum token limit
   };
 
   constructor(embeddingService: IEmbeddingService) {
     this.embeddingService = embeddingService;
-    
-    // Check if basic mode is enabled using ModeService for consistency
-    this.useBasicMode = ModeService.getMode() === OrchOSModeEnum.BASIC;
-    LoggingUtils.logInfo(`[MEMORY] Initialized in ${this.useBasicMode ? 'basic (DuckDB)' : 'complete (Pinecone)'} mode`);
-    
-    // Listen for mode changes to update storage choice at runtime
-    ModeService.onModeChange((mode) => {
-      this.useBasicMode = mode === OrchOSModeEnum.BASIC;
-      LoggingUtils.logInfo(`[MEMORY] Mode changed to ${mode}, using ${this.useBasicMode ? 'DuckDB' : 'Pinecone'}`);
-    });
+
+    // DEPRECATED: PineconeMemoryService is being phased out - always use DuckDB now
+    this.useBasicMode = true; // Force DuckDB mode
+
+    LoggingUtils.logWarning(
+      `[MEMORY-SERVICE] ⚠️  PineconeMemoryService is DEPRECATED. Using DuckDB local storage only.`
+    );
+    LoggingUtils.logInfo(
+      `[MEMORY-SERVICE] Initialized DuckDB memory service (unified local storage)`
+    );
+
+    // Reset buffer state
+    this.resetBuffer();
+
+    // Mode change listeners removed - DuckDB is now the only storage backend
+    // No need to switch between storage systems anymore
   }
 
   /**
@@ -97,13 +105,24 @@ export class PineconeMemoryService implements IPersistenceService {
           newTranscriptions.push(transcription);
           // Marcar como processada para futuras chamadas
           this.processedTranscriptionIndices[speaker].add(i);
-          LoggingUtils.logInfo(`[COGNITIVE-MEMORY] New transcription for speaker ${speaker}: ${transcription.text.substring(0, 30)}...`);
+          LoggingUtils.logInfo(
+            `[COGNITIVE-MEMORY] New transcription for speaker ${speaker}: ${transcription.text.substring(
+              0,
+              30
+            )}...`
+          );
         }
       }
 
       // If there are no new transcriptions and no question or answer, do nothing (no brain update required)
-      if (newTranscriptions.length === 0 && !question.trim() && !answer.trim()) {
-        LoggingUtils.logInfo(`[COGNITIVE-BUFFER] No new content to add to cognitive buffer`);
+      if (
+        newTranscriptions.length === 0 &&
+        !question.trim() &&
+        !answer.trim()
+      ) {
+        LoggingUtils.logInfo(
+          `[COGNITIVE-BUFFER] No new content to add to cognitive buffer`
+        );
         return;
       }
 
@@ -111,7 +130,9 @@ export class PineconeMemoryService implements IPersistenceService {
       // The question will be processed directly at flush time (on-demand brain query)
 
       if (newTranscriptions.length > 0) {
-        LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Adding ${newTranscriptions.length} new transcriptions to cognitive buffer`);
+        LoggingUtils.logInfo(
+          `[COGNITIVE-BUFFER] Adding ${newTranscriptions.length} new transcriptions to cognitive buffer`
+        );
 
         // Group ONLY new transcriptions by speaker (brain memory organization)
         const speakerMessages = this.groupTranscriptionsBySpeaker(
@@ -131,13 +152,15 @@ export class PineconeMemoryService implements IPersistenceService {
             this.messageBuffer.primaryUser.messages.push(...messages);
             this.messageBuffer.primaryUser.lastUpdated = Date.now();
             const currentTokens = this.countBufferTokens();
-            LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Added ${messages.length} messages to primary user's buffer. Total tokens: ${currentTokens}/${this.bufferConfig.maxTokensBeforeFlush}`);
+            LoggingUtils.logInfo(
+              `[COGNITIVE-BUFFER] Added ${messages.length} messages to primary user's buffer. Total tokens: ${currentTokens}/${this.bufferConfig.maxTokensBeforeFlush}`
+            );
           } else {
             // Initialize buffer for external speaker if it does not exist (brain buffer expansion)
             if (!this.messageBuffer.external[speaker]) {
               this.messageBuffer.external[speaker] = {
                 messages: [],
-                lastUpdated: Date.now()
+                lastUpdated: Date.now(),
               };
             }
 
@@ -145,7 +168,9 @@ export class PineconeMemoryService implements IPersistenceService {
             this.messageBuffer.external[speaker].messages.push(...messages);
             this.messageBuffer.external[speaker].lastUpdated = Date.now();
             const currentTokens = this.countBufferTokens();
-            LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Added ${messages.length} messages to buffer for speaker ${speaker}. Total tokens: ${currentTokens}/${this.bufferConfig.maxTokensBeforeFlush}`);
+            LoggingUtils.logInfo(
+              `[COGNITIVE-BUFFER] Added ${messages.length} messages to buffer for speaker ${speaker}. Total tokens: ${currentTokens}/${this.bufferConfig.maxTokensBeforeFlush}`
+            );
           }
         }
       }
@@ -155,32 +180,40 @@ export class PineconeMemoryService implements IPersistenceService {
 
       if (shouldFlush) {
         // If buffer reached token limit, save everything including user's messages (cognitive flush)
-        LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Auto-flushing cognitive buffer due to token limit`);
-        await this.flushBuffer(answer.trim() ? answer : null, primaryUserSpeaker, true);
+        LoggingUtils.logInfo(
+          `[COGNITIVE-BUFFER] Auto-flushing cognitive buffer due to token limit`
+        );
+        await this.flushBuffer(
+          answer.trim() ? answer : null,
+          primaryUserSpeaker,
+          true
+        );
       } else if (answer.trim()) {
         // If we have an assistant response but buffer is not full,
         // save ONLY the response (without user's messages), so we don't lose the response (brain response preservation)
-        LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Saving only assistant's response, retaining buffer state`);
+        LoggingUtils.logInfo(
+          `[COGNITIVE-BUFFER] Saving only assistant's response, retaining buffer state`
+        );
 
         // Create a vector entry only for the response, without touching the buffer (direct brain memory insert)
         await this.saveAssistantResponseOnly(answer);
       }
     } catch (error) {
-      LoggingUtils.logError("[COGNITIVE-BUFFER] Error processing interaction for cognitive buffer", error);
+      LoggingUtils.logError(
+        "[COGNITIVE-BUFFER] Error processing interaction for cognitive buffer",
+        error
+      );
     }
   }
 
   /**
-   * Checks if the memory service is available (Pinecone or DuckDB)
+   * Checks if the memory service is available (DuckDB only)
    */
   isAvailable(): boolean {
-    if (this.useBasicMode) {
-      // In basic mode, check if DuckDB services are available
-      return !!window.electronAPI?.saveToDuckDB && !!window.electronAPI.queryDuckDB;
-    } else {
-      // In complete mode, check if Pinecone services are available
-      return !!window.electronAPI?.saveToPinecone && !!window.electronAPI.queryPinecone;
-    }
+    // Always check for DuckDB services (Pinecone deprecated)
+    return (
+      !!window.electronAPI?.saveToDuckDB && !!window.electronAPI.queryDuckDB
+    );
   }
 
   /**
@@ -190,16 +223,16 @@ export class PineconeMemoryService implements IPersistenceService {
     id: string,
     embedding: number[],
     metadata: Record<string, unknown>
-  ): { id: string, values: number[], metadata: Record<string, unknown> } {
+  ): { id: string; values: number[]; metadata: Record<string, unknown> } {
     return {
       id,
       values: embedding,
-      metadata
+      metadata,
     };
   }
 
   /**
-   * Queries memory store (Pinecone or DuckDB) for relevant memory
+   * Queries memory store (DuckDB only - Pinecone deprecated)
    */
   async queryMemory(
     embedding: number[],
@@ -213,45 +246,45 @@ export class PineconeMemoryService implements IPersistenceService {
     try {
       // Log filters for debug (brain query diagnostics)
       if (filters) {
-        LoggingUtils.logInfo(`[MemoryService] filters: ${JSON.stringify(filters)}`);
-      }
-      
-      let queryResponse;
-      // Use either DuckDB or Pinecone based on mode
-      if (this.useBasicMode) {
-        // Query DuckDB via IPC (local memory)
-        LoggingUtils.logInfo(`[MEMORY] Querying DuckDB in basic mode`);
-        queryResponse = await window.electronAPI.queryDuckDB(
-          embedding,
-          topK,
-          normalizeKeywords(keywords),
-          filters
-          // Using dynamic threshold - system will choose optimal value based on context
-        );
-      } else {
-        // Query Pinecone via IPC (cloud memory)
-        LoggingUtils.logInfo(`[MEMORY] Querying Pinecone in complete mode`);
-        queryResponse = await window.electronAPI.queryPinecone(
-          embedding,
-          topK,
-          normalizeKeywords(keywords),
-          filters
+        LoggingUtils.logInfo(
+          `[MemoryService] filters: ${JSON.stringify(filters)}`
         );
       }
-      
+
+      // Always query DuckDB (Pinecone deprecated)
+      LoggingUtils.logInfo(`[MEMORY] Querying DuckDB local storage`);
+      const queryResponse = await window.electronAPI.queryDuckDB(
+        embedding,
+        topK,
+        normalizeKeywords(keywords),
+        filters
+        // Using dynamic threshold - system will choose optimal value based on context
+      );
+
       // Extract relevant texts from results (brain memory retrieval)
       const relevantTexts = queryResponse.matches
-        .filter((match: { metadata?: { content?: string } }) => match.metadata && match.metadata.content)
-        .map((match: { metadata?: { content?: string } }) => match.metadata?.content as string)
+        .filter(
+          (match: { metadata?: { content?: string } }) =>
+            match.metadata && match.metadata.content
+        )
+        .map(
+          (match: { metadata?: { content?: string } }) =>
+            match.metadata?.content as string
+        )
         .join("\n\n");
-      
+
       if (relevantTexts) {
-        LoggingUtils.logInfo(`[COGNITIVE-MEMORY] Relevant context retrieved via ${this.useBasicMode ? 'DuckDB' : 'Pinecone'}`);
+        LoggingUtils.logInfo(
+          `[COGNITIVE-MEMORY] Relevant context retrieved via DuckDB`
+        );
       }
-      
+
       return relevantTexts;
     } catch (error) {
-      LoggingUtils.logError(`[COGNITIVE-MEMORY] Error querying ${this.useBasicMode ? 'DuckDB' : 'Pinecone'} memory`, error);
+      LoggingUtils.logError(
+        `[COGNITIVE-MEMORY] Error querying DuckDB memory`,
+        error
+      );
       return "";
     }
   }
@@ -262,25 +295,32 @@ export class PineconeMemoryService implements IPersistenceService {
   private shouldFlushBuffer(): boolean {
     // Calculate total number of messages in buffer (for diagnostics)
     const totalUserMessages = this.messageBuffer.primaryUser.messages.length;
-    const totalExternalMessages = Object.values(this.messageBuffer.external)
-      .reduce((sum, speaker) => sum + speaker.messages.length, 0);
+    const totalExternalMessages = Object.values(
+      this.messageBuffer.external
+    ).reduce((sum, speaker) => sum + speaker.messages.length, 0);
     const totalMessages = totalUserMessages + totalExternalMessages;
 
     // Check total number of tokens in buffer (brain load check)
     const totalTokens = this.countBufferTokens();
 
     // Detailed log to better understand buffer behavior (cognitive diagnostics)
-    LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Current status: ${totalTokens}/${this.bufferConfig.maxTokensBeforeFlush} tokens, ${totalMessages} total messages (${totalUserMessages} user, ${totalExternalMessages} external)`);
+    LoggingUtils.logInfo(
+      `[COGNITIVE-BUFFER] Current status: ${totalTokens}/${this.bufferConfig.maxTokensBeforeFlush} tokens, ${totalMessages} total messages (${totalUserMessages} user, ${totalExternalMessages} external)`
+    );
 
     // If minimum token threshold not reached, do not flush (brain conservation)
     if (totalTokens < this.bufferConfig.minTokensBeforeFlush) {
-      LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Minimum token threshold not reached (${totalTokens}/${this.bufferConfig.minTokensBeforeFlush})`);
+      LoggingUtils.logInfo(
+        `[COGNITIVE-BUFFER] Minimum token threshold not reached (${totalTokens}/${this.bufferConfig.minTokensBeforeFlush})`
+      );
       return false;
     }
 
     // If maximum token limit exceeded, flush (brain overflow)
     if (totalTokens >= this.bufferConfig.maxTokensBeforeFlush) {
-      LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Token limit exceeded (${totalTokens}/${this.bufferConfig.maxTokensBeforeFlush})`);
+      LoggingUtils.logInfo(
+        `[COGNITIVE-BUFFER] Token limit exceeded (${totalTokens}/${this.bufferConfig.maxTokensBeforeFlush})`
+      );
       return true;
     }
 
@@ -291,82 +331,113 @@ export class PineconeMemoryService implements IPersistenceService {
   /**
    * Persists the buffer content in Pinecone and clears the buffer (neural persistence/flush)
    */
-  private async flushBuffer(answer: string | null, primaryUserSpeaker: string, resetBufferAfterFlush: boolean = true): Promise<void> {
+  private async flushBuffer(
+    answer: string | null,
+    primaryUserSpeaker: string,
+    resetBufferAfterFlush: boolean = true
+  ): Promise<void> {
     if (!this.isAvailable() || !this.embeddingService.isInitialized()) {
-      LoggingUtils.logWarning(`[COGNITIVE-BUFFER] Neural persistence service unavailable, flush aborted`);
+      LoggingUtils.logWarning(
+        `[COGNITIVE-BUFFER] Neural persistence service unavailable, flush aborted`
+      );
       return;
     }
 
     try {
       const now = Date.now();
       const uuid = now.toString();
-      const pineconeEntries = [] as Array<{ id: string, values: number[], metadata: Record<string, unknown> }>;
+      const pineconeEntries = [] as Array<{
+        id: string;
+        values: number[];
+        metadata: Record<string, unknown>;
+      }>;
 
       // Processar mensagens do usuário principal se houver
       if (this.messageBuffer.primaryUser.messages.length > 0) {
         const userMessages = this.messageBuffer.primaryUser.messages;
         const completeUserMessage = userMessages.join("\n");
 
-        LoggingUtils.logInfo(`[Buffer] Criando embedding para ${userMessages.length} mensagens do usuário principal: "${completeUserMessage.substring(0, 50)}${completeUserMessage.length > 50 ? '...' : ''}"`);
-        const userEmbedding = await this.embeddingService.createEmbedding(completeUserMessage);
+        LoggingUtils.logInfo(
+          `[Buffer] Criando embedding para ${
+            userMessages.length
+          } mensagens do usuário principal: "${completeUserMessage.substring(
+            0,
+            50
+          )}${completeUserMessage.length > 50 ? "..." : ""}"`
+        );
+        const userEmbedding = await this.embeddingService.createEmbedding(
+          completeUserMessage
+        );
 
-        pineconeEntries.push(this.createVectorEntry(
-          `speaker-${uuid}-${primaryUserSpeaker}`,
-          userEmbedding,
-          {
-            type: "complete_message",
-            content: completeUserMessage,
-            source: "user",
-            speakerName: primaryUserSpeaker,
-            speakerGroup: primaryUserSpeaker,
-            isSpeaker: true,
-            isUser: true,
-            messageCount: userMessages.length,
-            timestamp: new Date().toISOString(),
-            bufferCreatedAt: new Date(this.messageBuffer.primaryUser.lastUpdated).toISOString(),
-            bufferFlushedAt: new Date(now).toISOString()
-          }
-        ));
+        pineconeEntries.push(
+          this.createVectorEntry(
+            `speaker-${uuid}-${primaryUserSpeaker}`,
+            userEmbedding,
+            {
+              type: "complete_message",
+              content: completeUserMessage,
+              source: "user",
+              speakerName: primaryUserSpeaker,
+              speakerGroup: primaryUserSpeaker,
+              isSpeaker: true,
+              isUser: true,
+              messageCount: userMessages.length,
+              timestamp: new Date().toISOString(),
+              bufferCreatedAt: new Date(
+                this.messageBuffer.primaryUser.lastUpdated
+              ).toISOString(),
+              bufferFlushedAt: new Date(now).toISOString(),
+            }
+          )
+        );
       }
 
       // Processar mensagens de cada falante externo
-      for (const [speaker, data] of Object.entries(this.messageBuffer.external)) {
+      for (const [speaker, data] of Object.entries(
+        this.messageBuffer.external
+      )) {
         if (data.messages.length === 0) continue;
 
         const externalMessages = data.messages;
         const completeExternalMessage = externalMessages.join("\n");
 
-        LoggingUtils.logInfo(`[Buffer] Criando embedding para ${externalMessages.length} mensagens do falante ${speaker}`);
-        const externalEmbedding = await this.embeddingService.createEmbedding(completeExternalMessage);
+        LoggingUtils.logInfo(
+          `[Buffer] Criando embedding para ${externalMessages.length} mensagens do falante ${speaker}`
+        );
+        const externalEmbedding = await this.embeddingService.createEmbedding(
+          completeExternalMessage
+        );
 
-        pineconeEntries.push(this.createVectorEntry(
-          `speaker-${uuid}-${speaker}`,
-          externalEmbedding,
-          {
-            type: "complete_message",
-            content: completeExternalMessage,
-            source: "external",
-            speakerName: speaker,
-            speakerGroup: "external",
-            isSpeaker: true,
-            isUser: false,
-            messageCount: externalMessages.length,
-            timestamp: new Date().toISOString(),
-            bufferCreatedAt: new Date(data.lastUpdated).toISOString(),
-            bufferFlushedAt: new Date(now).toISOString()
-          }
-        ));
+        pineconeEntries.push(
+          this.createVectorEntry(
+            `speaker-${uuid}-${speaker}`,
+            externalEmbedding,
+            {
+              type: "complete_message",
+              content: completeExternalMessage,
+              source: "external",
+              speakerName: speaker,
+              speakerGroup: "external",
+              isSpeaker: true,
+              isUser: false,
+              messageCount: externalMessages.length,
+              timestamp: new Date().toISOString(),
+              bufferCreatedAt: new Date(data.lastUpdated).toISOString(),
+              bufferFlushedAt: new Date(now).toISOString(),
+            }
+          )
+        );
       }
 
       // Adicionar resposta se fornecida
       if (answer) {
-        LoggingUtils.logInfo(`[Buffer] Adicionando resposta ao salvar no Pinecone`);
+        LoggingUtils.logInfo(
+          `[Buffer] Adicionando resposta ao salvar no Pinecone`
+        );
         const answerEmbed = await this.embeddingService.createEmbedding(answer);
 
-        pineconeEntries.push(this.createVectorEntry(
-          `a-${uuid}`,
-          answerEmbed,
-          {
+        pineconeEntries.push(
+          this.createVectorEntry(`a-${uuid}`, answerEmbed, {
             type: "assistant_response",
             content: answer,
             source: "assistant",
@@ -375,24 +446,23 @@ export class PineconeMemoryService implements IPersistenceService {
             isSpeaker: false,
             isUser: false,
             timestamp: new Date().toISOString(),
-            bufferFlushedAt: new Date(now).toISOString()
-          }
-        ));
+            bufferFlushedAt: new Date(now).toISOString(),
+          })
+        );
       }
 
       // Verificar se há entradas para salvar
       if (pineconeEntries.length > 0) {
-        // Save to DuckDB or Pinecone based on mode via IPC
-        if (this.useBasicMode) {
-          const result = await window.electronAPI?.saveToDuckDB(pineconeEntries);
-          if (result?.success) {
-            LoggingUtils.logInfo(`[Buffer] Persistido no DuckDB: ${pineconeEntries.length} entradas`);
-          } else {
-            LoggingUtils.logError(`[Buffer] Erro ao persistir no DuckDB: ${result?.error}`);
-          }
+        // Always save to DuckDB (Pinecone deprecated)
+        const result = await window.electronAPI?.saveToDuckDB(pineconeEntries);
+        if (result?.success) {
+          LoggingUtils.logInfo(
+            `[Buffer] Persistido no DuckDB: ${pineconeEntries.length} entradas`
+          );
         } else {
-          await window.electronAPI?.saveToPinecone(pineconeEntries);
-          LoggingUtils.logInfo(`[Buffer] Persistido no Pinecone: ${pineconeEntries.length} entradas`);
+          LoggingUtils.logError(
+            `[Buffer] Erro ao persistir no DuckDB: ${result?.error}`
+          );
         }
 
         // Atualizar timestamp do último flush
@@ -403,13 +473,18 @@ export class PineconeMemoryService implements IPersistenceService {
           LoggingUtils.logInfo(`[Buffer] Resetando buffer após flush`);
           this.resetBuffer();
         } else {
-          LoggingUtils.logInfo(`[Buffer] Mantendo buffer após salvar resposta do assistente`);
+          LoggingUtils.logInfo(
+            `[Buffer] Mantendo buffer após salvar resposta do assistente`
+          );
         }
       } else {
-        LoggingUtils.logInfo(`[Buffer] Nenhuma entrada para salvar no Pinecone`);
+        LoggingUtils.logInfo(`[Buffer] Nenhuma entrada para salvar no DuckDB`);
       }
     } catch (error) {
-      LoggingUtils.logError("[Buffer] Erro ao persistir buffer no Pinecone", error);
+      LoggingUtils.logError(
+        "[Buffer] Erro ao persistir buffer no DuckDB",
+        error
+      );
     }
   }
 
@@ -421,7 +496,9 @@ export class PineconeMemoryService implements IPersistenceService {
     this.messageBuffer.external = {};
     // Keeps lastFlushTime for flush interval control (brain timing)
 
-    LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Cognitive buffer reset after neural persistence`);
+    LoggingUtils.logInfo(
+      `[COGNITIVE-BUFFER] Cognitive buffer reset after neural persistence`
+    );
   }
 
   /**
@@ -429,24 +506,34 @@ export class PineconeMemoryService implements IPersistenceService {
    * @param answer Assistant response
    */
   private async saveAssistantResponseOnly(answer: string): Promise<void> {
-    if (!this.isAvailable() || !this.embeddingService.isInitialized() || !answer.trim()) {
+    if (
+      !this.isAvailable() ||
+      !this.embeddingService.isInitialized() ||
+      !answer.trim()
+    ) {
       return;
     }
 
     try {
       const now = Date.now();
       const uuid = now.toString();
-      const pineconeEntries = [] as Array<{ id: string, values: number[], metadata: Record<string, unknown> }>;
+      const pineconeEntries = [] as Array<{
+        id: string;
+        values: number[];
+        metadata: Record<string, unknown>;
+      }>;
 
       // Only process the assistant's response (brain response only)
       if (answer.trim()) {
-        LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Adding only assistant response to Pinecone without buffer flush`);
-        const assistantEmbedding = await this.embeddingService.createEmbedding(answer);
+        LoggingUtils.logInfo(
+          `[COGNITIVE-BUFFER] Adding only assistant response to DuckDB without buffer flush`
+        );
+        const assistantEmbedding = await this.embeddingService.createEmbedding(
+          answer
+        );
 
-        pineconeEntries.push(this.createVectorEntry(
-          `assistant-${uuid}`,
-          assistantEmbedding,
-          {
+        pineconeEntries.push(
+          this.createVectorEntry(`assistant-${uuid}`, assistantEmbedding, {
             type: "assistant_response",
             content: answer,
             source: "assistant",
@@ -455,27 +542,31 @@ export class PineconeMemoryService implements IPersistenceService {
             isSpeaker: false,
             isUser: false,
             timestamp: new Date().toISOString(),
-            bufferFlushedAt: new Date(now).toISOString()
-          }
-        ));
+            bufferFlushedAt: new Date(now).toISOString(),
+          })
+        );
 
-        // Save only the response to DuckDB or Pinecone based on mode via IPC (direct neural persistence)
+        // Always save only the response to DuckDB (Pinecone deprecated)
         if (pineconeEntries.length > 0) {
-          if (this.useBasicMode) {
-            const result = await window.electronAPI?.saveToDuckDB(pineconeEntries);
-            if (result?.success) {
-              LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to DuckDB: ${pineconeEntries.length} entries`);
-            } else {
-              LoggingUtils.logError(`[COGNITIVE-BUFFER] Error persisting to DuckDB: ${result?.error}`);
-            }
+          const result = await window.electronAPI?.saveToDuckDB(
+            pineconeEntries
+          );
+          if (result?.success) {
+            LoggingUtils.logInfo(
+              `[COGNITIVE-BUFFER] Persisted only assistant response to DuckDB: ${pineconeEntries.length} entries`
+            );
           } else {
-            await window.electronAPI?.saveToPinecone(pineconeEntries);
-            LoggingUtils.logInfo(`[COGNITIVE-BUFFER] Persisted only assistant response to Pinecone: ${pineconeEntries.length} entries`);
+            LoggingUtils.logError(
+              `[COGNITIVE-BUFFER] Error persisting to DuckDB: ${result?.error}`
+            );
           }
         }
       }
     } catch (error) {
-      LoggingUtils.logError("[COGNITIVE-BUFFER] Error persisting assistant response to Pinecone", error);
+      LoggingUtils.logError(
+        "[COGNITIVE-BUFFER] Error persisting assistant response to DuckDB",
+        error
+      );
     }
   }
 
@@ -488,7 +579,11 @@ export class PineconeMemoryService implements IPersistenceService {
     const userText = this.messageBuffer.primaryUser.messages.join("\n");
     let totalTokens = countTokens(userText);
 
-    LoggingUtils.logInfo(`[Buffer-Debug] Texto do usuário: "${userText.substring(0, 50)}..." (${userText.length} caracteres, ${totalTokens} tokens)`);
+    LoggingUtils.logInfo(
+      `[Buffer-Debug] Texto do usuário: "${userText.substring(0, 50)}..." (${
+        userText.length
+      } caracteres, ${totalTokens} tokens)`
+    );
 
     // Não contamos tokens de perguntas já que não as armazenamos no buffer
 
@@ -496,7 +591,12 @@ export class PineconeMemoryService implements IPersistenceService {
     for (const speakerData of Object.values(this.messageBuffer.external)) {
       const speakerText = speakerData.messages.join("\n");
       const speakerTokens = countTokens(speakerText);
-      LoggingUtils.logInfo(`[Buffer-Debug] Texto de falante externo: "${speakerText.substring(0, 50)}..." (${speakerText.length} caracteres, ${speakerTokens} tokens)`);
+      LoggingUtils.logInfo(
+        `[Buffer-Debug] Texto de falante externo: "${speakerText.substring(
+          0,
+          50
+        )}..." (${speakerText.length} caracteres, ${speakerTokens} tokens)`
+      );
       totalTokens += speakerTokens;
     }
 
@@ -521,8 +621,10 @@ export class PineconeMemoryService implements IPersistenceService {
      * @param text - Texto contendo marcadores de falantes [Speaker] Texto...
      * @returns Array de segmentos com falante normalizado e texto
      */
-    const splitMixedTranscription = (text: string): Array<{ speaker: string, text: string }> => {
-      const results: Array<{ speaker: string, text: string }> = [];
+    const splitMixedTranscription = (
+      text: string
+    ): Array<{ speaker: string; text: string }> => {
+      const results: Array<{ speaker: string; text: string }> = [];
       // Regex otimizada para encontrar padrões [Falante] Texto
       const speakerPattern = /\[([^\]]+)\]\s*(.*?)(?=\s*\[[^\]]+\]|$)/gs;
 
@@ -535,11 +637,14 @@ export class PineconeMemoryService implements IPersistenceService {
         if (!rawSpeaker?.trim() || !spokenText?.trim()) continue;
 
         // Normalização do falante para categorias consistentes
-        const normalizedSpeaker = this.normalizeSpeakerName(rawSpeaker.trim(), primaryUserSpeaker);
+        const normalizedSpeaker = this.normalizeSpeakerName(
+          rawSpeaker.trim(),
+          primaryUserSpeaker
+        );
 
         results.push({
           speaker: normalizedSpeaker,
-          text: spokenText.trim()
+          text: spokenText.trim(),
         });
       }
 
@@ -549,7 +654,8 @@ export class PineconeMemoryService implements IPersistenceService {
     // Itera sobre todas as transcrições
     for (const { text, speaker } of transcriptions) {
       // Detecção eficiente de transcrições mistas (com marcadores de falantes)
-      const isMixedTranscription = text.indexOf('[') > -1 && text.indexOf(']') > -1;
+      const isMixedTranscription =
+        text.indexOf("[") > -1 && text.indexOf("]") > -1;
 
       if (isMixedTranscription) {
         // Processa transcrições mistas dividindo-as por falante
@@ -568,7 +674,10 @@ export class PineconeMemoryService implements IPersistenceService {
         }
       } else {
         // Para transcrições normais (sem marcadores), usa o falante da transcrição
-        const normalizedSpeaker = this.normalizeSpeakerName(speaker, primaryUserSpeaker);
+        const normalizedSpeaker = this.normalizeSpeakerName(
+          speaker,
+          primaryUserSpeaker
+        );
 
         // Inicializa array para o falante se necessário
         if (!speakerMessages.has(normalizedSpeaker)) {
@@ -585,22 +694,24 @@ export class PineconeMemoryService implements IPersistenceService {
   }
 
   /**
-   * Saves vectors to memory store (Pinecone or DuckDB)
+   * Saves vectors to memory store (DuckDB only - legacy method name for compatibility)
    * @param vectors Array of vectors
    * @returns Promise that resolves when vectors are saved
    */
-  public async saveToPinecone(vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>): Promise<void> {
-    if (this.useBasicMode) {
-      // Save to DuckDB in basic mode
-      LoggingUtils.logInfo(`[MEMORY] Saving ${vectors.length} vectors to DuckDB in basic mode`);
-      const result = await window.electronAPI.saveToDuckDB(vectors);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save to DuckDB');
-      }
-    } else {
-      // Save to Pinecone in complete mode
-      LoggingUtils.logInfo(`[MEMORY] Saving ${vectors.length} vectors to Pinecone in complete mode`);
-      await window.electronAPI.saveToPinecone(vectors);
+  public async saveToPinecone(
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
+    }>
+  ): Promise<void> {
+    // Always save to DuckDB (Pinecone deprecated)
+    LoggingUtils.logInfo(
+      `[MEMORY] Saving ${vectors.length} vectors to DuckDB (legacy saveToPinecone method)`
+    );
+    const result = await window.electronAPI.saveToDuckDB(vectors);
+    if (!result.success) {
+      throw new Error(result.error || "Failed to save to DuckDB");
     }
   }
 
@@ -610,18 +721,24 @@ export class PineconeMemoryService implements IPersistenceService {
    * @param primaryUserSpeaker - Primary user speaker identifier
    * @returns Normalized speaker name
    */
-  private normalizeSpeakerName(rawSpeaker: string, primaryUserSpeaker: string): string {
+  private normalizeSpeakerName(
+    rawSpeaker: string,
+    primaryUserSpeaker: string
+  ): string {
     // Converts to lowercase for case-insensitive comparison
     const lowerSpeaker = rawSpeaker.toLowerCase();
 
     // Categorizes as "primary user" or "external"
     if (rawSpeaker === primaryUserSpeaker) {
       return primaryUserSpeaker;
-    } else if (lowerSpeaker.includes("speaker") || lowerSpeaker.includes("falante")) {
+    } else if (
+      lowerSpeaker.includes("speaker") ||
+      lowerSpeaker.includes("falante")
+    ) {
       return "external";
     }
 
     // If it doesn't fit any special category, keeps the original
     return rawSpeaker;
   }
-} 
+}

@@ -92,6 +92,9 @@ export class ElectronAPIFactory {
       // vLLM Manager
       ...this.createVllmManager(),
 
+      // Ollama Manager
+      ...this.createOllamaManager(),
+
       // DuckDB Commands (sandboxed version via IPC)
       duckdbCommand: duckdbService.duckdbCommand.bind(duckdbService),
 
@@ -287,37 +290,201 @@ export class ElectronAPIFactory {
       vllmStartModel: async (modelId: string) => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("vllm-start-model", modelId),
-          { component: "VllmManager", operation: "startModel", severity: "medium" }
+          {
+            component: "VllmManager",
+            operation: "startModel",
+            severity: "medium",
+          }
         );
       },
       vllmModelStatus: async () => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("vllm-model-status"),
-          { component: "VllmManager", operation: "modelStatus", severity: "low" }
+          {
+            component: "VllmManager",
+            operation: "modelStatus",
+            severity: "low",
+          }
         );
       },
       vllmGenerate: async (payload: any) => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("vllm-generate", payload),
-          { component: "VllmManager", operation: "generate", severity: "medium" }
+          {
+            component: "VllmManager",
+            operation: "generate",
+            severity: "medium",
+          }
         );
       },
       vllmHardwareInfo: async () => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("vllm-hardware-info"),
-          { component: "VllmManager", operation: "hardwareInfo", severity: "low" }
+          {
+            component: "VllmManager",
+            operation: "hardwareInfo",
+            severity: "low",
+          }
         );
       },
       vllmListLibrary: async () => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("vllm-list-library"),
-          { component: "VllmManager", operation: "listLibrary", severity: "low" }
+          {
+            component: "VllmManager",
+            operation: "listLibrary",
+            severity: "low",
+          }
+        );
+      },
+      vllmRefreshLibrary: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-refresh-library"),
+          {
+            component: "VllmManager",
+            operation: "refreshLibrary",
+            severity: "low",
+          }
+        );
+      },
+      vllmDownloadModel: async (modelId: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-download-model", modelId),
+          {
+            component: "VllmManager",
+            operation: "downloadModel",
+            severity: "medium",
+          }
         );
       },
       vllmStopModel: async () => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("vllm-stop-model"),
           { component: "VllmManager", operation: "stopModel", severity: "low" }
+        );
+      },
+      vllmTestConnection: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-test-connection"),
+          {
+            component: "VllmManager",
+            operation: "testConnection",
+            severity: "low",
+          }
+        );
+      },
+    };
+  }
+
+  /**
+   * Create Ollama Manager service methods
+   */
+  private createOllamaManager() {
+    return {
+      listModels: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("ollama-list-models"),
+          {
+            component: "OllamaManager",
+            operation: "listModels",
+            severity: "low",
+          }
+        );
+      },
+
+      getAvailableModels: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("ollama-get-available-models"),
+          {
+            component: "OllamaManager",
+            operation: "getAvailableModels",
+            severity: "low",
+          }
+        );
+      },
+
+      downloadModel: async (
+        modelId: string,
+        onProgress?: (progress: number, speed: string, eta: string) => void
+      ) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            if (onProgress) {
+              const progressListener = (
+                _event: Electron.IpcRendererEvent,
+                data: { progress: number; speed: string; eta: string }
+              ) => {
+                try {
+                  onProgress(data.progress, data.speed, data.eta);
+                } catch (error) {
+                  this.logger.error(
+                    "Error processing Ollama download progress",
+                    error
+                  );
+                }
+              };
+
+              ipcRenderer.on("ollama-download-progress", progressListener);
+
+              try {
+                const result = await ipcRenderer.invoke(
+                  "ollama-download-model",
+                  modelId
+                );
+                ipcRenderer.removeListener(
+                  "ollama-download-progress",
+                  progressListener
+                );
+                return result;
+              } catch (error) {
+                ipcRenderer.removeListener(
+                  "ollama-download-progress",
+                  progressListener
+                );
+                throw error;
+              }
+            } else {
+              return await ipcRenderer.invoke("ollama-download-model", modelId);
+            }
+          },
+          {
+            component: "OllamaManager",
+            operation: "downloadModel",
+            severity: "medium",
+          }
+        );
+      },
+
+      cancelDownload: async (modelId: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("ollama-cancel-download", modelId),
+          {
+            component: "OllamaManager",
+            operation: "cancelDownload",
+            severity: "low",
+          }
+        );
+      },
+
+      removeModel: async (modelId: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("ollama-remove-model", modelId),
+          {
+            component: "OllamaManager",
+            operation: "removeModel",
+            severity: "medium",
+          }
+        );
+      },
+
+      testConnection: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("ollama-test-connection"),
+          {
+            component: "OllamaManager",
+            operation: "testConnection",
+            severity: "low",
+          }
         );
       },
     };
@@ -364,32 +531,41 @@ export class ElectronAPIFactory {
     };
   }
 
-    /**
+  /**
    * Create Communication Management service methods
    */
-    private createCommunicationManager() {
-      return {
-        sendPromptUpdate: (type: 'partial' | 'complete' | 'error', content: string) => {
-          this.errorHandler.wrapSync(() => {
+  private createCommunicationManager() {
+    return {
+      sendPromptUpdate: (
+        type: "partial" | "complete" | "error",
+        content: string
+      ) => {
+        this.errorHandler.wrapSync(
+          () => {
             switch (type) {
-              case 'partial':
-                ipcRenderer.send(PROCESSING_EVENTS.PROMPT_PARTIAL_RESPONSE, content);
+              case "partial":
+                ipcRenderer.send(
+                  PROCESSING_EVENTS.PROMPT_PARTIAL_RESPONSE,
+                  content
+                );
                 break;
-              case 'complete':
+              case "complete":
                 ipcRenderer.send(PROCESSING_EVENTS.PROMPT_SUCCESS, content);
                 break;
-              case 'error':
+              case "error":
                 ipcRenderer.send(PROCESSING_EVENTS.PROMPT_ERROR, content);
                 break;
             }
-          }, {
-            component: 'CommunicationManager',
-            operation: 'sendPromptUpdate',
-            severity: 'low'
-          });
-        },
-      };
-    }
+          },
+          {
+            component: "CommunicationManager",
+            operation: "sendPromptUpdate",
+            severity: "low",
+          }
+        );
+      },
+    };
+  }
 
   /**
    * Create Import Management service methods
@@ -478,7 +654,7 @@ export class ElectronAPIFactory {
    */
   private createLegacyVectorDatabaseAPI() {
     return {
-      // Pinecone Legacy Support
+      // Pinecone Legacy Support - redirected to DuckDB
       queryPinecone: async (
         embedding: number[],
         topK = 5,
@@ -488,7 +664,7 @@ export class ElectronAPIFactory {
         return this.errorHandler.wrapAsync(
           async () => {
             return await ipcRenderer.invoke(
-              "query-pinecone",
+              "query-duckdb",
               embedding,
               topK,
               keywords,
@@ -512,7 +688,11 @@ export class ElectronAPIFactory {
       ) => {
         return this.errorHandler.wrapAsync(
           async () => {
-            return await ipcRenderer.invoke("save-pinecone", vectors);
+            this.logger.warn(
+              "⚠️ saveToPinecone is deprecated, using DuckDB instead"
+            );
+            // Redirect to DuckDB instead of calling removed Pinecone handler
+            return await ipcRenderer.invoke("save-duckdb", vectors);
           },
           {
             component: "LegacyVectorDB",

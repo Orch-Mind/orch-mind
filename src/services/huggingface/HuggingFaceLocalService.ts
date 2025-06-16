@@ -2,8 +2,10 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { AutoTokenizer } from "@huggingface/transformers";
-import { getOption, STORAGE_KEYS } from "../StorageService";
-import { extractToolCalls } from "../../utils/hfToolUtils";
+import { cleanThinkTags } from "../../components/context/deepgram/utils/ThinkTagCleaner";
+
+// Flag to enable legacy chat_template fallback for models missing template
+const ENABLE_FALLBACK_CHAT_TEMPLATE = false;
 
 // modelos suportados no navegador (geração de texto)
 export const SUPPORTED_HF_BROWSER_MODELS = [
@@ -182,38 +184,42 @@ export class HuggingFaceLocalService {
 
       // Load tokenizer for chat template
       this.tokenizer = await AutoTokenizer.from_pretrained(modelId);
-      
+
       // Add default chat template for models that don't have one
-      if (!this.tokenizer.chat_template) {
+      // Fallback chat_template injection disabled for vLLM-only setup
+      if (ENABLE_FALLBACK_CHAT_TEMPLATE && !this.tokenizer.chat_template) {
         console.log(`[HFS] Adding default chat template for ${modelId}`);
-        
+
         // Define a simple but effective chat template
         this.tokenizer.chat_template = `{% for message in messages %}{% if message['role'] == 'system' %}System: {{ message['content'] }}
 {% elif message['role'] == 'user' %}User: {{ message['content'] }}
 {% elif message['role'] == 'assistant' %}Assistant: {{ message['content'] }}
 {% endif %}{% endfor %}{% if add_generation_prompt %}Assistant: {% endif %}`;
-        
+
         // Also ensure apply_chat_template method exists
         if (!this.tokenizer.apply_chat_template) {
-          this.tokenizer.apply_chat_template = function(messages: any[], options: any = {}) {
-            let result = '';
-            
+          this.tokenizer.apply_chat_template = function (
+            messages: any[],
+            options: any = {}
+          ) {
+            let result = "";
+
             // Process messages
             for (const message of messages) {
-              if (message.role === 'system') {
+              if (message.role === "system") {
                 result += `System: ${message.content}\n`;
-              } else if (message.role === 'user') {
+              } else if (message.role === "user") {
                 result += `User: ${message.content}\n`;
-              } else if (message.role === 'assistant') {
+              } else if (message.role === "assistant") {
                 result += `Assistant: ${message.content}\n`;
               }
             }
-            
+
             // Add generation prompt if requested
             if (options.add_generation_prompt) {
-              result += 'Assistant: ';
+              result += "Assistant: ";
             }
-            
+
             return result;
           };
         }
@@ -281,199 +287,66 @@ export class HuggingFaceLocalService {
   }
 
   /**
-   * Generate text with enhanced error handling and streaming support
+   * Generate text using the loaded model.
    */
   async generate(
     messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
     opts: HuggingFaceLocalOptions = {}
   ): Promise<string> {
-    console.log(`[HFS] 🔍 DEBUG: generate called with original opts:`, opts);
-    console.log(
-      `[HFS] 🔍 DEBUG: opts.device: ${opts.device}, opts.dtype: ${opts.dtype}`
-    );
-
-    // CRITICAL: Completely ignore any device/dtype values from opts - they are unreliable
-    // Create a clean opts object without device/dtype to prevent any interference
-    const cleanOpts: HuggingFaceLocalOptions = {
-      model: opts.model,
-      maxTokens: opts.maxTokens,
-      temperature: opts.temperature,
-      forceReload: opts.forceReload,
-      // Explicitly exclude device and dtype - they will be forced to correct values
-    };
-
-    console.log(
-      `[HFS] 🔍 DEBUG: cleaned opts (without device/dtype):`,
-      cleanOpts
-    );
-
-    const modelId =
-      cleanOpts.model ||
-      (getOption(STORAGE_KEYS.HF_MODEL) as string) ||
-      SUPPORTED_HF_BROWSER_MODELS[0]; // Default to smallest model
-
-    // FORCE correct configurations - NEVER use values from opts
-    const device = "wasm"; // Always use wasm for browser compatibility
-    const dtype = "fp32"; // Always use fp32 - model-specific configs will override if needed
-
-    console.log(`[HFS] 🔍 DEBUG: FORCED device: ${device}, dtype: ${dtype}`);
-    console.log(`[HFS] Generating text with model: ${modelId}`);
+    if (!this.initialized || !this.generator) {
+      throw new Error("Model not initialized. Call loadModel() first.");
+    }
 
     try {
-      await this.loadModel({
-        modelId,
-        device,
-        dtype,
-        forceReload: cleanOpts.forceReload,
-      });
+      // Build conversation prompt
+      const prompt =
+        messages
+          .map(
+            (m) =>
+              `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`
+          )
+          .join("\n\n") + "\n\nAssistant:";
 
-      if (!this.generator) {
-        throw new Error("Model not loaded properly");
-      }
-      
-      // Ensure tokenizer has chat_template (for models loaded before this fix)
-      if (this.tokenizer && !this.tokenizer.chat_template) {
-        // Define a simple but effective chat template
-        this.tokenizer.chat_template = `{% for message in messages %}{% if message['role'] == 'system' %}System: {{ message['content'] }}
-{% elif message['role'] == 'user' %}User: {{ message['content'] }}
-{% elif message['role'] == 'assistant' %}Assistant: {{ message['content'] }}
-{% endif %}{% endfor %}{% if add_generation_prompt %}Assistant: {% endif %}`;
-        
-        // Also ensure apply_chat_template method exists
-        if (!this.tokenizer.apply_chat_template) {
-          this.tokenizer.apply_chat_template = function(messages: any[], options: any = {}) {
-            let result = '';
-            
-            // Process messages
-            for (const message of messages) {
-              if (message.role === 'system') {
-                result += `System: ${message.content}\n`;
-              } else if (message.role === 'user') {
-                result += `User: ${message.content}\n`;
-              } else if (message.role === 'assistant') {
-                result += `Assistant: ${message.content}\n`;
-              }
-            }
-            
-            // Add generation prompt if requested
-            if (options.add_generation_prompt) {
-              result += 'Assistant: ';
-            }
-            
-            return result;
-          };
-        }
-      }
-
-      // Build prompt using chat template when available, else fallback
-      let prompt: string | undefined;
-      try {
-        if (
-          (this.tokenizer as any).chat_template &&
-          typeof this.tokenizer.apply_chat_template === "function"
-        ) {
-          const templateOpts: any = {
-            add_generation_prompt: true,
-            tokenize: false, // Force string output to avoid array result
-          };
-
-          let tmpPrompt: any = this.tokenizer.apply_chat_template(
-            messages as any,
-            templateOpts
-          );
-          if (Array.isArray(tmpPrompt)) {
-            tmpPrompt = tmpPrompt.join("");
-          }
-          prompt = String(tmpPrompt);
-        }
-      } catch (err) {
-        // apply_chat_template failed - use fallback without warning
-        prompt = undefined;
-      }
-
-      if (!prompt || prompt.trim().length === 0) {
-        // Use simple prompt construction for models without chat template
-        prompt =
-          messages
-            .map(
-              (m) =>
-                `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`
-            )
-            .join("\n\n") + "\n\nAssistant:";
-      }
-
-      // Enhanced generation parameters
       const generationOptions = {
-        max_new_tokens: cleanOpts.maxTokens ?? 256, // Increased default for better responses
-        temperature: cleanOpts.temperature ?? 0.7,
-        return_full_text: false,
-        do_sample: true,
-        top_p: 0.9, // Add nucleus sampling for better quality
-        repetition_penalty: 1.1, // Reduce repetitive outputs
-        pad_token_id: 50256, // Common padding token
-        eos_token_id: 50256, // End of sequence token
-      };
+        max_new_tokens: opts.maxTokens || 512,
+        temperature: opts.temperature ?? 0.7,
+        do_sample: (opts.temperature ?? 0.7) > 0,
+      } as any;
 
-      console.log(`[HFS] Generating with options:`, generationOptions);
-
-      // Call generator directly (timeout removed per HF best practices)
       const result: any[] = await this.generator(prompt, generationOptions);
 
-      if (!result || result.length === 0) {
-        throw new Error("No generation result received");
-      }
+      let first = result[0];
+      if (Array.isArray(first)) first = first[0];
 
-      // Handle possible nested arrays from batch outputs
-      let firstResult = result[0];
-      if (Array.isArray(firstResult)) firstResult = firstResult[0];
-
-      const generatedTextRaw =
-        firstResult?.generated_text ?? firstResult?.text ?? undefined;
+      // Extract content depending on result structure
+      let generatedTextRaw = first?.generated_text ?? first?.text ?? undefined;
 
       if (typeof generatedTextRaw === "undefined") {
         throw new Error("Invalid generation result format");
       }
 
-      const generatedText = Array.isArray(generatedTextRaw)
+      const content = Array.isArray(generatedTextRaw)
         ? generatedTextRaw.at(-1)?.content ?? JSON.stringify(generatedTextRaw)
         : String(generatedTextRaw);
 
-      const cleanedText = generatedText.trim();
-      console.log(`[HFS] ✅ Generated ${cleanedText.length} characters`);
-
-      return cleanedText;
-    } catch (error) {
-      console.error(`[HFS] ❌ Generation error:`, error);
-
-      // Provide helpful error messages
-      if (error instanceof Error) {
-        if (error.message.includes("timeout")) {
-          throw new Error(
-            "Text generation timed out. Try using a smaller model or reducing max_tokens."
-          );
-        } else if (
-          error.message.includes("memory") ||
-          error.message.includes("OOM")
-        ) {
-          throw new Error(
-            "Out of memory during generation. Try using a quantized model (q4/q8) or reducing max_tokens."
-          );
-        }
+      // Remove the original prompt from the response if it's included
+      let responseText = content;
+      if (responseText.includes(prompt)) {
+        responseText = responseText.replace(prompt, "").trim();
       }
 
-      throw new Error(
-        `Text generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+      // Clean think tags from the response
+      const cleanedResponse = cleanThinkTags(responseText);
+
+      return cleanedResponse;
+    } catch (error) {
+      console.error("[HFS] ❌ Generation error:", error);
+      throw error;
     }
   }
 
   /**
-   * Generate text with function-calling like interface.
-   * Wrapper emulating OpenAI-style "generateWithFunctions" esperado pelas camadas superiores.
-   * Em primeira versão não faz parsing de chamadas de função; devolve apenas o conteúdo gerado
-   * e um array vazio para tool_calls.
+   * Generate text with function calling support.
    */
   async generateWithFunctions(
     messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
@@ -490,50 +363,79 @@ export class HuggingFaceLocalService {
       maxTokens?: number;
     } = {}
   ): Promise<{ content?: string; tool_calls?: Array<any> }> {
+    if (!this.initialized || !this.generator) {
+      throw new Error("Model not initialized. Call loadModel() first.");
+    }
+
     try {
-      const modelId =
-        (getOption(STORAGE_KEYS.HF_MODEL) as string) ||
-        SUPPORTED_HF_BROWSER_MODELS[0];
+      // Function to extract tool calls from generated text
+      const extractToolCalls = (text: string) => {
+        const toolCalls: any[] = [];
 
-      await this.loadModel({ modelId, device: "wasm", dtype: "fp32" });
+        // Look for JSON-like function calls in the text
+        const functionCallRegex =
+          /\{"function":\s*\{"name":\s*"([^"]+)",\s*"arguments":\s*(\{[^}]*\})\}\}/g;
+        let match;
 
-      if (!this.generator || !this.tokenizer) {
-        throw new Error("Model or tokenizer not loaded");
-      }
-      
-      // Ensure tokenizer has chat_template (for models loaded before this fix)
-      if (this.tokenizer && !this.tokenizer.chat_template) {
-        // Define a simple but effective chat template
-        this.tokenizer.chat_template = `{% for message in messages %}{% if message['role'] == 'system' %}System: {{ message['content'] }}
-{% elif message['role'] == 'user' %}User: {{ message['content'] }}
-{% elif message['role'] == 'assistant' %}Assistant: {{ message['content'] }}
-{% endif %}{% endfor %}{% if add_generation_prompt %}Assistant: {% endif %}`;
-        
-        // Also ensure apply_chat_template method exists
-        if (!this.tokenizer.apply_chat_template) {
-          this.tokenizer.apply_chat_template = function(messages: any[], options: any = {}) {
-            let result = '';
-            
-            // Process messages
-            for (const message of messages) {
-              if (message.role === 'system') {
-                result += `System: ${message.content}\n`;
-              } else if (message.role === 'user') {
-                result += `User: ${message.content}\n`;
-              } else if (message.role === 'assistant') {
-                result += `Assistant: ${message.content}\n`;
+        while ((match = functionCallRegex.exec(text)) !== null) {
+          try {
+            const functionName = match[1];
+            const argumentsStr = match[2];
+            const args = JSON.parse(argumentsStr);
+
+            toolCalls.push({
+              function: {
+                name: functionName,
+                arguments: args,
+              },
+            });
+          } catch (e) {
+            // Skip invalid JSON
+            continue;
+          }
+        }
+
+        // Alternative format: look for function calls in a more flexible way
+        if (toolCalls.length === 0) {
+          const altRegex = /(\w+)\s*\(\s*([^)]*)\s*\)/g;
+          while ((match = altRegex.exec(text)) !== null) {
+            const functionName = match[1];
+            const argsStr = match[2];
+
+            // Check if this function name matches any of our tools
+            const matchingTool = tools.find(
+              (t) => t.function.name === functionName
+            );
+            if (matchingTool) {
+              try {
+                // Try to parse arguments as JSON or create simple object
+                let args = {};
+                if (argsStr.trim()) {
+                  if (argsStr.includes(":")) {
+                    // Try to parse as JSON-like
+                    args = JSON.parse(`{${argsStr}}`);
+                  } else {
+                    // Simple string argument
+                    args = { value: argsStr.trim() };
+                  }
+                }
+
+                toolCalls.push({
+                  function: {
+                    name: functionName,
+                    arguments: args,
+                  },
+                });
+              } catch (e) {
+                // Skip invalid arguments
+                continue;
               }
             }
-            
-            // Add generation prompt if requested
-            if (options.add_generation_prompt) {
-              result += 'Assistant: ';
-            }
-            
-            return result;
-          };
+          }
         }
-      }
+
+        return toolCalls;
+      };
 
       // Build chat prompt passing the tools array per HF docs, with fallback
       let prompt: string | undefined;
@@ -590,7 +492,10 @@ export class HuggingFaceLocalService {
         }
       }
 
-      if (!prompt || (typeof prompt === 'string' && prompt.trim().length === 0)) {
+      if (
+        !prompt ||
+        (typeof prompt === "string" && prompt.trim().length === 0)
+      ) {
         // Use simple prompt with tool injection for models without chat template
         // This is the expected behavior, not an error
 
@@ -654,8 +559,7 @@ export class HuggingFaceLocalService {
       if (Array.isArray(first)) first = first[0];
 
       // Extract content depending on result structure
-      let generatedTextRaw =
-        first?.generated_text ?? first?.text ?? undefined;
+      let generatedTextRaw = first?.generated_text ?? first?.text ?? undefined;
 
       if (typeof generatedTextRaw === "undefined") {
         throw new Error("Invalid generation result format");
@@ -665,10 +569,13 @@ export class HuggingFaceLocalService {
         ? generatedTextRaw.at(-1)?.content ?? JSON.stringify(generatedTextRaw)
         : String(generatedTextRaw);
 
-      let tool_calls = extractToolCalls(content);
+      // Clean think tags from the content before processing tool calls
+      const cleanedContent = cleanThinkTags(content);
+
+      let tool_calls = extractToolCalls(cleanedContent);
 
       return {
-        content: content || undefined,
+        content: cleanedContent || undefined,
         tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
       };
     } catch (error) {

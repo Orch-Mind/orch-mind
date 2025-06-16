@@ -3,20 +3,17 @@
 
 /**
  * DuckDB Neural Database Service - Electron Compatible
- * 
+ *
  * Implementation following DuckDB-WASM official documentation for Electron
  * @see https://duckdb.org/docs/stable/clients/wasm/instantiation.html
  */
 
-import { ErrorHandler } from '../utils/ErrorHandler';
-import { Logger } from '../utils/Logger';
+import { DuckDBMatch } from "../../vector-database/interfaces/IVectorDatabase";
+import { ErrorHandler } from "../utils/ErrorHandler";
+import { Logger } from "../utils/Logger";
 
-// DuckDB-WASM types matching the actual library interface
-interface NormalizedMatch {
-  id: string;
-  score: number;
-  metadata: Record<string, unknown>;
-}
+// Legacy compatibility alias for DuckDB-WASM types
+interface NormalizedMatch extends DuckDBMatch {}
 
 export class DuckDBService {
   private static instance: DuckDBService | null = null;
@@ -26,13 +23,18 @@ export class DuckDBService {
   private isInitialized = false;
 
   private constructor(logger: Logger, errorHandler: ErrorHandler) {
-    this.logger = logger.createChild('DuckDB');
+    this.logger = logger.createChild("DuckDB");
   }
 
-  static getInstance(logger?: Logger, errorHandler?: ErrorHandler): DuckDBService {
+  static getInstance(
+    logger?: Logger,
+    errorHandler?: ErrorHandler
+  ): DuckDBService {
     if (!DuckDBService.instance) {
       if (!logger || !errorHandler) {
-        throw new Error('Logger and ErrorHandler required for first instance creation');
+        throw new Error(
+          "Logger and ErrorHandler required for first instance creation"
+        );
       }
       DuckDBService.instance = new DuckDBService(logger, errorHandler);
     }
@@ -44,11 +46,13 @@ export class DuckDBService {
 
     // DuckDB WASM is not recommended for Electron applications
     // This service is deprecated - use DuckDBHelper in main process instead
-    this.logger.warn('DuckDBService: Deprecated for Electron - use main process DuckDBHelper instead');
-    
+    this.logger.warn(
+      "DuckDBService: Deprecated for Electron - use main process DuckDBHelper instead"
+    );
+
     // Mark as "initialized" but non-functional to prevent loops
     this.isInitialized = false;
-    
+
     // Return early without throwing to allow graceful fallback
     return;
   }
@@ -57,22 +61,22 @@ export class DuckDBService {
     if (!this.isInitialized) {
       await this.initialize();
     }
-    
+
     // If still not initialized, return safe defaults
     if (!this.isInitialized) {
       return this.getFallbackResponse(command);
     }
 
     switch (command) {
-      case 'query':
+      case "query":
         return this.handleQuery(data);
-      case 'save':
+      case "save":
         return this.handleSave(data);
-      case 'count':
+      case "count":
         return this.handleCount();
-      case 'debug':
+      case "debug":
         return this.handleDebug();
-      case 'close':
+      case "close":
         return this.handleClose();
       default:
         throw new Error(`Unknown command: ${command}`);
@@ -81,36 +85,43 @@ export class DuckDBService {
 
   private getFallbackResponse(command: string): any {
     switch (command) {
-      case 'query':
+      case "query":
         return { matches: [] };
-      case 'save':
-        return { success: false, error: 'Database not available' };
-      case 'count':
+      case "save":
+        return { success: false, error: "Database not available" };
+      case "count":
         return { count: 0 };
-      case 'debug':
+      case "debug":
         return { initialized: false, fallback: true };
-      case 'close':
+      case "close":
         return { success: true };
       default:
-        return { error: 'Command not available in fallback mode' };
+        return { error: "Command not available in fallback mode" };
     }
   }
 
-  private async handleQuery(params: any): Promise<{ matches: NormalizedMatch[] }> {
+  private async handleQuery(
+    params: any
+  ): Promise<{ matches: NormalizedMatch[] }> {
     if (!this.connection) {
       return { matches: [] };
     }
 
     try {
-      const { embedding, topK = 5, namespace = 'default', keywords = [] } = params;
-      
+      const {
+        embedding,
+        topK = 5,
+        namespace = "default",
+        keywords = [],
+      } = params;
+
       if (!embedding || !Array.isArray(embedding)) {
         return { matches: [] };
       }
 
       // Store embedding as JSON string for Electron compatibility
       const embeddingStr = JSON.stringify(embedding);
-      
+
       let sql = `
         SELECT 
           id, 
@@ -119,48 +130,50 @@ export class DuckDBService {
         FROM embeddings 
         WHERE namespace = ?
       `;
-      
+
       const queryParams = [namespace];
-      
+
       // Add keyword filtering if provided
       if (keywords.length > 0) {
-        const keywordConditions = keywords.map(() => 
-          "metadata LIKE ?"
-        ).join(' OR ');
+        const keywordConditions = keywords
+          .map(() => "metadata LIKE ?")
+          .join(" OR ");
         sql += ` AND (${keywordConditions})`;
         keywords.forEach((keyword: string) => queryParams.push(`%${keyword}%`));
       }
-      
+
       sql += ` LIMIT ?`;
       queryParams.push(topK);
-      
+
       // Use simple query for Electron compatibility
       const results = await this.connection.query(sql, queryParams);
 
       const matches = results.map((row: any) => ({
         id: row.id,
         score: Number(row.score) || 0,
-        metadata: row.metadata ? JSON.parse(row.metadata) : {}
+        metadata: row.metadata ? JSON.parse(row.metadata) : {},
       }));
 
       this.logger.info(`Query returned ${matches.length} matches`);
       return { matches };
     } catch (error) {
-      this.logger.error('Query failed', error);
+      this.logger.error("Query failed", error);
       return { matches: [] };
     }
   }
 
-  private async handleSave(params: any): Promise<{ success: boolean; error?: string }> {
+  private async handleSave(
+    params: any
+  ): Promise<{ success: boolean; error?: string }> {
     if (!this.connection) {
-      return { success: false, error: 'Database not initialized' };
+      return { success: false, error: "Database not initialized" };
     }
 
     try {
-      const { vectors, namespace = 'default' } = params;
-      
+      const { vectors, namespace = "default" } = params;
+
       if (!Array.isArray(vectors) || vectors.length === 0) {
-        return { success: false, error: 'No vectors provided' };
+        return { success: false, error: "No vectors provided" };
       }
 
       // Use simple insert approach for Electron compatibility
@@ -168,23 +181,29 @@ export class DuckDBService {
         if (!vector.id || !vector.values || !Array.isArray(vector.values)) {
           continue;
         }
-        
+
         const embeddingStr = JSON.stringify(vector.values);
         const metadataStr = JSON.stringify(vector.metadata || {});
-        
-        await this.connection.query(`
-          INSERT OR REPLACE INTO embeddings (id, namespace, embedding, metadata)
-          VALUES (?, ?, ?, ?)
-        `, [vector.id, namespace, embeddingStr, metadataStr]);
+
+        // UPSERT behavior: DELETE existing record first, then INSERT
+        await this.connection.query(
+          `DELETE FROM embeddings WHERE id = ? AND namespace = ?`,
+          [vector.id, namespace]
+        );
+
+        await this.connection.query(
+          `INSERT INTO embeddings (id, namespace, embedding, metadata) VALUES (?, ?, ?, ?)`,
+          [vector.id, namespace, embeddingStr, metadataStr]
+        );
       }
-      
+
       this.logger.info(`Saved ${vectors.length} vectors successfully`);
       return { success: true };
     } catch (error) {
-      this.logger.error('Save failed', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+      this.logger.error("Save failed", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -196,11 +215,11 @@ export class DuckDBService {
 
     try {
       const results = await this.connection.query(
-        'SELECT COUNT(*) as count FROM embeddings'
+        "SELECT COUNT(*) as count FROM embeddings"
       );
       return { count: Number(results[0]?.count) || 0 };
     } catch (error) {
-      this.logger.error('Count query failed', error);
+      this.logger.error("Count query failed", error);
       return { count: 0 };
     }
   }
@@ -211,8 +230,8 @@ export class DuckDBService {
       hasConnection: !!this.connection,
       hasDatabase: !!this.db,
       crossOriginIsolated: crossOriginIsolated,
-      version: 'DuckDB-WASM-Electron',
-      environment: 'electron'
+      version: "DuckDB-WASM-Electron",
+      environment: "electron",
     };
   }
 
@@ -221,7 +240,7 @@ export class DuckDBService {
       await this.terminate();
       return { success: true };
     } catch (error) {
-      this.logger.error('Close failed', error);
+      this.logger.error("Close failed", error);
       return { success: false };
     }
   }
@@ -237,9 +256,9 @@ export class DuckDBService {
         this.db = null;
       }
       this.isInitialized = false;
-      this.logger.info('DuckDB connection terminated');
+      this.logger.info("DuckDB connection terminated");
     } catch (error) {
-      this.logger.warn('Error during termination', error);
+      this.logger.warn("Error during termination", error);
     }
   }
 }

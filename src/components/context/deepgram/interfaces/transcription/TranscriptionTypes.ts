@@ -7,7 +7,7 @@
 import { OpenAI } from "openai";
 
 // Base types
-export type Role = "developer" | "user" | "assistant";
+export type Role = "developer" | "user" | "assistant" | "system";
 
 export interface Message {
   role: Role;

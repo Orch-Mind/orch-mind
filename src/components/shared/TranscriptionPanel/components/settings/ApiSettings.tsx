@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { memo, useCallback, useEffect } from "react";
+import React, { memo, useState } from "react";
 import { OrchOSModeEnum } from "../../../../../services/ModeService";
 import {
+  getOption,
   setOption,
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 
-import {
-  ApiNavigation,
-  BasicModeSettings,
-  ChatGPTSettings,
-  DeepgramSettings,
-  PineconeSettings,
-} from "./api";
+import { BasicModeSettings, OllamaSettings } from "./api";
 import { ApiSettingsProps } from "./api/types";
 
 /**
  * Componente orquestrador para configurações de APIs externas
+ * Arquitetura de modos:
+ * - Modo Basic: HuggingFace (modelos leves via Transformers.js)
+ * - Modo Advanced: Ollama + configurações avançadas (interface unificada)
+ *
  * Refatorado seguindo princípios SOLID:
  * - Single Responsibility Principle: cada subcomponente tem responsabilidade única
  * - Open/Closed Principle: aberto para extensão, fechado para modificação
@@ -30,49 +29,23 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
   ({
     applicationMode,
     setApplicationMode,
-    pineconeApiKey,
-    setPineconeApiKey,
-    chatgptApiKey,
-    setChatgptApiKey,
-    chatgptModel,
-    setChatgptModel,
-    openaiEmbeddingModel,
-    setOpenaiEmbeddingModel,
-    hfModel,
-    setHfModel,
-    hfEmbeddingModel,
-    setHfEmbeddingModel,
-    deepgramApiKey,
-    setDeepgramApiKey,
-    deepgramModel,
-    setDeepgramModel,
-    deepgramLanguage,
-    setDeepgramLanguage,
-    openSection,
-    setOpenSection,
+    ollamaModel,
+    setOllamaModel,
+    ollamaEmbeddingModel,
+    setOllamaEmbeddingModel,
+    ollamaEnabled,
+    setOllamaEnabled,
   }) => {
-    // Memoized setters for Deepgram (hooks devem ficar sempre no topo)
-    const memoizedSetDeepgramModel = useCallback(
-      (value: string) => {
-        if (value !== deepgramModel) {
-          setDeepgramModel(value);
-          setOption(STORAGE_KEYS.DEEPGRAM_MODEL, value);
-        }
-      },
-      [deepgramModel, setDeepgramModel]
+    // Estado para configurações avançadas
+    const [duckDbPath, setDuckDbPath] = useState<string>(
+      () => getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || "./orch-os-memory"
     );
 
-    const memoizedSetDeepgramLanguage = useCallback(
-      (value: string) => {
-        if (value !== deepgramLanguage) {
-          setDeepgramLanguage(value);
-          setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, value);
-        }
-      },
-      [deepgramLanguage, setDeepgramLanguage]
+    const [toolsEnabled, setToolsEnabled] = useState<boolean>(
+      () => getOption<boolean>(STORAGE_KEYS.TOOLS_ENABLED) ?? true
     );
 
-    // AI model options for HuggingFace
+    // AI model options for HuggingFace (modo básico)
     const HF_MODELS = [
       {
         id: "Xenova/llama2.c-stories15M",
@@ -92,7 +65,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
       },
     ];
 
-    // Lista de modelos de embedding compatíveis
+    // Lista de modelos de embedding compatíveis (modo básico)
     const HF_EMBEDDING_MODELS = [
       {
         id: "Xenova/all-MiniLM-L6-v2",
@@ -100,123 +73,184 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
       },
     ];
 
-    // Efeito para limpar a seção aberta ao trocar de modo
-    useEffect(() => {
-      // Reset the open section when switching modes to avoid showing wrong sections
-      setOpenSection(null);
-    }, [applicationMode, setOpenSection]);
+    // Handler para seleção de diretório DuckDB
+    const handleBrowseDirectory = async () => {
+      try {
+        if (typeof window !== "undefined" && (window as any).electronAPI) {
+          const result = await (window as any).electronAPI.selectDirectory();
 
-    // Handler para atualização do modelo HuggingFace
+          if (result.success && result.path) {
+            const newPath = result.path;
+            setDuckDbPath(newPath);
+            setOption(STORAGE_KEYS.DUCKDB_PATH, newPath);
+            console.log("📁 [SETTINGS] DuckDB path updated:", newPath);
+
+            // Reinicializar DuckDB com o novo caminho
+            try {
+              const reinitResult = await (
+                window as any
+              ).electronAPI.reinitializeDuckDB(newPath);
+              if (reinitResult.success) {
+                console.log(
+                  "✅ [SETTINGS] DuckDB successfully reinitialized with new path"
+                );
+              } else {
+                console.error(
+                  "❌ [SETTINGS] Failed to reinitialize DuckDB:",
+                  reinitResult.error
+                );
+              }
+            } catch (reinitError) {
+              console.error(
+                "❌ [SETTINGS] Error reinitializing DuckDB:",
+                reinitError
+              );
+            }
+          } else if (!result.canceled) {
+            console.error(
+              "❌ [SETTINGS] Failed to select directory:",
+              result.error
+            );
+          }
+        } else {
+          console.warn(
+            "⚠️ [SETTINGS] Directory selection not available in web mode"
+          );
+        }
+      } catch (error) {
+        console.error("❌ [SETTINGS] Error selecting directory:", error);
+      }
+    };
+
+    // Handler para mudança manual do caminho DuckDB
+    const handlePathChange = async (newPath: string) => {
+      setDuckDbPath(newPath);
+      setOption(STORAGE_KEYS.DUCKDB_PATH, newPath);
+
+      // Reinicializar DuckDB apenas se estamos no Electron e o caminho não está vazio
+      if (
+        typeof window !== "undefined" &&
+        (window as any).electronAPI &&
+        newPath.trim()
+      ) {
+        try {
+          const reinitResult = await (
+            window as any
+          ).electronAPI.reinitializeDuckDB(newPath);
+          if (reinitResult.success) {
+            console.log(
+              "✅ [SETTINGS] DuckDB successfully reinitialized with new path"
+            );
+          } else {
+            console.error(
+              "❌ [SETTINGS] Failed to reinitialize DuckDB:",
+              reinitResult.error
+            );
+          }
+        } catch (reinitError) {
+          console.error(
+            "❌ [SETTINGS] Error reinitializing DuckDB:",
+            reinitError
+          );
+        }
+      }
+    };
+
+    // Handler para atualização do modelo HuggingFace (modo básico)
     const handleHfModelChange = (value: string) => {
-      setHfModel(value);
       setOption(STORAGE_KEYS.HF_MODEL, value);
     };
 
-    // Handler para atualização do modelo de embedding HuggingFace
+    // Handler para atualização do modelo de embedding HuggingFace (modo básico)
     const handleHfEmbeddingModelChange = (value: string) => {
-      setHfEmbeddingModel(value);
       setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, value);
     };
 
-    // Modo Advanced - APIs completas
-    // Move os logs para um useEffect para evitar logs em cada render
-    useEffect(() => {
-      // Apenas logar no modo advanced
-      if (applicationMode === OrchOSModeEnum.ADVANCED) {
-        console.log("[ApiSettings] deepgramModel alterado:", deepgramModel);
-      }
-    }, [deepgramModel, applicationMode]);
-
-    useEffect(() => {
-      // Apenas logar no modo advanced
-      if (applicationMode === OrchOSModeEnum.ADVANCED) {
-        console.log(
-          "[ApiSettings] deepgramLanguage alterado:",
-          deepgramLanguage
-        );
-      }
-    }, [deepgramLanguage, applicationMode]);
-
     // Renderização condicional baseada no modo da aplicação
-    // Symbolic: Use enum for mode-dependent logic
     if (applicationMode === OrchOSModeEnum.BASIC) {
       return (
-        <BasicModeSettings
-          applicationMode={applicationMode}
-          setApplicationMode={setApplicationMode}
-          hfModel={hfModel}
-          setHfModel={handleHfModelChange}
-          hfEmbeddingModel={hfEmbeddingModel}
-          setHfEmbeddingModel={handleHfEmbeddingModelChange}
-          hfModelOptions={HF_MODELS}
-          hfEmbeddingModelOptions={HF_EMBEDDING_MODELS}
-        />
+        <div className="space-y-4">
+          {/* Header explicativo para modo básico */}
+          <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500/20">
+                <span className="text-green-400 text-sm">🤗</span>
+              </div>
+              <div>
+                <h3 className="text-green-400 font-medium">
+                  Modo Basic - HuggingFace
+                </h3>
+                <p className="text-green-400/70 text-sm">
+                  Modelos leves executados via Transformers.js no navegador
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <BasicModeSettings
+            applicationMode={applicationMode}
+            setApplicationMode={setApplicationMode}
+            hfModel=""
+            setHfModel={handleHfModelChange}
+            hfEmbeddingModel=""
+            setHfEmbeddingModel={handleHfEmbeddingModelChange}
+            hfModelOptions={HF_MODELS}
+            hfEmbeddingModelOptions={HF_EMBEDDING_MODELS}
+          />
+        </div>
       );
     }
 
     return (
-      <div className="flex flex-col w-full">
-        {/* Sub-abas de navegação para os serviços de API */}
-        <ApiNavigation
-          openSection={openSection}
-          setOpenSection={setOpenSection}
+      <div className="flex flex-col w-full space-y-6">
+        {/* Header explicativo para modo avançado */}
+        <div className="bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-cyan-500/20">
+              <span className="text-cyan-400 text-sm">🦙</span>
+            </div>
+            <div>
+              <h3 className="text-cyan-400 font-medium">
+                Modo Advanced - Configurações Completas
+              </h3>
+              <p className="text-cyan-400/70 text-sm">
+                Ollama, banco de dados e configurações avançadas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção Ollama - Modelos Locais */}
+        <OllamaSettings
+          ollamaModel={ollamaModel}
+          setOllamaModel={(value) => {
+            setOllamaModel(value);
+            setOption(STORAGE_KEYS.OLLAMA_MODEL, value);
+          }}
+          ollamaEmbeddingModel={ollamaEmbeddingModel}
+          setOllamaEmbeddingModel={(value) => {
+            setOllamaEmbeddingModel(value);
+            setOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL, value);
+          }}
+          ollamaEnabled={ollamaEnabled}
+          setOllamaEnabled={(value) => {
+            setOllamaEnabled(value);
+            setOption(STORAGE_KEYS.OLLAMA_ENABLED, value);
+          }}
+          storagePath={duckDbPath}
+          setStoragePath={(path) => {
+            handlePathChange(path);
+          }}
         />
 
-        {/* Seção Pinecone */}
-        {openSection === "pinecone" && (
-          <PineconeSettings
-            pineconeApiKey={pineconeApiKey}
-            setPineconeApiKey={(value) => {
-              setPineconeApiKey(value);
-              setOption(STORAGE_KEYS.PINECONE_API_KEY, value);
-            }}
-          />
-        )}
-
-        {/* Seção ChatGPT */}
-        {openSection === "chatgpt" && (
-          <ChatGPTSettings
-            applicationMode={applicationMode}
-            chatgptApiKey={chatgptApiKey}
-            setChatgptApiKey={(value) => {
-              setChatgptApiKey(value);
-              setOption(STORAGE_KEYS.OPENAI_API_KEY, value);
-            }}
-            chatgptModel={chatgptModel}
-            setChatgptModel={(value) => {
-              setChatgptModel(value);
-              setOption(STORAGE_KEYS.CHATGPT_MODEL, value);
-            }}
-            openaiEmbeddingModel={openaiEmbeddingModel}
-            setOpenaiEmbeddingModel={(value) => {
-              setOpenaiEmbeddingModel(value);
-              setOption(STORAGE_KEYS.OPENAI_EMBEDDING_MODEL, value);
-            }}
-          />
-        )}
-
-        {/* Seção Deepgram */}
-        {openSection === "deepgram" && (
-          <DeepgramSettings
-            deepgramApiKey={deepgramApiKey}
-            setDeepgramApiKey={(value) => {
-              setDeepgramApiKey(value);
-              setOption(STORAGE_KEYS.DEEPGRAM_API_KEY, value);
-            }}
-            deepgramModel={deepgramModel}
-            setDeepgramModel={memoizedSetDeepgramModel}
-            deepgramLanguage={deepgramLanguage}
-            setDeepgramLanguage={memoizedSetDeepgramLanguage}
-          />
-        )}
-
-        <div className="mt-3 flex justify-end">
+        {/* Botão para voltar ao modo básico */}
+        <div className="flex justify-end">
           <button
             type="button"
-            className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg px-6 py-2 hover:from-cyan-500/30 hover:to-blue-500/30 transition-all shadow-[0_0_10px_rgba(0,200,255,0.2)] backdrop-blur-sm"
+            className="bg-gradient-to-r from-green-500/20 to-blue-500/20 text-green-300 border border-green-500/30 rounded-lg px-6 py-2 hover:from-green-500/30 hover:to-blue-500/30 transition-all shadow-[0_0_10px_rgba(0,255,100,0.2)] backdrop-blur-sm"
             onClick={() => setApplicationMode(OrchOSModeEnum.BASIC)}
           >
-            Switch to Basic Mode
+            🤗 Switch to Basic Mode (HuggingFace)
           </button>
         </div>
       </div>

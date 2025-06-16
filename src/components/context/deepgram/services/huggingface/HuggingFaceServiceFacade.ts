@@ -10,6 +10,7 @@ import { ModelStreamResponse } from "../../interfaces/openai/ICompletionService"
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { Message } from "../../interfaces/transcription/TranscriptionTypes";
 import { LoggingUtils } from "../../utils/LoggingUtils";
+import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
 import { HuggingFaceCompletionService } from "./HuggingFaceCompletionService";
 import { HuggingFaceClientService } from "./neural/HuggingFaceClientService";
 
@@ -22,21 +23,17 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
   private completionService: HuggingFaceCompletionService;
   private neuralSignalService: HuggingFaceNeuralSignalService | null = null;
 
-  constructor() {
+  constructor(completionService: HuggingFaceCompletionService) {
     // Inicializar os serviços especializados
     this.clientService = new HuggingFaceClientService();
-    this.completionService = new HuggingFaceCompletionService(
-      this.clientService
-    );
-    this.neuralSignalService = new HuggingFaceNeuralSignalService(
-      this
-    );
+    this.completionService = completionService;
+    this.neuralSignalService = new HuggingFaceNeuralSignalService(this);
 
     LoggingUtils.logInfo(
       "Initialized HuggingFace Service Facade with specialized neural services"
     );
   }
-  
+
   /**
    * Inicializa o cliente HuggingFace
    * Symbolic: Estabelecimento de conexão neural com modelos locais
@@ -68,13 +65,24 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
   async streamOpenAIResponse(
     messages: Message[]
   ): Promise<ModelStreamResponse> {
+
     // Mapear as mensagens para o formato esperado pelo serviço de completion
     const mappedMessages = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    return await this.completionService.streamModelResponse(mappedMessages);
+    const response = await this.completionService.streamModelResponse(
+      mappedMessages
+    );
+
+    // Clean think tags from the response
+    const cleanedResponse = cleanThinkTags(response.responseText);
+
+    return {
+      ...response,
+      responseText: cleanedResponse,
+    };
   }
 
   /**
@@ -164,15 +172,14 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
         tool_calls?: Array<{
           function: {
             name: string;
-            arguments: string;
+            arguments: string | Record<string, any>;
           };
         }>;
       };
     }>;
   }> {
-    return this.completionService.callModelWithFunctions(options);
+    return await this.completionService.callModelWithFunctions(options);
   }
-
 
   /**
    * Generate response using HuggingFace backend
@@ -202,5 +209,18 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
       this.neuralSignalService = new HuggingFaceNeuralSignalService(this);
     }
     return this.neuralSignalService;
+  }
+
+  /**
+   * Get available models (placeholder for HuggingFace models)
+   */
+  async getAvailableModels(): Promise<string[]> {
+    // Return a list of supported HuggingFace models
+    return [
+      "microsoft/DialoGPT-medium",
+      "microsoft/DialoGPT-large",
+      "facebook/blenderbot-400M-distill",
+      "facebook/blenderbot-1B-distill",
+    ];
   }
 }

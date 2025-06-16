@@ -1,0 +1,204 @@
+version: "3.8"
+
+# vLLM + Ollama Integration Docker Compose
+# Based on best practices from deployment guides
+# References:
+# - https://dasarpai.com/dsblog/integrating-ollama-and-open-webui-with-docker
+# - https://medium.com/@md.tarikulislamjuel/how-backend-developers-can-connect-to-an-llm-model-using-ollama-a-simple-guide-1cf4f703c084
+
+services:
+  # Ollama service for model management and hosting
+  ollama:
+    image: ollama/ollama:latest
+    container_name: orch-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      # Persistent model storage
+      - ollama_models:/root/.ollama/models
+      - ollama_config:/root/.ollama
+    environment:
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=24h
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - orch-ai-network
+    # GPU support for NVIDIA cards
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Uncomment for CPU-only deployment
+    # profiles:
+    #   - cpu
+
+  # vLLM OpenAI-compatible API server
+  vllm:
+    image: ghcr.io/vllm/vllm-openai:latest
+    container_name: orch-vllm
+    ports:
+      - "${VLLM_PORT:-33220}:8000"
+    volumes:
+      # Share models with Ollama
+      - ollama_models:/models:ro
+      # Cache for better performance
+      - vllm_cache:/root/.cache
+    environment:
+      # Model serving configuration
+      - MODEL_NAME=${VLLM_MODEL_NAME:-microsoft/DialoGPT-medium}
+      - MODEL_PATH=/models/${VLLM_MODEL_PATH:-}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKER_USE_RAY=true
+      - RAY_DISABLE_IMPORT_WARNING=1
+      # GPU configuration
+      - CUDA_VISIBLE_DEVICES=0
+      # Memory optimization
+      - VLLM_ATTENTION_BACKEND=FLASHINFER
+      - VLLM_BLOCK_SIZE=16
+      - VLLM_GPU_MEMORY_UTILIZATION=0.9
+      # Performance tuning
+      - VLLM_ENGINE_ITERATION_TIMEOUT_S=60
+      - VLLM_DISABLE_LOG_STATS=false
+    command: >
+      --model ${VLLM_MODEL_NAME:-microsoft/DialoGPT-medium}
+      --host 0.0.0.0
+      --port 8000
+      --served-model-name ${VLLM_SERVED_MODEL_NAME:-default}
+      --tensor-parallel-size 1
+      --dtype auto
+      --max-model-len 4096
+      --gpu-memory-utilization 0.9
+      --enforce-eager
+      --disable-log-requests
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - orch-ai-network
+    # GPU support for NVIDIA cards
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Uncomment for CPU-only deployment
+    # profiles:
+    #   - cpu
+
+  # Redis for caching and session management (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: orch-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-orchos123}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - orch-ai-network
+    profiles:
+      - full
+
+  # Monitoring with Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: orch-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+    networks:
+      - orch-ai-network
+    profiles:
+      - monitoring
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: orch-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-orchos123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - orch-ai-network
+    profiles:
+      - monitoring
+
+# Persistent volumes for data storage
+volumes:
+  ollama_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OLLAMA_MODELS_PATH:-./data/ollama/models}
+  ollama_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OLLAMA_CONFIG_PATH:-./data/ollama/config}
+  vllm_cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${VLLM_CACHE_PATH:-./data/vllm/cache}
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# Networks for service communication
+networks:
+  orch-ai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
