@@ -148,7 +148,41 @@ export class TranscriptionPromptProcessor {
     try {
       this.isProcessingPrompt = true;
 
-      // Validate transcription availability
+      // If we have temporaryContext (direct prompt), skip transcription validation
+      if (temporaryContext?.trim()) {
+        LoggingUtils.logInfo("Using direct prompt input (temporaryContext)");
+
+        // Garante que o backend já abstraído está pronto (Ollama ou HuggingFace)
+        if (!(await this.llmService.ensureOpenAIClient())) return;
+
+        // Notify processing start
+        this.uiService.notifyPromptProcessingStarted(temporaryContext);
+
+        // Use temporaryContext directly as prompt text
+        const promptText = temporaryContext.trim();
+
+        // Log cognitive activities
+        symbolicCognitionTimelineLogger.logRawPrompt(promptText);
+        symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
+
+        LoggingUtils.logInfo(
+          `Processing direct prompt: "${promptText.substring(0, 50)}..."`
+        );
+
+        // Process using orchestrated pipeline
+        const result = await this._executeProcessingPipeline(
+          mode,
+          promptText,
+          temporaryContext
+        );
+
+        // Update UI and complete processing
+        this.uiService.updateUI({ aiResponse: result.response });
+        this.uiService.notifyPromptComplete(result.response);
+        return;
+      }
+
+      // Only validate transcriptions if no temporaryContext is provided
       const hasTranscriptions = this.storageService.hasValidTranscriptions();
 
       if (!hasTranscriptions) {
@@ -159,17 +193,13 @@ export class TranscriptionPromptProcessor {
           LoggingUtils.logInfo(
             `Using last known transcription: "${this.storageService.getLastTranscription()}"`
           );
-        } else if (!temporaryContext) {
-          // Notify error if there is no transcription or context
+        } else {
+          // Notify error if there is no transcription
           this.uiService.notifyPromptError(
             "No transcription detected for processing"
           );
           LoggingUtils.logInfo(`No transcription detected for processing`);
           return;
-        } else {
-          this.uiService.notifyPromptError(
-            "No transcription detected for processing"
-          );
         }
       }
 
@@ -179,28 +209,17 @@ export class TranscriptionPromptProcessor {
       // Notify processing start
       this.uiService.notifyPromptProcessingStarted(temporaryContext);
 
-      // Extract new transcription lines or fallback to temporary context (manual prompt)
+      // Extract new transcription lines
       const extractedLines = this.transcriptionExtractor.extractNewLines();
       let promptText: string | null = extractedLines;
 
       if (!promptText || promptText.trim().length === 0) {
-        // Use temporaryContext as fallback when in Basic mode (manual prompt input)
-        if (temporaryContext?.trim()?.length) {
-          promptText = temporaryContext.trim();
-          LoggingUtils.logInfo("Using temporary context as prompt input.");
-        } else {
-          LoggingUtils.logInfo(
-            "No new transcription or temporary context to send."
-          );
-          return;
-        }
+        LoggingUtils.logInfo("No new transcription to send.");
+        return;
       }
 
       // Log cognitive activities
       symbolicCognitionTimelineLogger.logRawPrompt(promptText);
-      if (temporaryContext?.trim()) {
-        symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
-      }
 
       LoggingUtils.logInfo(
         `Processing transcription: "${promptText.substring(0, 50)}..."`
@@ -256,7 +275,7 @@ export class TranscriptionPromptProcessor {
       this.currentLanguage
     );
     const processingResults = await this.memoryRetriever.processSignals(
-      enrichedSignals,
+      enrichedSignals
     );
 
     // PHASE 3: Neural Integration
