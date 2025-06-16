@@ -186,6 +186,19 @@ export interface ElectronAPI {
     payload: any
   ) => Promise<{ success: boolean; data?: any; error?: string }>;
   vllmStopModel: () => Promise<{ success: boolean; error?: string }>;
+  listModels(): Promise<OllamaModel[]>;
+  getAvailableModels(): Promise<OllamaModel[]>;
+  downloadModel(
+    modelId: string,
+    onProgress?: (progress: number, speed: string, eta: string) => void
+  ): Promise<boolean>;
+  cancelDownload(modelId: string): Promise<void>;
+  removeModel(modelId: string): Promise<void>;
+  testConnection(): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }>;
 }
 
 declare global {

@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   MicrophoneState,
   useDeepgram,
   useMicrophone,
 } from "../../components/context";
 import { ConnectionState } from "../../components/context/deepgram/interfaces/deepgram/IDeepgramService";
-import ModelLoadingTest from "../../components/debug/ModelLoadingTest";
-import LocalModelManager from "../../components/debug/LocalModelManager";
-import { TransformersTest } from "../../components/debug/TransformersTest";
 import TranscriptionPanel from "../../components/shared/TranscriptionPanel/TranscriptionPanel";
 
 /**
@@ -105,70 +102,12 @@ export const TranscriptionModule: React.FC = () => {
     };
   }, []);
 
-  // Add tab state for switching between transcription and test modes
-  const [activeTab, setActiveTab] = useState<
-    "transcription" | "test" | "models"
-  >("transcription");
-
   return (
     <div style={{ height: "100%", width: "100%", overflow: "hidden" }}>
-      {/* Tab navigation */}
-      <div className="flex bg-gray-800 border-b border-gray-600">
-        <button
-          onClick={() => setActiveTab("transcription")}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "transcription"
-              ? "bg-blue-600 text-white border-b-2 border-blue-400"
-              : "text-gray-300 hover:text-white hover:bg-gray-700"
-          }`}
-        >
-          🎤 Transcription
-        </button>
-        <button
-          onClick={() => setActiveTab("test")}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "test"
-              ? "bg-green-600 text-white border-b-2 border-green-400"
-              : "text-gray-300 hover:text-white hover:bg-gray-700"
-          }`}
-        >
-          🧪 Transformers Test
-        </button>
-        <button
-          onClick={() => setActiveTab("models")}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "models"
-              ? "bg-purple-600 text-white border-b-2 border-purple-400"
-              : "text-gray-300 hover:text-white hover:bg-gray-700"
-          }`}
-        >
-          🤖 Model Loading Test
-        </button>
-      </div>
-
-      {/* Tab content */}
-      <div
-        style={{
-          height: "calc(100% - 48px)",
-          width: "100%",
-          overflow: "hidden",
-        }}
-      >
-        {activeTab === "transcription" ? (
-          <TranscriptionPanel
-            onClose={() => {}} // No close functionality needed
-            width="100%"
-          />
-        ) : activeTab === "test" ? (
-          <div className="p-4 h-full overflow-auto bg-gray-900">
-            <TransformersTest />
-          </div>
-        ) : (
-          <div className="h-full overflow-auto bg-gray-900">
-            <LocalModelManager />
-          </div>
-        )}
-      </div>
+      <TranscriptionPanel
+        onClose={() => {}} // No close functionality needed
+        width="100%"
+      />
     </div>
   );
 };
