@@ -184,8 +184,15 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
   onToggleRecording,
   onSendPrompt,
 }) => {
-  // Local state for chat messages and input
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  // Use robust message management hook
+  const {
+    messages: chatMessages,
+    addMessage,
+    clearMessages,
+    recovery,
+  } = usePersistentMessages();
+
+  // Local state for input and UI
   const [inputMessage, setInputMessage] = useState("");
   const [currentContext, setCurrentContext] = useState("");
   const [showContextField, setShowContextField] = useState(false);
@@ -254,8 +261,13 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
         contextContent: currentContext || undefined,
       };
 
-      // Add user message to chat immediately
-      setChatMessages((prev) => [...prev, userMessage]);
+      // Add user message to chat immediately using robust hook
+      addMessage({
+        type: "user",
+        content: messageContent,
+        hasContext: !!currentContext,
+        contextContent: currentContext || undefined,
+      });
       lastUserMessageIdRef.current = userMessage.id;
 
       // Clear input and context
@@ -331,13 +343,19 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       content: "Test message",
       timestamp: new Date(),
     };
-    setChatMessages((prev) => {
-      console.log("🧪 [CHAT] Test message - current messages:", prev.length);
-      const newMessages = [...prev, testMessage];
-      console.log("🧪 [CHAT] Test message - new messages:", newMessages.length);
-      return newMessages;
+    console.log(
+      "🧪 [CHAT] Test message - current messages:",
+      chatMessages.length
+    );
+    addMessage({
+      type: "user",
+      content: "Test message",
     });
-  }, []);
+    console.log(
+      "🧪 [CHAT] Test message - new messages:",
+      chatMessages.length + 1
+    );
+  }, [addMessage, chatMessages.length]);
 
   // Handle AI response - fixed to prevent infinite loops and duplicates
   useEffect(() => {
@@ -384,26 +402,25 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       };
 
       // Add AI message to chat (prevent duplicates)
-      setChatMessages((prev) => {
-        // Check if this exact content already exists
-        const existingMessage = prev.find(
-          (msg) => msg.type === "system" && msg.content === aiResponseText
+      const existingMessage = chatMessages.find(
+        (msg) => msg.type === "system" && msg.content === aiResponseText
+      );
+
+      if (existingMessage) {
+        console.log(
+          "⚠️ [CHAT] Duplicate AI message detected, skipping:",
+          aiResponseText.substring(0, 50)
         );
-
-        if (existingMessage) {
-          console.log(
-            "⚠️ [CHAT] Duplicate AI message detected, skipping:",
-            aiResponseText.substring(0, 50)
-          );
-          return prev;
-        }
-
+      } else {
         console.log(
           "📝 [CHAT] Adding AI message to chat, current length:",
-          prev.length
+          chatMessages.length
         );
-        return [...prev, aiMessage];
-      });
+        addMessage({
+          type: "system",
+          content: aiResponseText,
+        });
+      }
 
       // Update refs to prevent reprocessing
       lastProcessedAiResponseRef.current = aiResponseText;
@@ -451,7 +468,7 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
   useEffect(() => {
     console.log("📊 [CHAT] Chat messages updated:", {
       length: chatMessages.length,
-      messages: chatMessages.map((m) => ({
+      messages: chatMessages.map((m: ChatMessage) => ({
         id: m.id,
         type: m.type,
         content:
