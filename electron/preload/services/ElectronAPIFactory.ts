@@ -89,6 +89,9 @@ export class ElectronAPIFactory {
       // Import Management
       ...this.createImportManager(),
 
+      // vLLM Manager
+      ...this.createVllmManager(),
+
       // DuckDB Commands (sandboxed version via IPC)
       duckdbCommand: duckdbService.duckdbCommand.bind(duckdbService),
 
@@ -276,6 +279,50 @@ export class ElectronAPIFactory {
   /**
    * Create Environment Management service methods
    */
+  /**
+   * Create vLLM Manager service methods
+   */
+  private createVllmManager() {
+    return {
+      vllmStartModel: async (modelId: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-start-model", modelId),
+          { component: "VllmManager", operation: "startModel", severity: "medium" }
+        );
+      },
+      vllmModelStatus: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-model-status"),
+          { component: "VllmManager", operation: "modelStatus", severity: "low" }
+        );
+      },
+      vllmGenerate: async (payload: any) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-generate", payload),
+          { component: "VllmManager", operation: "generate", severity: "medium" }
+        );
+      },
+      vllmHardwareInfo: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-hardware-info"),
+          { component: "VllmManager", operation: "hardwareInfo", severity: "low" }
+        );
+      },
+      vllmListLibrary: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-list-library"),
+          { component: "VllmManager", operation: "listLibrary", severity: "low" }
+        );
+      },
+      vllmStopModel: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("vllm-stop-model"),
+          { component: "VllmManager", operation: "stopModel", severity: "low" }
+        );
+      },
+    };
+  }
+
   private createEnvironmentManager() {
     return {
       getEnv: async (key: string) => {
