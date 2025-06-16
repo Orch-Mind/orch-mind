@@ -1,199 +1,274 @@
+import { nanoid } from "nanoid";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface ChatMessage {
   id: string;
-  type: "user" | "system";
+  type: "user" | "system" | "error";
   content: string;
   timestamp: Date;
   hasContext?: boolean;
   contextContent?: string;
 }
 
+interface AddMessageParams {
+  type: "user" | "system" | "error";
+  content: string;
+  hasContext?: boolean;
+  contextContent?: string;
+}
+
 interface UsePersistentMessagesReturn {
   messages: ChatMessage[];
-  addMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => void;
+  addMessage: (params: AddMessageParams) => void;
   clearMessages: () => void;
   recovery: {
-    hasRecovered: boolean;
-    recoveredCount: number;
+    hasBackup: boolean;
+    restoreFromBackup: () => void;
+    clearBackup: () => void;
   };
 }
 
-const STORAGE_KEY = "orch-os-chat-messages";
-const DEBUG_PREFIX = "🔒 [PERSISTENT_MESSAGES]";
+const STORAGE_KEY = "orch-chat-messages";
+const BACKUP_KEY = "orch-chat-backup";
+const COMPONENT_ID_KEY = "orch-chat-component-id";
 
-export function usePersistentMessages(): UsePersistentMessagesReturn {
-  // Use ref to maintain persistent reference across re-renders
-  const messagesRef = useRef<ChatMessage[]>([]);
+export const usePersistentMessages = (): UsePersistentMessagesReturn => {
+  // Generate a unique component ID to track remounting
+  const componentId = useRef<string>(nanoid());
+  const isInitialized = useRef(false);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [recovery, setRecovery] = useState({
-    hasRecovered: false,
-    recoveredCount: 0,
-  });
-  const componentId = useRef(
-    `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  );
 
-  console.log(
-    `${DEBUG_PREFIX} Component initialized with ID:`,
-    componentId.current
-  );
+  // Initialize messages from storage or backup
+  useEffect(() => {
+    if (isInitialized.current) return;
 
-  // Generate unique message ID
-  const generateMessageId = useCallback(() => {
-    return `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log("🔄 [PERSISTENT_MESSAGES] Initializing component:", {
+      componentId: componentId.current,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      // Try to load from primary storage first
+      const storedMessages = localStorage.getItem(STORAGE_KEY);
+      const lastComponentId = localStorage.getItem(COMPONENT_ID_KEY);
+
+      if (storedMessages) {
+        const parsedMessages = JSON.parse(storedMessages);
+        const validMessages = parsedMessages
+          .map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }))
+          .filter(
+            (msg: ChatMessage) =>
+              msg.id && msg.type && msg.content && msg.timestamp
+          );
+
+        console.log("✅ [PERSISTENT_MESSAGES] Restored from storage:", {
+          messageCount: validMessages.length,
+          lastComponentId,
+          currentComponentId: componentId.current,
+        });
+
+        setMessages(validMessages);
+      } else {
+        // Try to restore from backup if primary storage is empty
+        const backupData = localStorage.getItem(BACKUP_KEY);
+        if (backupData) {
+          const backup = JSON.parse(backupData);
+          if (backup.messages && Array.isArray(backup.messages)) {
+            const validMessages = backup.messages
+              .map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp),
+              }))
+              .filter(
+                (msg: ChatMessage) =>
+                  msg.id && msg.type && msg.content && msg.timestamp
+              );
+
+            console.log("🔄 [PERSISTENT_MESSAGES] Restored from backup:", {
+              messageCount: validMessages.length,
+              backupTimestamp: backup.timestamp,
+            });
+
+            setMessages(validMessages);
+          }
+        }
+      }
+
+      // Store current component ID
+      localStorage.setItem(COMPONENT_ID_KEY, componentId.current);
+      isInitialized.current = true;
+    } catch (error) {
+      console.error("❌ [PERSISTENT_MESSAGES] Error loading messages:", error);
+      isInitialized.current = true;
+    }
   }, []);
 
-  // Save to localStorage
-  const saveToStorage = useCallback((messagesToSave: ChatMessage[]) => {
+  // Auto-save messages to storage
+  useEffect(() => {
+    if (!isInitialized.current || messages.length === 0) return;
+
     try {
-      const dataToSave = {
-        messages: messagesToSave,
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+
+      // Also create a backup
+      const backup = {
+        messages,
         timestamp: Date.now(),
         componentId: componentId.current,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      console.log(
-        `${DEBUG_PREFIX} Saved ${messagesToSave.length} messages to localStorage`
-      );
-    } catch (error) {
-      console.error(`${DEBUG_PREFIX} Failed to save to localStorage:`, error);
-    }
-  }, []);
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
 
-  // Load from localStorage
-  const loadFromStorage = useCallback((): ChatMessage[] => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.messages && Array.isArray(parsed.messages)) {
-          console.log(
-            `${DEBUG_PREFIX} Loaded ${parsed.messages.length} messages from localStorage`
-          );
-          return parsed.messages.map((msg) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          }));
-        }
-      }
-    } catch (error) {
-      console.error(`${DEBUG_PREFIX} Failed to load from localStorage:`, error);
-    }
-    return [];
-  }, []);
-
-  // Sync messages with ref and localStorage
-  const syncMessages = useCallback(
-    (newMessages: ChatMessage[]) => {
-      console.log(`${DEBUG_PREFIX} Syncing ${newMessages.length} messages`);
-      console.log(
-        `${DEBUG_PREFIX} Messages:`,
-        newMessages.map((m) => ({
-          id: m.id,
-          type: m.type,
-          content: m.content.substring(0, 30),
-        }))
-      );
-
-      messagesRef.current = newMessages;
-      setMessages(newMessages);
-      saveToStorage(newMessages);
-    },
-    [saveToStorage]
-  );
-
-  // Initialize from localStorage on mount
-  useEffect(() => {
-    console.log(
-      `${DEBUG_PREFIX} Component mounted, checking for stored messages`
-    );
-    const storedMessages = loadFromStorage();
-
-    if (storedMessages.length > 0) {
-      console.log(
-        `${DEBUG_PREFIX} Recovering ${storedMessages.length} messages from storage`
-      );
-      syncMessages(storedMessages);
-      setRecovery({
-        hasRecovered: true,
-        recoveredCount: storedMessages.length,
+      console.log("💾 [PERSISTENT_MESSAGES] Auto-saved:", {
+        messageCount: messages.length,
+        componentId: componentId.current,
       });
-    } else {
-      console.log(`${DEBUG_PREFIX} No stored messages found, starting fresh`);
+    } catch (error) {
+      console.error("❌ [PERSISTENT_MESSAGES] Error saving messages:", error);
     }
-  }, [loadFromStorage, syncMessages]);
-
-  // Monitor messages state changes
-  useEffect(() => {
-    console.log(`${DEBUG_PREFIX} Messages state changed:`, {
-      count: messages.length,
-      refCount: messagesRef.current.length,
-      matches: messages.length === messagesRef.current.length,
-      lastMessage:
-        messages[messages.length - 1]?.content?.substring(0, 30) || "none",
-    });
   }, [messages]);
 
-  // Add message function
-  const addMessage = useCallback(
-    (messageData: Omit<ChatMessage, "id" | "timestamp">) => {
-      const newMessage: ChatMessage = {
-        ...messageData,
-        id: generateMessageId(),
-        timestamp: new Date(),
-      };
-
-      console.log(`${DEBUG_PREFIX} Adding new message:`, {
-        id: newMessage.id,
-        type: newMessage.type,
-        content: newMessage.content.substring(0, 50),
-      });
-
-      const currentMessages = messagesRef.current;
-      const newMessages = [...currentMessages, newMessage];
-
-      // Sanity check
-      if (newMessages.length <= currentMessages.length) {
-        console.error(
-          `${DEBUG_PREFIX} ❌ SANITY CHECK FAILED: New messages count (${newMessages.length}) <= current count (${currentMessages.length})`
-        );
-      }
-
-      syncMessages(newMessages);
-    },
-    [generateMessageId, syncMessages]
-  );
-
-  // Clear messages function
-  const clearMessages = useCallback(() => {
-    console.log(`${DEBUG_PREFIX} Clearing all messages`);
-    syncMessages([]);
-    setRecovery({ hasRecovered: false, recoveredCount: 0 });
-  }, [syncMessages]);
-
-  // Periodic sanity check
+  // Detect component remounting
   useEffect(() => {
-    const interval = setInterval(() => {
-      const stateCount = messages.length;
-      const refCount = messagesRef.current.length;
-
-      if (stateCount !== refCount) {
-        console.warn(
-          `${DEBUG_PREFIX} ⚠️ MISMATCH DETECTED: State has ${stateCount} messages, ref has ${refCount}`
-        );
-        console.warn(`${DEBUG_PREFIX} Attempting to recover from ref...`);
-        setMessages([...messagesRef.current]);
+    const handleBeforeUnload = () => {
+      console.log(
+        "🔄 [PERSISTENT_MESSAGES] Component unmounting, creating backup"
+      );
+      try {
+        const backup = {
+          messages,
+          timestamp: Date.now(),
+          componentId: componentId.current,
+        };
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+      } catch (error) {
+        console.error("❌ [PERSISTENT_MESSAGES] Error creating backup:", error);
       }
-    }, 5000); // Check every 5 seconds
+    };
 
-    return () => clearInterval(interval);
-  }, [messages.length]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      handleBeforeUnload(); // Create backup on unmount
+    };
+  }, [messages]);
+
+  const addMessage = useCallback((params: AddMessageParams) => {
+    const newMessage: ChatMessage = {
+      id: nanoid(),
+      type: params.type,
+      content: params.content,
+      timestamp: new Date(),
+      hasContext: params.hasContext,
+      contextContent: params.contextContent,
+    };
+
+    console.log("➕ [PERSISTENT_MESSAGES] Adding message:", {
+      id: newMessage.id,
+      type: newMessage.type,
+      contentLength: newMessage.content.length,
+      hasContext: newMessage.hasContext,
+    });
+
+    setMessages((prev) => {
+      // Prevent duplicates
+      const isDuplicate = prev.some(
+        (msg) =>
+          msg.content === newMessage.content &&
+          msg.type === newMessage.type &&
+          Math.abs(msg.timestamp.getTime() - newMessage.timestamp.getTime()) <
+            1000
+      );
+
+      if (isDuplicate) {
+        console.log(
+          "⚠️ [PERSISTENT_MESSAGES] Duplicate message detected, skipping"
+        );
+        return prev;
+      }
+
+      return [...prev, newMessage];
+    });
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    console.log("🗑️ [PERSISTENT_MESSAGES] Clearing all messages");
+    setMessages([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(BACKUP_KEY);
+    } catch (error) {
+      console.error("❌ [PERSISTENT_MESSAGES] Error clearing storage:", error);
+    }
+  }, []);
+
+  // Recovery functions
+  const hasBackup = useCallback(() => {
+    try {
+      const backup = localStorage.getItem(BACKUP_KEY);
+      return !!backup;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const restoreFromBackup = useCallback(() => {
+    try {
+      const backupData = localStorage.getItem(BACKUP_KEY);
+      if (backupData) {
+        const backup = JSON.parse(backupData);
+        if (backup.messages && Array.isArray(backup.messages)) {
+          const validMessages = backup.messages
+            .map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            }))
+            .filter(
+              (msg: ChatMessage) =>
+                msg.id && msg.type && msg.content && msg.timestamp
+            );
+
+          console.log(
+            "🔄 [PERSISTENT_MESSAGES] Manually restored from backup:",
+            {
+              messageCount: validMessages.length,
+            }
+          );
+
+          setMessages(validMessages);
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error(
+        "❌ [PERSISTENT_MESSAGES] Error restoring from backup:",
+        error
+      );
+      return false;
+    }
+  }, []);
+
+  const clearBackup = useCallback(() => {
+    try {
+      localStorage.removeItem(BACKUP_KEY);
+      console.log("🗑️ [PERSISTENT_MESSAGES] Backup cleared");
+    } catch (error) {
+      console.error("❌ [PERSISTENT_MESSAGES] Error clearing backup:", error);
+    }
+  }, []);
 
   return {
     messages,
     addMessage,
     clearMessages,
-    recovery,
+    recovery: {
+      hasBackup: hasBackup(),
+      restoreFromBackup,
+      clearBackup,
+    },
   };
-}
+};

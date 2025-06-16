@@ -390,6 +390,14 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({
    */
   const startTranscription = useCallback(
     async (temporaryContext?: string) => {
+      console.log("🚀 [DEEPGRAM_CONTEXT] startTranscription called:", {
+        temporaryContext,
+        hasContext: !!temporaryContext,
+        isProcessing: state.isProcessing,
+        hasTranscriptionService: !!deepgramTranscriptionRef.current,
+        timestamp: new Date().toISOString(),
+      });
+
       // Verifica se já existe um processamento em andamento
       if (state.isProcessing) {
         console.warn(
@@ -408,20 +416,27 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // Start processing - bloqueia novos processamentos
         dispatch({ type: "SET_PROCESSING", payload: true });
+        console.log("🔄 [DEEPGRAM_CONTEXT] Processing state set to true");
 
         // Feedback visual/auditivo pode ser adicionado aqui
         console.log("🔄 Iniciando processamento de prompt...");
 
         // Send to the transcription service that implements the complete logic
+        console.log(
+          "📤 [DEEPGRAM_CONTEXT] Calling deepgramTranscriptionRef.sendTranscriptionPrompt"
+        );
         await deepgramTranscriptionRef.current.sendTranscriptionPrompt(
           temporaryContext
+        );
+        console.log(
+          "✅ [DEEPGRAM_CONTEXT] sendTranscriptionPrompt completed successfully"
         );
 
         // Update state after successful processing
         dispatch({ type: "SET_PROCESSING", payload: false });
         console.log("✅ Processamento de prompt concluído");
       } catch (error) {
-        console.error("❌ Error processing prompt:", error);
+        console.error("❌ [DEEPGRAM_CONTEXT] Error processing prompt:", error);
 
         // Ensure state is updated even in case of error
         dispatch({ type: "SET_PROCESSING", payload: false });

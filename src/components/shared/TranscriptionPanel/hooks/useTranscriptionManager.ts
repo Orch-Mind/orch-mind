@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useToast } from "../../../../App";
 import {
   ConnectionState,
@@ -105,51 +105,135 @@ export const useTranscriptionManager = () => {
     }
   }, []);
 
-  // Setup electron listeners for AI prompt responses
+  // Memoized toggleRecording to prevent recreating on every render
+  const toggleRecording = useCallback(async () => {
+    const currentState = getCurrentMicrophoneState();
+    console.log("🔊 Button clicked! Microphone state:", currentState);
+
+    if (currentState === MicrophoneState.Open) {
+      console.log("🚫 Stopping recording via button...");
+      stopMicrophone();
+    } else {
+      console.log("🎤 Starting recording via button...");
+      // If no audio source is active, enable system audio by default before recording
+      if (!isMicrophoneOn && !isSystemAudioOn) {
+        setIsSystemAudioOn(true);
+        setTimeout(() => startMicrophone(), 100);
+      } else {
+        startMicrophone();
+      }
+    }
+  }, [
+    getCurrentMicrophoneState,
+    stopMicrophone,
+    startMicrophone,
+    isMicrophoneOn,
+    isSystemAudioOn,
+    setIsSystemAudioOn,
+  ]);
+
+  // Memoize handleSendPrompt to prevent recreating on every render
+  const handleSendPrompt = useCallback(
+    async (messageContent?: string) => {
+      try {
+        // Use messageContent if provided (from chat), otherwise use temporaryContextRef.current (from traditional flow)
+        const contextToUse = messageContent || temporaryContextRef.current;
+        console.log("🚀 [SEND_PROMPT] Starting prompt send:", {
+          messageContent,
+          temporaryContext: temporaryContextRef.current,
+          contextToUse,
+          hasContext: !!contextToUse,
+        });
+
+        await sendTranscriptionPrompt(contextToUse);
+        console.log("✅ [SEND_PROMPT] Prompt sent successfully");
+
+        // Only clear temporaryContext if we used the traditional flow
+        if (!messageContent) {
+          setTemporaryContext("");
+        }
+      } catch (error) {
+        console.error("❌ [SEND_PROMPT] Error sending prompt:", error);
+        setTexts((prev) => ({
+          ...prev,
+          aiResponse: `Error: ${
+            error instanceof Error ? error.message : "Failed to send prompt"
+          }`,
+        }));
+
+        showToast("Error", "Failed to send prompt", "error");
+      }
+    },
+    [sendTranscriptionPrompt, setTemporaryContext, setTexts, showToast]
+  ); // Memoized with proper dependencies
+
+  // Setup electron listeners for AI prompt responses (FIXED: No dependencies)
   useEffect(() => {
     if (typeof window !== "undefined" && window.electronAPI) {
-      const removePartialListener = window.electronAPI.onPromptPartialResponse(
-        (partialResponse) => {
-          console.log("🔄 [IPC] Partial response received:", partialResponse);
-          setTexts((prev) => ({
-            ...prev,
-            aiResponse: partialResponse,
-          }));
-        }
-      );
+      // Create stable callbacks that don't depend on changing state
+      const handlePartialResponse = (partialResponse: string) => {
+        console.log("🔄 [IPC] Partial response received:", {
+          response: partialResponse,
+          length: partialResponse.length,
+          timestamp: new Date().toISOString(),
+        });
+        setTexts((prev) => ({
+          ...prev,
+          aiResponse: partialResponse,
+        }));
+      };
 
-      const removeSuccessListener = window.electronAPI.onPromptSuccess(
-        (finalResponse) => {
-          console.log("✅ [IPC] Final response received:", finalResponse);
-          setTexts((prev) => ({
-            ...prev,
-            aiResponse: finalResponse,
-          }));
-        }
-      );
+      const handleSuccessResponse = (finalResponse: string) => {
+        console.log("✅ [IPC] Final response received:", {
+          response: finalResponse,
+          length: finalResponse.length,
+          timestamp: new Date().toISOString(),
+        });
+        setTexts((prev) => ({
+          ...prev,
+          aiResponse: finalResponse,
+        }));
+      };
 
-      const removeErrorListener = window.electronAPI.onPromptError((error) => {
-        console.log("❌ [IPC] Error response received:", error);
+      const handleErrorResponse = (error: string) => {
+        console.log("❌ [IPC] Error response received:", {
+          error,
+          timestamp: new Date().toISOString(),
+        });
         setTexts((prev) => ({
           ...prev,
           aiResponse: `Erro: ${error}`,
         }));
-
         showToast("Erro", error, "error");
-      });
+      };
 
-      const removeSendingListener = window.electronAPI.onPromptSending(() => {
-        console.log("🔄 [IPC] Sending state received");
+      const handleSendingState = () => {
+        console.log("🔄 [IPC] Sending state received:", {
+          timestamp: new Date().toISOString(),
+        });
         setTexts((prev) => ({
           ...prev,
           aiResponse: "Processando...",
         }));
-      });
+      };
 
-      const removeSendListener = window.electronAPI.onPromptSend(() => {
+      const handlePromptSend = () => {
         console.log("📤 [IPC] Send prompt event received");
         handleSendPrompt();
-      });
+      };
+
+      const removePartialListener = window.electronAPI.onPromptPartialResponse(
+        handlePartialResponse
+      );
+      const removeSuccessListener = window.electronAPI.onPromptSuccess(
+        handleSuccessResponse
+      );
+      const removeErrorListener =
+        window.electronAPI.onPromptError(handleErrorResponse);
+      const removeSendingListener =
+        window.electronAPI.onPromptSending(handleSendingState);
+      const removeSendListener =
+        window.electronAPI.onPromptSend(handlePromptSend);
 
       return () => {
         removePartialListener();
@@ -159,7 +243,7 @@ export const useTranscriptionManager = () => {
         removeSendListener();
       };
     }
-  }, []);
+  }, [setTexts, showToast, handleSendPrompt]); // Stable dependencies only
 
   // Update Deepgram language when UI language changes
   useEffect(() => {
@@ -180,56 +264,20 @@ export const useTranscriptionManager = () => {
     }
   }, [microphoneState]);
 
-  // Simplified function for the recording button that imitates the behavior of the Option+Enter shortcut
-  const toggleRecording = async () => {
-    const currentState = getCurrentMicrophoneState();
-    console.log("🔊 Button clicked! Microphone state:", currentState);
+  // Memoized utility functions to prevent recreating on every render
+  const clearTranscription = useCallback(
+    () => setTexts((prev) => ({ ...prev, transcription: "" })),
+    [setTexts]
+  );
 
-    if (currentState === MicrophoneState.Open) {
-      console.log("🚫 Stopping recording via button...");
-      stopMicrophone();
-    } else {
-      console.log("🎤 Starting recording via button...");
-      // If no audio source is active, enable system audio by default before recording
-      if (!isMicrophoneOn && !isSystemAudioOn) {
-        setIsSystemAudioOn(true);
-        setTimeout(() => startMicrophone(), 100);
-      } else {
-        startMicrophone();
-      }
-    }
-  };
+  const clearAiResponse = useCallback(
+    () => setTexts((prev) => ({ ...prev, aiResponse: "" })),
+    [setTexts]
+  );
 
-  const handleSendPrompt = async (messageContent?: string) => {
-    try {
-      // Use messageContent if provided (from chat), otherwise use temporaryContextRef.current (from traditional flow)
-      const contextToUse = messageContent || temporaryContextRef.current;
-      await sendTranscriptionPrompt(contextToUse);
-
-      // Only clear temporaryContext if we used the traditional flow
-      if (!messageContent) {
-        setTemporaryContext("");
-      }
-    } catch (error) {
-      setTexts((prev) => ({
-        ...prev,
-        aiResponse: `Error: ${
-          error instanceof Error ? error.message : "Failed to send prompt"
-        }`,
-      }));
-
-      showToast("Error", "Failed to send prompt", "error");
-    }
-  };
-
-  const clearTranscription = () =>
-    setTexts((prev) => ({ ...prev, transcription: "" }));
-  const clearAiResponse = () =>
-    setTexts((prev) => ({ ...prev, aiResponse: "" }));
-
-  const toggleExpand = () => {
+  const toggleExpand = useCallback(() => {
     setIsExpanded(!isExpanded);
-  };
+  }, [isExpanded, setIsExpanded]);
 
   return {
     language,

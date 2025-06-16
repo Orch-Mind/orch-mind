@@ -3,6 +3,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: calc(
+    100vh - 8rem
+  ); /* Limita altura máxima deixando espaço para header */
   width: 100%;
   background: linear-gradient(
     135deg,
@@ -14,11 +17,14 @@
   backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 250, 255, 0.2);
   overflow: hidden;
+  position: relative;
 }
 
-/* Chat Messages Area */
+/* Chat Messages Area - FIXED SCROLL */
 .chat-messages {
   flex: 1;
+  min-height: 0; /* CRÍTICO: permite flex item encolher */
+  max-height: 70vh; /* Limita altura máxima para forçar scroll */
   overflow-y: auto;
   overflow-x: hidden;
   padding: 24px;
@@ -191,8 +197,9 @@
   text-align: left;
 }
 
-/* Input Area */
+/* Input Area - ALTURA FIXA */
 .chat-input-area {
+  flex-shrink: 0; /* Não encolhe */
   border-top: 1px solid rgba(0, 250, 255, 0.2);
   background: rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(10px);
@@ -490,9 +497,33 @@
 }
 
 /* Responsive adjustments */
+/* Responsividade para scroll e altura */
+@media (max-height: 800px) {
+  .conversational-chat {
+    max-height: calc(100vh - 6rem);
+  }
+
+  .chat-messages {
+    max-height: 60vh;
+    padding: 16px;
+  }
+}
+
+@media (max-height: 600px) {
+  .conversational-chat {
+    max-height: calc(100vh - 4rem);
+  }
+
+  .chat-messages {
+    max-height: 50vh;
+    padding: 12px;
+  }
+}
+
 @media (max-width: 768px) {
   .chat-messages {
     padding: 16px;
+    max-height: 65vh; /* Ajuste para mobile */
   }
 
   .main-input-wrapper {
@@ -640,4 +671,45 @@
     transform: scale(1.2);
     opacity: 1;
   }
+}
+
+/* Scroll to Bottom Button Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 250, 255, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 250, 255, 0.3);
+  z-index: 10;
+  transition: all 0.2s ease;
+  animation: fadeIn 0.3s ease;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.scroll-to-bottom-btn:hover {
+  transform: translateX(-50%) scale(1.1);
+  background: rgba(0, 250, 255, 1);
+  box-shadow: 0 6px 16px rgba(0, 250, 255, 0.5);
 }

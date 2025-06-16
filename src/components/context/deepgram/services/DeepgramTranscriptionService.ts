@@ -203,18 +203,37 @@ export class DeepgramTranscriptionService
    * Automatically selects between Ollama (advanced mode) and HuggingFace (basic mode)
    */
   async sendTranscriptionPrompt(temporaryContext?: string): Promise<void> {
+    console.log("🚀 [DEEPGRAM_SERVICE] sendTranscriptionPrompt called:", {
+      temporaryContext,
+      hasContext: !!temporaryContext,
+      currentMode: ModeService.getMode(),
+      timestamp: new Date().toISOString(),
+    });
+
     const currentMode = ModeService.getMode();
 
-    if (currentMode === OrchOSModeEnum.BASIC) {
-      LoggingUtils.logInfo("🤖 Using HuggingFace service (Basic mode)");
-      return await this.transcriptionPromptProcessor.processWithHuggingFace(
-        temporaryContext
+    try {
+      if (currentMode === OrchOSModeEnum.BASIC) {
+        LoggingUtils.logInfo("🤖 Using HuggingFace service (Basic mode)");
+        console.log("📤 [DEEPGRAM_SERVICE] Calling processWithHuggingFace");
+        await this.transcriptionPromptProcessor.processWithHuggingFace(
+          temporaryContext
+        );
+        console.log("✅ [DEEPGRAM_SERVICE] processWithHuggingFace completed");
+      } else {
+        LoggingUtils.logInfo("🧠 Using Ollama service (Advanced mode)");
+        console.log("📤 [DEEPGRAM_SERVICE] Calling processWithOpenAI");
+        await this.transcriptionPromptProcessor.processWithOpenAI(
+          temporaryContext
+        );
+        console.log("✅ [DEEPGRAM_SERVICE] processWithOpenAI completed");
+      }
+    } catch (error) {
+      console.error(
+        "❌ [DEEPGRAM_SERVICE] Error in sendTranscriptionPrompt:",
+        error
       );
-    } else {
-      LoggingUtils.logInfo("🧠 Using Ollama service (Advanced mode)");
-      return await this.transcriptionPromptProcessor.processWithOpenAI(
-        temporaryContext
-      );
+      throw error;
     }
   }
 

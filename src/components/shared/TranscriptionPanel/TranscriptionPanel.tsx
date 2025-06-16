@@ -26,7 +26,7 @@ import "./styles/TranscriptionPanel.visual.css"; // Efeitos visuais e glassmorfi
 // Quantum consciousness visualization import
 import { QuantumVisualizationContainer } from "../QuantumVisualization/QuantumVisualizationContainer";
 // Conversational Chat import
-import { ConversationalChat } from "./components/ConversationalChat/ConversationalChat";
+import { ConversationalChat } from "./components/ConversationalChat";
 // Brain visualization is now handled in a separate module
 
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
@@ -229,6 +229,10 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     </div>
   );
 
+  // Generate a stable key for ConversationalChat to prevent unnecessary remounting
+  // Use a truly stable key that doesn't change on re-renders
+  const chatKey = React.useMemo(() => "conversational-chat-stable", []);
+
   // --- Render ---
   return (
     <div
@@ -300,9 +304,19 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
         <div
           key="neural-chat-zone"
           className="neural-chat-zone"
-          style={{ height: "100%", width: "100%", padding: "1.2rem" }}
+          style={{
+            height: "100%",
+            maxHeight:
+              "calc(100vh - 4rem)" /* Limita altura para forçar scroll interno */,
+            width: "100%",
+            padding: "1.2rem",
+            overflow: "hidden" /* Força o chat a usar scroll interno */,
+            display: "flex",
+            flexDirection: "column",
+          }}
         >
           <ConversationalChat
+            key={chatKey}
             transcriptionText={texts.transcription}
             onTranscriptionChange={handleTranscriptionChange}
             onClearTranscription={clearTranscription}
