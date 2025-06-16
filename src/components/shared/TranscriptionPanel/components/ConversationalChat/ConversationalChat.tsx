@@ -27,6 +27,8 @@ const ChatMessages: React.FC<{
     messagesLength: messages.length,
     isProcessing,
     messageIds: messages.map((m) => m.id),
+    lastMessage:
+      messages[messages.length - 1]?.content?.substring(0, 30) || "none",
   });
   return (
     <>
@@ -373,8 +375,21 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
         timestamp: new Date(),
       };
 
-      // Add AI message to chat
+      // Add AI message to chat (prevent duplicates)
       setChatMessages((prev) => {
+        // Check if this exact content already exists
+        const existingMessage = prev.find(
+          (msg) => msg.type === "system" && msg.content === aiResponseText
+        );
+
+        if (existingMessage) {
+          console.log(
+            "⚠️ [CHAT] Duplicate AI message detected, skipping:",
+            aiResponseText.substring(0, 50)
+          );
+          return prev;
+        }
+
         console.log(
           "📝 [CHAT] Adding AI message to chat, current length:",
           prev.length
@@ -390,7 +405,9 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
 
       // Clear the AI response text to prevent showing it elsewhere
       setTimeout(() => {
-        console.log("🧹 [CHAT] Clearing AI response text");
+        console.log(
+          "🧹 [CHAT] Clearing AI response text after successful processing"
+        );
         onAiResponseChange("");
       }, 100);
 
@@ -423,6 +440,12 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
   useEffect(() => {
     console.log("📊 [CHAT] Chat messages updated:", {
       length: chatMessages.length,
+      messages: chatMessages.map((m) => ({
+        id: m.id,
+        type: m.type,
+        content:
+          m.content.substring(0, 30) + (m.content.length > 30 ? "..." : ""),
+      })),
     });
   }, [chatMessages]);
 
@@ -518,38 +541,6 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       {/* Chat Messages Area */}
       <div className="chat-messages" ref={chatMessagesRef}>
         {chatContent}
-
-        {/* Typing Indicator */}
-        {isProcessing && (
-          <div className="message system-message typing-indicator">
-            <div className="message-avatar">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" fill="url(#gradient-ai)" />
-                <rect x="8" y="8" width="8" height="8" rx="2" fill="white" />
-                <circle cx="12" cy="12" r="2" fill="url(#gradient-ai)" />
-                <defs>
-                  <linearGradient
-                    id="gradient-ai"
-                    x1="0%"
-                    y1="0%"
-                    x2="100%"
-                    y2="100%"
-                  >
-                    <stop offset="0%" stopColor="#ff4dd2" />
-                    <stop offset="100%" stopColor="#7c4dff" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-            <div className="message-content">
-              <div className="message-text typing-animation">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
