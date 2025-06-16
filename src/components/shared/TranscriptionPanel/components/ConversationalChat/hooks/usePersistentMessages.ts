@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   type: "user" | "system";
   content: string;

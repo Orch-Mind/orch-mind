@@ -1,16 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MicrophoneState } from "../../../../context";
 import "./ConversationalChat.css";
-
-// Local interfaces for chat functionality
-interface ChatMessage {
-  id: string;
-  type: "user" | "system";
-  content: string;
-  timestamp: Date;
-  hasContext?: boolean;
-  contextContent?: string;
-}
+import {
+  ChatMessage,
+  usePersistentMessages,
+} from "./hooks/usePersistentMessages";
 
 // Interface for memory system integration
 interface MemoryMessage {
