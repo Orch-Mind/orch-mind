@@ -208,8 +208,16 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       inputMessage,
       isProcessing,
       showContextField,
+      messageIds: chatMessages.map((m) => m.id),
+      messageContents: chatMessages.map((m) => m.content.substring(0, 20)),
     });
-  }, [chatMessages.length, inputMessage, isProcessing, showContextField]);
+  }, [
+    chatMessages.length,
+    inputMessage,
+    isProcessing,
+    showContextField,
+    chatMessages,
+  ]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -416,6 +424,9 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       // If AI response is cleared while processing, stop processing
       console.log("⏹️ [CHAT] AI response cleared, stopping processing");
       setIsProcessing(false);
+    } else if (aiResponseText === "" && !isProcessing) {
+      // AI response is empty but we're not processing - this is normal
+      console.log("ℹ️ [CHAT] AI response is empty (normal state)");
     } else {
       console.log("⏭️ [CHAT] Skipping AI response processing:", {
         hasText: !!aiResponseText,
@@ -742,8 +753,5 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
   );
 };
 
-// Export memoized component (ignores rapid transcriptionText updates)
-export const ConversationalChat = React.memo(
-  ConversationalChatComponent,
-  areEqual
-);
+// Export component without memo temporarily to debug message disappearing issue
+export const ConversationalChat = ConversationalChatComponent;
