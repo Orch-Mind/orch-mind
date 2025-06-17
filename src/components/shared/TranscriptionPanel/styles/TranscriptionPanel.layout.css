@@ -178,6 +178,11 @@ textarea.orchos-textarea-neural,
   box-sizing: border-box;
 }
 
+/* Override background when showing only chat (single column) */
+.orchos-quantum-dashboard[style*="grid-template-columns: 1fr"] {
+  background: #0a0f1a;
+}
+
 .orchos-quantum-dashboard::before {
   content: '';
   position: absolute;
@@ -193,6 +198,11 @@ textarea.orchos-textarea-neural,
   animation: quantumDrift 20s ease-in-out infinite;
   pointer-events: none;
   opacity: 0.4;
+}
+
+/* Hide pseudo-element when showing only chat */
+.orchos-quantum-dashboard[style*="grid-template-columns: 1fr"]::before {
+  display: none;
 }
 
 /* Quantum Visualization Zone - Holographic Container */

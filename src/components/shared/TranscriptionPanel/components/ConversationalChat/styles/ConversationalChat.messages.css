@@ -200,7 +200,7 @@
 /* Typing Indicator */
 .typing-indicator {
   order: 1;
-  opacity: 0.8;
+  /* Removido opacity para evitar transparência */
   /* Background sólido para evitar transparência */
   background: #0a0f1a;
   isolation: isolate;
@@ -232,6 +232,8 @@
   flex-direction: column;
   min-height: 0;
   position: relative;
+  /* Background sólido para cobrir qualquer transparência */
+  background: #0a0f1a;
 }
 
 /* Add a pseudo-element for extra scroll space */
