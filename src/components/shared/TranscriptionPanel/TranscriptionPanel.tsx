@@ -19,6 +19,7 @@ import { useGeneralSettings } from "./components/settings/hooks/useGeneralSettin
 import "./styles/TranscriptionPanel.animations.css"; // Animações e keyframes
 import "./styles/TranscriptionPanel.buttons.css"; // Botões e controles interativos
 import "./styles/TranscriptionPanel.layout.css"; // Layout, grid e estrutura espacial
+import "./styles/TranscriptionPanel.overrides.css"; // Overrides para single-column mode
 import "./styles/TranscriptionPanel.settings.css"; // Componentes de configuração
 import "./styles/TranscriptionPanel.tooltip.css"; // Tooltips e ajudas contextuais
 import "./styles/TranscriptionPanel.variables.css"; // Variáveis globais e propriedades customizadas

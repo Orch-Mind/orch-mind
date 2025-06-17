@@ -180,7 +180,21 @@ textarea.orchos-textarea-neural,
 
 /* Override background when showing only chat (single column) */
 .orchos-quantum-dashboard.single-column {
-  background: #0a0f1a;
+  background: #0a0f1a !important;
+}
+
+/* Hide pseudo-element when showing only chat */
+.orchos-quantum-dashboard.single-column::before {
+  display: none !important;
+}
+
+/* Ensure all child elements have solid background in single-column mode */
+.orchos-quantum-dashboard.single-column * {
+  background-color: transparent !important;
+}
+
+.orchos-quantum-dashboard.single-column .neural-chat-zone {
+  background: #0a0f1a !important;
 }
 
 .orchos-quantum-dashboard::before {
@@ -198,11 +212,6 @@ textarea.orchos-textarea-neural,
   animation: quantumDrift 20s ease-in-out infinite;
   pointer-events: none;
   opacity: 0.4;
-}
-
-/* Hide pseudo-element when showing only chat */
-.orchos-quantum-dashboard.single-column::before {
-  display: none;
 }
 
 /* Quantum Visualization Zone - Holographic Container */

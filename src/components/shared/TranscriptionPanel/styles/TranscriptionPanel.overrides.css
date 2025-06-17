@@ -1,0 +1,42 @@
+/* ================================================================
+ * OVERRIDE STYLES - Single Column Mode
+ * ================================================================
+ * These styles override the quantum dashboard background when
+ * showing only the chat (without quantum visualization)
+ */
+
+/* Force solid background in single-column mode */
+.orchos-quantum-dashboard.single-column {
+  background: #0a0f1a !important;
+  background-image: none !important;
+}
+
+/* Remove all pseudo-elements and animations in single-column mode */
+.orchos-quantum-dashboard.single-column::before,
+.orchos-quantum-dashboard.single-column::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+/* Ensure neural-chat-zone has solid background */
+.orchos-quantum-dashboard.single-column .neural-chat-zone {
+  background: #0a0f1a !important;
+  background-image: none !important;
+}
+
+/* Remove any background from child elements that might leak */
+.orchos-quantum-dashboard.single-column .conversational-chat,
+.orchos-quantum-dashboard.single-column .chat-messages-container,
+.orchos-quantum-dashboard.single-column .chat-messages,
+.orchos-quantum-dashboard.single-column .messages-wrapper {
+  background: #0a0f1a !important;
+  background-image: none !important;
+}
+
+/* Ensure typing indicator has solid background */
+.orchos-quantum-dashboard.single-column .typing-indicator {
+  background: #0a0f1a !important;
+  background-image: none !important;
+} 
