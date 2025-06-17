@@ -51,7 +51,15 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   } = usePersistentMessages();
 
   const chatState = useChatState();
-  const scrollState = useChatScroll(chatMessages.length);
+
+  // Refs for scroll management
+  const messagesContainerRef = useRef<HTMLDivElement>(null!);
+
+  // Use the updated scroll hook
+  const scrollState = useChatScroll({
+    messages: chatMessages,
+    messagesContainerRef,
+  });
 
   // Log component lifecycle (only in development)
   useEffect(() => {
@@ -70,56 +78,100 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     }
   }, []);
 
-  // Auto-restore from backup on mount
-  useEffect(() => {
-    if (recovery.hasBackup) {
-      console.log("🔄 [CHAT_LIFECYCLE] Backup detected, auto-restoring...");
-      recovery.restoreFromBackup();
-    }
-  }, [recovery]);
+  // Track if we're currently receiving a response
+  const isReceivingResponse = useRef(false);
+  const lastProcessedResponse = useRef<string>("");
+  const responseDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle AI response processing (simplified logic)
+  // Handle AI response processing with debounce and better state management
   useEffect(() => {
+    if (!aiResponseText || aiResponseText.trim() === "") {
+      return;
+    }
+
+    // Handle processing state
     if (
-      !aiResponseText ||
-      aiResponseText.trim() === "" ||
       aiResponseText === "Processing..." ||
       aiResponseText === "Processando..."
     ) {
-      if (
-        aiResponseText === "Processing..." ||
-        aiResponseText === "Processando..."
-      ) {
-        chatState.setIsProcessing(true);
+      chatState.setIsProcessing(true);
+      isReceivingResponse.current = true;
+      return;
+    }
+
+    // Clear any existing debounce timer
+    if (responseDebounceTimer.current) {
+      clearTimeout(responseDebounceTimer.current);
+    }
+
+    // Debounce the response processing to avoid rapid updates
+    responseDebounceTimer.current = setTimeout(() => {
+      // Check if this is truly a new response
+      if (aiResponseText === lastProcessedResponse.current) {
+        console.log("⚠️ [CHAT] Same response, skipping");
+        return;
       }
-      return;
-    }
 
-    // Check for duplicates
-    const isDuplicate = chatMessages.some(
-      (msg) => msg.type === "system" && msg.content === aiResponseText
-    );
+      // Check for duplicates in existing messages
+      const isDuplicate = chatMessages.some(
+        (msg) => msg.type === "system" && msg.content === aiResponseText
+      );
 
-    if (isDuplicate) {
-      console.log("⚠️ [CHAT] Duplicate AI response, skipping");
-      return;
-    }
+      if (isDuplicate) {
+        console.log("⚠️ [CHAT] Duplicate AI response in messages, skipping");
+        return;
+      }
 
-    // Add AI response
-    addMessage({
-      type: "system",
-      content: aiResponseText,
-    });
+      // Check if this looks like a final response (not partial)
+      // A final response typically doesn't end with "..." and has reasonable length
+      const looksLikeFinalResponse =
+        !aiResponseText.endsWith("...") &&
+        aiResponseText.length > 10 &&
+        !aiResponseText.includes("Processando") &&
+        !aiResponseText.includes("Processing");
 
-    // Clear processing state
-    chatState.setIsProcessing(false);
-    if (chatState.processingTimeoutRef.current) {
-      clearTimeout(chatState.processingTimeoutRef.current);
-      chatState.processingTimeoutRef.current = null;
-    }
+      if (looksLikeFinalResponse) {
+        console.log(
+          "✅ [CHAT] Adding final AI response:",
+          aiResponseText.substring(0, 50)
+        );
 
-    // Clear AI response
-    onClearAiResponse();
+        // Add AI response
+        addMessage({
+          type: "system",
+          content: aiResponseText,
+        });
+
+        // Update last processed response
+        lastProcessedResponse.current = aiResponseText;
+
+        // Clear processing state
+        chatState.setIsProcessing(false);
+        isReceivingResponse.current = false;
+
+        if (chatState.processingTimeoutRef.current) {
+          clearTimeout(chatState.processingTimeoutRef.current);
+          chatState.processingTimeoutRef.current = null;
+        }
+
+        // Only clear AI response after successfully adding the message
+        // Add a small delay to ensure the message is properly saved
+        setTimeout(() => {
+          onClearAiResponse();
+        }, 100);
+      } else {
+        console.log("🔄 [CHAT] Partial response detected, waiting for more...");
+        // For partial responses, just update the processing state
+        isReceivingResponse.current = true;
+      }
+    }, 300); // 300ms debounce
+
+    // Cleanup function
+    return () => {
+      if (responseDebounceTimer.current) {
+        clearTimeout(responseDebounceTimer.current);
+      }
+    };
   }, [aiResponseText, chatMessages, addMessage, onClearAiResponse, chatState]);
 
   // Handle send message (KISS principle - simple and clear)
@@ -131,11 +183,8 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     }
 
     const finalContent = messageContent || transcriptionText.trim();
-    const finalContext = chatState.currentContext
-      ? `${finalContent}\n\nContext: ${chatState.currentContext}`
-      : finalContent;
 
-    // Add user message
+    // Add user message with context info
     addMessage({
       type: "user",
       content: finalContent,
@@ -155,18 +204,10 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
       clearTimeout(chatState.processingTimeoutRef.current);
     }
 
-    chatState.processingTimeoutRef.current = setTimeout(() => {
-      chatState.setIsProcessing(false);
-      addMessage({
-        type: "system",
-        content:
-          "⚠️ Timeout: A resposta da IA demorou muito para chegar. Tente novamente.",
-      });
-    }, 30000);
-
-    // Send prompt
+    // Send prompt - pass message and context separately
     setTimeout(() => {
-      onSendPrompt(finalContext);
+      // Pass the message as first parameter and context as second
+      onSendPrompt(finalContent, chatState.currentContext || undefined);
     }, 0);
   }, [
     chatState,
@@ -227,14 +268,48 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     };
   }, [addMessage, chatState]);
 
+  // Force scroll to bottom on mount and when messages are loaded
+  useEffect(() => {
+    // Small delay to ensure DOM is fully rendered
+    const scrollTimer = setTimeout(() => {
+      if (messagesContainerRef.current && chatMessages.length > 0) {
+        // Force multiple scroll attempts to ensure we reach the absolute bottom
+        const forceScroll = () => {
+          if (!messagesContainerRef.current) return;
+
+          const element = messagesContainerRef.current;
+          const maxScroll = element.scrollHeight - element.clientHeight;
+
+          // Try different methods to ensure scroll
+          element.scrollTop = element.scrollHeight;
+          element.scrollTo(0, element.scrollHeight);
+
+          // Verify and retry if needed
+          requestAnimationFrame(() => {
+            if (element.scrollTop < maxScroll - 2) {
+              element.scrollTop = maxScroll + 100; // Overshoot to ensure bottom
+            }
+          });
+        };
+
+        // Execute multiple times with delays
+        forceScroll();
+        setTimeout(forceScroll, 100);
+        setTimeout(forceScroll, 300);
+      }
+    }, 50);
+
+    return () => clearTimeout(scrollTimer);
+  }, []); // Only run once on mount
+
   return (
     <div className="conversational-chat">
       {/* Chat Messages Container */}
       <ChatMessagesContainer
         messages={chatMessages}
         isProcessing={chatState.isProcessing}
-        onScrollChange={scrollState.handleScroll}
-        scrollRef={scrollState.messagesRef}
+        onScrollChange={() => {}} // Not needed anymore
+        scrollRef={messagesContainerRef}
         showScrollButton={scrollState.showScrollButton}
         onScrollToBottom={scrollState.scrollToBottom}
         onAddTestMessage={debugFunctions.addTestMessage}
@@ -277,7 +352,7 @@ function areEqual(
   prev: ConversationalChatProps,
   next: ConversationalChatProps
 ) {
-  return (
+  const isEqual =
     prev.aiResponseText === next.aiResponseText &&
     prev.temporaryContext === next.temporaryContext &&
     prev.microphoneState === next.microphoneState &&
@@ -286,9 +361,26 @@ function areEqual(
     prev.onClearTranscription === next.onClearTranscription &&
     prev.onSendPrompt === next.onSendPrompt &&
     prev.onToggleRecording === next.onToggleRecording &&
-    prev.onTranscriptionChange === next.onTranscriptionChange
-    // transcriptionText deliberately ignored
-  );
+    prev.onTranscriptionChange === next.onTranscriptionChange;
+  // transcriptionText deliberately ignored
+
+  if (!isEqual && process.env.NODE_ENV !== "production") {
+    console.log(
+      "🔄 [CHAT_RERENDER] ConversationalChat re-rendering due to prop change:",
+      {
+        aiResponseChanged: prev.aiResponseText !== next.aiResponseText,
+        aiResponseText: {
+          prev: prev.aiResponseText?.substring(0, 50),
+          next: next.aiResponseText?.substring(0, 50),
+        },
+        temporaryContextChanged:
+          prev.temporaryContext !== next.temporaryContext,
+        microphoneStateChanged: prev.microphoneState !== next.microphoneState,
+      }
+    );
+  }
+
+  return isEqual;
 }
 
 // Export component with memo to prevent unnecessary re-renders

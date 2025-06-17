@@ -1,0 +1,197 @@
+/* ================================================================
+ * ANIMATIONS - Keyframes & Transitions
+ * ================================================================
+ * Contains all animation definitions, keyframes, and transition
+ * effects used throughout the chat interface
+ */
+
+/* ===== KEYFRAME ANIMATIONS ===== */
+
+/* Message Animation */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes messageAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Context Input Slide Down */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Microphone Recording Pulse */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 68, 85, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 68, 85, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 68, 85, 0);
+  }
+}
+
+/* Settings Popup Slide In */
+@keyframes popupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Typing Indicator Animation */
+@keyframes typingDot {
+  0%,
+  60%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  30% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Neural Quantum Scroll Button Animations */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes neuralPulse {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+    box-shadow: 
+      0 0 16px rgba(0, 250, 255, 0.4),
+      0 6px 20px rgba(0, 0, 0, 0.25),
+      inset 0 0 12px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    transform: scale(1.02) translateY(-0.5px); /* Pulsação mais sutil */
+    box-shadow: 
+      0 0 24px rgba(0, 250, 255, 0.5),
+      0 8px 24px rgba(0, 0, 0, 0.3),
+      inset 0 0 16px rgba(255, 255, 255, 0.12);
+  }
+}
+
+@keyframes pulseScale {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== APPLIED ANIMATIONS ===== */
+
+/* Message Animation Application */
+.message {
+  animation: messageSlideIn 0.3s ease-out;
+}
+
+/* Context Input Animation */
+.context-input-wrapper {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Transcription Display Animation */
+.transcription-display {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Settings Popup Animation */
+.settings-popup {
+  animation: popupSlideIn 0.2s ease-out;
+}
+
+/* Microphone Recording Animation */
+.mic-btn.recording {
+  animation: pulse 1.5s infinite;
+}
+
+/* Typing Animation Application */
+.typing-animation span {
+  animation: typingDot 1.4s infinite ease-in-out;
+}
+
+.typing-animation span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-animation span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-animation span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* ===== REDUCED MOTION SUPPORT ===== */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable animations for users who prefer reduced motion */
+  .message,
+  .context-input-wrapper,
+  .transcription-display,
+  .settings-popup {
+    animation: none !important;
+  }
+  
+  .mic-btn.recording {
+    animation: none !important;
+  }
+  
+  .typing-animation span {
+    animation: none !important;
+  }
+  
+  /* Keep only opacity transitions for reduced motion */
+  .message,
+  .context-input-wrapper,
+  .transcription-display {
+    transition: opacity 0.2s ease !important;
+  }
+} 

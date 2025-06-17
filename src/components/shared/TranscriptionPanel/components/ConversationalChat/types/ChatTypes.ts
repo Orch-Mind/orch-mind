@@ -58,6 +58,14 @@ export interface ChatMessagesContainerProps {
   messages: ChatMessage[];
   isProcessing: boolean;
   onScrollChange: (isNearBottom: boolean) => void;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  showScrollButton: boolean;
+  onScrollToBottom: () => void;
+  newMessageCount?: number;
+  hasNewMessages?: boolean;
+  onAddTestMessage?: () => void;
+  onResetState?: () => void;
+  onClearMessages?: () => void;
 }
 
 // Main component props
@@ -72,7 +80,7 @@ export interface ConversationalChatProps {
   onTemporaryContextChange: (value: string) => void;
   microphoneState: MicrophoneState;
   onToggleRecording: () => void;
-  onSendPrompt: (messageContent?: string) => void;
+  onSendPrompt: (messageContent?: string, contextContent?: string) => void;
 }
 
 // Hook return types
@@ -85,11 +93,15 @@ export interface ChatState {
   setShowContextField: (show: boolean) => void;
   isProcessing: boolean;
   setIsProcessing: (processing: boolean) => void;
+  processingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
 }
 
 export interface ScrollState {
   showScrollButton: boolean;
   scrollToBottom: () => void;
   handleScroll: () => void;
-  messagesRef: React.RefObject<HTMLDivElement>;
+  messagesRef: React.RefObject<HTMLDivElement | null>;
+  newMessageCount: number;
+  hasNewMessages: boolean;
+  clearNotification: () => void;
 }

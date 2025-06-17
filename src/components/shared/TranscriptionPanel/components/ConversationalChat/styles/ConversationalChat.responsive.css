@@ -1,0 +1,301 @@
+/* ================================================================
+ * RESPONSIVE STYLES - Media Queries & Screen Adaptations
+ * ================================================================
+ * Contains all responsive design adjustments for different
+ * screen sizes and device types
+ */
+
+/* ===== HIGH RESOLUTION / LARGE SCREENS ===== */
+@media (min-width: 1200px) {
+  .chat-messages {
+    padding: 20px 16px;
+  }
+  
+  .main-input-wrapper {
+    padding: 20px 32px;
+  }
+  
+  .message-bubble-wrapper {
+    max-width: 65%; /* Slightly smaller on large screens */
+  }
+}
+
+/* ===== MEDIUM HEIGHT SCREENS ===== */
+@media (max-height: 800px) {
+  .message-content {
+    padding: 10px 14px;
+  }
+
+  .message {
+    gap: 6px;
+    margin: 0;
+  }
+
+  /* Espaçamento específico para telas baixas */
+  .user-message,
+  .system-message {
+    margin: 0 0 12px 0;
+  }
+
+  .message-timestamp {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  .chat-messages {
+    padding: 16px;
+  }
+}
+
+/* ===== SMALL HEIGHT SCREENS ===== */
+@media (max-height: 600px) {
+  .chat-messages {
+    padding: 12px;
+  }
+  
+  .welcome-message {
+    padding: 20px 16px;
+  }
+  
+  .welcome-message h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  
+  .welcome-message p {
+    font-size: 14px;
+  }
+}
+
+/* ===== TABLET LANDSCAPE ===== */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .message-bubble-wrapper {
+    max-width: 75%;
+  }
+}
+
+/* ===== TABLET PORTRAIT ===== */
+@media (max-width: 768px) {
+  .chat-messages {
+    padding: 16px;
+  }
+
+  .main-input-wrapper {
+    padding: 12px 16px;
+  }
+
+  /* Aumenta a largura máxima das mensagens em telas menores */
+  .message-bubble-wrapper {
+    max-width: 85%;
+  }
+
+  /* Reduz gap entre avatar e mensagem no tablet */
+  .message {
+    gap: 6px;
+    margin: 0;
+  }
+
+  /* Espaçamento específico para mensagens no tablet */
+  .user-message,
+  .system-message {
+    margin: 0 0 14px 0;
+  }
+
+  /* Ajusta padding das mensagens para tablet */
+  .message-content {
+    padding: 10px 14px;
+  }
+
+  /* Ajusta tamanho do timestamp para tablet */
+  .message-timestamp {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  .input-controls {
+    gap: 6px;
+  }
+
+  .control-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .context-input-wrapper,
+  .transcription-display {
+    padding: 12px;
+  }
+}
+
+/* ===== MOBILE LANDSCAPE ===== */
+@media (max-width: 768px) and (orientation: landscape) {
+  .chat-messages {
+    padding: 12px;
+  }
+  
+  .main-input-wrapper {
+    padding: 8px 12px;
+  }
+  
+  .message-bubble-wrapper {
+    max-width: 80%;
+  }
+}
+
+/* ===== MOBILE PORTRAIT ===== */
+@media (max-width: 480px) {
+  .conversational-chat {
+    border-radius: 12px;
+  }
+  
+  .chat-messages {
+    padding: 12px 8px;
+  }
+
+  .main-input-wrapper {
+    padding: 8px 12px;
+  }
+
+  /* Mobile specific message styling */
+  .message-bubble-wrapper {
+    max-width: 90%;
+  }
+
+  .message {
+    gap: 4px;
+  }
+
+  .user-message,
+  .system-message {
+    margin: 0 0 12px 0;
+  }
+
+  .message-content {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .message-text {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .message-timestamp {
+    font-size: 9px;
+    margin-top: 2px;
+  }
+
+  /* Avatar adjustments for mobile */
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message-avatar svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Control buttons for mobile */
+  .input-controls {
+    gap: 4px;
+    margin-left: 8px;
+  }
+
+  .control-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Context and transcription for mobile */
+  .context-input-wrapper,
+  .transcription-display {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .context-input {
+    padding: 8px;
+    min-height: 50px;
+    font-size: 13px;
+  }
+
+  .transcription-text {
+    font-size: 13px;
+  }
+
+  /* Welcome message adjustments */
+  .welcome-message {
+    padding: 20px 12px;
+  }
+
+  .welcome-message h3 {
+    font-size: 18px;
+  }
+
+  .welcome-message p {
+    font-size: 13px;
+  }
+
+  /* Scroll button for mobile */
+  .scroll-to-bottom-btn {
+    width: 40px;
+    height: 40px;
+    bottom: 16px;
+    margin-right: 8px;
+  }
+}
+
+/* ===== VERY SMALL SCREENS ===== */
+@media (max-width: 320px) {
+  .chat-messages {
+    padding: 8px 6px;
+  }
+  
+  .main-input-wrapper {
+    padding: 6px 8px;
+  }
+  
+  .message-bubble-wrapper {
+    max-width: 95%;
+  }
+  
+  .message-content {
+    padding: 6px 10px;
+  }
+  
+  .control-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .input-controls {
+    gap: 2px;
+    margin-left: 4px;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .conversational-chat {
+    background: white !important;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+  }
+  
+  .chat-input-area,
+  .input-controls,
+  .scroll-to-bottom-btn {
+    display: none !important;
+  }
+  
+  .message-content {
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+    color: #000 !important;
+  }
+  
+  .message-timestamp {
+    color: #666 !important;
+  }
+} 

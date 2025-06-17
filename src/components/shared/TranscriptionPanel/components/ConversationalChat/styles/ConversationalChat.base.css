@@ -1,0 +1,120 @@
+/* ================================================================
+ * BASE STYLES - Core Layout & Containers
+ * ================================================================
+ * Contém a estrutura de layout definitiva para o chat.
+ * Esta abordagem usa uma cadeia de flexbox para garantir que
+ * a área de mensagens ocupe o espaço correto.
+ */
+
+/* Container principal do chat */
+.conversational-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  /* Isolamento do background do painel */
+  isolation: isolate;
+}
+
+/* Nível 1: Container de Mensagens (Filho do .conversational-chat) */
+.chat-messages-container {
+  flex: 1; /* ESSENCIAL: Faz este container crescer e ocupar o espaço disponível */
+  min-height: 0; /* PREVENÇÃO DE BUG FLEXBOX: Impede que o container exceda o pai */
+  position: relative; /* Contexto para o botão absoluto */
+  display: flex; /* Cria um novo contexto flex para seu filho */
+  flex-direction: column;
+  overflow: hidden; /* IMPORTANTE: Contém o overflow no container */
+  /* Background para isolar do painel pai */
+  background: transparent;
+  z-index: 1;
+}
+
+/* Nível 2: A Área de Scroll (Filho do .chat-messages-container) */
+.chat-messages {
+  flex: 1; /* ESSENCIAL: Faz a área de scroll preencher o .chat-messages-container */
+  min-height: 0; /* PREVENÇÃO DE BUG FLEXBOX */
+  height: 0; /* TRUQUE: Força o container a respeitar o flex: 1 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 12px 32px 12px; /* Aumentado padding-bottom para garantir espaço de scroll */
+  display: flex;
+  flex-direction: column;
+  scroll-behavior: smooth;
+  /* Background sólido para cobrir qualquer vazamento */
+  background: rgba(10, 15, 25, 0.95);
+  position: relative;
+  z-index: 1;
+}
+
+/* Pseudo-elemento para garantir espaço extra de scroll */
+.chat-messages::after {
+  content: "";
+  display: block;
+  height: 2px;
+  min-height: 2px;
+  visibility: hidden;
+  flex-shrink: 0;
+}
+
+/* Nível 3: O Wrapper das Mensagens */
+.messages-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-top: auto;
+}
+
+/* Scrollbar Styling */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #00faff 0%, #7c4dff 100%);
+  border-radius: 3px;
+}
+
+/* Welcome Message */
+.welcome-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.7);
+  width: 100%;
+  /* flex-grow permite que ele ocupe o espaço vertical quando for o único elemento */
+  flex-grow: 1;
+}
+
+.welcome-icon {
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.welcome-message h3 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #00faff 0%, #7c4dff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-message p {
+  font-size: 16px;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+/* Debug button styles removed for cleaner UI */ 

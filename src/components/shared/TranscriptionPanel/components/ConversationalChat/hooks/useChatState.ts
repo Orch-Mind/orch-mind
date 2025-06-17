@@ -6,7 +6,6 @@ import { ChatState } from "../types/ChatTypes";
  * Follows Single Responsibility Principle - only manages chat state
  */
 export const useChatState = (): ChatState & {
-  processingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
   resetState: () => void;
 } => {
   const [inputMessage, setInputMessage] = useState("");

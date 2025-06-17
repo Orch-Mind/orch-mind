@@ -5,31 +5,38 @@
 // Interface for the Deepgram context
 
 import { ListenLiveClient } from "@deepgram/sdk";
-import { ConnectionState } from './IDeepgramService';
+import { ConnectionState } from "./IDeepgramService";
 
 export enum DeepgramState {
-  NotConnected = 'not_connected',
-  Connecting = 'connecting',
-  Connected = 'connected',
-  Disconnecting = 'disconnecting',
-  Error = 'error'
+  NotConnected = "not_connected",
+  Connecting = "connecting",
+  Connected = "connected",
+  Disconnecting = "disconnecting",
+  Error = "error",
 }
 
-import { PineconeMemoryService } from '../../services/memory/PineconeMemoryService';
-import { TranscriptionStorageService } from '../../services/transcription/TranscriptionStorageService';
+import { PineconeMemoryService } from "../../services/memory/PineconeMemoryService";
+import { TranscriptionStorageService } from "../../services/transcription/TranscriptionStorageService";
 
 export interface IDeepgramContext {
   connection: ListenLiveClient | null;
   connectionState: ConnectionState;
   sendTranscriptionPrompt: (temporaryContext?: string) => Promise<void>;
+  sendDirectMessage: (
+    message: string,
+    temporaryContext?: string
+  ) => Promise<void>;
   transcriptionList: string[];
-  waitForConnectionState: (targetState: ConnectionState, timeoutMs?: number) => Promise<boolean>;
-  getConnectionStatus: () => { 
-    state: ConnectionState, 
-    stateRef: ConnectionState, 
-    hasConnectionObject: boolean,
-    readyState: number | null,
-    active: boolean 
+  waitForConnectionState: (
+    targetState: ConnectionState,
+    timeoutMs?: number
+  ) => Promise<boolean>;
+  getConnectionStatus: () => {
+    state: ConnectionState;
+    stateRef: ConnectionState;
+    hasConnectionObject: boolean;
+    readyState: number | null;
+    active: boolean;
   };
   hasActiveConnection: () => boolean;
   deepgramState: DeepgramState;
@@ -49,11 +56,14 @@ export interface IDeepgramContext {
   // Advanced services exposed for UI/integration
   transcriptionService?: TranscriptionStorageService;
   memoryService?: PineconeMemoryService;
-  
+
   // Debug function for database inspection
-  debugDatabase?: (action: 'count' | 'inspect' | 'debug' | 'diagnose', options?: any) => Promise<any>;
-  
+  debugDatabase?: (
+    action: "count" | "inspect" | "debug" | "diagnose",
+    options?: any
+  ) => Promise<any>;
+
   // Additional debugging functions for development
   testDatabaseDiagnosis?: () => Promise<any>;
   testEmbeddingModel?: () => Promise<any>;
-} 
+}

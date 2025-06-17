@@ -1,0 +1,179 @@
+/* ================================================================
+ * COMPONENT STYLES - Unique UI Elements
+ * ================================================================
+ * Contains styles for specialized components like scroll buttons
+ * and other unique interface elements
+ */
+
+/* ===== SCROLL TO BOTTOM BUTTON - Quantum Neural Design ===== */
+
+/* Botão de scroll direto sem wrapper */
+.scroll-to-bottom-btn {
+  /* Posicionamento */
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 15;
+  
+  /* Dimensões */
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  
+  /* Remove default button styles and focus */
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-focus-ring-color: transparent;
+  
+  /* Quantum glass effect with enhanced glow */
+  background: linear-gradient(
+    135deg, 
+    rgba(0, 250, 255, 0.95) 0%, 
+    rgba(124, 77, 255, 0.85) 100%
+  );
+  
+  /* Neural border with glow */
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  
+  /* Multi-layer shadow for depth */
+  box-shadow: 
+    /* Outer glow */
+    0 0 20px rgba(0, 250, 255, 0.4),
+    /* Drop shadow */
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    /* Inner light */
+    inset 0 0 15px rgba(255, 255, 255, 0.1);
+  
+  /* Backdrop filter for glass effect */
+  -webkit-backdrop-filter: blur(10px) saturate(150%); /* Safari support */
+  backdrop-filter: blur(10px) saturate(150%);
+  
+  /* Smooth transitions */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Estado inicial oculto */
+  opacity: 0;
+  transform: scale(0.8) translateY(10px);
+  pointer-events: none;
+}
+
+/* Estado visível */
+.scroll-to-bottom-btn.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+/* Hover state - enhanced glow and slight scale */
+.scroll-to-bottom-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 0 30px rgba(0, 250, 255, 0.6),
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+  
+  /* Brighten background slightly */
+  background: linear-gradient(
+    135deg, 
+    rgba(0, 250, 255, 1) 0%, 
+    rgba(124, 77, 255, 0.9) 100%
+  );
+}
+
+/* Active/Pressed state */
+.scroll-to-bottom-btn:active,
+.scroll-to-bottom-btn.pressed {
+  transform: scale(0.95);
+  box-shadow: 
+    0 0 15px rgba(0, 250, 255, 0.3),
+    0 2px 10px rgba(0, 0, 0, 0.3),
+    inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Focus state - remove outline */
+.scroll-to-bottom-btn:focus {
+  outline: none;
+}
+
+/* Focus visible - para acessibilidade via teclado */
+.scroll-to-bottom-btn:focus-visible {
+  outline: none;
+  box-shadow: 
+    0 0 0 3px rgba(0, 250, 255, 0.5),
+    0 0 30px rgba(0, 250, 255, 0.6),
+    0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Icon styling within button */
+.scroll-to-bottom-btn svg {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* Pulse animation for attention */
+@keyframes scrollButtonPulse {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(0, 250, 255, 0.4),
+      0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 35px rgba(0, 250, 255, 0.6),
+      0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  100% {
+    box-shadow: 
+      0 0 20px rgba(0, 250, 255, 0.4),
+      0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Apply pulse animation when needed */
+.scroll-to-bottom-btn.pulse {
+  animation: scrollButtonPulse 2s ease-in-out infinite;
+}
+
+/* ===== NEW MESSAGE BADGE - Otimizado para FAB 48px ===== */
+.scroll-to-bottom-btn .new-messages-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #ff4757;
+  color: white;
+  border-radius: 50%;
+  width: 18px;    /* Menor para proporção com botão 48px */
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;  /* Fonte menor */
+  font-weight: bold;
+  font-family: Inter, sans-serif;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(255, 71, 87, 0.4);
+  animation: pulseScale 0.5s ease-out;
+  z-index: 20;
+}
+
+/* ===== REDUCED MOTION SUPPORT ===== */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-to-bottom-btn {
+    animation: none !important;
+    transition: opacity 0.2s ease !important;
+  }
+
+  @keyframes neuralPulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+  }
+} 

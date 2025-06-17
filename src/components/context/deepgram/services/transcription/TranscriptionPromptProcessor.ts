@@ -129,6 +129,85 @@ export class TranscriptionPromptProcessor {
   }
 
   /**
+   * Process direct message from chat (no transcription)
+   * @param message The message from chat input
+   * @param temporaryContext Optional additional context
+   */
+  async processDirectMessage(
+    message: string,
+    temporaryContext?: string
+  ): Promise<void> {
+    const mode = this.llmService.constructor.name.includes("HuggingFace")
+      ? "huggingface"
+      : "openai";
+    await this._processDirectMessage(mode, message, temporaryContext);
+  }
+
+  /**
+   * Process a direct message from chat interface
+   */
+  private async _processDirectMessage(
+    mode: ProcessorMode,
+    message: string,
+    temporaryContext?: string
+  ): Promise<void> {
+    // Prevent concurrent processing
+    if (this.isProcessingPrompt) {
+      LoggingUtils.logWarning(
+        "Blocking prompt request: Already processing another prompt"
+      );
+      return;
+    }
+
+    this.uiService.updateUI({ aiResponse: "Processing..." });
+
+    try {
+      this.isProcessingPrompt = true;
+
+      // Garante que o backend já abstraído está pronto
+      if (!(await this.llmService.ensureOpenAIClient())) return;
+
+      LoggingUtils.logInfo("Processing direct message from chat");
+
+      // Log cognitive activities
+      symbolicCognitionTimelineLogger.logRawPrompt(message);
+      if (temporaryContext?.trim()) {
+        LoggingUtils.logInfo(`Using additional context: "${temporaryContext}"`);
+        symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
+      }
+
+      // Notify processing start
+      this.uiService.notifyPromptProcessingStarted(temporaryContext);
+
+      LoggingUtils.logInfo(
+        `Processing message: "${message.substring(0, 50)}..."${
+          temporaryContext ? " with additional context" : ""
+        }`
+      );
+
+      // Process using orchestrated pipeline
+      const result = await this._executeProcessingPipeline(
+        mode,
+        message,
+        temporaryContext
+      );
+
+      // Update UI and complete processing
+      this.uiService.updateUI({ aiResponse: result.response });
+      this.uiService.notifyPromptComplete(result.response);
+    } catch (error: Error | unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      LoggingUtils.logError("Error processing message", error);
+      this.uiService.updateUI({ aiResponse: `Error: ${errorMessage}` });
+      this.uiService.notifyPromptError(errorMessage);
+    } finally {
+      this.isProcessingPrompt = false;
+      LoggingUtils.logInfo("Message processing completed, releasing lock");
+    }
+  }
+
+  /**
    * Main transcription processing orchestration - adaptable to different backends
    */
   private async _processTranscriptionPrompt(
@@ -148,50 +227,20 @@ export class TranscriptionPromptProcessor {
     try {
       this.isProcessingPrompt = true;
 
-      // If we have temporaryContext (direct prompt), skip transcription validation
-      if (temporaryContext?.trim()) {
-        LoggingUtils.logInfo("Using direct prompt input (temporaryContext)");
+      // Garante que o backend já abstraído está pronto (Ollama ou HuggingFace)
+      if (!(await this.llmService.ensureOpenAIClient())) return;
 
-        // Garante que o backend já abstraído está pronto (Ollama ou HuggingFace)
-        if (!(await this.llmService.ensureOpenAIClient())) return;
-
-        // Notify processing start
-        this.uiService.notifyPromptProcessingStarted(temporaryContext);
-
-        // Use temporaryContext directly as prompt text
-        const promptText = temporaryContext.trim();
-
-        // Log cognitive activities
-        symbolicCognitionTimelineLogger.logRawPrompt(promptText);
-        symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
-
-        LoggingUtils.logInfo(
-          `Processing direct prompt: "${promptText.substring(0, 50)}..."`
-        );
-
-        // Process using orchestrated pipeline
-        const result = await this._executeProcessingPipeline(
-          mode,
-          promptText,
-          temporaryContext
-        );
-
-        // Update UI and complete processing
-        this.uiService.updateUI({ aiResponse: result.response });
-        this.uiService.notifyPromptComplete(result.response);
-        return;
-      }
-
-      // Only validate transcriptions if no temporaryContext is provided
+      // Validate and extract transcriptions
       const hasTranscriptions = this.storageService.hasValidTranscriptions();
 
       if (!hasTranscriptions) {
         LoggingUtils.logWarning("No transcription detected");
 
-        // Verify if there is text in lastTranscription (it might not have gone to transcriptionList)
-        if (this.storageService.getLastTranscription()) {
+        // Verify if there is text in lastTranscription
+        const lastTranscription = this.storageService.getLastTranscription();
+        if (lastTranscription) {
           LoggingUtils.logInfo(
-            `Using last known transcription: "${this.storageService.getLastTranscription()}"`
+            `Using last known transcription: "${lastTranscription}"`
           );
         } else {
           // Notify error if there is no transcription
@@ -202,9 +251,6 @@ export class TranscriptionPromptProcessor {
           return;
         }
       }
-
-      // Garante que o backend já abstraído está pronto (Ollama ou HuggingFace)
-      if (!(await this.llmService.ensureOpenAIClient())) return;
 
       // Notify processing start
       this.uiService.notifyPromptProcessingStarted(temporaryContext);
@@ -221,8 +267,16 @@ export class TranscriptionPromptProcessor {
       // Log cognitive activities
       symbolicCognitionTimelineLogger.logRawPrompt(promptText);
 
+      // Log temporary context if provided
+      if (temporaryContext?.trim()) {
+        LoggingUtils.logInfo(`Using additional context: "${temporaryContext}"`);
+        symbolicCognitionTimelineLogger.logTemporaryContext(temporaryContext);
+      }
+
       LoggingUtils.logInfo(
-        `Processing transcription: "${promptText.substring(0, 50)}..."`
+        `Processing transcription: "${promptText.substring(0, 50)}..."${
+          temporaryContext ? " with additional context" : ""
+        }`
       );
 
       // Process using orchestrated pipeline

@@ -238,6 +238,33 @@ export class DeepgramTranscriptionService
   }
 
   /**
+   * Processes a direct message from chat interface
+   * @param message The message from chat input
+   * @param temporaryContext Optional additional context
+   */
+  async sendDirectMessage(
+    message: string,
+    temporaryContext?: string
+  ): Promise<void> {
+    console.log("💬 [DEEPGRAM_SERVICE] sendDirectMessage called:", {
+      message: message.substring(0, 50),
+      hasContext: !!temporaryContext,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      await this.transcriptionPromptProcessor.processDirectMessage(
+        message,
+        temporaryContext
+      );
+      console.log("✅ [DEEPGRAM_SERVICE] sendDirectMessage completed");
+    } catch (error) {
+      console.error("❌ [DEEPGRAM_SERVICE] Error in sendDirectMessage:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Processes the transcription using HuggingFace backend specifically
    * Always uses HuggingFace regardless of the current mode
    */

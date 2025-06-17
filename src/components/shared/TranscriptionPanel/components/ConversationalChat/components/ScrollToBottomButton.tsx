@@ -1,52 +1,86 @@
-import React from "react";
-import { ScrollButtonProps } from "../types/ChatTypes";
+import React, { useEffect, useRef } from "react";
+
+interface ScrollToBottomButtonProps {
+  show: boolean;
+  onClick: () => void;
+}
 
 /**
  * Scroll to bottom button component
- * Follows Single Responsibility Principle - only handles scroll button
+ * Follows KISS principle - simple button with single purpose
  */
-export const ScrollToBottomButton: React.FC<ScrollButtonProps> = ({
+export const ScrollToBottomButton: React.FC<ScrollToBottomButtonProps> = ({
   show,
   onClick,
 }) => {
-  if (!show) return null;
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    // Handle wheel events on the button
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent default to avoid any conflicts
+      e.preventDefault();
+
+      // Find the chat messages container
+      const chatMessages = document.querySelector(".chat-messages");
+      if (chatMessages) {
+        // Manually scroll the chat container
+        chatMessages.scrollTop += e.deltaY;
+      }
+    };
+
+    // Add wheel event listener
+    button.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      button.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   return (
     <button
-      className="scroll-to-bottom-btn"
+      ref={buttonRef}
+      className={`scroll-to-bottom-btn ${show ? "visible" : ""}`}
       onClick={onClick}
-      title="Scroll to bottom"
+      aria-label="Scroll to bottom"
       type="button"
-      style={{
-        position: "absolute",
-        bottom: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(0, 250, 255, 0.9)",
-        color: "white",
-        border: "none",
-        borderRadius: "50%",
-        width: "40px",
-        height: "40px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        boxShadow: "0 4px 12px rgba(0, 250, 255, 0.3)",
-        zIndex: 10,
-        transition: "all 0.2s ease",
-        animation: "fadeIn 0.3s ease",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateX(-50%) scale(1.1)";
-        e.currentTarget.style.background = "rgba(0, 250, 255, 1)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateX(-50%) scale(1)";
-        e.currentTarget.style.background = "rgba(0, 250, 255, 0.9)";
-      }}
     >
-      ↓
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient
+            id="scrollGradient"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M12 4v12m0 0l-6-6m6 6l6-6"
+          stroke="url(#scrollGradient)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M5 20h14"
+          stroke="url(#scrollGradient)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      </svg>
     </button>
   );
 };

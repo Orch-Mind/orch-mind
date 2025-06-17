@@ -448,6 +448,68 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({
     [state.isProcessing]
   ); // Adicionamos state.isProcessing como dependência
 
+  /**
+   * Envia uma mensagem direta do chat
+   * @param message A mensagem do chat
+   * @param temporaryContext Contexto adicional opcional
+   */
+  const sendDirectMessage = useCallback(
+    async (message: string, temporaryContext?: string) => {
+      console.log("💬 [DEEPGRAM_CONTEXT] sendDirectMessage called:", {
+        message: message.substring(0, 50),
+        hasContext: !!temporaryContext,
+        isProcessing: state.isProcessing,
+        hasTranscriptionService: !!deepgramTranscriptionRef.current,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Verifica se já existe um processamento em andamento
+      if (state.isProcessing) {
+        console.warn(
+          "⚠️ Bloqueando novo prompt: um processamento já está em andamento"
+        );
+        return Promise.reject(new Error("PROCESSING_IN_PROGRESS"));
+      }
+
+      try {
+        // Verify if the transcription service is available
+        if (!deepgramTranscriptionRef.current) {
+          console.error("❌ Transcription service not available");
+          return;
+        }
+
+        // Start processing - bloqueia novos processamentos
+        dispatch({ type: "SET_PROCESSING", payload: true });
+        console.log("🔄 [DEEPGRAM_CONTEXT] Processing state set to true");
+
+        // Send to the transcription service
+        console.log(
+          "📤 [DEEPGRAM_CONTEXT] Calling deepgramTranscriptionRef.sendDirectMessage"
+        );
+        await deepgramTranscriptionRef.current.sendDirectMessage(
+          message,
+          temporaryContext
+        );
+        console.log(
+          "✅ [DEEPGRAM_CONTEXT] sendDirectMessage completed successfully"
+        );
+
+        // Update state after successful processing
+        dispatch({ type: "SET_PROCESSING", payload: false });
+        console.log("✅ Processamento de mensagem concluído");
+      } catch (error) {
+        console.error("❌ [DEEPGRAM_CONTEXT] Error processing message:", error);
+
+        // Ensure state is updated even in case of error
+        dispatch({ type: "SET_PROCESSING", payload: false });
+
+        // Propagate the error for handling in the component that called it
+        throw error;
+      }
+    },
+    [state.isProcessing]
+  );
+
   // Stop transcription
   const stopTranscription = useCallback(async () => {
     if (deepgramTranscriptionRef.current) {
@@ -743,6 +805,7 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({
     debugDatabase,
     testDatabaseDiagnosis,
     testEmbeddingModel,
+    sendDirectMessage,
   };
 
   return (

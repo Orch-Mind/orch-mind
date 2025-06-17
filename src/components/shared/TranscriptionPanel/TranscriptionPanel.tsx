@@ -306,13 +306,16 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           className="neural-chat-zone"
           style={{
             height: "100%",
-            maxHeight:
-              "calc(100vh - 4rem)" /* Limita altura para forçar scroll interno */,
             width: "100%",
             padding: "1.2rem",
             overflow: "hidden" /* Força o chat a usar scroll interno */,
             display: "flex",
             flexDirection: "column",
+            /* Background sólido para bloquear vazamento do painel */
+            background: "rgba(10, 15, 25, 0.98)",
+            borderRadius: "12px",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <ConversationalChat

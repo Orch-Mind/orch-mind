@@ -1,0 +1,314 @@
+/* ================================================================
+ * INPUT STYLES - Chat Input Area & Controls
+ * ================================================================
+ * Contains all styles related to the chat input area,
+ * context input, transcription display, and input controls
+ */
+
+/* Input Area - ALTURA FIXA */
+.chat-input-area {
+  flex-shrink: 0; /* Não encolhe */
+  border-top: 1px solid rgba(0, 250, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Context Input */
+.context-input-wrapper {
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 250, 255, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.context-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #00faff;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.context-close-btn {
+  background: none;
+  border: none;
+  color: #ff4455;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.context-close-btn:hover {
+  background: rgba(255, 68, 85, 0.2);
+  transform: scale(1.1);
+}
+
+.context-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 250, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  color: #ffffff;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 60px;
+  transition: all 0.2s ease;
+}
+
+.context-input:focus {
+  outline: none;
+  border-color: #00faff;
+  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2);
+}
+
+.context-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Main Input Area */
+.main-input-wrapper {
+  padding: 4px 24px 16px 24px; /* Reduz padding top ainda mais para eliminar gap */
+}
+
+.input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Input bottom row - input field + controls */
+.input-bottom-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* Transcription Display */
+.transcription-display {
+  background: rgba(0, 250, 255, 0.1);
+  border: 1px solid rgba(0, 250, 255, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.transcription-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #00faff;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transcription-text {
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.4;
+  padding-right: 24px;
+}
+
+.transcription-clear-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #ff4455;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.transcription-clear-btn:hover {
+  background: rgba(255, 68, 85, 0.2);
+  transform: scale(1.1);
+}
+
+/* Message Input */
+.message-input-wrapper {
+  flex: 1; /* Take up remaining space */
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 250, 255, 0.3);
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.2s ease;
+}
+
+.message-input-wrapper:focus-within {
+  border-color: #00faff;
+  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2);
+}
+
+.message-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  outline: none;
+  padding: 8px 12px;
+  line-height: 1.5;
+  font-family: inherit;
+  transition: height 0.2s ease;
+}
+
+.message-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Input Controls */
+.input-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.control-btn {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 250, 255, 0.3);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #00faff;
+}
+
+.control-btn:hover {
+  background: rgba(0, 250, 255, 0.1);
+  border-color: #00faff;
+  transform: scale(1.05);
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.control-btn:disabled:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(0, 250, 255, 0.3);
+  transform: none;
+}
+
+/* Specific button styles */
+.context-btn {
+  color: #00faff;
+}
+
+.mic-btn {
+  color: #ff4dd2;
+}
+
+.mic-btn.recording {
+  background: rgba(255, 68, 85, 0.2);
+  border-color: #ff4455;
+  color: #ff4455;
+}
+
+.settings-btn.active {
+  background: rgba(124, 77, 255, 0.2);
+  color: #7c4dff;
+}
+
+.send-btn {
+  background: linear-gradient(135deg, #00faff 0%, #7c4dff 100%);
+  color: white;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00faff 10%, #7c4dff 90%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 250, 255, 0.3);
+}
+
+/* Settings Popup */
+.settings-popup {
+  background: rgba(0, 10, 20, 0.95);
+  border: 1px solid rgba(0, 250, 255, 0.3);
+  border-radius: 12px;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  max-width: 350px;
+}
+
+/* Context Button Active State */
+.context-btn.active {
+  background: rgba(0, 250, 255, 0.2);
+  border-color: #00faff;
+  color: #00faff;
+  box-shadow: 0 0 12px rgba(0, 250, 255, 0.3);
+}
+
+/* Send Button States */
+.send-btn.ready {
+  background: rgba(0, 250, 255, 0.2);
+  border-color: #00faff;
+  color: #00faff;
+  box-shadow: 0 0 12px rgba(0, 250, 255, 0.3);
+}
+
+.send-btn.ready:hover {
+  background: rgba(0, 250, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.send-btn.disabled {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Accessibility Improvements */
+.control-btn:focus {
+  outline: 2px solid #00faff;
+  outline-offset: 2px;
+}
+
+.context-input:focus,
+.message-input:focus {
+  outline: none;
+  border-color: #00faff;
+  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2);
+} 

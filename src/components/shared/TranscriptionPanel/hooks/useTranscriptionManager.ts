@@ -41,6 +41,7 @@ export const useTranscriptionManager = () => {
   const {
     connectionState,
     sendTranscriptionPrompt,
+    sendDirectMessage,
     connectToDeepgram,
     disconnectFromDeepgram,
     waitForConnectionState,
@@ -134,24 +135,35 @@ export const useTranscriptionManager = () => {
 
   // Memoize handleSendPrompt to prevent recreating on every render
   const handleSendPrompt = useCallback(
-    async (messageContent?: string) => {
+    async (messageContent?: string, contextContent?: string) => {
       try {
-        // Use messageContent if provided (from chat), otherwise use temporaryContextRef.current (from traditional flow)
-        const contextToUse = messageContent || temporaryContextRef.current;
         console.log("🚀 [SEND_PROMPT] Starting prompt send:", {
           messageContent,
+          contextContent,
           temporaryContext: temporaryContextRef.current,
-          contextToUse,
-          hasContext: !!contextToUse,
+          hasDirectMessage: !!messageContent,
+          timestamp: new Date().toISOString(),
         });
 
-        await sendTranscriptionPrompt(contextToUse);
-        console.log("✅ [SEND_PROMPT] Prompt sent successfully");
-
-        // Only clear temporaryContext if we used the traditional flow
-        if (!messageContent) {
+        // If we have a direct message from chat, use the new sendDirectMessage method
+        if (messageContent) {
+          console.log(
+            "💬 [SEND_PROMPT] Using sendDirectMessage for chat message"
+          );
+          await sendDirectMessage(messageContent, contextContent);
+        } else {
+          // Traditional flow - use transcription with optional context
+          console.log(
+            "📝 [SEND_PROMPT] Using sendTranscriptionPrompt for transcription"
+          );
+          await sendTranscriptionPrompt(
+            temporaryContextRef.current || contextContent
+          );
+          // Clear temporaryContext after sending
           setTemporaryContext("");
         }
+
+        console.log("✅ [SEND_PROMPT] Prompt sent successfully");
       } catch (error) {
         console.error("❌ [SEND_PROMPT] Error sending prompt:", error);
         setTexts((prev) => ({
@@ -164,19 +176,36 @@ export const useTranscriptionManager = () => {
         showToast("Error", "Failed to send prompt", "error");
       }
     },
-    [sendTranscriptionPrompt, setTemporaryContext, setTexts, showToast]
+    [
+      sendTranscriptionPrompt,
+      sendDirectMessage,
+      setTemporaryContext,
+      setTexts,
+      showToast,
+    ]
   ); // Memoized with proper dependencies
 
   // Setup electron listeners for AI prompt responses (FIXED: No dependencies)
   useEffect(() => {
     if (typeof window !== "undefined" && window.electronAPI) {
+      // Track response accumulation
+      let responseBuffer = "";
+      let isAccumulatingResponse = false;
+
       // Create stable callbacks that don't depend on changing state
       const handlePartialResponse = (partialResponse: string) => {
         console.log("🔄 [IPC] Partial response received:", {
-          response: partialResponse,
+          response: partialResponse.substring(0, 50),
           length: partialResponse.length,
           timestamp: new Date().toISOString(),
         });
+
+        // Mark that we're accumulating a response
+        isAccumulatingResponse = true;
+        responseBuffer = partialResponse;
+
+        // Update with the partial response
+        // Don't clear it - let the component decide when to clear
         setTexts((prev) => ({
           ...prev,
           aiResponse: partialResponse,
@@ -185,10 +214,16 @@ export const useTranscriptionManager = () => {
 
       const handleSuccessResponse = (finalResponse: string) => {
         console.log("✅ [IPC] Final response received:", {
-          response: finalResponse,
+          response: finalResponse.substring(0, 50),
           length: finalResponse.length,
           timestamp: new Date().toISOString(),
         });
+
+        // Clear accumulation state
+        isAccumulatingResponse = false;
+        responseBuffer = "";
+
+        // Set the final response
         setTexts((prev) => ({
           ...prev,
           aiResponse: finalResponse,
@@ -200,6 +235,11 @@ export const useTranscriptionManager = () => {
           error,
           timestamp: new Date().toISOString(),
         });
+
+        // Clear accumulation state
+        isAccumulatingResponse = false;
+        responseBuffer = "";
+
         setTexts((prev) => ({
           ...prev,
           aiResponse: `Erro: ${error}`,
@@ -211,15 +251,15 @@ export const useTranscriptionManager = () => {
         console.log("🔄 [IPC] Sending state received:", {
           timestamp: new Date().toISOString(),
         });
+
+        // Reset accumulation state when starting a new request
+        isAccumulatingResponse = false;
+        responseBuffer = "";
+
         setTexts((prev) => ({
           ...prev,
           aiResponse: "Processando...",
         }));
-      };
-
-      const handlePromptSend = () => {
-        console.log("📤 [IPC] Send prompt event received");
-        handleSendPrompt();
       };
 
       const removePartialListener = window.electronAPI.onPromptPartialResponse(
@@ -232,18 +272,15 @@ export const useTranscriptionManager = () => {
         window.electronAPI.onPromptError(handleErrorResponse);
       const removeSendingListener =
         window.electronAPI.onPromptSending(handleSendingState);
-      const removeSendListener =
-        window.electronAPI.onPromptSend(handlePromptSend);
 
       return () => {
         removePartialListener();
         removeSuccessListener();
         removeErrorListener();
         removeSendingListener();
-        removeSendListener();
       };
     }
-  }, [setTexts, showToast, handleSendPrompt]); // Stable dependencies only
+  }, [setTexts, showToast]); // Removed handleSendPrompt from dependencies
 
   // Update Deepgram language when UI language changes
   useEffect(() => {

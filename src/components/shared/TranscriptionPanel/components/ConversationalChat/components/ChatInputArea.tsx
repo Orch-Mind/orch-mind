@@ -2,7 +2,7 @@ import React from "react";
 import { ChatState, ConversationalChatProps } from "../types/ChatTypes";
 import { ChatControls } from "./ChatControls";
 import { ContextInput } from "./ContextInput";
-import { DebugControls } from "./DebugControls";
+// import { DebugControls } from "./DebugControls"; // Removed - debug controls disabled
 import { MessageInput } from "./MessageInput";
 import { TranscriptionDisplay } from "./TranscriptionDisplay";
 
@@ -21,6 +21,7 @@ interface ChatInputAreaProps extends ConversationalChatProps {
 /**
  * Chat input area component
  * Follows composition pattern - combines input-related components
+ * Debug controls removed for cleaner UI
  */
 export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   transcriptionText,
@@ -37,7 +38,7 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   onClearAll,
   hasBackup,
 }) => {
-  const canSend = chatState.inputMessage.trim() || transcriptionText.trim();
+  const canSend = !!(chatState.inputMessage.trim() || transcriptionText.trim());
 
   return (
     <div className="chat-input-area">
@@ -61,27 +62,18 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
             onClear={onClearTranscription}
           />
 
-          {/* Message Input */}
-          <MessageInput
-            value={chatState.inputMessage}
-            onChange={chatState.setInputMessage}
-            onSend={onSendMessage}
-            onKeyPress={onKeyPress}
-            placeholder="Type your message or use voice transcription..."
-          />
-
-          {/* Controls Container */}
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {/* Debug Controls (only in development) */}
-            <DebugControls
-              onAddTestMessage={onAddTestMessage}
-              onAddTestAI={onAddTestAI}
-              onRestore={onRestore}
-              onClearAll={onClearAll}
-              hasBackup={hasBackup}
+          {/* Input Bottom Row - Input + Controls */}
+          <div className="input-bottom-row">
+            {/* Message Input */}
+            <MessageInput
+              value={chatState.inputMessage}
+              onChange={chatState.setInputMessage}
+              onSend={onSendMessage}
+              onKeyPress={onKeyPress}
+              placeholder="Type your message or use voice transcription..."
             />
 
-            {/* Main Chat Controls */}
+            {/* Main Chat Controls - Debug controls removed */}
             <ChatControls
               microphoneState={microphoneState}
               onToggleRecording={onToggleRecording}

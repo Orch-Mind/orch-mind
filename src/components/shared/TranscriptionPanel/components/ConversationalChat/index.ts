@@ -1,20 +1,18 @@
-// Main refactored component
-export { ConversationalChat } from "./ConversationalChatRefactored";
+// Export main component
+export { ConversationalChat } from "./ConversationalChat";
 
-// Individual components (for potential reuse)
-export { ChatControls } from "./components/ChatControls";
-export { ChatInputArea } from "./components/ChatInputArea";
-export { ChatMessagesContainer } from "./components/ChatMessagesContainer";
-export { ContextInput } from "./components/ContextInput";
-export { DebugControls } from "./components/DebugControls";
-export { MessageInput } from "./components/MessageInput";
-export { ScrollToBottomButton } from "./components/ScrollToBottomButton";
-export { TranscriptionDisplay } from "./components/TranscriptionDisplay";
+// Export types
+export * from "./types/ChatTypes";
 
-// Hooks
+// Export hooks
 export { useChatScroll } from "./hooks/useChatScroll";
 export { useChatState } from "./hooks/useChatState";
 export { usePersistentMessages } from "./hooks/usePersistentMessages";
 
-// Types
-export type * from "./types/ChatTypes";
+// Individual components (for potential reuse)
+export { ChatInputArea } from "./components/ChatInputArea";
+export { ChatMessagesContainer } from "./components/ChatMessagesContainer";
+export { ContextInput } from "./components/ContextInput";
+export { MessageInput } from "./components/MessageInput";
+export { ScrollToBottomButton } from "./components/ScrollToBottomButton";
+export { TranscriptionDisplay } from "./components/TranscriptionDisplay";
