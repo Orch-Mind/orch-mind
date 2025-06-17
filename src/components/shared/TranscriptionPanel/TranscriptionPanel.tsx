@@ -311,11 +311,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             overflow: "hidden" /* Força o chat a usar scroll interno */,
             display: "flex",
             flexDirection: "column",
-            /* Background sólido para bloquear vazamento do painel */
-            background: "rgba(10, 15, 25, 0.98)",
-            borderRadius: "12px",
-            position: "relative",
-            zIndex: 1,
           }}
         >
           <ConversationalChat

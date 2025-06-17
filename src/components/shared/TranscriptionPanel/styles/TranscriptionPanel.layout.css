@@ -352,6 +352,13 @@ body.orchos-active {
   height: 100% !important;
 }
 
+/* Neural Chat Zone - Isolated background */
+.neural-chat-zone {
+  position: relative;
+  background: #0a0f1a; /* Solid background matching the dashboard center color */
+  isolation: isolate; /* Create new stacking context */
+}
+
 /* Recording control inside card */
 
 /* Transcription card button layout */

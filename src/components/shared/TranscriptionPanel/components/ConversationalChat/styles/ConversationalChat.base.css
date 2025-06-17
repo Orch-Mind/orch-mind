@@ -26,9 +26,6 @@
   display: flex; /* Cria um novo contexto flex para seu filho */
   flex-direction: column;
   overflow: hidden; /* IMPORTANTE: Contém o overflow no container */
-  /* Background para isolar do painel pai */
-  background: transparent;
-  z-index: 1;
 }
 
 /* Nível 2: A Área de Scroll (Filho do .chat-messages-container) */
@@ -42,10 +39,6 @@
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
-  /* Background sólido para cobrir qualquer vazamento */
-  background: rgba(10, 15, 25, 0.95);
-  position: relative;
-  z-index: 1;
 }
 
 /* Pseudo-elemento para garantir espaço extra de scroll */
