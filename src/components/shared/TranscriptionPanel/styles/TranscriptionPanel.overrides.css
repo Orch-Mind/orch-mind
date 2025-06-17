@@ -33,10 +33,4 @@
 .orchos-quantum-dashboard.single-column .messages-wrapper {
   background: #0a0f1a !important;
   background-image: none !important;
-}
-
-/* Ensure typing indicator has solid background */
-.orchos-quantum-dashboard.single-column .typing-indicator {
-  background: #0a0f1a !important;
-  background-image: none !important;
 } 

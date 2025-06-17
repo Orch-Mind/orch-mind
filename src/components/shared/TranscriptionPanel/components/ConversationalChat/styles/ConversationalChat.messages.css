@@ -199,11 +199,8 @@
 
 /* Typing Indicator */
 .typing-indicator {
-  order: 1;
-  /* Removido opacity para evitar transparência */
-  /* Background sólido para evitar transparência */
-  background: #0a0f1a;
-  isolation: isolate;
+  /* Herda todos os estilos da classe .message e .system-message */
+  /* Removido estilos que estavam sobrescrevendo o layout padrão */
 }
 
 .typing-animation {
@@ -212,7 +209,7 @@
   justify-content: flex-start;
   gap: 4px;
   height: 24px;
-  padding: 8px 0;
+  padding: 0; /* Removido padding extra que estava desalinhando */
 }
 
 .typing-animation span {
@@ -339,27 +336,3 @@
   color: #7c4dff;
   margin-top: 4px;
 }
-
-/* AI typing indicator */
-.ai-typing {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.typing-indicator {
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  background: rgba(124, 77, 255, 0.1);
-  border-radius: 16px;
-}
-
-.typing-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ff4dd2 0%, #7c4dff 100%);
-} 
