@@ -275,7 +275,9 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
       {/* Main Chat Dashboard Layout */}
       <div
-        className="orchos-quantum-dashboard"
+        className={`orchos-quantum-dashboard ${
+          !enableMatrix ? "single-column" : ""
+        }`}
         style={{
           flex: "1 1 auto",
           // Quando enableMatrix é true, mostra quantum visualization (lógica corrigida)

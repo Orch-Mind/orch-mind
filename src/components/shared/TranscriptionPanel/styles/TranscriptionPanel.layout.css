@@ -179,7 +179,7 @@ textarea.orchos-textarea-neural,
 }
 
 /* Override background when showing only chat (single column) */
-.orchos-quantum-dashboard[style*="grid-template-columns: 1fr"] {
+.orchos-quantum-dashboard.single-column {
   background: #0a0f1a;
 }
 
@@ -201,7 +201,7 @@ textarea.orchos-textarea-neural,
 }
 
 /* Hide pseudo-element when showing only chat */
-.orchos-quantum-dashboard[style*="grid-template-columns: 1fr"]::before {
+.orchos-quantum-dashboard.single-column::before {
   display: none;
 }
 
