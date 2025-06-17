@@ -201,6 +201,9 @@
 .typing-indicator {
   order: 1;
   opacity: 0.8;
+  /* Background sólido para evitar transparência */
+  background: #0a0f1a;
+  isolation: isolate;
 }
 
 .typing-animation {
@@ -245,6 +248,10 @@
   flex-direction: column;
   gap: 12px;
   min-height: min-content;
+  /* Background sólido para evitar vazamentos */
+  background: #0a0f1a;
+  position: relative;
+  z-index: 1;
 }
 
 /* ================================================================

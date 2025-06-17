@@ -359,6 +359,19 @@ body.orchos-active {
   isolation: isolate; /* Create new stacking context */
 }
 
+/* Add a pseudo-element to ensure complete coverage */
+.neural-chat-zone::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: #0a0f1a;
+  z-index: -1;
+  pointer-events: none;
+}
+
 /* Recording control inside card */
 
 /* Transcription card button layout */

@@ -16,6 +16,8 @@
   position: relative;
   /* Isolamento do background do painel */
   isolation: isolate;
+  /* Background sólido para evitar vazamentos */
+  background: #0a0f1a;
 }
 
 /* Nível 1: Container de Mensagens (Filho do .conversational-chat) */
