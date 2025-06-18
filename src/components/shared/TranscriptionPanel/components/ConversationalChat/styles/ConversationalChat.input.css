@@ -16,13 +16,18 @@
 
 /* Context Input */
 .context-input-wrapper {
-  background: rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 250, 255, 0.3);
-  border-radius: 12px;
-  padding: 16px;
+  background: rgba(0, 250, 255, 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 250, 255, 0.2);
+  border-radius: 16px;
+  padding: 16px 20px;
   margin-bottom: 16px;
+  position: relative;
+  box-shadow: 
+    0 8px 32px rgba(0, 250, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .context-label {
@@ -59,226 +64,441 @@
 }
 
 .context-input {
-  width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(0, 250, 255, 0.2);
-  border-radius: 8px;
-  padding: 12px;
-  color: #ffffff;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
-  resize: vertical;
-  min-height: 60px;
-  transition: all 0.2s ease;
-}
-
-.context-input:focus {
+  line-height: 1.6;
   outline: none;
-  border-color: #00faff;
-  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2);
+  padding: 0;
+  width: 100%;
+  min-height: 60px;
+  resize: none;
+  font-family: inherit;
 }
 
 .context-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 /* Main Input Area */
 .main-input-wrapper {
-  padding: 4px 24px 16px 24px; /* Reduz padding top ainda mais para eliminar gap */
+  padding: 16px 24px 20px 24px; /* Increased padding for better breathing room */
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  position: relative;
+}
+
+/* Subtle glow effect for depth */
+.main-input-wrapper::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 250, 255, 0.5) 50%,
+    transparent 100%
+  );
+  opacity: 0.8;
 }
 
 .input-row {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px; /* Increased gap for better separation */
 }
 
-/* Input bottom row - input field + controls */
+/* Input bottom row - Enhanced layout */
 .input-bottom-row {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
+  align-items: center;
+  gap: 12px; /* Add gap between input and controls */
+  position: relative;
 }
 
-/* Transcription Display */
+/* Transcription Display - Modern glassmorphism */
 .transcription-display {
-  background: rgba(0, 250, 255, 0.1);
-  border: 1px solid rgba(0, 250, 255, 0.3);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 12px;
+  background: rgba(0, 250, 255, 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 250, 255, 0.2);
+  border-radius: 16px;
+  padding: 16px 20px;
   position: relative;
-  max-height: 150px; /* Limita altura total do container */
-  overflow: hidden; /* Esconde overflow do container */
+  max-height: 120px;
+  overflow: hidden;
+  box-shadow: 
+    0 8px 32px rgba(0, 250, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transcription-display:hover {
+  border-color: rgba(0, 250, 255, 0.3);
+  box-shadow: 
+    0 12px 40px rgba(0, 250, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .transcription-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: #00faff;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.2px;
+  opacity: 0.9;
+}
+
+.transcription-label svg {
+  width: 18px;
+  height: 18px;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .transcription-text {
   color: #ffffff;
   font-size: 14px;
-  line-height: 1.4;
-  padding-right: 24px;
-  max-height: 100px; /* Altura máxima para o texto */
-  overflow-y: auto; /* Scroll apenas no texto */
+  line-height: 1.6;
+  padding-right: 32px;
+  max-height: 80px;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
 .transcription-clear-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 68, 85, 0.1);
+  border: 1px solid rgba(255, 68, 85, 0.3);
   color: #ff4455;
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 4px;
-  width: 20px;
-  height: 20px;
+  padding: 0;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .transcription-clear-btn:hover {
   background: rgba(255, 68, 85, 0.2);
-  transform: scale(1.1);
+  border-color: rgba(255, 68, 85, 0.5);
+  transform: scale(1.05);
 }
 
 /* Message Input */
 .message-input-wrapper {
-  flex: 1; /* Take up remaining space */
-  display: flex;
-  align-items: flex-end;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(0, 250, 255, 0.3);
-  border-radius: 12px;
-  padding: 8px;
-  transition: all 0.2s ease;
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 250, 255, 0.2);
+  border-radius: 20px;
+  padding: 0 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  min-height: 52px;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Efeito de brilho ao redor do input */
+/* Animated border glow effect */
 .message-input-wrapper::before {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(
-    circle,
-    rgba(0, 250, 255, 0.1) 0%,
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(0, 250, 255, 0.1) 50%,
     transparent 70%
   );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.message-input-wrapper:focus-within {
-  border-color: #00faff;
-  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2), 
-              0 0 20px rgba(0, 250, 255, 0.1);
-  background: rgba(0, 0, 0, 0.5);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
 }
 
 .message-input-wrapper:focus-within::before {
-  opacity: 1;
+  transform: translateX(100%);
 }
 
+.message-input-wrapper:focus-within {
+  border-color: rgba(0, 250, 255, 0.4);
+  box-shadow: 
+    0 0 0 3px rgba(0, 250, 255, 0.1),
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(0, 250, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Message Input - Clean and modern */
 .message-input {
-  flex: 1;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
   font-size: 15px;
   outline: none;
-  padding: 8px 12px;
-  line-height: 1.5;
+  padding: 14px 0;
+  line-height: 1.6;
   font-family: inherit;
-  transition: height 0.2s ease, color 0.2s ease;
+  width: 100%;
+  transition: color 0.2s ease;
 }
 
 .message-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   transition: color 0.2s ease;
 }
 
 .message-input:focus::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.25);
 }
 
-/* Typing indicator (small pulse when typing) */
+/* Typing indicator animation */
 .message-input-wrapper.typing {
-  animation: subtle-pulse 2s ease-in-out infinite;
+  animation: typingPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes subtle-pulse {
+@keyframes typingPulse {
   0%, 100% {
-    border-color: rgba(0, 250, 255, 0.3);
+    box-shadow: 
+      0 4px 24px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   50% {
-    border-color: rgba(0, 250, 255, 0.5);
+    box-shadow: 
+      0 4px 24px rgba(0, 250, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 }
 
-/* Input Controls */
+/* Input Controls - Modern button design */
 .input-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 12px;
+  flex-shrink: 0;
 }
 
+/* Control Buttons - Futuristic design */
 .control-btn {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(0, 250, 255, 0.3);
-  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 250, 255, 0.2);
+  border-radius: 14px;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.control-btn svg {
+  width: 22px;
+  height: 22px;
+  color: rgba(255, 255, 255, 0.7);
   transition: all 0.2s ease;
-  color: #00faff;
+  z-index: 1;
 }
 
 .control-btn:hover {
   background: rgba(0, 250, 255, 0.1);
-  border-color: #00faff;
-  transform: scale(1.05);
+  border-color: rgba(0, 250, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 20px rgba(0, 250, 255, 0.2),
+    0 0 0 1px rgba(0, 250, 255, 0.2);
+}
+
+.control-btn:hover svg {
+  color: #00faff;
+  transform: scale(1.1);
 }
 
 .control-btn:active {
-  transform: scale(0.95);
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 10px rgba(0, 250, 255, 0.2),
+    inset 0 1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .control-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  transform: none;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .control-btn:disabled:hover {
-  background: rgba(0, 0, 0, 0.4);
-  border-color: rgba(0, 250, 255, 0.3);
   transform: none;
+  border-color: rgba(0, 250, 255, 0.2);
+  box-shadow: none;
+}
+
+/* Specific button states */
+.control-btn.active {
+  background: rgba(0, 250, 255, 0.15);
+  border-color: rgba(0, 250, 255, 0.5);
+  box-shadow: 
+    0 0 0 2px rgba(0, 250, 255, 0.2),
+    0 4px 20px rgba(0, 250, 255, 0.3);
+}
+
+.control-btn.active svg {
+  color: #00faff;
+}
+
+/* Microphone button recording state */
+.control-btn.mic-btn.recording {
+  background: rgba(255, 68, 85, 0.15);
+  border-color: rgba(255, 68, 85, 0.5);
+  animation: recordingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 0 rgba(255, 68, 85, 0.4),
+      0 4px 20px rgba(255, 68, 85, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 8px rgba(255, 68, 85, 0.1),
+      0 4px 20px rgba(255, 68, 85, 0.4);
+  }
+}
+
+.control-btn.mic-btn.recording svg {
+  color: #ff4455;
+}
+
+/* Send button ready state */
+.control-btn.send-btn.ready {
+  background: rgba(0, 250, 255, 0.15);
+  border-color: rgba(0, 250, 255, 0.5);
+}
+
+.control-btn.send-btn.ready svg {
+  color: #00faff;
+}
+
+.control-btn.send-btn.ready:hover {
+  background: rgba(0, 250, 255, 0.25);
+  border-color: rgba(0, 250, 255, 0.7);
+  box-shadow: 
+    0 0 0 3px rgba(0, 250, 255, 0.2),
+    0 4px 24px rgba(0, 250, 255, 0.4);
+}
+
+/* Focus states for accessibility */
+.control-btn:focus {
+  outline: none;
+  box-shadow: 
+    0 0 0 3px rgba(0, 250, 255, 0.4),
+    0 4px 20px rgba(0, 250, 255, 0.2);
+}
+
+/* Remove outline on mouse click but keep for keyboard navigation */
+.control-btn:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Show focus ring only for keyboard navigation */
+.control-btn:focus-visible {
+  outline: none;
+  box-shadow: 
+    0 0 0 3px rgba(0, 250, 255, 0.4),
+    0 4px 20px rgba(0, 250, 255, 0.2);
+}
+
+/* Remove default button focus for all browsers */
+.control-btn::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* Ensure no outline on active state (when clicking) */
+.control-btn:active {
+  outline: none;
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 10px rgba(0, 250, 255, 0.2),
+    inset 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.message-input:focus {
+  outline: none;
+}
+
+/* Also remove outline from message input */
+.message-input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Remove outline from transcription clear button */
+.transcription-clear-btn:focus {
+  outline: none;
+}
+
+.transcription-clear-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.transcription-clear-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 68, 85, 0.4);
+}
+
+/* Ripple effect for buttons */
+.control-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+  pointer-events: none;
+}
+
+.control-btn:active::after {
+  width: 100%;
+  height: 100%;
+}
+
+/* Input separator - DEPRECATED */
+.input-separator {
+  display: none;
 }
 
 /* Specific button styles */
@@ -453,4 +673,169 @@
 
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Add pulse animation for transcription icon */
+.pulse-dot {
+  animation: pulseDot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+}
+
+/* Mobile Responsive Improvements */
+@media (max-width: 768px) {
+  .main-input-wrapper {
+    padding: 12px 16px 16px 16px;
+  }
+
+  .input-row {
+    gap: 12px;
+  }
+
+  .control-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .control-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .message-input-wrapper {
+    border-radius: 16px;
+    padding: 0 16px;
+    min-height: 48px;
+  }
+
+  .message-input {
+    font-size: 14px;
+    padding: 12px 0;
+  }
+
+  .transcription-display {
+    padding: 12px 16px;
+    border-radius: 12px;
+  }
+
+  .transcription-label {
+    font-size: 10px;
+  }
+
+  .transcription-clear-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-input-wrapper {
+    padding: 8px 12px 12px 12px;
+  }
+
+  .input-bottom-row {
+    gap: 8px;
+  }
+
+  .input-controls {
+    gap: 4px;
+  }
+
+  .control-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .control-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .message-input-wrapper {
+    min-height: 44px;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .message-input-wrapper {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .control-btn {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .transcription-display {
+    background: rgba(0, 250, 255, 0.06);
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve touch targets on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .control-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Additional focus management for all interactive elements */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure context input also follows the same pattern */
+.context-input:focus {
+  outline: none;
+}
+
+.context-input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Message input wrapper focus states */
+.message-input-wrapper:focus-within {
+  outline: none;
+}
+
+/* Ensure all buttons in the app follow the same pattern */
+button {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Remove blue highlight on touch devices */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 } 

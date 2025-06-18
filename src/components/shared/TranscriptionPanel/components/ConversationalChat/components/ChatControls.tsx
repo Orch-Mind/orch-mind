@@ -3,8 +3,8 @@ import { MicrophoneState } from "../../../../../context";
 import { ChatControlsProps } from "../types/ChatTypes";
 
 /**
- * Chat controls component
- * Follows Single Responsibility Principle - only handles chat controls
+ * Chat controls component with modern futuristic icons
+ * Enhanced with better visual feedback and animations
  */
 export const ChatControls: React.FC<ChatControlsProps> = ({
   microphoneState,
@@ -19,25 +19,36 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
 }) => {
   return (
     <div className="input-controls">
-      {/* Context Toggle Button */}
+      {/* Context Toggle Button - Modern design */}
       <button
         className={`control-btn context-btn ${showContext ? "active" : ""}`}
         onClick={onToggleContext}
         title={showContext ? "Hide context field" : "Add context"}
         type="button"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" />
-          <path
-            d="M10 5v5l3 3"
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="4"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8 12h8M12 8v8"
+            stroke="currentColor"
+            strokeWidth="1.5"
             strokeLinecap="round"
           />
+          <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.3" />
         </svg>
       </button>
 
-      {/* Audio Settings Button */}
+      {/* Audio Settings Button - Futuristic wave design */}
       <button
         ref={audioSettingsButtonRef as React.RefObject<HTMLButtonElement>}
         className={`control-btn audio-settings-btn ${
@@ -47,17 +58,25 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         title="Audio settings"
         type="button"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M3 9v6h4l5 5V4L7 9H3z" fill="currentColor" />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 12h4l4-4v12l-4-4H3z" fill="currentColor" opacity="0.8" />
           <path
-            d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
-            fill="currentColor"
-            opacity="0.8"
+            d="M14 8c1.5 1 2.5 2.5 2.5 4s-1 3-2.5 4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M17 5c2.5 1.5 4 4 4 7s-1.5 5.5-4 7"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            opacity="0.6"
           />
         </svg>
       </button>
 
-      {/* Microphone Button */}
+      {/* Microphone Button - Modern minimal design */}
       <button
         className={`control-btn mic-btn ${
           microphoneState === MicrophoneState.Open ? "recording" : ""
@@ -70,43 +89,67 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         }
         type="button"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           {microphoneState === MicrophoneState.Open ? (
-            <rect x="9" y="9" width="6" height="6" fill="currentColor" rx="1" />
+            // Recording state - animated square
+            <g>
+              <rect x="8" y="8" width="8" height="8" fill="currentColor" rx="2">
+                <animate
+                  attributeName="rx"
+                  values="2;4;2"
+                  dur="1.5s"
+                  repeatCount="indefinite"
+                />
+              </rect>
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                opacity="0.3"
+              />
+            </g>
           ) : (
+            // Microphone icon - sleek design
             <>
-              <path
-                d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+              <rect
+                x="9"
+                y="3"
+                width="6"
+                height="11"
+                rx="3"
                 fill="currentColor"
               />
               <path
-                d="M19 10v2a7 7 0 0 1-14 0v-2"
+                d="M5 10v2a7 7 0 0014 0v-2"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="1.5"
                 strokeLinecap="round"
               />
               <line
                 x1="12"
                 y1="19"
                 x2="12"
-                y2="23"
+                y2="22"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="1.5"
               />
               <line
                 x1="8"
-                y1="23"
+                y1="22"
                 x2="16"
-                y2="23"
+                y2="22"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="1.5"
+                strokeLinecap="round"
               />
             </>
           )}
         </svg>
       </button>
 
-      {/* Send Button */}
+      {/* Send Button - Modern arrow design */}
       <button
         className={`control-btn send-btn ${canSend ? "ready" : "disabled"}`}
         onClick={onSend}
@@ -114,8 +157,16 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         title="Send message (Enter)"
         type="button"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M2 12l18-8-8 18-3-7-7-3z" fill="currentColor" />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M3 12L5 4l16 8-16 8 2-8zm2 0h7"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+          <circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.3" />
         </svg>
       </button>
     </div>
