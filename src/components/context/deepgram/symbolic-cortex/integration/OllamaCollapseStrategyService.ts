@@ -159,7 +159,9 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
       const userPrompt = {
         role: "user" as const,
-        content: `LANGUAGE: ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "PT-BR"}
+        content: `LANGUAGE: ${
+          getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "PT-BR"
+        }
       
       Metrics:
       - cores: ${params.activatedCores.join(", ")}
@@ -191,10 +193,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         model: getOption(STORAGE_KEYS.OLLAMA_MODEL) ?? "qwen3:latest", // Use compatible model
         messages: [systemPrompt, userPrompt],
         tools: tools,
-        tool_choice: {
-          type: "function",
-          function: { name: "decideCollapseStrategy" },
-        },
+        // tool_choice is not supported yet by Ollama (future improvement)
         temperature: 0.1,
       });
 

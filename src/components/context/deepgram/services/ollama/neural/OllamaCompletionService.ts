@@ -44,7 +44,6 @@ export class OllamaCompletionService implements ICompletionService {
         parameters: Record<string, unknown>;
       };
     }>;
-    tool_choice?: { type: string; function: { name: string } };
     temperature?: number;
     max_tokens?: number;
   }): Promise<{
@@ -162,6 +161,9 @@ export class OllamaCompletionService implements ICompletionService {
           );
         }
 
+        // Note: tool_choice is not supported yet by Ollama (as per official documentation)
+        // It's a planned future improvement
+
         // Add GPU control for Metal acceleration issues (macOS)
         if (retryCount > 0) {
           // On retry, force CPU mode to avoid Metal acceleration issues
@@ -188,7 +190,6 @@ export class OllamaCompletionService implements ICompletionService {
         let data: any;
 
         try {
-
           const response = await fetch("http://localhost:11434/api/chat", {
             method: "POST",
             headers: {
@@ -299,36 +300,21 @@ export class OllamaCompletionService implements ICompletionService {
 
         // Fallback: Try to parse function calls from content if no native tool calls
         if (!tool_calls || tool_calls.length === 0) {
-          try {
-            const cleanContent = content.trim();
+          // Only attempt fallback parsing if tools were provided and content looks like JSON
+          if (
+            options.tools &&
+            options.tools.length > 0 &&
+            content.includes("{")
+          ) {
+            try {
+              const cleanContent = content.trim();
 
-            // Try multiple parsing strategies for function calls
-            let functionCallData = null;
+              // Try to extract JSON from content
+              let functionCallData = null;
 
-            // Strategy 1: Direct JSON parsing (most common case)
-            if (cleanContent.startsWith("{") && cleanContent.endsWith("}")) {
-              try {
-                functionCallData = JSON.parse(cleanContent);
-                LoggingUtils.logInfo(
-                  `🦙 [OllamaCompletion] Direct JSON parse successful (fallback)`
-                );
-              } catch (e) {
-                LoggingUtils.logWarning(
-                  `🦙 [OllamaCompletion] Direct JSON parse failed: ${e}`
-                );
-              }
-            }
-
-            // Strategy 2: Extract JSON from markdown or mixed content
-            if (!functionCallData) {
+              // Look for JSON in code blocks or standalone
               const jsonMatches = [
-                // Look for JSON in code blocks
                 /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g,
-                // Look for standalone JSON objects
-                /(\{[\s\S]*?"function_name"[\s\S]*?\})/g,
-                // Look for any JSON object with parameters
-                /(\{[\s\S]*?"parameters"[\s\S]*?\})/g,
-                // Look for any JSON object
                 /(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
               ];
 
@@ -337,10 +323,11 @@ export class OllamaCompletionService implements ICompletionService {
                 for (const match of matches) {
                   try {
                     const candidate = JSON.parse(match[1]);
-                    if (candidate.function_name || candidate.parameters) {
+                    // Check if it looks like a function call
+                    if (candidate.function_name || candidate.function_call) {
                       functionCallData = candidate;
                       LoggingUtils.logInfo(
-                        `🦙 [OllamaCompletion] JSON extracted from content (fallback)`
+                        `🦙 [OllamaCompletion] Extracted function call from content (fallback)`
                       );
                       break;
                     }
@@ -350,58 +337,40 @@ export class OllamaCompletionService implements ICompletionService {
                 }
                 if (functionCallData) break;
               }
-            }
 
-            // Convert to OpenAI-compatible format if we found a function call
-            if (functionCallData) {
-              let functionName = "";
-              let functionArgs: any = {};
+              // Convert to tool_calls format if found
+              if (functionCallData) {
+                let functionName =
+                  functionCallData.function_name ||
+                  functionCallData.function_call?.name ||
+                  "";
+                let functionArgs =
+                  functionCallData.parameters ||
+                  functionCallData.function_call?.arguments ||
+                  {};
 
-              // Handle our simplified format
-              if (
-                functionCallData.function_name &&
-                functionCallData.parameters
-              ) {
-                functionName = functionCallData.function_name;
-                functionArgs = functionCallData.parameters;
-              }
-              // Handle OpenAI-like format if present
-              else if (functionCallData.function_call) {
-                functionName = functionCallData.function_call.name;
-                functionArgs =
-                  typeof functionCallData.function_call.arguments === "string"
-                    ? JSON.parse(functionCallData.function_call.arguments)
-                    : functionCallData.function_call.arguments;
-              }
-
-              if (functionName) {
-                // Ensure arguments is properly formatted and cleaned
-                const argumentsString =
-                  typeof functionArgs === "string"
-                    ? cleanThinkTags(functionArgs)
-                    : cleanThinkTags(JSON.stringify(functionArgs));
-
-                tool_calls = [
-                  {
-                    function: {
-                      name: functionName,
-                      arguments: argumentsString,
+                if (functionName) {
+                  tool_calls = [
+                    {
+                      function: {
+                        name: functionName,
+                        arguments:
+                          typeof functionArgs === "string"
+                            ? functionArgs
+                            : JSON.stringify(functionArgs),
+                      },
                     },
-                  },
-                ];
-
-                LoggingUtils.logInfo(
-                  `🦙 [OllamaCompletion] Successfully parsed function call from content (fallback, cleaned): ${functionName}`
-                );
+                  ];
+                  LoggingUtils.logInfo(
+                    `🦙 [OllamaCompletion] Fallback function call parsed: ${functionName}`
+                  );
+                }
               }
+            } catch (parseError) {
+              LoggingUtils.logWarning(
+                `🦙 [OllamaCompletion] Fallback parsing failed: ${parseError}`
+              );
             }
-          } catch (parseError) {
-            LoggingUtils.logError(
-              `🦙 [OllamaCompletion] Function call parsing error (fallback): ${parseError}`
-            );
-            LoggingUtils.logError(
-              `🦙 [OllamaCompletion] Raw content for debugging: ${content}`
-            );
           }
         }
 
@@ -413,6 +382,11 @@ export class OllamaCompletionService implements ICompletionService {
         console.log(
           `🦙 [OllamaCompletion] Tool calls count: ${tool_calls?.length || 0}`
         );
+
+        // Clean think tags from tool calls if present
+        if (tool_calls && tool_calls.length > 0) {
+          tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
+        }
 
         // Convert the response to expected format
         return {
