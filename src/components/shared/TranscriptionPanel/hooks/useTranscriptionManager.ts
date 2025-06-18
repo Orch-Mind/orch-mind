@@ -47,7 +47,34 @@ export const useTranscriptionManager = () => {
     waitForConnectionState,
     getConnectionStatus,
     hasActiveConnection,
+    flushTranscriptionsToUI,
+    clearTranscriptionData,
+    transcriptionService,
   } = useDeepgram();
+
+  // Memoized utility functions to prevent recreating on every render
+  const clearTranscription = useCallback(() => {
+    console.log("🧹 [CLEAR_TRANSCRIPTION] Clearing all transcription data");
+
+    // Clear UI state
+    setTexts((prev) => ({ ...prev, transcription: "" }));
+
+    // Clear service-level data if available
+    if (clearTranscriptionData) {
+      clearTranscriptionData();
+    }
+
+    // Also clear the TranscriptionStorageService data
+    if (transcriptionService?.clearTranscriptionData) {
+      console.log("🧹 Clearing TranscriptionStorageService data");
+      transcriptionService.clearTranscriptionData();
+    }
+  }, [setTexts, clearTranscriptionData, transcriptionService]);
+
+  const clearAiResponse = useCallback(
+    () => setTexts((prev) => ({ ...prev, aiResponse: "" })),
+    [setTexts]
+  );
 
   const [showDetailedDiagnostics, setShowDetailedDiagnostics] = useState(false);
   const [connectionDetails, setConnectionDetails] = useState<Record<
@@ -56,6 +83,7 @@ export const useTranscriptionManager = () => {
   > | null>(null);
   const [temporaryContext, setTemporaryContext] = useState<string>("");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [isLocalProcessing, setIsLocalProcessing] = useState<boolean>(false);
   const temporaryContextRef = useRef<string>("");
   const transcriptionRef = useRef<HTMLTextAreaElement>(null);
 
@@ -114,8 +142,36 @@ export const useTranscriptionManager = () => {
     if (currentState === MicrophoneState.Open) {
       console.log("🚫 Stopping recording via button...");
       stopMicrophone();
+
+      // Clear transcriptions when stopping recording
+      console.log("🧹 Clearing transcriptions after stopping recording");
+      clearTranscription();
+
+      // Also clear the TranscriptionStorageService data
+      if (transcriptionService?.clearTranscriptionData) {
+        console.log("🧹 Clearing TranscriptionStorageService data");
+        transcriptionService.clearTranscriptionData();
+      }
     } else {
       console.log("🎤 Starting recording via button...");
+
+      // Clear both UI and service data before starting a new recording
+      console.log(
+        "🧹 Clearing all previous transcription data for a fresh start."
+      );
+      clearTranscription(); // Clears UI state from TranscriptionContext
+      if (clearTranscriptionData) {
+        clearTranscriptionData(); // Clears service-level data from DeepgramContext
+      }
+
+      // Also clear the TranscriptionStorageService data
+      if (transcriptionService?.clearTranscriptionData) {
+        console.log(
+          "🧹 Clearing TranscriptionStorageService data before starting"
+        );
+        transcriptionService.clearTranscriptionData();
+      }
+
       // If no audio source is active, enable system audio by default before recording
       if (!isMicrophoneOn && !isSystemAudioOn) {
         setIsSystemAudioOn(true);
@@ -131,59 +187,83 @@ export const useTranscriptionManager = () => {
     isMicrophoneOn,
     isSystemAudioOn,
     setIsSystemAudioOn,
+    clearTranscriptionData,
+    clearTranscription,
+    transcriptionService,
   ]);
 
   // Memoize handleSendPrompt to prevent recreating on every render
   const handleSendPrompt = useCallback(
     async (messageContent?: string, contextContent?: string) => {
+      // Proteção de duplicação agora é feita no DeepgramContext (global)
+
       try {
+        // Set state for UI updates (e.g., disabling button visually)
+        setIsLocalProcessing(true);
+
+        // Check if there's any content to send
+        const currentTranscription = texts.transcription?.trim();
+        if (!messageContent && !currentTranscription) {
+          console.warn("⚠️ [SEND_PROMPT] No content to send");
+          showToast("Aviso", "Nenhuma mensagem para enviar", "neutral");
+          setIsLocalProcessing(false);
+          return;
+        }
+
         console.log("🚀 [SEND_PROMPT] Starting prompt send:", {
           messageContent,
           contextContent,
           temporaryContext: temporaryContextRef.current,
           hasDirectMessage: !!messageContent,
+          hasTranscription: !!currentTranscription,
           timestamp: new Date().toISOString(),
         });
 
-        // If we have a direct message from chat, use the new sendDirectMessage method
-        if (messageContent) {
-          console.log(
-            "💬 [SEND_PROMPT] Using sendDirectMessage for chat message"
-          );
-          await sendDirectMessage(messageContent, contextContent);
-        } else {
-          // Traditional flow - use transcription with optional context
-          console.log(
-            "📝 [SEND_PROMPT] Using sendTranscriptionPrompt for transcription"
-          );
-          await sendTranscriptionPrompt(
-            temporaryContextRef.current || contextContent
-          );
-          // Clear temporaryContext after sending
-          setTemporaryContext("");
+        // Flush transcriptions to UI before sending
+        if (flushTranscriptionsToUI) {
+          console.log("📤 [SEND_PROMPT] Flushing transcriptions before send");
+          flushTranscriptionsToUI();
         }
 
-        console.log("✅ [SEND_PROMPT] Prompt sent successfully");
-      } catch (error) {
-        console.error("❌ [SEND_PROMPT] Error sending prompt:", error);
-        setTexts((prev) => ({
-          ...prev,
-          aiResponse: `Error: ${
-            error instanceof Error ? error.message : "Failed to send prompt"
-          }`,
-        }));
+        // If it's a direct message (from chat input), use sendDirectMessage
+        if (messageContent) {
+          console.log("💬 [SEND_PROMPT] Sending as direct message");
+          await sendDirectMessage(
+            messageContent,
+            contextContent || temporaryContextRef.current
+          );
+        } else {
+          // Otherwise, use the transcription-based prompt
+          console.log("🎯 [SEND_PROMPT] Sending as transcription prompt");
+          await sendTranscriptionPrompt(temporaryContextRef.current);
+        }
 
-        showToast("Error", "Failed to send prompt", "error");
+        console.log("✅ [SEND_PROMPT] Prompt send completed successfully");
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message === "PROCESSING_IN_PROGRESS"
+              ? "Um processamento já está em andamento. Aguarde a conclusão."
+              : error.message
+            : "Erro desconhecido ao processar o prompt";
+
+        console.error("❌ [SEND_PROMPT] Error sending prompt:", error);
+        showToast("Erro", errorMessage, "error");
+      } finally {
+        // Always clear state
+        setIsLocalProcessing(false);
       }
     },
     [
       sendTranscriptionPrompt,
       sendDirectMessage,
-      setTemporaryContext,
-      setTexts,
       showToast,
+      flushTranscriptionsToUI,
+      texts.transcription,
+      clearTranscriptionData,
+      clearTranscription,
     ]
-  ); // Memoized with proper dependencies
+  );
 
   // Setup electron listeners for AI prompt responses (FIXED: No dependencies)
   useEffect(() => {
@@ -223,7 +303,8 @@ export const useTranscriptionManager = () => {
         isAccumulatingResponse = false;
         responseBuffer = "";
 
-        // Set the final response
+        // Set the final response WITHOUT clearing transcription
+        // This allows new transcriptions to continue appearing
         setTexts((prev) => ({
           ...prev,
           aiResponse: finalResponse,
@@ -280,7 +361,7 @@ export const useTranscriptionManager = () => {
         removeSendingListener();
       };
     }
-  }, [setTexts, showToast]); // Removed handleSendPrompt from dependencies
+  }, [setTexts, showToast]);
 
   // Update Deepgram language when UI language changes
   useEffect(() => {
@@ -300,17 +381,6 @@ export const useTranscriptionManager = () => {
       );
     }
   }, [microphoneState]);
-
-  // Memoized utility functions to prevent recreating on every render
-  const clearTranscription = useCallback(
-    () => setTexts((prev) => ({ ...prev, transcription: "" })),
-    [setTexts]
-  );
-
-  const clearAiResponse = useCallback(
-    () => setTexts((prev) => ({ ...prev, aiResponse: "" })),
-    [setTexts]
-  );
 
   const toggleExpand = useCallback(() => {
     setIsExpanded(!isExpanded);
@@ -349,5 +419,7 @@ export const useTranscriptionManager = () => {
     waitForConnectionState,
     hasActiveConnection,
     ConnectionState,
+    clearTranscriptionData,
+    isLocalProcessing,
   };
 };

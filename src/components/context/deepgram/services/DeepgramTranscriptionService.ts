@@ -348,4 +348,13 @@ export class DeepgramTranscriptionService
       );
     }
   }
+
+  /**
+   * Flush all accumulated transcriptions to the UI
+   * Should be called when recording stops or when sending a message
+   */
+  flushTranscriptionsToUI(): void {
+    this.storageService.flushTranscriptionsToUI();
+    LoggingUtils.logInfo("Flushing transcriptions to UI");
+  }
 }

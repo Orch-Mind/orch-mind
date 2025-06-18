@@ -26,8 +26,12 @@ export const TranscriptionModule: React.FC = () => {
   } = useMicrophone();
 
   // Get deepgram services
-  const { connectToDeepgram, disconnectFromDeepgram, connectionState } =
-    useDeepgram();
+  const {
+    connectToDeepgram,
+    disconnectFromDeepgram,
+    connectionState,
+    flushTranscriptionsToUI,
+  } = useDeepgram();
 
   // Refs to maintain latest values in event handlers
   const microphoneStateRef = useRef(microphoneState);
@@ -66,6 +70,11 @@ export const TranscriptionModule: React.FC = () => {
         console.log(
           "🛑 Stopping Deepgram connection due to microphone state change"
         );
+
+        // Note: Transcriptions are already displayed in real-time
+        // No need to flush on stop as they're already visible
+        console.log("🛑 Recording stopped, transcriptions already visible");
+
         disconnectFromDeepgram();
       }
     }
@@ -74,6 +83,7 @@ export const TranscriptionModule: React.FC = () => {
     connectToDeepgram,
     disconnectFromDeepgram,
     connectionState,
+    flushTranscriptionsToUI,
   ]);
 
   // Setup keyboard shortcut for recording toggle

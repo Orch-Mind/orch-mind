@@ -107,6 +107,8 @@
   padding: 12px 16px;
   margin-bottom: 12px;
   position: relative;
+  max-height: 150px; /* Limita altura total do container */
+  overflow: hidden; /* Esconde overflow do container */
 }
 
 .transcription-label {
@@ -126,6 +128,9 @@
   font-size: 14px;
   line-height: 1.4;
   padding-right: 24px;
+  max-height: 100px; /* Altura máxima para o texto */
+  overflow-y: auto; /* Scroll apenas no texto */
+  overflow-x: hidden;
 }
 
 .transcription-clear-btn {

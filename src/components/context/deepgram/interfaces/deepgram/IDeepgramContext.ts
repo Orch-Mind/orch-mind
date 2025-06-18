@@ -65,5 +65,24 @@ export interface IDeepgramContext {
 
   // Additional debugging functions for development
   testDatabaseDiagnosis?: () => Promise<any>;
-  testEmbeddingModel?: () => Promise<any>;
+  testEmbeddingModel?: () => Promise<void>;
+
+  /**
+   * Flush all accumulated transcriptions to the UI
+   * Should be called when recording stops or when sending a message
+   */
+  flushTranscriptionsToUI: () => void;
+
+  /**
+   * Clears all transcription data from the service and UI
+   */
+  clearTranscriptionData: () => void;
+
+  // Get all transcriptions with their sent status
+  getAllTranscriptionsWithStatus?: () => Array<{
+    text: string;
+    timestamp: string;
+    speaker: string;
+    sent?: boolean;
+  }>;
 }

@@ -255,8 +255,8 @@ export class TranscriptionPromptProcessor {
       // Notify processing start
       this.uiService.notifyPromptProcessingStarted(temporaryContext);
 
-      // Extract new transcription lines
-      const extractedLines = this.transcriptionExtractor.extractNewLines();
+      // Extract new transcription lines AND mark as sent atomically
+      const extractedLines = this.transcriptionExtractor.extractAndMarkAsSent();
       let promptText: string | null = extractedLines;
 
       if (!promptText || promptText.trim().length === 0) {
@@ -289,6 +289,14 @@ export class TranscriptionPromptProcessor {
       // Update UI and complete processing
       this.uiService.updateUI({ aiResponse: result.response });
       this.uiService.notifyPromptComplete(result.response);
+
+      // Note: Transcriptions were already marked as sent during extraction
+      // This prevents race conditions and duplicate sends
+
+      // Update UI to show only new transcriptions (empty initially)
+      if (this.storageService.updateUIWithNewTranscriptions) {
+        this.storageService.updateUIWithNewTranscriptions();
+      }
     } catch (error: Error | unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

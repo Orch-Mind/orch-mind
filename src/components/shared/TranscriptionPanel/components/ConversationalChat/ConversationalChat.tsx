@@ -215,6 +215,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     chatState.setShowContextField(false);
     onTemporaryContextChange("");
 
+    // IMPORTANT: Clear transcription after sending
+    if (transcriptionText.trim()) {
+      onClearTranscription();
+    }
+
     // Set processing state with timeout
     chatState.setIsProcessing(true);
     if (chatState.processingTimeoutRef.current) {
@@ -232,6 +237,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     addMessage,
     onTemporaryContextChange,
     onSendPrompt,
+    onClearTranscription,
   ]);
 
   // Handle key press (Enter to send, Shift+Enter for new line)

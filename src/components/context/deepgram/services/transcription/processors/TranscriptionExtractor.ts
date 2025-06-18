@@ -1,43 +1,73 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { ITranscriptionStorageService } from '../../../interfaces/transcription/ITranscriptionStorageService';
+import { ITranscriptionStorageService } from "../../../interfaces/transcription/ITranscriptionStorageService";
 
 /**
  * Neural transcription extraction processor
  * Responsible for extracting new lines that haven't been processed yet
  */
 export class TranscriptionExtractor {
-  private lastSentLineIndex: number = -1;
-
   constructor(private storageService: ITranscriptionStorageService) {}
 
   /**
    * Extract new transcription lines that haven't been processed yet
+   * WITHOUT marking them as sent (for preview/validation purposes)
    */
   extractNewLines(): string | null {
-    const fullTranscription = this.storageService.getUITranscriptionText();
-    const lines = fullTranscription.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    const newLines = lines.slice(this.lastSentLineIndex + 1);
+    const newTranscriptions = this.storageService.getNewTranscriptions();
 
-    if (newLines.length === 0) return null;
+    if (newTranscriptions.length === 0) {
+      console.log("📭 No new transcriptions to extract");
+      return null;
+    }
 
-    // Update index after successful extraction
-    this.lastSentLineIndex = lines.length - 1;
-    return newLines.join('\n');
+    // Format transcriptions with speaker information
+    const formattedLines = newTranscriptions.map((t) => {
+      return `${t.speaker}: ${t.text}`;
+    });
+
+    console.log(`📤 Extracting ${newTranscriptions.length} new transcriptions`);
+    return formattedLines.join("\n");
+  }
+
+  /**
+   * Extract new transcriptions AND immediately mark them as sent
+   * This ensures atomic operation preventing duplicate sends
+   */
+  extractAndMarkAsSent(): string | null {
+    // Use the atomic method from storage service
+    const newTranscriptions = this.storageService.extractAndMarkAsSent();
+
+    if (newTranscriptions.length === 0) {
+      console.log("📭 No new transcriptions to extract");
+      return null;
+    }
+
+    // Format transcriptions with speaker information
+    const formattedLines = newTranscriptions.map((t) => {
+      return `${t.speaker}: ${t.text}`;
+    });
+
+    console.log(
+      `📤 Extracted and marked ${newTranscriptions.length} transcriptions as sent`
+    );
+
+    return formattedLines.join("\n");
   }
 
   /**
    * Reset extraction state for new session
    */
   reset(): void {
-    this.lastSentLineIndex = -1;
+    // No longer need to track index manually
+    console.log("🔄 Transcription extractor reset");
   }
 
   /**
-   * Get current extraction index (for debugging/monitoring)
+   * Check if there are new transcriptions available
    */
-  getCurrentIndex(): number {
-    return this.lastSentLineIndex;
+  hasNewTranscriptions(): boolean {
+    return this.storageService.hasNewTranscriptions();
   }
-} 
+}

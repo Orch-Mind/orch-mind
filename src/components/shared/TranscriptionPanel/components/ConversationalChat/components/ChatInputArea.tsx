@@ -1,4 +1,5 @@
 import React from "react";
+import { useDeepgram } from "../../../../../context";
 import { ChatState, ConversationalChatProps } from "../types/ChatTypes";
 import { ChatControls } from "./ChatControls";
 import { ContextInput } from "./ContextInput";
@@ -44,7 +45,15 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   showAudioSettings,
   audioSettingsButtonRef,
 }) => {
-  const canSend = !!(chatState.inputMessage.trim() || transcriptionText.trim());
+  const canSend =
+    !!(chatState.inputMessage.trim() || transcriptionText.trim()) &&
+    !chatState.isProcessing;
+
+  // Get transcriptions with status from Deepgram context
+  const { getAllTranscriptionsWithStatus } = useDeepgram();
+  const transcriptionsWithStatus = getAllTranscriptionsWithStatus
+    ? getAllTranscriptionsWithStatus()
+    : [];
 
   return (
     <div className="chat-input-area">
@@ -66,6 +75,7 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           <TranscriptionDisplay
             text={transcriptionText}
             onClear={onClearTranscription}
+            transcriptions={transcriptionsWithStatus}
           />
 
           {/* Input Bottom Row - Input + Controls */}

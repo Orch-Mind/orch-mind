@@ -30,6 +30,12 @@ export interface ContextInputProps {
 export interface TranscriptionDisplayProps {
   text: string;
   onClear: () => void;
+  transcriptions?: Array<{
+    text: string;
+    timestamp: string;
+    speaker: string;
+    sent?: boolean;
+  }>;
 }
 
 export interface ChatControlsProps {

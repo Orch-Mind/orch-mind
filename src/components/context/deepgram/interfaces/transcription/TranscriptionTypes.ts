@@ -19,6 +19,7 @@ export interface SpeakerTranscription {
   text: string;
   timestamp: string;
   speaker: string;
+  sent?: boolean; // Track if this transcription has been sent
 }
 
 export interface SpeakerSegment {
@@ -67,8 +68,16 @@ export interface IPCHandlers {
   onPromptError?: (text: string) => void;
   sendNeuralPrompt?: (context?: string) => void;
   queryPinecone?: (embedding: number[]) => Promise<Record<string, unknown>>;
-  saveToPinecone?: (entries: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>) => Promise<void>;
+  saveToPinecone?: (
+    entries: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
+    }>
+  ) => Promise<void>;
 }
 
 // Interface for UI updates
-export type UIUpdater = (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
+export type UIUpdater = (
+  updater: (prev: Record<string, unknown>) => Record<string, unknown>
+) => void;
