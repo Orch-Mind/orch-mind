@@ -219,12 +219,6 @@ export const useTranscriptionManager = () => {
           timestamp: new Date().toISOString(),
         });
 
-        // Flush transcriptions to UI before sending
-        if (flushTranscriptionsToUI) {
-          console.log("📤 [SEND_PROMPT] Flushing transcriptions before send");
-          flushTranscriptionsToUI();
-        }
-
         // If it's a direct message (from chat input), use sendDirectMessage
         if (messageContent) {
           console.log("💬 [SEND_PROMPT] Sending as direct message");
@@ -234,6 +228,12 @@ export const useTranscriptionManager = () => {
           );
         } else {
           // Otherwise, use the transcription-based prompt
+          // Only flush transcriptions when we have actual transcriptions
+          if (flushTranscriptionsToUI && currentTranscription) {
+            console.log("📤 [SEND_PROMPT] Flushing transcriptions before send");
+            flushTranscriptionsToUI();
+          }
+
           console.log("🎯 [SEND_PROMPT] Sending as transcription prompt");
           await sendTranscriptionPrompt(temporaryContextRef.current);
         }

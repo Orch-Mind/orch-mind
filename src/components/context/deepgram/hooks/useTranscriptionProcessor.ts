@@ -30,6 +30,62 @@ export function useTranscriptionProcessor(
   transcriptionRef.current = transcriptionService;
 
   /**
+   * Wait for transcription service to be available
+   */
+  const waitForService = useCallback(
+    async (maxWaitTime: number = 5000): Promise<boolean> => {
+      const startTime = Date.now();
+      const checkInterval = 100; // Check every 100ms
+
+      while (Date.now() - startTime < maxWaitTime) {
+        if (transcriptionRef.current) {
+          console.log("✅ Transcription service is now available");
+          return true;
+        }
+        // Wait before next check
+        await new Promise((resolve) => setTimeout(resolve, checkInterval));
+      }
+
+      console.error("❌ Timeout waiting for transcription service");
+      return false;
+    },
+    []
+  );
+
+  /**
+   * Send message directly through IPC when transcription service is not available
+   */
+  const sendDirectMessageViaIPC = async (
+    message: string,
+    temporaryContext?: string
+  ) => {
+    console.log("📨 [IPC] Sending direct message via IPC:", {
+      message: message.substring(0, 50),
+      hasContext: !!temporaryContext,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Check if electron API is available
+    if (typeof window !== "undefined" && window.electronAPI) {
+      try {
+        // Use sendNeuralPrompt which is the correct method from IElectronAPI
+        // The message is passed as temporaryContext since that's how the API expects it
+        const fullContext = temporaryContext
+          ? `${message}\n\nContext: ${temporaryContext}`
+          : message;
+
+        await window.electronAPI.sendNeuralPrompt(fullContext);
+        console.log("✅ [IPC] Direct message sent successfully");
+      } catch (error) {
+        console.error("❌ [IPC] Error sending direct message:", error);
+        throw error;
+      }
+    } else {
+      throw new Error("Electron API not available");
+    }
+  };
+
+  /**
    * Start transcription processing with concurrency protection
    */
   const sendTranscriptionPrompt = useCallback(
@@ -63,17 +119,20 @@ export function useTranscriptionProcessor(
       }
 
       try {
+        // Wait for service to be available
         if (!transcriptionRef.current) {
-          console.error("❌ Transcription service not available");
-          globalProcessingRef.current = false;
-          return;
+          console.log("⏳ Waiting for transcription service...");
+          const serviceAvailable = await waitForService();
+          if (!serviceAvailable) {
+            throw new Error("Transcription service not available");
+          }
         }
 
         // Start processing
         dispatch({ type: "SET_PROCESSING", payload: true });
         console.log("🔄 Processing state set to true");
 
-        await transcriptionRef.current.sendTranscriptionPrompt(
+        await transcriptionRef.current!.sendTranscriptionPrompt(
           temporaryContext
         );
         console.log("✅ Transcription prompt completed successfully");
@@ -89,7 +148,7 @@ export function useTranscriptionProcessor(
         console.log("🔓 [GLOBAL_REF] Processing lock released");
       }
     },
-    [isProcessing, dispatch, globalProcessingRef]
+    [isProcessing, dispatch, globalProcessingRef, waitForService]
   );
 
   /**
@@ -102,6 +161,7 @@ export function useTranscriptionProcessor(
         hasContext: !!temporaryContext,
         isProcessing,
         globalProcessingRef: globalProcessingRef.current,
+        hasTranscriptionService: !!transcriptionRef.current,
         timestamp: new Date().toISOString(),
       });
 
@@ -125,20 +185,26 @@ export function useTranscriptionProcessor(
       }
 
       try {
-        if (!transcriptionRef.current) {
-          console.error("❌ Transcription service not available");
-          globalProcessingRef.current = false;
-          return;
-        }
-
         dispatch({ type: "SET_PROCESSING", payload: true });
 
-        await transcriptionRef.current.sendDirectMessage(
+        // Wait for service to be available if needed
+        if (!transcriptionRef.current) {
+          console.log("⏳ Waiting for transcription service...");
+          const serviceAvailable = await waitForService();
+          if (!serviceAvailable) {
+            throw new Error(
+              "Transcription service not available after timeout"
+            );
+          }
+        }
+
+        // Use the transcription service
+        await transcriptionRef.current!.sendDirectMessage(
           message,
           temporaryContext
         );
-        console.log("✅ Direct message completed successfully");
 
+        console.log("✅ Direct message completed successfully");
         dispatch({ type: "SET_PROCESSING", payload: false });
       } catch (error) {
         console.error("❌ Error sending direct message:", error);
@@ -150,7 +216,7 @@ export function useTranscriptionProcessor(
         console.log("🔓 [GLOBAL_REF] Processing lock released");
       }
     },
-    [isProcessing, dispatch, globalProcessingRef]
+    [isProcessing, dispatch, globalProcessingRef, waitForService]
   );
 
   /**
@@ -158,7 +224,11 @@ export function useTranscriptionProcessor(
    */
   const flushTranscriptionsToUI = useCallback(() => {
     if (!transcriptionRef.current) {
-      console.error("❌ Transcription service not available");
+      // Silently return if service is not available
+      // This can happen when sending direct messages before service initialization
+      console.log(
+        "⚠️ Transcription service not available for flush - skipping"
+      );
       return;
     }
 
