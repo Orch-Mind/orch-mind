@@ -163,11 +163,37 @@
   border-radius: 12px;
   padding: 8px;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efeito de brilho ao redor do input */
+.message-input-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(0, 250, 255, 0.1) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
 .message-input-wrapper:focus-within {
   border-color: #00faff;
-  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2), 
+              0 0 20px rgba(0, 250, 255, 0.1);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.message-input-wrapper:focus-within::before {
+  opacity: 1;
 }
 
 .message-input {
@@ -180,11 +206,30 @@
   padding: 8px 12px;
   line-height: 1.5;
   font-family: inherit;
-  transition: height 0.2s ease;
+  transition: height 0.2s ease, color 0.2s ease;
 }
 
 .message-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.2s ease;
+}
+
+.message-input:focus::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Typing indicator (small pulse when typing) */
+.message-input-wrapper.typing {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    border-color: rgba(0, 250, 255, 0.3);
+  }
+  50% {
+    border-color: rgba(0, 250, 255, 0.5);
+  }
 }
 
 /* Input Controls */
@@ -311,4 +356,96 @@
   outline: none;
   border-color: #00faff;
   box-shadow: 0 0 0 2px rgba(0, 250, 255, 0.2);
+}
+
+/* Audio Settings Button */
+.audio-settings-btn {
+  color: #00faff;
+  transition: all 0.2s ease;
+}
+
+.audio-settings-btn:hover {
+  color: #ffffff;
+  background: rgba(0, 250, 255, 0.2);
+}
+
+.audio-settings-btn.active {
+  background: rgba(0, 250, 255, 0.2);
+  border-color: #00faff;
+  color: #00faff;
+  box-shadow: 0 0 12px rgba(0, 250, 255, 0.3);
+}
+
+/* Audio Settings Popover */
+.audio-settings-popover-container {
+  position: absolute;
+  bottom: 60px;
+  right: 80px;
+  z-index: 1000;
+}
+
+.audio-settings-popover {
+  animation: popover-appear 0.2s ease-out;
+}
+
+@keyframes popover-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Popover arrow pointing to button */
+.audio-settings-popover::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 40px;
+  width: 16px;
+  height: 16px;
+  background: rgba(17, 24, 39, 0.95);
+  border-right: 1px solid rgba(0, 250, 255, 0.3);
+  border-bottom: 1px solid rgba(0, 250, 255, 0.3);
+  transform: rotate(45deg);
+}
+
+/* Mobile responsiveness for popover */
+@media (max-width: 640px) {
+  .audio-settings-popover-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+  }
+  
+  .audio-settings-popover {
+    width: 100%;
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .audio-settings-popover::after {
+    display: none;
+  }
+}
+
+/* Fade in animation for device selectors */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
 } 

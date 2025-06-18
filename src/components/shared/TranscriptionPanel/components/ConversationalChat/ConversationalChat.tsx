@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useSettingsState } from "../settings/useSettingsState";
+import { AudioSettingsPopover } from "./components/AudioSettingsPopover";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { ChatMessagesContainer } from "./components/ChatMessagesContainer";
 import "./ConversationalChat.css";
@@ -35,6 +37,16 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   microphoneState,
   onToggleRecording,
   onSendPrompt,
+  // Audio settings props
+  language,
+  setLanguage,
+  isMicrophoneOn,
+  setIsMicrophoneOn,
+  isSystemAudioOn,
+  setIsSystemAudioOn,
+  audioDevices,
+  selectedDevices,
+  handleDeviceChange,
 }) => {
   // Component lifecycle tracking
   const componentId = useRef(
@@ -51,6 +63,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   } = usePersistentMessages();
 
   const chatState = useChatState();
+
+  // Audio settings state
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const audioSettingsButtonRef = useRef<HTMLElement>(null!);
+  const audioSettings = useSettingsState(showAudioSettings);
 
   // Refs for scroll management
   const messagesContainerRef = useRef<HTMLDivElement>(null!);
@@ -238,6 +255,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     }
   }, [chatState]);
 
+  // Handle audio settings toggle
+  const handleToggleAudioSettings = useCallback(() => {
+    setShowAudioSettings(!showAudioSettings);
+  }, [showAudioSettings]);
+
   // Debug functions (YAGNI principle - only in development)
   const debugFunctions = React.useMemo(() => {
     if (process.env.NODE_ENV === "production") {
@@ -342,6 +364,33 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           recovery.clearBackup();
         }}
         hasBackup={recovery.hasBackup}
+        onToggleAudioSettings={handleToggleAudioSettings}
+        showAudioSettings={showAudioSettings}
+        audioSettingsButtonRef={audioSettingsButtonRef}
+      />
+
+      {/* Audio Settings Popover */}
+      <AudioSettingsPopover
+        show={showAudioSettings}
+        onClose={() => setShowAudioSettings(false)}
+        anchorRef={audioSettingsButtonRef}
+        settings={{
+          // Language
+          language: language || "pt-BR",
+          setLanguage: setLanguage || (() => {}),
+
+          // Device selection
+          isMicrophoneOn: isMicrophoneOn || false,
+          setIsMicrophoneOn: setIsMicrophoneOn || (() => {}),
+          isSystemAudioOn: isSystemAudioOn || false,
+          setIsSystemAudioOn: setIsSystemAudioOn || (() => {}),
+          audioDevices: audioDevices || [],
+          selectedDevices: selectedDevices || {
+            microphone: null,
+            systemAudio: null,
+          },
+          handleDeviceChange: handleDeviceChange || (() => {}),
+        }}
       />
     </div>
   );
@@ -361,8 +410,16 @@ function areEqual(
     prev.onClearTranscription === next.onClearTranscription &&
     prev.onSendPrompt === next.onSendPrompt &&
     prev.onToggleRecording === next.onToggleRecording &&
-    prev.onTranscriptionChange === next.onTranscriptionChange;
-  // transcriptionText deliberately ignored
+    prev.onTranscriptionChange === next.onTranscriptionChange &&
+    // Audio settings comparisons (only check if props changed, not device arrays)
+    prev.language === next.language &&
+    prev.setLanguage === next.setLanguage &&
+    prev.isMicrophoneOn === next.isMicrophoneOn &&
+    prev.setIsMicrophoneOn === next.setIsMicrophoneOn &&
+    prev.isSystemAudioOn === next.isSystemAudioOn &&
+    prev.setIsSystemAudioOn === next.setIsSystemAudioOn &&
+    prev.handleDeviceChange === next.handleDeviceChange;
+  // transcriptionText, audioDevices and selectedDevices deliberately ignored
 
   if (!isEqual && process.env.NODE_ENV !== "production") {
     console.log(

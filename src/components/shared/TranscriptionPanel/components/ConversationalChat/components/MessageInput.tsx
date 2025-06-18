@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChatInputProps } from "../types/ChatTypes";
 
 /**
@@ -11,9 +11,11 @@ export const MessageInput: React.FC<ChatInputProps> = ({
   onSend,
   onKeyPress,
   disabled = false,
-  placeholder = "Type your message...",
+  placeholder = "Type your message or use voice transcription...",
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-resize textarea (KISS principle - simple and focused)
   useEffect(() => {
@@ -23,12 +25,37 @@ export const MessageInput: React.FC<ChatInputProps> = ({
     }
   }, [value]);
 
+  // Handle typing indicator
+  useEffect(() => {
+    if (value.trim().length > 0) {
+      setIsTyping(true);
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set new timeout to remove typing indicator
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+      }, 1000);
+    } else {
+      setIsTyping(false);
+    }
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [value]);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
   };
 
   return (
-    <div className="message-input-wrapper">
+    <div className={`message-input-wrapper ${isTyping ? "typing" : ""}`}>
       <textarea
         ref={inputRef}
         className="message-input"
@@ -47,4 +74,4 @@ export const MessageInput: React.FC<ChatInputProps> = ({
       />
     </div>
   );
-}; 
+};

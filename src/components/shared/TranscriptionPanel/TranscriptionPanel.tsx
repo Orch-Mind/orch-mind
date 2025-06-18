@@ -329,6 +329,16 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             microphoneState={microphoneState}
             onToggleRecording={toggleRecording}
             onSendPrompt={handleSendPrompt}
+            // Audio settings props
+            language={language}
+            setLanguage={setLanguage}
+            isMicrophoneOn={isMicrophoneOn}
+            setIsMicrophoneOn={setIsMicrophoneOn}
+            isSystemAudioOn={isSystemAudioOn}
+            setIsSystemAudioOn={setIsSystemAudioOn}
+            audioDevices={audioDevices}
+            selectedDevices={selectedDevices}
+            handleDeviceChange={handleDeviceChange}
           />
         </div>
       </div>

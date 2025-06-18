@@ -16,6 +16,9 @@ interface ChatInputAreaProps extends ConversationalChatProps {
   onRestore: () => void;
   onClearAll: () => void;
   hasBackup: boolean;
+  onToggleAudioSettings?: () => void;
+  showAudioSettings?: boolean;
+  audioSettingsButtonRef?: React.RefObject<HTMLElement>;
 }
 
 /**
@@ -37,6 +40,9 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   onRestore,
   onClearAll,
   hasBackup,
+  onToggleAudioSettings,
+  showAudioSettings,
+  audioSettingsButtonRef,
 }) => {
   const canSend = !!(chatState.inputMessage.trim() || transcriptionText.trim());
 
@@ -83,10 +89,22 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               showContext={
                 chatState.showContextField || !!chatState.currentContext
               }
+              onToggleAudioSettings={onToggleAudioSettings}
+              showAudioSettings={showAudioSettings}
+              audioSettingsButtonRef={audioSettingsButtonRef}
             />
           </div>
         </div>
       </div>
+
+      {/* TODO: Add AudioSettingsPopover component here
+      <AudioSettingsPopover
+        show={showAudioSettings}
+        onClose={() => setShowAudioSettings(false)}
+        anchorRef={audioSettingsButtonRef}
+        settings={audioSettings}
+      />
+      */}
     </div>
   );
 };
