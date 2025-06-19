@@ -86,38 +86,50 @@ const MessageItem: React.FC<{ message: ChatMessage }> = React.memo(
   }
 );
 
-// Typing indicator component
-const TypingIndicator: React.FC = React.memo(() => {
-  const gradientId = `gradient-typing-${Date.now()}`;
+// Typing indicator component with optional pending response
+const TypingIndicator: React.FC<{ pendingResponse?: string }> = React.memo(
+  ({ pendingResponse }) => {
+    const gradientId = `gradient-typing-${Date.now()}`;
 
-  return (
-    <div className="message system-message typing-indicator">
-      <div className="message-avatar">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ff4dd2" />
-              <stop offset="100%" stopColor="#7c4dff" />
-            </linearGradient>
-          </defs>
-          <circle cx="12" cy="12" r="10" fill={`url(#${gradientId})`} />
-          {/* AI brain icon - melhor centralizado */}
-          <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="white" />
-          <circle cx="12" cy="12" r="1.5" fill={`url(#${gradientId})`} />
-        </svg>
-      </div>
-      <div className="message-bubble-wrapper">
-        <div className="message-content">
-          <div className="message-text typing-animation">
-            <span></span>
-            <span></span>
-            <span></span>
+    return (
+      <div className="message system-message typing-indicator">
+        <div className="message-avatar">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient
+                id={gradientId}
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
+                <stop offset="0%" stopColor="#ff4dd2" />
+                <stop offset="100%" stopColor="#7c4dff" />
+              </linearGradient>
+            </defs>
+            <circle cx="12" cy="12" r="10" fill={`url(#${gradientId})`} />
+            {/* AI brain icon - melhor centralizado */}
+            <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="white" />
+            <circle cx="12" cy="12" r="1.5" fill={`url(#${gradientId})`} />
+          </svg>
+        </div>
+        <div className="message-bubble-wrapper">
+          <div className="message-content">
+            {pendingResponse ? (
+              <div className="message-text">{pendingResponse}</div>
+            ) : (
+              <div className="message-text typing-animation">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 // Welcome message component
 const WelcomeMessage: React.FC<{
@@ -177,6 +189,7 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
   onAddTestMessage = () => {},
   onResetState = () => {},
   onClearMessages = () => {},
+  pendingAiResponse,
 }) => {
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -196,7 +209,9 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
             <MessageItem key={message.id} message={message} />
           ))}
 
-          {isProcessing && <TypingIndicator />}
+          {isProcessing && (
+            <TypingIndicator pendingResponse={pendingAiResponse} />
+          )}
 
           {messages.length === 0 && !isProcessing && (
             <WelcomeMessage

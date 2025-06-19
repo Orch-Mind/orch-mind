@@ -85,6 +85,7 @@ export interface ChatMessagesContainerProps {
   onAddTestMessage?: () => void;
   onResetState?: () => void;
   onClearMessages?: () => void;
+  pendingAiResponse?: string;
 }
 
 /**
