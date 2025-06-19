@@ -1,12 +1,22 @@
 import { MicrophoneState, SelectedDevices } from "../../../../../context";
+import { ChatMessage as PersistentChatMessage } from "../hooks/usePersistentMessages";
+import { ChatConversation } from "./ChatHistoryTypes";
 
-// Core chat types
+/**
+ * Core chat message interface representing a single message in the chat
+ */
 export interface ChatMessage {
+  /** Unique identifier for the message */
   id: string;
+  /** Type of message - user input, system message, or error */
   type: "user" | "system" | "error";
+  /** The actual message content */
   content: string;
+  /** When the message was created */
   timestamp: Date;
+  /** Whether this message has additional context */
   hasContext?: boolean;
+  /** The context content if hasContext is true */
   contextContent?: string;
 }
 
@@ -77,52 +87,115 @@ export interface ChatMessagesContainerProps {
   onClearMessages?: () => void;
 }
 
-// Main component props
+/**
+ * Main props interface for the ConversationalChat component
+ */
 export interface ConversationalChatProps {
+  // Transcription handling
+  /** Current transcription text from speech-to-text */
   transcriptionText: string;
+  /** Handler for transcription text changes */
   onTranscriptionChange: (value: string) => void;
+  /** Handler to clear transcription */
   onClearTranscription: () => void;
+
+  // AI Response handling
+  /** Current AI response text */
   aiResponseText: string;
+  /** Handler for AI response text changes */
   onAiResponseChange: (value: string) => void;
+  /** Handler to clear AI response */
   onClearAiResponse: () => void;
+
+  // Context handling
+  /** Temporary context for the current conversation */
   temporaryContext: string;
+  /** Handler for temporary context changes */
   onTemporaryContextChange: (value: string) => void;
+
+  // Recording controls
+  /** Current microphone state */
   microphoneState: MicrophoneState;
+  /** Handler to toggle recording on/off */
   onToggleRecording: () => void;
+  /** Handler to send a prompt to the AI */
   onSendPrompt: (messageContent?: string, contextContent?: string) => void;
 
-  // Audio settings props
+  // Audio settings props (optional)
+  /** Current selected language */
   language?: string;
+  /** Handler to change language */
   setLanguage?: (value: string) => void;
+  /** Whether microphone is enabled */
   isMicrophoneOn?: boolean;
+  /** Handler to toggle microphone */
   setIsMicrophoneOn?: (value: boolean) => void;
+  /** Whether system audio is enabled */
   isSystemAudioOn?: boolean;
+  /** Handler to toggle system audio */
   setIsSystemAudioOn?: (value: boolean) => void;
+  /** Available audio devices */
   audioDevices?: MediaDeviceInfo[];
+  /** Currently selected audio devices */
   selectedDevices?: SelectedDevices;
+  /** Handler for audio device changes */
   handleDeviceChange?: (deviceId: string, isSystemAudio: boolean) => void;
+
+  // Chat History props (optional)
+  /** Current active conversation */
+  currentConversation?: ChatConversation | null;
+  /** Handler to add a message to a conversation */
+  onAddMessageToConversation?: (
+    conversationId: string,
+    message: PersistentChatMessage
+  ) => void;
+
+  // Processing state callback (optional)
+  /** Handler called when processing state changes */
+  onProcessingChange?: (isProcessing: boolean) => void;
 }
 
-// Hook return types
+/**
+ * Chat state management interface used by internal hooks
+ */
 export interface ChatState {
+  /** Current input message being typed */
   inputMessage: string;
+  /** Setter for input message */
   setInputMessage: (value: string) => void;
+  /** Current context text */
   currentContext: string;
+  /** Setter for context text */
   setCurrentContext: (value: string) => void;
+  /** Whether to show the context input field */
   showContextField: boolean;
+  /** Toggle context field visibility */
   setShowContextField: (show: boolean) => void;
+  /** Whether a message is currently being processed */
   isProcessing: boolean;
+  /** Set processing state */
   setIsProcessing: (processing: boolean) => void;
+  /** Reference to processing timeout for cleanup */
   processingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
 }
 
+/**
+ * Scroll state management interface for chat messages container
+ */
 export interface ScrollState {
+  /** Whether to show the scroll-to-bottom button */
   showScrollButton: boolean;
+  /** Function to scroll to the bottom of messages */
   scrollToBottom: () => void;
+  /** Handler for scroll events */
   handleScroll: () => void;
+  /** Reference to the messages container element */
   messagesRef: React.RefObject<HTMLDivElement | null>;
+  /** Count of new messages since last scroll */
   newMessageCount: number;
+  /** Whether there are new messages to notify about */
   hasNewMessages: boolean;
+  /** Clear new message notification */
   clearNotification: () => void;
 }
 

@@ -6,6 +6,7 @@ import { ChatMessagesContainer } from "./components/ChatMessagesContainer";
 import "./ConversationalChat.css";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatState } from "./hooks/useChatState";
+import { useConversationMessages } from "./hooks/useConversationMessages";
 import { usePersistentMessages } from "./hooks/usePersistentMessages";
 import { ConversationalChatProps } from "./types/ChatTypes";
 
@@ -47,6 +48,10 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   audioDevices,
   selectedDevices,
   handleDeviceChange,
+  // Chat History props
+  currentConversation,
+  onAddMessageToConversation,
+  onProcessingChange,
 }) => {
   // Component lifecycle tracking
   const componentId = useRef(
@@ -54,15 +59,85 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   );
   const mountTime = useRef(Date.now());
 
+  // Log prop changes
+  useEffect(() => {
+    console.log("[CHAT_PROPS] Conversation prop changed:", {
+      conversationId: currentConversation?.id,
+      title: currentConversation?.title,
+      messageCount: currentConversation?.messages.length,
+    });
+  }, [currentConversation]);
+
   // Custom hooks for state management (Dependency Inversion Principle)
+  // Use conversation messages if available, otherwise fall back to persistent messages
+  const persistentMessagesHook = usePersistentMessages();
+  const conversationMessagesHook = useConversationMessages({
+    currentConversation: currentConversation || null,
+    onAddMessage: onAddMessageToConversation || (() => {}),
+    onClearConversation: () => {}, // Will be implemented later
+  });
+
+  // Clear input state when conversation changes
+  useEffect(() => {
+    if (currentConversation) {
+      // Clear any input state when switching conversations
+      chatState.setInputMessage("");
+      chatState.setCurrentContext("");
+      chatState.setShowContextField(false);
+      chatState.setIsProcessing(false);
+
+      // Clear any ongoing processing timeouts
+      if (chatState.processingTimeoutRef.current) {
+        clearTimeout(chatState.processingTimeoutRef.current);
+        chatState.processingTimeoutRef.current = null;
+      }
+
+      // Clear any pending AI responses
+      if (
+        aiResponseText &&
+        (aiResponseText === "Processing..." ||
+          aiResponseText === "Processando...")
+      ) {
+        onClearAiResponse();
+      }
+
+      // Reset response tracking
+      isReceivingResponse.current = false;
+      lastProcessedResponse.current = "";
+
+      console.log("[CHAT] Conversation changed, clearing all state");
+    }
+  }, [currentConversation?.id]); // chatState and other deps intentionally omitted to prevent infinite loops
+
+  // Select the appropriate hook based on whether we have a conversation system
+  const useConversationSystem = !!(
+    currentConversation && onAddMessageToConversation
+  );
   const {
     messages: chatMessages,
     addMessage,
     clearMessages,
-    recovery,
-  } = usePersistentMessages();
+  } = useConversationSystem ? conversationMessagesHook : persistentMessagesHook;
+
+  // Recovery is only available with persistent messages
+  const recovery = useConversationSystem
+    ? {
+        hasBackup: false,
+        restoreFromBackup: () => {},
+        clearBackup: () => {},
+        integrityCheck: () => false,
+        lastSaveTime: 0,
+      }
+    : persistentMessagesHook.recovery;
 
   const chatState = useChatState();
+
+  // Notify parent when processing state changes
+  useEffect(() => {
+    if (onProcessingChange) {
+      onProcessingChange(chatState.isProcessing);
+    }
+  }, [chatState.isProcessing, onProcessingChange]);
 
   // Audio settings state
   const [showAudioSettings, setShowAudioSettings] = useState(false);
@@ -80,10 +155,17 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
   // Log component lifecycle (only in development)
   useEffect(() => {
+    // Clear state on mount
+    chatState.setInputMessage("");
+    chatState.setCurrentContext("");
+    chatState.setShowContextField(false);
+    chatState.setIsProcessing(false);
+
     if (process.env.NODE_ENV !== "production") {
       console.log("🔄 [CHAT_LIFECYCLE] Component MOUNTED:", {
         componentId: componentId.current,
         mountTime: new Date(mountTime.current).toISOString(),
+        conversationId: currentConversation?.id,
       });
 
       return () => {
@@ -93,7 +175,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         });
       };
     }
-  }, []);
+  }, []); // chatState omitted intentionally - we want this to run only on mount
 
   // Track if we're currently receiving a response
   const isReceivingResponse = useRef(false);

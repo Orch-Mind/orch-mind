@@ -18,6 +18,7 @@ import { useGeneralSettings } from "./components/settings/hooks/useGeneralSettin
 // Importação dos arquivos CSS modulares - estrutura neural-simbólica
 import "./styles/TranscriptionPanel.animations.css"; // Animações e keyframes
 import "./styles/TranscriptionPanel.buttons.css"; // Botões e controles interativos
+import "./styles/TranscriptionPanel.chathistory.css"; // Histórico de chats
 import "./styles/TranscriptionPanel.layout.css"; // Layout, grid e estrutura espacial
 import "./styles/TranscriptionPanel.overrides.css"; // Overrides para single-column mode
 import "./styles/TranscriptionPanel.settings.css"; // Componentes de configuração
@@ -28,6 +29,9 @@ import "./styles/TranscriptionPanel.visual.css"; // Efeitos visuais e glassmorfi
 import { QuantumVisualizationContainer } from "../QuantumVisualization/QuantumVisualizationContainer";
 // Conversational Chat import
 import { ConversationalChat } from "./components/ConversationalChat";
+// Chat History imports
+import { ChatHistorySidebar } from "./components/ConversationalChat/components/ChatHistorySidebar";
+import { useChatHistory } from "./components/ConversationalChat/hooks/useChatHistory";
 // Brain visualization is now handled in a separate module
 
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
@@ -39,6 +43,12 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
   // Hook para acessar as configurações gerais, incluindo enableMatrix
   const { enableMatrix } = useGeneralSettings();
+
+  // Chat History Hook
+  const chatHistory = useChatHistory();
+
+  // Track processing state
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (!transcriptionManager) return null;
 
@@ -196,6 +206,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   // Estados para modais
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Settings content for the chat component
   const settingsContent = (
@@ -230,9 +241,11 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     </div>
   );
 
-  // Generate a stable key for ConversationalChat to prevent unnecessary remounting
-  // Use a truly stable key that doesn't change on re-renders
-  const chatKey = React.useMemo(() => "conversational-chat-stable", []);
+  // Generate a key based on current conversation ID to force remount when conversation changes
+  const chatKey = React.useMemo(
+    () => chatHistory.currentConversationId || "default-chat",
+    [chatHistory.currentConversationId]
+  );
 
   // --- Render ---
   return (
@@ -276,16 +289,40 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
       {/* Main Chat Dashboard Layout */}
       <div
-        className={`orchos-quantum-dashboard ${
+        className={`orchos-quantum-dashboard with-sidebar ${
           !enableMatrix ? "single-column" : ""
         }`}
         style={{
           flex: "1 1 auto",
-          // Quando enableMatrix é true, mostra quantum visualization (lógica corrigida)
-          // Ajusta o grid para duas colunas quando habilitado, uma coluna quando desabilitado
-          gridTemplateColumns: enableMatrix ? "1.618fr 1fr" : "1fr",
         }}
       >
+        {/* Chat History Sidebar */}
+        <div
+          className={`chat-history-sidebar ${
+            mobileSidebarOpen ? "mobile-open" : ""
+          }`}
+        >
+          <ChatHistorySidebar
+            conversations={chatHistory.conversations}
+            currentConversationId={chatHistory.currentConversationId}
+            onSelectConversation={(id: string) => {
+              // Clear any pending AI responses when switching conversations
+              clearAiResponse();
+              clearTranscription();
+              chatHistory.selectConversation(id);
+            }}
+            onCreateNewConversation={() => {
+              // Clear any pending AI responses when creating new conversation
+              clearAiResponse();
+              clearTranscription();
+              return chatHistory.createNewConversation();
+            }}
+            onDeleteConversation={chatHistory.deleteConversation}
+            onSearchConversations={chatHistory.searchConversations}
+            isProcessing={isProcessing}
+          />
+        </div>
+
         {/* Quantum Visualization Zone - Left Panel with Golden Ratio */}
         {/* Lógica corrigida: enableMatrix = true mostra, false esconde */}
         {enableMatrix && (
@@ -339,6 +376,10 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             audioDevices={audioDevices}
             selectedDevices={selectedDevices}
             handleDeviceChange={handleDeviceChange}
+            // Chat History props
+            currentConversation={chatHistory.currentConversation}
+            onAddMessageToConversation={chatHistory.addMessageToConversation}
+            onProcessingChange={setIsProcessing}
           />
         </div>
       </div>
@@ -415,6 +456,22 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           onClose={() => setShowSettingsModal(false)}
         />
       )}
+
+      {/* Mobile Sidebar Toggle Button */}
+      <button
+        className="mobile-sidebar-toggle"
+        onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        title="Histórico de conversas"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M3 12h18m-18-6h18m-18 12h18"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
     </div>
   );
 };
