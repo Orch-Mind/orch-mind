@@ -2,9 +2,9 @@
 .chat-history-sidebar {
   position: fixed;
   left: 0;
-  top: 0;
+  top: 3.5rem; /* Start below the header (h-14 = 56px) */
   width: 280px;
-  height: 100vh;
+  height: calc(100vh - 3.5rem); /* Full height minus header */
   background: rgba(9, 9, 11, 0.95);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -290,6 +290,7 @@
     left: -280px;
     transition: left 0.3s ease, transform 0.3s ease;
     transform: none; /* Reset transform on mobile */
+    /* Mobile already inherits top: 3.5rem and height from base styles */
   }
   
   .chat-history-sidebar.mobile-open {
@@ -328,7 +329,7 @@
 .desktop-sidebar-toggle {
   position: fixed; /* Fixed positioning for stability */
   left: 280px; /* Position at edge of sidebar */
-  top: 50%;
+  top: calc(50vh + 1.75rem); /* Center considering header offset (3.5rem / 2) */
   transform: translateY(-50%);
   width: 32px;
   height: 64px;
