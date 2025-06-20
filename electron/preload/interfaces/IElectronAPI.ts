@@ -207,6 +207,35 @@ export interface IOllamaManager {
   }>;
 }
 
+// Dependency Management Types
+export interface DependencyStatus {
+  ollama: {
+    installed: boolean;
+    version?: string;
+    path?: string;
+  };
+  docker: {
+    installed: boolean;
+    version?: string;
+    running?: boolean;
+  };
+}
+
+export interface InstallProgress {
+  dependency: "ollama" | "docker";
+  status: "checking" | "downloading" | "installing" | "completed" | "error";
+  progress?: number;
+  message: string;
+  error?: string;
+}
+
+export interface HardwareDetectionResult {
+  success: boolean;
+  hardware?: HardwareInfo;
+  dockerRequired: boolean;
+  error?: string;
+}
+
 // Complete Electron API Interface
 export interface IElectronAPI
   extends IWindowManager,
@@ -285,4 +314,14 @@ export interface IElectronAPI
   saveToDuckDB(
     vectors: VectorData[]
   ): Promise<{ success: boolean; error?: string }>;
+
+  // Dependency Management
+  checkDependencies: () => Promise<DependencyStatus>;
+  installOllama: () => Promise<void>;
+  installDocker: () => Promise<void>;
+  getInstallInstructions: (dependency: "ollama" | "docker") => Promise<string>;
+  onInstallProgress: (
+    callback: (progress: InstallProgress) => void
+  ) => () => void;
+  detectHardware: () => Promise<HardwareDetectionResult>;
 }

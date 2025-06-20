@@ -100,6 +100,9 @@ export class ElectronAPIFactory {
 
       // Legacy Vector Database Support
       ...this.createLegacyVectorDatabaseAPI(),
+
+      // Dependency Management
+      ...this.createDependencyManager(),
     };
 
     this.logger.success("Neural Electron API composition completed");
@@ -830,6 +833,88 @@ export class ElectronAPIFactory {
           });
           return { success: false, error: String(error) };
         }
+      },
+    };
+  }
+
+  /**
+   * Create Dependency Management service methods
+   */
+  private createDependencyManager() {
+    return {
+      checkDependencies: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("check-dependencies"),
+          {
+            component: "DependencyManager",
+            operation: "checkDependencies",
+            severity: "low",
+          }
+        );
+      },
+
+      installOllama: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("install-ollama"),
+          {
+            component: "DependencyManager",
+            operation: "installOllama",
+            severity: "high",
+          }
+        );
+      },
+
+      installDocker: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("install-docker"),
+          {
+            component: "DependencyManager",
+            operation: "installDocker",
+            severity: "high",
+          }
+        );
+      },
+
+      getInstallInstructions: async (dependency: "ollama" | "docker") => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("get-install-instructions", dependency),
+          {
+            component: "DependencyManager",
+            operation: "getInstallInstructions",
+            severity: "low",
+          }
+        );
+      },
+
+      detectHardware: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("detect-hardware"),
+          {
+            component: "DependencyManager",
+            operation: "detectHardware",
+            severity: "low",
+          }
+        );
+      },
+
+      onInstallProgress: (callback: (progress: any) => void) => {
+        const progressListener = (
+          _event: Electron.IpcRendererEvent,
+          progress: any
+        ) => {
+          try {
+            callback(progress);
+          } catch (error) {
+            this.logger.error("Error in install progress callback", error);
+          }
+        };
+
+        ipcRenderer.on("install-progress", progressListener);
+
+        // Return cleanup function
+        return () => {
+          ipcRenderer.removeListener("install-progress", progressListener);
+        };
       },
     };
   }

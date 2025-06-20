@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { DuckDBMatch } from "../../electron/vector-database/interfaces/IVectorDatabase";
 import type { VllmStatus } from "../../electron/preload/interfaces/IElectronAPI";
+import { DuckDBMatch } from "../../electron/vector-database/interfaces/IVectorDatabase";
 
 export interface ElectronAPI {
   // Core window methods
@@ -199,6 +199,52 @@ export interface ElectronAPI {
     message?: string;
     error?: string;
   }>;
+  // Dependency Management
+  checkDependencies: () => Promise<DependencyStatus>;
+  installOllama: () => Promise<void>;
+  installDocker: () => Promise<void>;
+  getInstallInstructions: (dependency: "ollama" | "docker") => Promise<string>;
+  onInstallProgress: (
+    callback: (progress: InstallProgress) => void
+  ) => () => void;
+  detectHardware: () => Promise<HardwareDetectionResult>;
+}
+
+export interface DependencyStatus {
+  ollama: {
+    installed: boolean;
+    version?: string;
+    path?: string;
+  };
+  docker: {
+    installed: boolean;
+    version?: string;
+    running?: boolean;
+  };
+}
+
+export interface InstallProgress {
+  dependency: "ollama" | "docker";
+  status: "checking" | "downloading" | "installing" | "completed" | "error";
+  progress?: number;
+  message: string;
+  error?: string;
+}
+
+export interface HardwareDetectionResult {
+  success: boolean;
+  hardware?: {
+    cpuCores: number;
+    ramGB: number;
+    gpu?: {
+      vendor: string;
+      model: string;
+      vramGB: number;
+      cuda: boolean;
+    };
+  };
+  dockerRequired: boolean;
+  error?: string;
 }
 
 declare global {

@@ -113,4 +113,12 @@ interface ElectronAPI {
     message?: string;
     error?: string;
   }>;
+  // Dependency Management
+  checkDependencies: () => Promise<DependencyStatus>;
+  installOllama: () => Promise<void>;
+  installDocker: () => Promise<void>;
+  getInstallInstructions: (dependency: "ollama" | "docker") => Promise<string>;
+  onInstallProgress: (
+    callback: (progress: InstallProgress) => void
+  ) => () => void;
 }

@@ -137,10 +137,14 @@ export class VllmManager extends EventEmitter {
       this.updateStatus(partial);
     });
 
-    this.docker = new DockerRunner(
-      this.config.dockerImage,
-      this.config.vllmPort
-    );
+    this.docker = new DockerRunner({
+      image: this.config.dockerImage,
+      port: this.config.vllmPort,
+      enableGPU: true,
+      gpuMemoryUtilization: 0.9,
+      maxModelLen: 4096,
+      huggingFaceToken: process.env.HUGGING_FACE_HUB_TOKEN,
+    });
 
     // Log initialization
     this.log("VllmManager initialized", { config: this.config });
@@ -310,7 +314,9 @@ export class VllmManager extends EventEmitter {
         state: "pulling_image",
         message: "Preparing vLLM container...",
       });
-      await this.docker.run();
+
+      // Pass the model name to DockerRunner
+      await this.docker.run(meta.repo);
       this.updateStatus({ progress: 100 });
 
       // Step 4: Start the model

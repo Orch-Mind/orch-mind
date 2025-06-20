@@ -1,10 +1,10 @@
 version: "3.8"
 
 # vLLM + Ollama Integration Docker Compose
-# Based on best practices from deployment guides
+# Based on official vLLM documentation: https://docs.vllm.ai/en/v0.8.4/deployment/docker.html
 # References:
+# - https://medium.com/@kimdoil1211/effortless-vllm-deployment-with-docker-a-comprehensive-guide-2a23119839e2
 # - https://dasarpai.com/dsblog/integrating-ollama-and-open-webui-with-docker
-# - https://medium.com/@md.tarikulislamjuel/how-backend-developers-can-connect-to-an-llm-model-using-ollama-a-simple-guide-1cf4f703c084
 
 services:
   # Ollama service for model management and hosting
@@ -36,74 +36,58 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
-    # Uncomment for CPU-only deployment
-    # profiles:
-    #   - cpu
 
-  # vLLM OpenAI-compatible API server
+  # vLLM OpenAI-compatible API server (following official docs)
   vllm:
-    image: ghcr.io/vllm/vllm-openai:latest
+    image: vllm/vllm-openai:latest # Official vLLM image
     container_name: orch-vllm
+    runtime: nvidia # Required for GPU support per documentation
     ports:
       - "${VLLM_PORT:-33220}:8000"
     volumes:
+      # HuggingFace cache (required by official docs)
+      - ~/.cache/huggingface:/root/.cache/huggingface
       # Share models with Ollama
       - ollama_models:/models:ro
-      # Cache for better performance
-      - vllm_cache:/root/.cache
     environment:
-      # Model serving configuration
-      - MODEL_NAME=${VLLM_MODEL_NAME:-microsoft/DialoGPT-medium}
-      - MODEL_PATH=/models/${VLLM_MODEL_PATH:-}
-      - HOST=0.0.0.0
-      - PORT=8000
-      - WORKER_USE_RAY=true
-      - RAY_DISABLE_IMPORT_WARNING=1
+      # HuggingFace token for private models
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
       # GPU configuration
       - CUDA_VISIBLE_DEVICES=0
-      # Memory optimization
-      - VLLM_ATTENTION_BACKEND=FLASHINFER
-      - VLLM_BLOCK_SIZE=16
-      - VLLM_GPU_MEMORY_UTILIZATION=0.9
-      # Performance tuning
-      - VLLM_ENGINE_ITERATION_TIMEOUT_S=60
-      - VLLM_DISABLE_LOG_STATS=false
+    # Use --ipc=host for PyTorch shared memory (critical per docs)
+    ipc: host
+    # Alternative: use shm_size if ipc:host is not desired
+    # shm_size: 16gb
     command: >
       --model ${VLLM_MODEL_NAME:-microsoft/DialoGPT-medium}
       --host 0.0.0.0
       --port 8000
-      --served-model-name ${VLLM_SERVED_MODEL_NAME:-default}
       --tensor-parallel-size 1
       --dtype auto
-      --max-model-len 4096
-      --gpu-memory-utilization 0.9
-      --enforce-eager
-      --disable-log-requests
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-4096}
+      --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.9}
     depends_on:
       ollama:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
     networks:
       - orch-ai-network
-    # GPU support for NVIDIA cards
+    # GPU support following official docs
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
-    # Uncomment for CPU-only deployment
-    # profiles:
-    #   - cpu
 
   # Redis for caching and session management (optional)
   redis:
@@ -182,12 +166,6 @@ volumes:
       type: none
       o: bind
       device: ${OLLAMA_CONFIG_PATH:-./data/ollama/config}
-  vllm_cache:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${VLLM_CACHE_PATH:-./data/vllm/cache}
   redis_data:
     driver: local
   prometheus_data:

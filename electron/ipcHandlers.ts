@@ -7,7 +7,13 @@ import { dialog, ipcMain } from "electron";
 import type { ProgressInfo } from "../src/electron/chatgpt-import";
 import { importChatGPTHistoryHandler } from "../src/electron/chatgpt-import";
 import { DuckDBHelper } from "./DuckDBHelper";
+import { detectHardware } from "./HardwareDetector";
 import { IIpcHandlerDeps } from "./main";
+import {
+  DependencyInstaller,
+  DependencyStatus,
+  InstallProgress,
+} from "./services/DependencyInstaller";
 import { OllamaClient } from "./services/OllamaClient";
 import VllmManager from "./VllmManager";
 
@@ -536,6 +542,9 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   );
 
+  // Create Dependency Installer instance
+  const dependencyInstaller = new DependencyInstaller();
+
   // List installed Ollama models
   ipcMain.handle("ollama-list-models", async () => {
     try {
@@ -998,4 +1007,113 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       }
     }
   );
+
+  // ========================================
+  // 🔧 DEPENDENCY MANAGEMENT HANDLERS
+  // ========================================
+
+  // Check if Ollama and Docker are installed
+  ipcMain.handle("check-dependencies", async (): Promise<DependencyStatus> => {
+    try {
+      console.log("🔧 [IPC] Checking dependencies...");
+      const status = await dependencyInstaller.checkDependencies();
+      console.log("🔧 [IPC] Dependency status:", status);
+      return status;
+    } catch (error) {
+      console.error("🔧 [IPC] Error checking dependencies:", error);
+      throw error;
+    }
+  });
+
+  // Install Ollama
+  ipcMain.handle("install-ollama", async (event) => {
+    try {
+      console.log("🦙 [IPC] Starting Ollama installation...");
+
+      // Listen for progress updates
+      const progressHandler = (progress: InstallProgress) => {
+        event.sender.send("install-progress", progress);
+      };
+
+      dependencyInstaller.on("progress", progressHandler);
+
+      try {
+        await dependencyInstaller.installOllama();
+        console.log("🦙 [IPC] Ollama installation completed");
+      } finally {
+        dependencyInstaller.removeListener("progress", progressHandler);
+      }
+    } catch (error) {
+      console.error("🦙 [IPC] Error installing Ollama:", error);
+      throw error;
+    }
+  });
+
+  // Install Docker
+  ipcMain.handle("install-docker", async (event) => {
+    try {
+      console.log("🐳 [IPC] Starting Docker installation...");
+
+      // Listen for progress updates
+      const progressHandler = (progress: InstallProgress) => {
+        event.sender.send("install-progress", progress);
+      };
+
+      dependencyInstaller.on("progress", progressHandler);
+
+      try {
+        await dependencyInstaller.installDocker();
+        console.log("🐳 [IPC] Docker installation completed");
+      } finally {
+        dependencyInstaller.removeListener("progress", progressHandler);
+      }
+    } catch (error) {
+      console.error("🐳 [IPC] Error installing Docker:", error);
+      throw error;
+    }
+  });
+
+  // Get manual installation instructions
+  ipcMain.handle(
+    "get-install-instructions",
+    async (event, dependency: "ollama" | "docker") => {
+      try {
+        console.log(
+          `📝 [IPC] Getting ${dependency} installation instructions...`
+        );
+        const instructions =
+          dependencyInstaller.getManualInstructions(dependency);
+        return instructions;
+      } catch (error) {
+        console.error(
+          `📝 [IPC] Error getting ${dependency} instructions:`,
+          error
+        );
+        throw error;
+      }
+    }
+  );
+
+  // Hardware detection handler
+  ipcMain.handle("detect-hardware", async () => {
+    try {
+      const hardware = await detectHardware();
+      const isAppleSilicon =
+        hardware.gpu?.vendor === "Apple" && !hardware.gpu?.cuda;
+
+      return {
+        success: true,
+        hardware,
+        dockerRequired: !isAppleSilicon, // Docker only needed for non-Apple Silicon
+      };
+    } catch (error) {
+      console.error("Error detecting hardware:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to detect hardware",
+        dockerRequired: true, // Default to requiring Docker if detection fails
+      };
+    }
+  });
 }
