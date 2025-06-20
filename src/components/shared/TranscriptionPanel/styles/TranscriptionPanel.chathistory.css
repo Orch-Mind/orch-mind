@@ -225,6 +225,23 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+/* Disabled conversation item during processing */
+.conversation-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(124, 77, 255, 0.02);
+}
+
+.conversation-item.disabled::before {
+  display: none;
+}
+
+.conversation-item.disabled:hover {
+  transform: none;
+  background: rgba(124, 77, 255, 0.02);
+  border-color: transparent;
+}
+
 /* Delete Button */
 .delete-button {
   position: absolute;

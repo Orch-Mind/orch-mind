@@ -12,65 +12,9 @@ import "./styles/ConversationalChat.input.css";
 import "./styles/ConversationalChat.messages.css";
 import { ConversationalChatProps } from "./types/ChatTypes";
 
-// Map global para rastrear estados de processamento por conversa
-const processingStatesMap = new Map<
-  string,
-  {
-    isProcessing: boolean;
-    aiResponse?: string;
-    lastProcessedResponse?: string;
-    isReceivingResponse?: boolean;
-    startTime?: number;
-  }
->();
-
-// Função para limpar estados expirados (mais de 5 minutos)
-const cleanupExpiredStates = () => {
-  const now = Date.now();
-  const expiredKeys: string[] = [];
-
-  processingStatesMap.forEach((state, key) => {
-    if (state.startTime && now - state.startTime > 5 * 60 * 1000) {
-      expiredKeys.push(key);
-    }
-  });
-
-  expiredKeys.forEach((key) => {
-    processingStatesMap.delete(key);
-    console.log("[CHAT] Cleaned up expired processing state:", key);
-  });
-};
-
-// Armazenar o ID do intervalo para poder limpá-lo
-let cleanupIntervalId: NodeJS.Timeout | null = null;
-
-// Iniciar limpeza apenas se não estiver já rodando
-if (!cleanupIntervalId) {
-  cleanupIntervalId = setInterval(cleanupExpiredStates, 60000);
-}
-
-// Função global de debug (apenas em desenvolvimento)
-if (process.env.NODE_ENV !== "production") {
-  (window as any).debugProcessingStates = () => {
-    console.log("=== Processing States Map ===");
-    processingStatesMap.forEach((state, conversationId) => {
-      console.log(`Conversation ${conversationId}:`, {
-        isProcessing: state.isProcessing,
-        aiResponse: state.aiResponse?.substring(0, 50),
-        isReceivingResponse: state.isReceivingResponse,
-        startTime: new Date(state.startTime || 0).toLocaleTimeString(),
-        elapsedMs: Date.now() - (state.startTime || 0),
-      });
-    });
-    console.log(
-      `Total conversations with saved state: ${processingStatesMap.size}`
-    );
-  };
-
-  console.log(
-    "[CHAT] Debug function available: window.debugProcessingStates()"
-  );
-}
+// NOTA: A persistência do estado de processamento foi removida em favor de
+// bloquear a mudança de conversa durante o processamento. Isso garante que
+// o usuário não perca o processamento ao trocar de conversa acidentalmente.
 
 /**
  * Refactored Conversational Chat Component
@@ -149,111 +93,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     const currentId = currentConversation?.id;
     const previousId = previousConversationId.current;
 
-    // Salvar estado da conversa anterior se ainda estiver processando ou recebendo resposta
-    if (previousId && previousId !== currentId) {
-      // Salvar se estiver processando OU se tiver uma resposta pendente
-      const shouldSaveState =
-        chatState.isProcessing ||
-        isReceivingResponse.current ||
-        (aiResponseText &&
-          aiResponseText !== "" &&
-          aiResponseText !== "Processing..." &&
-          aiResponseText !== "Processando...");
-
-      if (shouldSaveState) {
-        processingStatesMap.set(previousId, {
-          isProcessing: chatState.isProcessing || isReceivingResponse.current,
-          aiResponse: aiResponseText,
-          lastProcessedResponse: lastProcessedResponse.current,
-          isReceivingResponse: isReceivingResponse.current,
-          startTime: Date.now(),
-        });
-        console.log(
-          "[CHAT] Saved processing state for conversation:",
-          previousId,
-          {
-            aiResponse: aiResponseText?.substring(0, 50),
-            isProcessing: chatState.isProcessing,
-            isReceivingResponse: isReceivingResponse.current,
-          }
-        );
-      }
-    }
-
     if (currentConversation && currentId) {
       // Clear any input state when switching conversations
       chatState.setInputMessage("");
       chatState.setCurrentContext("");
       chatState.setShowContextField(false);
-
-      // Restaurar estado de processamento se existir
-      const savedState = processingStatesMap.get(currentId);
-      console.log("[CHAT] Checking saved state for conversation:", currentId, {
-        hasSavedState: !!savedState,
-        savedState: savedState
-          ? {
-              isProcessing: savedState.isProcessing,
-              aiResponse: savedState.aiResponse?.substring(0, 50),
-              startTime: savedState.startTime,
-            }
-          : null,
-      });
-
-      if (savedState) {
-        // Verificar se não passou muito tempo (5 minutos)
-        const elapsedTime = Date.now() - (savedState.startTime || 0);
-        if (elapsedTime < 5 * 60 * 1000 && savedState.isProcessing) {
-          // 5 minutos
-          chatState.setIsProcessing(true);
-          isReceivingResponse.current = savedState.isReceivingResponse || true;
-          lastProcessedResponse.current =
-            savedState.lastProcessedResponse || "";
-
-          // Restaurar a resposta da IA se existir
-          if (savedState.aiResponse) {
-            // Sempre restaurar a resposta salva
-            onAiResponseChange(savedState.aiResponse);
-            console.log(
-              "[CHAT] Restored AI response:",
-              savedState.aiResponse?.substring(0, 50)
-            );
-          }
-
-          console.log(
-            "[CHAT] Restored processing state for conversation:",
-            currentId,
-            {
-              aiResponse: savedState.aiResponse?.substring(0, 50),
-              elapsed: elapsedTime,
-              isProcessing: savedState.isProcessing,
-              isReceivingResponse: savedState.isReceivingResponse,
-            }
-          );
-        } else {
-          // Se passou muito tempo ou não está processando, limpar o estado
-          processingStatesMap.delete(currentId);
-          chatState.setIsProcessing(false);
-
-          if (elapsedTime >= 5 * 60 * 1000) {
-            console.log(
-              "[CHAT] Processing state expired for conversation:",
-              currentId,
-              { elapsed: elapsedTime }
-            );
-          }
-        }
-      } else {
-        chatState.setIsProcessing(false);
-
-        // Clear any pending AI responses ONLY if not processing
-        if (
-          aiResponseText &&
-          (aiResponseText === "Processing..." ||
-            aiResponseText === "Processando...")
-        ) {
-          onClearAiResponse();
-        }
-      }
 
       // Clear any ongoing processing timeouts
       if (chatState.processingTimeoutRef.current) {
@@ -261,11 +105,18 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         chatState.processingTimeoutRef.current = null;
       }
 
-      // Reset response tracking only if not restoring
-      if (!savedState?.isProcessing) {
-        isReceivingResponse.current = false;
-        lastProcessedResponse.current = "";
+      // Clear any pending AI responses
+      if (
+        aiResponseText &&
+        (aiResponseText === "Processing..." ||
+          aiResponseText === "Processando...")
+      ) {
+        onClearAiResponse();
       }
+
+      // Reset response tracking
+      isReceivingResponse.current = false;
+      lastProcessedResponse.current = "";
 
       console.log("[CHAT] Conversation changed, state adjusted");
     }
@@ -337,33 +188,8 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           lifespan: Date.now() - mountTime.current,
         });
 
-        // Salvar estado antes de desmontar se ainda estiver processando ou tiver resposta pendente
-        const shouldSaveOnUnmount =
-          chatState.isProcessing ||
-          isReceivingResponse.current ||
-          (aiResponseText &&
-            aiResponseText !== "" &&
-            aiResponseText !== "Processing..." &&
-            aiResponseText !== "Processando...");
-
-        if (currentConversation?.id && shouldSaveOnUnmount) {
-          processingStatesMap.set(currentConversation.id, {
-            isProcessing: chatState.isProcessing || isReceivingResponse.current,
-            aiResponse: aiResponseText,
-            lastProcessedResponse: lastProcessedResponse.current,
-            isReceivingResponse: isReceivingResponse.current,
-            startTime: Date.now(),
-          });
-          console.log(
-            "[CHAT] Saved processing state on unmount:",
-            currentConversation.id,
-            {
-              aiResponse: aiResponseText?.substring(0, 50),
-              isProcessing: chatState.isProcessing,
-              isReceivingResponse: isReceivingResponse.current,
-            }
-          );
-        }
+        // Agora que bloqueamos a mudança de conversa durante o processamento,
+        // não é mais necessário salvar o estado ao desmontar
       };
     }
   }, []); // chatState, aiResponseText, and currentConversation omitted intentionally - we want this to run only on mount
@@ -373,33 +199,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   const lastProcessedResponse = useRef<string>("");
   const responseDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Atualizar o estado salvo quando aiResponseText mudar durante processamento
-  useEffect(() => {
-    if (
-      currentConversation?.id &&
-      aiResponseText &&
-      (chatState.isProcessing || isReceivingResponse.current)
-    ) {
-      const existingState = processingStatesMap.get(currentConversation.id);
-
-      // Criar ou atualizar o estado
-      processingStatesMap.set(currentConversation.id, {
-        isProcessing: chatState.isProcessing || isReceivingResponse.current,
-        aiResponse: aiResponseText,
-        lastProcessedResponse:
-          existingState?.lastProcessedResponse || lastProcessedResponse.current,
-        isReceivingResponse: isReceivingResponse.current,
-        startTime: existingState?.startTime || Date.now(),
-      });
-
-      console.log("[CHAT] Updated processing state in map:", {
-        conversationId: currentConversation.id,
-        aiResponse: aiResponseText?.substring(0, 50),
-        isProcessing: chatState.isProcessing,
-        isReceivingResponse: isReceivingResponse.current,
-      });
-    }
-  }, [aiResponseText, chatState.isProcessing, currentConversation?.id]);
+  // Não é mais necessário atualizar estado salvo pois bloqueamos mudança de conversa durante processamento
 
   // Handle AI response processing with debounce and better state management
   useEffect(() => {
@@ -471,14 +271,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         chatState.setIsProcessing(false);
         isReceivingResponse.current = false;
 
-        // Limpar do Map global quando terminar o processamento
-        if (currentConversation?.id) {
-          processingStatesMap.delete(currentConversation.id);
-          console.log(
-            "[CHAT] Cleared processing state for conversation:",
-            currentConversation.id
-          );
-        }
+        // Não é mais necessário limpar do Map pois não estamos mais salvando estados
 
         if (chatState.processingTimeoutRef.current) {
           clearTimeout(chatState.processingTimeoutRef.current);
@@ -666,14 +459,6 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         onAddTestMessage={debugFunctions.addTestMessage}
         onResetState={debugFunctions.resetChatState}
         onClearMessages={clearMessages}
-        pendingAiResponse={
-          chatState.isProcessing &&
-          aiResponseText &&
-          aiResponseText !== "Processing..." &&
-          aiResponseText !== "Processando..."
-            ? aiResponseText
-            : undefined
-        }
       />
 
       {/* Chat Input Area */}

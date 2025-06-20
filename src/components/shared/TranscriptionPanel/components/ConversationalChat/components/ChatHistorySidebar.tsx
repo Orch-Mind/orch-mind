@@ -111,10 +111,25 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
               key={conv.id}
               className={`conversation-item ${
                 conv.id === currentConversationId ? "active" : ""
+              } ${
+                isProcessing && conv.id !== currentConversationId
+                  ? "disabled"
+                  : ""
               }`}
-              onClick={() => onSelectConversation(conv.id)}
+              onClick={() => {
+                if (isProcessing && conv.id !== currentConversationId) {
+                  // Não permitir mudança de conversa durante processamento
+                  return;
+                }
+                onSelectConversation(conv.id);
+              }}
               onMouseEnter={() => setHoveredId(conv.id)}
               onMouseLeave={() => setHoveredId(null)}
+              title={
+                isProcessing && conv.id !== currentConversationId
+                  ? "Aguarde o processamento terminar"
+                  : undefined
+              }
             >
               <div className="conversation-content">
                 <h3 className="conversation-title">{conv.title}</h3>
