@@ -214,7 +214,7 @@
   padding: 0 20px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
+  overflow: hidden; /* Essential to clip content to border-radius */
   min-height: 52px;
   box-shadow: 
     0 4px 24px rgba(0, 0, 0, 0.2),
@@ -253,18 +253,24 @@
   background: rgba(0, 0, 0, 0.4);
 }
 
+
+
 /* Message Input - Clean and modern */
 .message-input {
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
   color: rgba(255, 255, 255, 0.95);
   font-size: 15px;
-  outline: none;
+  outline: none !important;
   padding: 14px 0;
   line-height: 1.6;
   font-family: inherit;
   width: 100%;
   transition: color 0.2s ease;
+  resize: none; /* Remove resize handle */
+  overflow-y: auto; /* Allow vertical scroll when needed */
+  overflow-x: hidden; /* No horizontal scroll */
+  box-shadow: none !important;
 }
 
 .message-input::placeholder {
@@ -274,6 +280,60 @@
 
 .message-input:focus::placeholder {
   color: rgba(255, 255, 255, 0.25);
+}
+
+/* Remove any default browser styling that might create a box */
+.message-input::-webkit-inner-spin-button,
+.message-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Ensure textarea looks seamless */
+.message-input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 0; /* No border radius on the textarea itself */
+  box-shadow: none; /* Remove any default shadows */
+}
+
+/* Remove any focus outlines or borders */
+.message-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* Fix for some browsers that add background on autofill */
+.message-input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.95) !important;
+  background-color: transparent !important;
+}
+
+/* Custom scrollbar for message input */
+.message-input::-webkit-scrollbar {
+  width: 4px;
+}
+
+.message-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-input::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.message-input::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox scrollbar */
+.message-input {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* Disabled state for message input */

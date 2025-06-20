@@ -70,6 +70,9 @@ export const MessageInput: React.FC<ChatInputProps> = ({
           maxHeight: "120px",
           resize: "none",
           overflow: "auto",
+          background: "transparent",
+          border: "none",
+          outline: "none",
         }}
       />
     </div>
