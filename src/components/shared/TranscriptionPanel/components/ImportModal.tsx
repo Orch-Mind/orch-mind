@@ -28,32 +28,61 @@ const ImportModal: React.FC<ImportModalProps> = ({
   const userName = getOption(STORAGE_KEYS.USER_NAME) || "User";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-gray-900/90 rounded-2xl shadow-2xl p-8 w-full max-w-md relative backdrop-blur-lg ring-2 ring-cyan-400/10">
-        <button
-          className="orchos-btn-circle absolute top-2 right-2"
-          onClick={handleCloseImportModal}
-          title="Fechar"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            fill="currentColor"
-            viewBox="0 0 16 16"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+      <div 
+        className="rounded-2xl p-6 w-full max-w-md relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
+          backdropFilter: "blur(40px) saturate(1.5) brightness(1.05)",
+          WebkitBackdropFilter: "blur(40px) saturate(1.5) brightness(1.05)",
+          border: "1px solid rgba(0, 250, 255, 0.15)",
+          boxShadow: `
+            0 25px 50px -12px rgba(0, 0, 0, 0.1), 
+            0 0 100px rgba(0, 250, 255, 0.05), 
+            inset 0 0 60px rgba(255, 255, 255, 0.01),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2)
+          `,
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2
+            className="text-2xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]"
+            style={{ fontFamily: "Orbitron, Inter, sans-serif" }}
           >
-            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
-          </svg>
-        </button>
-        <h2
-          className="text-2xl font-bold mb-6 text-center tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]"
-          style={{ fontFamily: "Orbitron, Inter, sans-serif" }}
-        >
-          Import Neural Data
-        </h2>
+            Import Neural Data
+          </h2>
+          <button
+            onClick={handleCloseImportModal}
+            className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-full p-1"
+            aria-label="Close modal"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
 
         {/* User info display */}
-        <div className="mb-4 p-3 bg-black/30 rounded-xl ring-1 ring-cyan-400/10">
+        <div 
+          className="mb-4 p-3 rounded-xl"
+          style={{
+            background: "rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(0, 250, 255, 0.1)"
+          }}
+        >
           <p className="text-cyan-200/80 text-sm flex items-center gap-2">
             <svg
               width="16"
@@ -74,6 +103,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
           </p>
         </div>
 
+        {/* File selection */}
         <label className="block mb-6">
           <span className="block text-cyan-200/80 mb-2 font-medium">
             Select file
@@ -90,7 +120,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
             />
             <label
               htmlFor="orchos-upload-neural"
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500 via-blue-700 to-purple-600 text-white font-semibold shadow-lg cursor-pointer hover:scale-105 transition-all duration-150"
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 via-blue-700/20 to-purple-600/20 text-white font-semibold shadow-lg cursor-pointer hover:scale-105 transition-all duration-150 border border-cyan-400/30 hover:border-cyan-400/60"
             >
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                 <circle
@@ -112,12 +142,14 @@ const ImportModal: React.FC<ImportModalProps> = ({
             </label>
           </div>
         </label>
+
+        {/* Import mode selection */}
         <div className="mb-6">
           <span className="block text-cyan-200/80 mb-2 font-medium">
             Import mode
           </span>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer group">
               <input
                 type="radio"
                 value="increment"
@@ -125,12 +157,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 onChange={(e) =>
                   setImportMode(e.target.value as "increment" | "overwrite")
                 }
-                className="w-4 h-4 text-cyan-400 bg-gray-800 border-gray-600 focus:ring-cyan-400"
+                className="w-4 h-4 text-cyan-400 bg-gray-800/50 border-gray-600 focus:ring-cyan-400"
                 disabled={isImporting}
               />
-              <span className="text-white">Increment</span>
+              <span className="text-white group-hover:text-cyan-300 transition-colors">Increment</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer group">
               <input
                 type="radio"
                 value="overwrite"
@@ -138,16 +170,18 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 onChange={(e) =>
                   setImportMode(e.target.value as "increment" | "overwrite")
                 }
-                className="w-4 h-4 text-cyan-400 bg-gray-800 border-gray-600 focus:ring-cyan-400"
+                className="w-4 h-4 text-cyan-400 bg-gray-800/50 border-gray-600 focus:ring-cyan-400"
                 disabled={isImporting}
               />
-              <span className="text-white">Overwrite</span>
+              <span className="text-white group-hover:text-cyan-300 transition-colors">Overwrite</span>
             </label>
           </div>
         </div>
+
+        {/* Start Import button */}
         <button
           type="button"
-          className="flex items-center gap-2 justify-center w-full py-3 mt-2 rounded-full font-bold text-lg bg-gradient-to-r from-cyan-400 via-blue-700 to-purple-600 shadow-[0_0_18px_2px_rgba(0,240,255,0.18)] hover:shadow-cyan-400/70 hover:scale-105 transition-all duration-200 ring-2 ring-cyan-400/20 backdrop-blur text-white focus:outline-none focus:ring-4 focus:ring-cyan-400/60 disabled:opacity-60 disabled:cursor-not-allowed mb-4"
+          className="flex items-center gap-2 justify-center w-full py-3 rounded-full font-bold text-lg bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 text-white focus:outline-none focus:ring-4 focus:ring-cyan-400/60 disabled:opacity-60 disabled:cursor-not-allowed mb-4"
           onClick={() => {
             handleStartImport();
           }}
@@ -171,15 +205,24 @@ const ImportModal: React.FC<ImportModalProps> = ({
           </svg>
           {isImporting ? "Importing..." : "Start Import"}
         </button>
+
+        {/* Progress bar */}
         {isImporting && (
           <div className="w-full flex flex-col items-center mb-6">
-            <div className="relative w-full h-9 rounded-full bg-gradient-to-r from-cyan-900/40 via-blue-900/30 to-purple-900/40 shadow-inner overflow-hidden mt-2 mb-3 ring-1 ring-cyan-400/10">
+            <div 
+              className="relative w-full h-9 rounded-full shadow-inner overflow-hidden mt-2 mb-3"
+              style={{
+                background: "linear-gradient(to right, rgba(0, 245, 255, 0.1), rgba(139, 0, 255, 0.1))",
+                border: "1px solid rgba(0, 250, 255, 0.1)"
+              }}
+            >
               <div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-400 via-blue-700 to-purple-600 shadow-[0_0_18px_2px_rgba(0,240,255,0.18)] transition-all duration-300 ease-out"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-400 via-blue-700 to-purple-600 transition-all duration-300 ease-out"
                 style={{
                   width: `${importProgress}%`, // This is ALWAYS the overall/global progress (0-100%)
                   minWidth: importProgress > 0 ? "2.5rem" : 0,
                   borderRadius: "9999px",
+                  boxShadow: "0 0 18px 2px rgba(0, 240, 255, 0.18)"
                 }}
               >
                 {/* Animated pulse effect on the progress bar */}
@@ -202,6 +245,8 @@ const ImportModal: React.FC<ImportModalProps> = ({
             </div>
           </div>
         )}
+
+        {/* Status display when not importing */}
         {!isImporting && importStage && (
           <div className="mb-2 flex items-center justify-center text-base">
             <span className="mr-2 text-white/70 font-medium">Status:</span>
@@ -210,9 +255,15 @@ const ImportModal: React.FC<ImportModalProps> = ({
             </span>
           </div>
         )}
+
+        {/* Import summary */}
         {importSummary && (
           <div
-            className="text-green-400 text-sm mt-2"
+            className={`text-sm mt-2 p-3 rounded-lg ${
+              importSummary.includes("Error") 
+                ? "text-red-400 bg-red-900/20 border border-red-500/30" 
+                : "text-green-400 bg-green-900/20 border border-green-500/30"
+            }`}
             data-testid="import-summary"
           >
             {importSummary}
