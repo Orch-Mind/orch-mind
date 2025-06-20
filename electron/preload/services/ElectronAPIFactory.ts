@@ -605,15 +605,45 @@ export class ElectronAPIFactory {
                 data: any
               ) => {
                 try {
+                  // Ensure we have valid progress data
+                  if (!data || typeof data !== "object") {
+                    this.logger.warn("Invalid progress data received:", data);
+                    return;
+                  }
+
+                  // Use the percentage from backend if available, otherwise calculate
                   const percent =
-                    data.percentage ??
-                    Math.floor(
-                      (data.processed / Math.max(1, data.total)) * 100
-                    );
+                    data.percentage !== undefined && data.percentage !== null
+                      ? Math.round(data.percentage)
+                      : Math.round(
+                          (data.processed / Math.max(1, data.total)) * 100
+                        );
+
+                  // Update document title with progress
                   document.title = `Import: ${percent}%`;
-                  onProgress(data);
+
+                  // Call the progress callback with normalized data
+                  const progressData = {
+                    processed: data.processed || 0,
+                    total: data.total || 0,
+                    percentage: percent,
+                    stage: data.stage || undefined,
+                  };
+
+                  onProgress(progressData);
+
+                  // Dispatch custom event for other parts of the app
                   document.dispatchEvent(
-                    new CustomEvent("import-progress-event", { detail: data })
+                    new CustomEvent("import-progress-event", {
+                      detail: progressData,
+                    })
+                  );
+
+                  // Log progress for debugging
+                  this.logger.debug(
+                    `Import progress: ${percent}% (${progressData.processed}/${
+                      progressData.total
+                    }) - Stage: ${progressData.stage || "N/A"}`
                   );
                 } catch (error) {
                   this.logger.error("Error processing progress event", error);
@@ -628,9 +658,14 @@ export class ElectronAPIFactory {
                   { fileBuffer, mode, user, applicationMode }
                 );
                 ipcRenderer.removeListener("import-progress", progressListener);
+
+                // Reset document title
+                document.title = "Orch-OS";
+
                 return result;
               } catch (error) {
                 ipcRenderer.removeListener("import-progress", progressListener);
+                document.title = "Orch-OS";
                 throw error;
               }
             } else {

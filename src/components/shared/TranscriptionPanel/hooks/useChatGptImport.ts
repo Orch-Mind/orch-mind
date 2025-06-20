@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState } from 'react';
-import { ModeService } from '../../../../services/ModeService';
-import { ToastVariant } from '../../../ui/toast';
-import { ImportMode } from '../types/interfaces';
+import { useState } from "react";
+import { ModeService } from "../../../../services/ModeService";
+import { getOption, STORAGE_KEYS } from "../../../../services/StorageService";
+import { ToastVariant } from "../../../ui/toast";
+import { ImportMode } from "../types/interfaces";
 
 // Custom hook following Single Responsibility and Open/Closed principles
 export const useChatGptImport = (
   showToast: (title: string, description: string, variant: ToastVariant) => void
 ) => {
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importUserName, setImportUserName] = useState<string>("");
-  const [importMode, setImportMode] = useState<ImportMode>('increment');
+  const [importMode, setImportMode] = useState<ImportMode>("increment");
   const [importProgress, setImportProgress] = useState<number>(0);
   const [importStage, setImportStage] = useState<string>("");
   const [importSummary, setImportSummary] = useState<string>("");
@@ -28,88 +28,157 @@ export const useChatGptImport = (
   };
 
   // Handler for starting the import process
-  const handleStartImport = async (userName: string) => {
-    console.log('[useChatGptImport] handleStartImport chamado. importMode:', importMode, '| importUserName:', userName, '| importFile:', !!importFile);
+  const handleStartImport = async () => {
+    // Get userName from storage settings
+    // This uses the same userName configured in General Settings (Settings modal)
+    // The user can update their name in Settings → General → User Name
+    const userName = getOption(STORAGE_KEYS.USER_NAME) || "User";
+
+    console.log(
+      "[useChatGptImport] handleStartImport called. importMode:",
+      importMode,
+      "| userName from settings:",
+      userName,
+      "| importFile:",
+      !!importFile
+    );
 
     if (!importFile) return;
-    
+
     setIsImporting(true);
     setImportProgress(0);
-    setImportStage(""); // Clear stage on new import
+    setImportStage("Preparing..."); // Initial stage
     setImportSummary("");
-    
+
     try {
       // Read file as buffer
       const fileBuffer = await importFile.arrayBuffer();
-      
-      type ProgressData = { processed: number; total: number; percentage?: number; stage?: string };
 
-      // Vamos usar a solução original com uma pequena modificação
-      // para evitar pulos bruscos
-      
-      // Armazenar o último percentual para evitar regressão
-      let lastPercent = 0;
-      
+      type ProgressData = {
+        processed: number;
+        total: number;
+        percentage?: number;
+        stage?: string;
+      };
+
+      // Track the last valid progress to ensure smooth progression
+      let lastValidProgress = 0;
+      let stageStartTime = Date.now();
+
       // Get current application mode to pass to import process
       const applicationMode = ModeService.getMode();
-      console.log('[useChatGptImport] Using applicationMode:', applicationMode);
-      
+      console.log("[useChatGptImport] Using applicationMode:", applicationMode);
+
       const result = await window.electronAPI.importChatHistory({
         fileBuffer,
         mode: importMode,
         user: userName,
         applicationMode,
         onProgress: (data: ProgressData) => {
-          // Usar o percentual enviado ou calcular
-          let percent = data.percentage !== undefined 
-            ? data.percentage 
-            : Math.round((data.processed / Math.max(1, data.total)) * 100);
-          
-          // Garantir que o progresso nunca regride
-          if (percent < lastPercent && lastPercent < 95) {
-            percent = lastPercent;
-          } else {
-            lastPercent = percent;
+          // Use the percentage directly from backend (now with weighted stages)
+          const currentProgress = data.percentage ?? 0;
+
+          // Ensure progress never goes backwards
+          const finalProgress = Math.max(
+            lastValidProgress,
+            Math.min(currentProgress, 100)
+          );
+          lastValidProgress = finalProgress;
+
+          // Update progress state
+          setImportProgress(finalProgress);
+
+          // Update stage with user-friendly text
+          if (data.stage) {
+            const stageText = getStageText(data.stage);
+            setImportStage(stageText);
+
+            // Log stage transitions for debugging
+            const elapsed = Date.now() - stageStartTime;
+            console.log(
+              `[RENDERER] Stage transition: ${data.stage} (${stageText}) after ${elapsed}ms`
+            );
+            stageStartTime = Date.now();
           }
-          
-          // Atualizar o estado
-          setImportProgress(percent);
-          if (data.stage) setImportStage(data.stage);
-          
-          // Atualizar o título e log
-          document.title = `Importing... ${percent}%`;
-          console.log(`[RENDERER] Progress: ${percent}% (${data.processed}/${data.total}) | Stage: ${data.stage || ''}`);
+
+          // Update window title
+          document.title = `Importing... ${finalProgress}%`;
+
+          // Detailed logging for debugging
+          console.log(
+            `[RENDERER] Progress: ${finalProgress}% | Stage: ${
+              data.stage || "unknown"
+            } | Raw: ${data.processed}/${data.total}`
+          );
         },
       });
-      
-      // Ensure progress bar is visible for at least a minimum duration
-      const minDisplay = process.env.NODE_ENV === 'test' ? 1000 : 200;
-      await new Promise(res => setTimeout(res, minDisplay));
-      
-      setIsImporting(false);
+
+      // Ensure progress reaches 100% on completion
       setImportProgress(100);
-      
+      setImportStage("Complete");
+
+      // Reset window title
+      document.title = "Orch-OS";
+
+      // Small delay before hiding progress to show completion
+      await new Promise((res) => setTimeout(res, 500));
+
+      setIsImporting(false);
+
       // Update summary based on result
       if (result?.imported !== undefined && result?.skipped !== undefined) {
-        setImportSummary(`Import complete! Imported: ${result.imported}, Skipped: ${result.skipped}`);
-        showToast("Import complete", `Imported: ${result.imported}, Ignored: ${result.skipped}`, "success");
+        setImportSummary(
+          `Import complete! Imported: ${result.imported}, Skipped: ${result.skipped}`
+        );
+        showToast(
+          "Import complete",
+          `Imported: ${result.imported}, Ignored: ${result.skipped}`,
+          "success"
+        );
       } else if (result?.success) {
-        setImportSummary('Import complete!');
-        showToast("Import complete", "Process completed successfully", "success");
+        setImportSummary("Import complete!");
+        showToast(
+          "Import complete",
+          "Process completed successfully",
+          "success"
+        );
       } else {
         setImportSummary(`Error: ${result?.error || "Unknown failure"}`);
         showToast("Error", result?.error || "Unknown failure", "error");
       }
     } catch (err: unknown) {
       setIsImporting(false);
+      setImportProgress(0);
+      setImportStage("");
+
       let errorMsg = "Import failed";
       if (err instanceof Error) {
         errorMsg = err.message;
       } else if (typeof err === "string") {
         errorMsg = err;
       }
+
       setImportSummary(`Error: ${errorMsg}`);
       showToast("Error", errorMsg, "error");
+
+      // Reset window title on error
+      document.title = "Orch-OS";
+    }
+  };
+
+  // Helper function to get user-friendly stage text
+  const getStageText = (stage: string): string => {
+    switch (stage) {
+      case "parsing":
+        return "Reading messages";
+      case "deduplicating":
+        return "Checking duplicates";
+      case "generating_embeddings":
+        return "Generating embeddings";
+      case "saving":
+        return "Saving to database";
+      default:
+        return stage || "Processing...";
     }
   };
 
@@ -118,6 +187,7 @@ export const useChatGptImport = (
     setShowImportModal(false);
     setImportFile(null);
     setImportProgress(0);
+    setImportStage("");
     setImportSummary("");
     setIsImporting(false);
   };
@@ -126,8 +196,6 @@ export const useChatGptImport = (
     // State
     importFile,
     setImportFile,
-    importUserName,
-    setImportUserName,
     importMode,
     setImportMode,
     importProgress,
@@ -136,10 +204,10 @@ export const useChatGptImport = (
     isImporting,
     showImportModal,
     setShowImportModal,
-    
+
     // Methods
     handleFileChange,
     handleStartImport,
-    handleCloseImportModal
+    handleCloseImportModal,
   };
 };

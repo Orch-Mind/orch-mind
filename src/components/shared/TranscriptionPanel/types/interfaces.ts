@@ -79,8 +79,6 @@ export interface ImportModalProps {
   onClose: () => void;
   importFile: File | null;
   setImportFile: React.Dispatch<React.SetStateAction<File | null>>;
-  importUserName: string;
-  setImportUserName: React.Dispatch<React.SetStateAction<string>>;
   importMode: ImportMode;
   setImportMode: React.Dispatch<React.SetStateAction<ImportMode>>;
   importProgress: number;
@@ -88,7 +86,7 @@ export interface ImportModalProps {
   importSummary: string;
   isImporting: boolean;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleStartImport: (userName: string) => Promise<void>;
+  handleStartImport: () => Promise<void>;
   handleCloseImportModal: () => void;
 }
 

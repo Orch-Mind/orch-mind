@@ -70,6 +70,9 @@ export class VectorStorageService {
     const storageType = "DuckDB"; // Always use DuckDB
     this.logger.info(`Saving ${vectors.length} vectors to ${storageType}`);
 
+    // Start the saving progress stage
+    this.progressReporter.startStage("saving", vectors.length);
+
     try {
       // Divide vectors into batches for better visual feedback and performance
       const BATCH_SIZE = 500; // Ideal batch size for both services
@@ -133,6 +136,9 @@ export class VectorStorageService {
         }
       }
 
+      // Complete the saving stage
+      this.progressReporter.completeStage("saving", vectors.length);
+
       // Result final
       if (success) {
         this.logger.success(
@@ -144,6 +150,9 @@ export class VectorStorageService {
 
       return { success, error: error || undefined };
     } catch (error) {
+      // Complete the stage even on error
+      this.progressReporter.completeStage("saving", vectors.length);
+
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       this.logger.error(`Error saving vectors to ${storageType}:`, error);
       return { success: false, error: errorMsg };

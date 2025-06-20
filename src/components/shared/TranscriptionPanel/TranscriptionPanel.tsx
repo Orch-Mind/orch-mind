@@ -159,8 +159,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   const {
     importFile,
     setImportFile,
-    importUserName,
-    setImportUserName,
     importMode,
     setImportMode,
     importProgress,
@@ -482,8 +480,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           onClose={handleCloseImportModal}
           importFile={importFile}
           setImportFile={setImportFile}
-          importUserName={importUserName}
-          setImportUserName={setImportUserName}
           importMode={importMode}
           setImportMode={setImportMode}
           importProgress={importProgress}

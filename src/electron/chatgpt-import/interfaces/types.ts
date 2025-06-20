@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { IOpenAIService } from "../../../components/context/deepgram/interfaces/openai/IOpenAIService";
+import { ProgressStage } from '../utils/progressReporter';
 
 // ChatGPT data interfaces for artificial brain memory import
 export interface ChatGPTMessageContent {
@@ -67,7 +68,7 @@ export interface ProgressInfo {
   processed: number;
   total: number;
   percentage: number;
-  stage: "parsing" | "deduplicating" | "generating_embeddings" | "saving";
+  stage: ProgressStage;
 }
 
 // Interface for import parameters (using DuckDB helper with legacy name for compatibility)
