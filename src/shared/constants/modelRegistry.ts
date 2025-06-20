@@ -8,7 +8,7 @@ export enum ModelSource {
 }
 
 export interface LocalModelMeta {
-  /** API model name (e.g., "llama3.2", "mistral") */
+  /** API model name (e.g., "llama3.2", "qwen3") */
   id: string;
   /** UI display name */
   label: string;

@@ -6,6 +6,7 @@
 import { dialog, ipcMain } from "electron";
 import type { ProgressInfo } from "../src/electron/chatgpt-import";
 import { importChatGPTHistoryHandler } from "../src/electron/chatgpt-import";
+import { DuckDBHelper } from "./DuckDBHelper";
 import { IIpcHandlerDeps } from "./main";
 import { OllamaClient } from "./services/OllamaClient";
 import VllmManager from "./VllmManager";
@@ -596,13 +597,57 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         throw new Error(`Model ${modelId} not found in available models`);
       }
 
+      // Create a temporary OllamaClient with progress callback
+      const downloadClient = new OllamaClient(
+        require("path").join(require("os").homedir(), ".ollama"),
+        (status: any) => {
+          // Send progress to renderer in the expected format
+          if (status.progress !== undefined) {
+            // Extract speed and ETA from formatted message
+            let speed = "0 MB/s";
+            let eta = "Calculating...";
+
+            // Extract from formatted message like "Downloading: 123MB / 456MB (2.5 MB/s, ETA: 3 min)"
+            if (status.message) {
+              // Extract speed (e.g., "2.5 MB/s")
+              const speedMatch = status.message.match(/\(([0-9.]+\s*MB\/s)/i);
+              if (speedMatch) {
+                speed = speedMatch[1];
+              }
+
+              // Extract ETA (e.g., "ETA: 3 min")
+              const etaMatch = status.message.match(/ETA:\s*([^)]+)/i);
+              if (etaMatch) {
+                eta = etaMatch[1].trim();
+              }
+            }
+
+            // Send formatted progress to renderer
+            event.sender.send("ollama-download-progress", {
+              progress: status.progress || 0,
+              speed: speed,
+              eta: eta,
+            });
+          }
+        }
+      );
+
       // Download the model
-      await ollamaClient.downloadOllamaModel(modelMeta);
+      await downloadClient.downloadOllamaModel(modelMeta);
 
       console.log(`🦙 [IPC] Successfully downloaded model: ${modelId}`);
       return true;
     } catch (error) {
       console.error(`🦙 [IPC] Error downloading model ${modelId}:`, error);
+
+      // Send error to renderer
+      event.sender.send("ollama-download-progress", {
+        modelId,
+        progress: 0,
+        message: error instanceof Error ? error.message : "Download failed",
+        state: "error",
+      });
+
       return false;
     }
   });
@@ -800,9 +845,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         await deps.duckDBHelper.close();
       }
 
-      // Import DuckDBHelper statically to avoid dynamic/static import conflict
-      // Note: This requires DuckDBHelper to be available in the main process context
-      const { DuckDBHelper } = require("./DuckDBHelper");
+      // Create new instance with the new path
       deps.duckDBHelper = new DuckDBHelper(newPath);
 
       // Initialize the new instance - null check for safety

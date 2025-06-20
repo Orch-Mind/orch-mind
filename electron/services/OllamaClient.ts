@@ -137,20 +137,6 @@ export class OllamaClient {
         family: "qwen",
       },
       {
-        id: "mistral",
-        label: "🔥 Mistral Latest (Tools Support)",
-        repo: "mistral:latest",
-        sizeGB: 4,
-        family: "mistral",
-      },
-      {
-        id: "mistral-nemo",
-        label: "⚡ Mistral Nemo (Optimized Tools)",
-        repo: "mistral-nemo:latest",
-        sizeGB: 5,
-        family: "mistral",
-      },
-      {
         id: "llama3.2",
         label: "🦙 Llama 3.2 Latest (Tools Support)",
         repo: "llama3.2:latest",
@@ -214,22 +200,6 @@ export class OllamaClient {
         isInstalled: false,
       },
       {
-        id: "mistral",
-        label: "Mistral Latest (✅ Tools Support)",
-        repo: "mistral:latest",
-        sizeGB: 4,
-        family: "mistral",
-        isInstalled: false,
-      },
-      {
-        id: "mistral-nemo",
-        label: "Mistral Nemo (✅ Optimized Tools)",
-        repo: "mistral-nemo:latest",
-        sizeGB: 5,
-        family: "mistral",
-        isInstalled: false,
-      },
-      {
         id: "llama3.2",
         label: "Llama 3.2 Latest (✅ Tools Support)",
         repo: "llama3.2:latest",
@@ -277,7 +247,7 @@ export class OllamaClient {
       if (!workingModel) {
         throw new Error(
           `Model '${modelName}' not found in Ollama registry. ` +
-            `Try one of these working models instead: llama3.2, phi3, mistral, tinyllama`
+            `Try one of these working models instead: llama3.2, phi3, tinyllama`
         );
       }
 
@@ -358,11 +328,12 @@ export class OllamaClient {
     meta: LocalModelMeta,
     attempt: number
   ): Promise<void> {
+    // Initial connection message
     this.updateStatus({
       state: "downloading",
       modelId: meta.id,
       progress: 0,
-      message: `🌐 REAL DOWNLOAD: ${modelName}... (attempt ${attempt}) - This will take time!`,
+      message: `🔗 Connecting to Ollama registry...`,
     });
 
     console.log(
@@ -394,6 +365,12 @@ export class OllamaClient {
       let lastProgress = 0;
       let hasError = false;
       let errorMessage = "";
+      let downloadStartTime = Date.now();
+      let lastUpdateTime = Date.now();
+      let lastCompletedBytes = 0;
+      let hasStartedDownloading = false;
+      let manifestReceived = false;
+      let stuckAt99Timer: NodeJS.Timeout | null = null;
 
       return new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -417,9 +394,40 @@ export class OllamaClient {
               // Enhanced status handling
               if (data.status) {
                 let message = data.status;
-                if (data.digest) {
+
+                // Provide user-friendly messages based on status
+                if (data.status.includes("pulling manifest")) {
+                  manifestReceived = true;
+                  message = `📋 Fetching model information...`;
+                  this.updateStatus({
+                    message,
+                    progress: 0,
+                  });
+                } else if (
+                  data.status.includes("downloading") &&
+                  !hasStartedDownloading
+                ) {
+                  hasStartedDownloading = true;
+                  // Show estimated size if available
+                  const sizeGB = meta.sizeGB || 4; // Default to 4GB if size unknown
+                  message = `📦 Starting download (~${sizeGB}GB)...`;
+                  this.updateStatus({
+                    message,
+                    progress: 1, // Show minimal progress to indicate start
+                  });
+                } else if (data.status.includes("verifying")) {
+                  message = `✅ Verifying download integrity...`;
+                } else if (data.status.includes("writing")) {
+                  message = `💾 Saving model to disk...`;
+                } else if (data.status.includes("removing")) {
+                  message = `🧹 Cleaning up temporary files...`;
+                }
+
+                // Still show digest for debugging if present
+                if (data.digest && !message.includes("...")) {
                   message += ` (${data.digest.slice(0, 12)}...)`;
                 }
+
                 this.updateStatus({ message });
 
                 // Handle specific error patterns from Ollama issues
@@ -441,7 +449,7 @@ export class OllamaClient {
                 }
               }
 
-              // Handle progress updates
+              // Handle progress updates with real speed and ETA calculation
               if (data.completed !== undefined && data.total !== undefined) {
                 completedBytes = data.completed;
                 totalBytes = data.total;
@@ -450,9 +458,94 @@ export class OllamaClient {
                   const progress = Math.round(
                     (completedBytes / totalBytes) * 100
                   );
+
                   if (progress !== lastProgress && progress <= 100) {
                     lastProgress = progress;
-                    this.updateStatus({ progress });
+
+                    // Log progress milestones for debugging
+                    if (progress === 99) {
+                      console.log(
+                        `[OllamaClient] ⚠️ Download reached 99% - critical phase`
+                      );
+
+                      // Start watchdog timer for 99% stalls
+                      if (!stuckAt99Timer) {
+                        stuckAt99Timer = setTimeout(() => {
+                          console.log(
+                            `[OllamaClient] Download stuck at 99% for 30s, forcing completion`
+                          );
+                          clearTimeout(timeoutId);
+                          this.updateStatus({
+                            progress: 100,
+                            message: "Download completed (watchdog at 99%)",
+                          });
+                          resolve();
+                        }, 30000); // 30 seconds watchdog
+                      }
+                    }
+
+                    // Calculate real download speed
+                    const currentTime = Date.now();
+                    const timeDelta = (currentTime - lastUpdateTime) / 1000; // seconds
+                    const bytesDelta = completedBytes - lastCompletedBytes;
+
+                    let speed = "0 MB/s";
+                    if (timeDelta > 0 && bytesDelta > 0) {
+                      const bytesPerSecond = bytesDelta / timeDelta;
+                      const mbPerSecond = bytesPerSecond / (1024 * 1024);
+                      speed = `${mbPerSecond.toFixed(1)} MB/s`;
+                    }
+
+                    // Calculate real ETA
+                    let eta = "Calculating...";
+                    const elapsedTime =
+                      (currentTime - downloadStartTime) / 1000; // seconds
+                    if (progress > 0 && elapsedTime > 0) {
+                      const totalTimeEstimate = (elapsedTime / progress) * 100;
+                      const remainingTime = totalTimeEstimate - elapsedTime;
+
+                      if (remainingTime < 60) {
+                        eta = `${Math.ceil(remainingTime)} sec`;
+                      } else if (remainingTime < 3600) {
+                        eta = `${Math.ceil(remainingTime / 60)} min`;
+                      } else {
+                        const hours = Math.floor(remainingTime / 3600);
+                        const minutes = Math.ceil((remainingTime % 3600) / 60);
+                        eta = `${hours}h ${minutes}m`;
+                      }
+                    }
+
+                    // Special handling for 99% to avoid stalls
+                    if (progress >= 99 && progress < 100) {
+                      // Force a more aggressive completion check
+                      if (completedBytes === totalBytes) {
+                        console.log(
+                          `[OllamaClient] Download appears complete at 99%, forcing completion`
+                        );
+                        this.updateStatus({
+                          progress: 100,
+                          message: "Download completed (forced at 99%)",
+                        });
+                        clearTimeout(timeoutId);
+                        resolve();
+                        return;
+                      }
+                    }
+
+                    // Update with real data
+                    this.updateStatus({
+                      progress,
+                      message: `Downloading: ${(
+                        completedBytes /
+                        (1024 * 1024)
+                      ).toFixed(0)}MB / ${(totalBytes / (1024 * 1024)).toFixed(
+                        0
+                      )}MB (${speed}, ETA: ${eta})`,
+                    });
+
+                    // Update tracking variables
+                    lastUpdateTime = currentTime;
+                    lastCompletedBytes = completedBytes;
                   }
                 }
               }
@@ -463,6 +556,9 @@ export class OllamaClient {
                 data.status?.includes("success")
               ) {
                 clearTimeout(timeoutId);
+                if (stuckAt99Timer) {
+                  clearTimeout(stuckAt99Timer);
+                }
                 this.updateStatus({
                   progress: 100,
                   message: "Download completed successfully",
@@ -485,6 +581,9 @@ export class OllamaClient {
           // Check for accumulated errors
           if (hasError && errorMessage) {
             clearTimeout(timeoutId);
+            if (stuckAt99Timer) {
+              clearTimeout(stuckAt99Timer);
+            }
             reject(new Error(`Download failed: ${errorMessage}`));
             return;
           }
@@ -534,35 +633,14 @@ export class OllamaClient {
     }
   }
 
-  /** Estimate model size based on name patterns */
-  private estimateModelSize(modelName: string): number {
-    const name = modelName.toLowerCase();
-
-    // Size estimation based on common model patterns
-    if (name.includes("tinyllama") || name.includes("1b")) return 1;
-    if (name.includes("3b") || name.includes("phi3")) return 2;
-    if (name.includes("7b") || name.includes("mistral")) return 4;
-    if (name.includes("8b") || name.includes("llama3.1")) return 5;
-    if (name.includes("9b") || name.includes("gemma2")) return 6;
-    if (name.includes("13b")) return 8;
-    if (name.includes("30b") || name.includes("34b")) return 20;
-    if (name.includes("70b")) return 40;
-
-    // Default estimation
-    return 4;
-  }
-
   /** Get model family based on name */
   private getModelFamily(modelName: string): string {
     const name = modelName.toLowerCase();
 
     if (name.includes("llama")) return "llama";
-    if (name.includes("mistral")) return "mistral";
     if (name.includes("phi")) return "phi";
     if (name.includes("gemma")) return "gemma";
     if (name.includes("qwen")) return "qwen";
-    if (name.includes("codellama")) return "code";
-    if (name.includes("embed")) return "embedding";
 
     return "general";
   }

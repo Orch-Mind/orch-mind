@@ -94,8 +94,6 @@ export class ModelValidationService {
       // Models that support tools/function calling (filtered by user)
       const recommendedModels = [
         { name: "qwen3:4b", minRam: 3 },
-        { name: "mistral:latest", minRam: 4 },
-        { name: "mistral-nemo:latest", minRam: 6 },
         { name: "llama3.2:latest", minRam: 4 },
       ];
 
@@ -183,11 +181,8 @@ export class ModelValidationService {
     if (name.includes("tinyllama")) return 1;
     if (name.includes("phi3")) return 2;
     if (name.includes("llama3.2")) return 3;
-    if (name.includes("mistral")) return 4;
-    if (name.includes("llama3.1")) return 5;
     if (name.includes("gemma2")) return 6;
     if (name.includes("qwen")) return 5;
-    if (name.includes("codellama")) return 4;
 
     return 4; // Default
   }
@@ -199,11 +194,9 @@ export class ModelValidationService {
     const name = modelName.toLowerCase();
 
     if (name.includes("llama")) return "llama";
-    if (name.includes("mistral")) return "mistral";
     if (name.includes("gemma")) return "gemma";
     if (name.includes("phi")) return "phi";
     if (name.includes("qwen")) return "qwen";
-    if (name.includes("code")) return "code";
 
     return "general";
   }

@@ -203,24 +203,6 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
 
     return (
       <div className="flex flex-col w-full space-y-6">
-        {/* Header explicativo para modo avançado */}
-        <div className="bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-lg p-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-cyan-500/20">
-              <span className="text-cyan-400 text-sm">🦙</span>
-            </div>
-            <div>
-              <h3 className="text-cyan-400 font-medium">
-                Modo Advanced - Configurações Completas
-              </h3>
-              <p className="text-cyan-400/70 text-sm">
-                Ollama, banco de dados e configurações avançadas
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Seção Ollama - Modelos Locais */}
         <OllamaSettings
           ollamaModel={ollamaModel}
           setOllamaModel={(value) => {

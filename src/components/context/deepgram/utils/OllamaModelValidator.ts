@@ -25,18 +25,6 @@ export const OLLAMA_FUNCTION_CALLING_MODELS: OllamaModelInfo[] = [
     description: "Qwen 3 - Excelente suporte multilíngue e tools",
   },
   {
-    name: "mistral",
-    supportsFunctionCalling: true,
-    recommended: true,
-    description: "Mistral - Rápido e eficiente para function calling",
-  },
-  {
-    name: "mistral-nemo",
-    supportsFunctionCalling: true,
-    recommended: true,
-    description: "Mistral Nemo - Versão otimizada para tools",
-  },
-  {
     name: "llama3.2",
     supportsFunctionCalling: true,
     recommended: true,

@@ -346,7 +346,7 @@ export class VllmManager extends EventEmitter {
       ) {
         enhancedMessage =
           `Model '${modelId}' not found in Ollama registry. ` +
-          `Try one of these working models instead: qwen3:4b, mistral:latest, mistral-nemo:latest, llama3.2:latest`;
+          `Try one of these working models instead: qwen3:4b, llama3.2:latest`;
       } else if (
         errorMessage.includes("Cannot connect") ||
         errorMessage.includes("ECONNREFUSED")
@@ -755,20 +755,6 @@ export class VllmManager extends EventEmitter {
         label: "Qwen3 4B",
         size: "1.7GB",
         tags: ["tools", "reasoning"],
-        isRecommended: true,
-      },
-      {
-        name: "mistral:latest",
-        label: "Mistral Latest",
-        size: "4.1GB",
-        tags: ["tools", "chat"],
-        isRecommended: true,
-      },
-      {
-        name: "mistral-nemo:latest",
-        label: "Mistral Nemo",
-        size: "5.5GB",
-        tags: ["tools", "optimized"],
         isRecommended: true,
       },
       {

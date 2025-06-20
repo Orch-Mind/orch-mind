@@ -76,7 +76,7 @@ export class OllamaCompletionService implements ICompletionService {
 
         // Get model with fallback logic
         let selectedModel =
-          getOption(STORAGE_KEYS.OLLAMA_MODEL) || "mistral:7b-instruct";
+          getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:4b";
 
         console.log(`🦙 [OllamaCompletion] Selected model: ${selectedModel}`);
 
@@ -103,12 +103,7 @@ export class OllamaCompletionService implements ICompletionService {
                 )}`
               );
               // Try to use the first available model that matches our filtered list
-              const fallbackModels = [
-                "qwen3:4b",
-                "mistral:latest",
-                "mistral-nemo:latest",
-                "llama3.2:latest",
-              ];
+              const fallbackModels = ["qwen3:4b", "llama3.2:latest"];
               const availableFallback = fallbackModels.find((model) =>
                 availableModels.includes(model)
               );
