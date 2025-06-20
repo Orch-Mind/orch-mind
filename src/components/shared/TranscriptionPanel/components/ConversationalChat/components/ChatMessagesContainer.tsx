@@ -178,15 +178,48 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
   onResetState = () => {},
   onClearMessages = () => {},
 }) => {
+  const scrollAnchorRef = React.useRef<HTMLDivElement>(null);
+
+  // Enhanced scroll to bottom that uses the anchor
+  const enhancedScrollToBottom = React.useCallback(() => {
+    // Try the original method first
+    onScrollToBottom();
+
+    // Then try scrolling to the anchor element
+    setTimeout(() => {
+      if (scrollAnchorRef.current) {
+        scrollAnchorRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }
+    }, 50);
+  }, [onScrollToBottom]);
+
   const handleScroll = () => {
     if (scrollRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       // Tolerância mínima de 2 pixels, consistente com useChatScroll
-      const isNearBottom = distanceFromBottom <= 2;
+      const isNearBottom = distanceFromBottom <= 5;
       onScrollChange(isNearBottom);
     }
   };
+
+  // Auto-scroll when messages change or processing state changes
+  React.useEffect(() => {
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(() => {
+      if (scrollAnchorRef.current) {
+        scrollAnchorRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [messages.length, isProcessing]);
 
   return (
     <div className="chat-messages-container">
@@ -206,15 +239,24 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
             />
           )}
 
-          {/* Hidden div for scroll to bottom */}
-          <div style={{ float: "left", clear: "both" }} />
+          {/* Anchor element for scroll to bottom */}
+          <div
+            ref={scrollAnchorRef}
+            className="scroll-anchor"
+            style={{
+              float: "left",
+              clear: "both",
+              height: "1px",
+              width: "100%",
+            }}
+          />
         </div>
       </div>
 
       {/* Scroll to bottom button */}
       <ScrollToBottomButton
         show={showScrollButton}
-        onClick={onScrollToBottom}
+        onClick={enhancedScrollToBottom}
       />
     </div>
   );

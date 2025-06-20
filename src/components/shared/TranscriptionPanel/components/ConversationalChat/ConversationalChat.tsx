@@ -278,6 +278,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           chatState.processingTimeoutRef.current = null;
         }
 
+        // Force scroll to bottom after AI response
+        setTimeout(() => {
+          scrollState.scrollToBottom(true);
+        }, 150);
+
         // Only clear AI response after successfully adding the message
         // Add a small delay to ensure the message is properly saved
         setTimeout(() => {
@@ -327,6 +332,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
       onClearTranscription();
     }
 
+    // Force scroll to bottom after sending message
+    setTimeout(() => {
+      scrollState.scrollToBottom(true);
+    }, 50);
+
     // Set processing state with timeout
     chatState.setIsProcessing(true);
     if (chatState.processingTimeoutRef.current) {
@@ -354,6 +364,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     onTemporaryContextChange,
     onSendPrompt,
     onClearTranscription,
+    scrollState,
   ]);
 
   // Handle key press (Enter to send, Shift+Enter for new line)

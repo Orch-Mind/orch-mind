@@ -87,6 +87,7 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               onSend={onSendMessage}
               onKeyPress={onKeyPress}
               placeholder="Type your message or use voice transcription..."
+              disabled={chatState.isProcessing}
             />
 
             {/* Main Chat Controls - Debug controls removed */}

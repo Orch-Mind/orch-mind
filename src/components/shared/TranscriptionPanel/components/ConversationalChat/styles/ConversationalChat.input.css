@@ -276,6 +276,29 @@
   color: rgba(255, 255, 255, 0.25);
 }
 
+/* Disabled state for message input */
+.message-input:disabled {
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.4); /* For WebKit browsers */
+}
+
+.message-input:disabled::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Disabled wrapper styles */
+.message-input-wrapper:has(.message-input:disabled) {
+  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(0, 250, 255, 0.1);
+}
+
+.message-input-wrapper:has(.message-input:disabled)::before {
+  opacity: 0.3;
+}
+
 /* Typing indicator animation */
 .message-input-wrapper.typing {
   animation: typingPulse 1.5s ease-in-out infinite;

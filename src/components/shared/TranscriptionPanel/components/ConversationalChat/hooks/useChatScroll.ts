@@ -33,16 +33,52 @@ export const useChatScroll = ({
       // Set programmatic scroll flag
       programmaticScrollRef.current = true;
 
-      // Scroll the messages container to absolute bottom
-      const container = messagesContainerRef.current;
-      container.scrollTop = container.scrollHeight;
+      // Multiple attempts to ensure we reach the absolute bottom
+      const forceScroll = () => {
+        if (!messagesContainerRef.current) return;
+
+        const container = messagesContainerRef.current;
+        const maxScroll = container.scrollHeight - container.clientHeight;
+
+        // Try multiple methods to ensure scroll
+        container.scrollTop = container.scrollHeight;
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: smooth ? "smooth" : "auto",
+        });
+
+        // Find the last element and scroll it into view
+        const lastElement = container.lastElementChild?.lastElementChild;
+        if (lastElement) {
+          lastElement.scrollIntoView({
+            behavior: smooth ? "smooth" : "auto",
+            block: "end",
+          });
+        }
+
+        // Verify and retry if needed
+        requestAnimationFrame(() => {
+          if (container.scrollTop < maxScroll - 2) {
+            container.scrollTop = maxScroll + 100; // Overshoot to ensure bottom
+          }
+        });
+      };
+
+      // Execute immediately
+      forceScroll();
+
+      // Execute again after DOM updates
+      requestAnimationFrame(forceScroll);
+
+      // And once more after a small delay to catch any late renders
+      setTimeout(forceScroll, 100);
 
       // Reset programmatic scroll flag after animation
       setTimeout(
         () => {
           programmaticScrollRef.current = false;
         },
-        smooth ? 500 : 100
+        smooth ? 800 : 200
       );
     },
     [messagesContainerRef]
@@ -57,8 +93,8 @@ export const useChatScroll = ({
 
     const { scrollTop, scrollHeight, clientHeight } =
       messagesContainerRef.current;
-    // Reduced threshold for more accurate detection
-    return scrollHeight - scrollTop - clientHeight < 5;
+    // Increased threshold for more forgiving detection
+    return scrollHeight - scrollTop - clientHeight < 50;
   }, [messagesContainerRef]);
 
   /**
@@ -115,7 +151,10 @@ export const useChatScroll = ({
    */
   useEffect(() => {
     if (messages.length > 0 && !isUserScrollingRef.current) {
-      scrollToBottom();
+      // Small delay to ensure DOM is updated
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
     }
   }, [messages, scrollToBottom]);
 
