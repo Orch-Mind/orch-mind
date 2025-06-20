@@ -135,7 +135,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
           checked={isSelected}
           onChange={() => !disabled && model.isDownloaded && onSelect(model)}
           disabled={disabled || !model.isDownloaded}
-          className="mt-1 w-4 h-4 text-cyan-400 bg-gray-800 border-cyan-500 focus:ring-cyan-400 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-1 w-4 h-4 text-cyan-400 bg-gray-800 border-cyan-500 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <div className="ml-3 flex-1">
           <div className="flex items-start justify-between gap-2">
