@@ -67,7 +67,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({
 
       {/* Qualidade de áudio */}
       <div>
-        <label className="block mb-2 text-sm text-cyan-200/70">Audio Quality</label>
+                  <label className="block text-sm text-cyan-200/70 mb-1">Audio Quality</label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-cyan-400/60">Low</span>
           <input

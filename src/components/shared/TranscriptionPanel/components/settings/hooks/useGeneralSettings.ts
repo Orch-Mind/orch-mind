@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useState, useEffect, useMemo } from "react";
-import { getOption, getUserName, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
+import { useEffect, useMemo, useState } from "react";
 import { ModeService, OrchOSMode } from '../../../../../../services/ModeService';
+import { getOption, getUserName, setOption, STORAGE_KEYS, subscribeToStorageChanges } from '../../../../../../services/StorageService';
 
 /**
  * Hook para gerenciamento de configurações gerais
@@ -14,8 +14,6 @@ export const useGeneralSettings = () => {
   const [name, setName] = useState<string>(() => getUserName() || 'User');
   const [enableMatrix, setEnableMatrix] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_MATRIX) ?? true);
   const [matrixDensity, setMatrixDensity] = useState<number>(() => getOption<number>(STORAGE_KEYS.MATRIX_DENSITY) ?? 60);
-  const [enableEffects, setEnableEffects] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_EFFECTS) ?? true);
-  const [enableAnimations, setEnableAnimations] = useState<boolean>(() => getOption<boolean>(STORAGE_KEYS.ENABLE_ANIMATIONS) ?? true);
   
   // Orch-OS Mode Cortex: single source of truth for mode
   const [applicationMode, setApplicationMode] = useState<OrchOSMode>(
@@ -32,8 +30,6 @@ export const useGeneralSettings = () => {
           break;
         case STORAGE_KEYS.ENABLE_MATRIX: setEnableMatrix(value); break;
         case STORAGE_KEYS.MATRIX_DENSITY: setMatrixDensity(value); break;
-        case STORAGE_KEYS.ENABLE_EFFECTS: setEnableEffects(value); break;
-        case STORAGE_KEYS.ENABLE_ANIMATIONS: setEnableAnimations(value); break;
       }
     };
     
@@ -50,8 +46,6 @@ export const useGeneralSettings = () => {
     }
     setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
     setOption(STORAGE_KEYS.MATRIX_DENSITY, matrixDensity);
-    setOption(STORAGE_KEYS.ENABLE_EFFECTS, enableEffects);
-    setOption(STORAGE_KEYS.ENABLE_ANIMATIONS, enableAnimations);
   };
   
   return useMemo(() => ({
@@ -64,10 +58,6 @@ export const useGeneralSettings = () => {
     setEnableMatrix,
     matrixDensity,
     setMatrixDensity,
-    enableEffects,
-    setEnableEffects,
-    enableAnimations,
-    setEnableAnimations,
     // Ações
     saveGeneralSettings
   }), [
@@ -79,10 +69,6 @@ export const useGeneralSettings = () => {
     setEnableMatrix,
     matrixDensity,
     setMatrixDensity,
-    enableEffects,
-    setEnableEffects,
-    enableAnimations,
-    setEnableAnimations,
     saveGeneralSettings
   ]);
 };

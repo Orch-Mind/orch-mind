@@ -40,8 +40,6 @@ export const STORAGE_KEYS = {
   // Matriz quântica e efeitos
   ENABLE_MATRIX: "enableMatrix",
   MATRIX_DENSITY: "matrixDensity",
-  ENABLE_EFFECTS: "enableEffects",
-  ENABLE_ANIMATIONS: "enableAnimations",
 
   // Estilo e tema
   DARK_MODE: "darkMode",

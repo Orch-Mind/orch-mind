@@ -24,12 +24,7 @@ export interface SettingsFooterProps {
   saveSettings: () => void;
 }
 
-export type TabType =
-  | "general"
-  | "interface"
-  | "audio"
-  | "requirements"
-  | "advanced";
+export type TabType = "general" | "audio" | "requirements" | "advanced";
 
 export type OpenSectionType =
   | "pinecone"
@@ -53,22 +48,6 @@ export interface SettingsState {
   setEnableMatrix: (enable: boolean) => void;
   matrixDensity: number;
   setMatrixDensity: (density: number) => void;
-  enableEffects: boolean;
-  setEnableEffects: (enable: boolean) => void;
-  enableAnimations: boolean;
-  setEnableAnimations: (enable: boolean) => void;
-
-  // Interface
-  darkMode: boolean;
-  setDarkMode: (enable: boolean) => void;
-  enableNeumorphism: boolean;
-  setEnableNeumorphism: (enable: boolean) => void;
-  enableGlassmorphism: boolean;
-  setEnableGlassmorphism: (enable: boolean) => void;
-  panelTransparency: number;
-  setPanelTransparency: (transparency: number) => void;
-  colorTheme: string;
-  setColorTheme: (theme: string) => void;
 
   // Audio
   audioQuality: number;
@@ -133,14 +112,6 @@ export interface SettingsState {
   setPineconeEnvironment: (env: string) => void;
   pineconeIndex: string;
   setPineconeIndex: (index: string) => void;
-
-  // Interface adicional
-  theme: string;
-  setTheme: (theme: string) => void;
-  uiDensity: string;
-  setUiDensity: (density: string) => void;
-  showAdvancedSettings: boolean;
-  setShowAdvancedSettings: (show: boolean) => void;
 
   // Debug
   debugMode: boolean;

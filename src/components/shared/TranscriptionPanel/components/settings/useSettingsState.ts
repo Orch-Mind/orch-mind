@@ -7,7 +7,6 @@ import { useApiSettings } from "./hooks/useApiSettings";
 import { useAudioSettings } from "./hooks/useAudioSettings";
 import { useDebugSettings } from "./hooks/useDebugSettings";
 import { useGeneralSettings } from "./hooks/useGeneralSettings";
-import { useInterfaceSettings } from "./hooks/useInterfaceSettings";
 import { useNavigationState } from "./hooks/useNavigationState";
 import { SettingsState } from "./types";
 
@@ -20,7 +19,6 @@ export const useSettingsState = (show: boolean): SettingsState => {
   // Composição de hooks especializados por domínio
   const navigation = useNavigationState();
   const general = useGeneralSettings();
-  const interfaceSettings = useInterfaceSettings();
   const audio = useAudioSettings(show);
   const api = useApiSettings();
   const debug = useDebugSettings();
@@ -81,7 +79,6 @@ export const useSettingsState = (show: boolean): SettingsState => {
   const saveSettings = () => {
     // Salva as configurações de cada domínio
     general.saveGeneralSettings();
-    interfaceSettings.saveInterfaceSettings();
     audio.saveAudioSettings();
     api.saveApiSettings();
     debug.saveDebugSettings();
@@ -95,8 +92,6 @@ export const useSettingsState = (show: boolean): SettingsState => {
       ...navigation,
       // General
       ...general,
-      // Interface
-      ...interfaceSettings,
       // Audio e Transcrição
       ...audio,
       // API (OpenAI, Deepgram, HuggingFace, Pinecone)
@@ -146,7 +141,6 @@ export const useSettingsState = (show: boolean): SettingsState => {
       // Dependências: todos os objetos retornados pelos hooks especializados e applicationMode
       navigation,
       general,
-      interfaceSettings,
       audio,
       api,
       debug,

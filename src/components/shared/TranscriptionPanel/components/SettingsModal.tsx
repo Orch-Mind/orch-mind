@@ -5,7 +5,6 @@ import React from "react";
 import {
   AudioSettings,
   GeneralSettings,
-  InterfaceSettings,
   RequirementsSettings,
 } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
@@ -30,8 +29,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-gray-900/90 rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative backdrop-blur-lg ring-2 ring-cyan-400/10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+      <div
+        className="rounded-2xl p-6 w-full max-w-2xl relative overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
+          backdropFilter: "blur(40px) saturate(1.5) brightness(1.05)",
+          WebkitBackdropFilter: "blur(40px) saturate(1.5) brightness(1.05)",
+          border: "1px solid rgba(0, 250, 255, 0.15)",
+          boxShadow: `
+            0 25px 50px -12px rgba(0, 0, 0, 0.1), 
+            0 0 100px rgba(0, 250, 255, 0.05), 
+            inset 0 0 60px rgba(255, 255, 255, 0.01),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2)
+          `,
+        }}
+      >
         {/* Cabeçalho */}
         <SettingsHeader onClose={onClose} />
 
@@ -55,26 +69,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
               setEnableMatrix={settings.setEnableMatrix}
               matrixDensity={settings.matrixDensity}
               setMatrixDensity={settings.setMatrixDensity}
-              enableEffects={settings.enableEffects}
-              setEnableEffects={settings.setEnableEffects}
-              enableAnimations={settings.enableAnimations}
-              setEnableAnimations={settings.setEnableAnimations}
-            />
-          )}
-
-          {/* Interface Tab */}
-          {settings.activeTab === "interface" && (
-            <InterfaceSettings
-              darkMode={settings.darkMode}
-              setDarkMode={settings.setDarkMode}
-              enableNeumorphism={settings.enableNeumorphism}
-              setEnableNeumorphism={settings.setEnableNeumorphism}
-              enableGlassmorphism={settings.enableGlassmorphism}
-              setEnableGlassmorphism={settings.setEnableGlassmorphism}
-              panelTransparency={settings.panelTransparency}
-              setPanelTransparency={settings.setPanelTransparency}
-              colorTheme={settings.colorTheme}
-              setColorTheme={settings.setColorTheme}
             />
           )}
 
