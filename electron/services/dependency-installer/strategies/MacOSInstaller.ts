@@ -39,12 +39,14 @@ export class MacOSInstaller extends BasePlatformInstaller {
    */
   getManualInstructions(dependency: string): string {
     const instructions: Record<string, string> = {
-      ollama: `1. Download from https://ollama.com/download/mac
+      ollama: `Manual installation for macOS:
+1. Download from https://ollama.com/download/mac
 2. Open the downloaded file and drag Ollama to Applications
 3. Launch Ollama from Applications
 Alternative: Run 'brew install ollama' in Terminal`,
 
-      docker: `1. Download Docker Desktop from https://docker.com/products/docker-desktop
+      docker: `Manual installation for macOS:
+1. Download Docker Desktop from https://docker.com/products/docker-desktop
 2. Open the downloaded .dmg file
 3. Drag Docker to Applications
 4. Launch Docker Desktop
