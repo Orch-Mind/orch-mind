@@ -12,43 +12,83 @@ const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onClose }) => {
   return (
     <>
       <button
-        className="group absolute top-3 right-3 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer"
+        onClick={onClose}
+        className="absolute top-3 right-3 w-12 h-12 rounded-full flex items-center justify-center"
         style={{
+          // Base styles
           backgroundColor: "rgba(0, 0, 0, 0.3)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           border: "1px solid rgba(0, 250, 255, 0.2)",
           color: "rgba(0, 250, 255, 0.8)",
+
+          // Remove default browser styles
+          outline: "none",
+          WebkitTapHighlightColor: "transparent",
+          WebkitTouchCallout: "none",
+          userSelect: "none",
+          MozUserSelect: "none",
+          WebkitUserSelect: "none",
+          msUserSelect: "none",
+
+          // Smooth transitions
+          transition: "all 0.2s ease",
+          cursor: "pointer",
+
+          // Position
           zIndex: 10,
         }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onClose();
+        // Hover styles
+        onMouseEnter={(e) => {
+          const btn = e.currentTarget;
+          btn.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+          btn.style.borderColor = "rgba(239, 68, 68, 0.4)";
+          btn.style.color = "rgba(248, 113, 113, 1)";
+          btn.style.transform = "scale(1.05)";
+          btn.style.boxShadow = "0 0 20px rgba(239, 68, 68, 0.3)";
         }}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Close"
+        onMouseLeave={(e) => {
+          const btn = e.currentTarget;
+          btn.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
+          btn.style.borderColor = "rgba(0, 250, 255, 0.2)";
+          btn.style.color = "rgba(0, 250, 255, 0.8)";
+          btn.style.transform = "scale(1)";
+          btn.style.boxShadow = "none";
+        }}
+        // Active state
+        onMouseDown={(e) => {
+          const btn = e.currentTarget;
+          btn.style.transform = "scale(0.95)";
+        }}
+        onMouseUp={(e) => {
+          const btn = e.currentTarget;
+          btn.style.transform = "scale(1.05)";
+        }}
+        // Focus styles (keyboard navigation)
+        onFocus={(e) => {
+          const btn = e.currentTarget;
+          btn.style.boxShadow = "0 0 0 2px rgba(0, 250, 255, 0.5)";
+        }}
+        onBlur={(e) => {
+          const btn = e.currentTarget;
+          btn.style.boxShadow = "none";
+        }}
+        title="Close settings"
         type="button"
-        aria-label="Close modal"
+        aria-label="Close settings modal"
+        role="button"
+        tabIndex={0}
       >
-        {/* Expanded click area */}
-        <span
-          className="absolute inset-0 -m-2 rounded-full"
-          style={{ zIndex: -1 }}
-        />
-
-        {/* Hover effect overlay */}
-        <span className="absolute inset-0 rounded-full transition-all duration-200 group-hover:bg-red-500/20 group-hover:border group-hover:border-red-500/40" />
-
         {/* Icon */}
         <svg
-          className="relative z-10 w-5 h-5 transition-all duration-200 group-hover:text-red-400 group-hover:scale-110"
-          xmlns="http://www.w3.org/2000/svg"
           width="20"
           height="20"
-          fill="currentColor"
           viewBox="0 0 16 16"
-          style={{ pointerEvents: "none" }}
+          fill="currentColor"
+          style={{
+            transition: "transform 0.2s ease",
+            pointerEvents: "none",
+          }}
         >
           <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
         </svg>
