@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { IOpenAIService } from "../../../components/context/deepgram/interfaces/openai/IOpenAIService";
-import { ProgressStage } from '../utils/progressReporter';
+import { ProgressStage } from "../utils/progressReporter";
 
 // ChatGPT data interfaces for artificial brain memory import
 export interface ChatGPTMessageContent {

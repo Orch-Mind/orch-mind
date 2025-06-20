@@ -5,14 +5,18 @@ import { ProgressInfo } from "../interfaces/types";
 import { Logger } from "./logging";
 
 // Type definition for stages to avoid repetition and improve type safety
-export type ProgressStage = "parsing" | "deduplicating" | "generating_embeddings" | "saving";
+export type ProgressStage =
+  | "parsing"
+  | "deduplicating"
+  | "generating_embeddings"
+  | "saving";
 
 // Stage weights configuration - extracted as a constant for better maintainability
 const STAGE_WEIGHTS: Record<ProgressStage, number> = {
-  parsing: 0.1,              // 10%
-  deduplicating: 0.2,        // 20%
+  parsing: 0.1, // 10%
+  deduplicating: 0.2, // 20%
   generating_embeddings: 0.5, // 50%
-  saving: 0.2,               // 20%
+  saving: 0.2, // 20%
 };
 
 // Stage order for progress calculation
