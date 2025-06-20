@@ -804,3 +804,102 @@ textarea.orchos-textarea-neural,
     transform: translateY(0);
   }
 }
+
+/* Add scanning line effect to headers */
+
+/* Card body - improved spacing */
+
+/* Custom scrollbar - quantum style */
+
+/* Ensure main body doesn't scroll */
+
+body.orchos-active {
+  overflow: hidden;
+}
+
+/* Mobile sidebar overlay backdrop */
+body.mobile-sidebar-open::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Desktop sidebar toggle - Additional visual enhancements */
+.desktop-sidebar-toggle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0, 250, 255, 0.1) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.desktop-sidebar-toggle:hover::before {
+  opacity: 1;
+}
+
+/* Keyboard shortcut hint - appears on hover after delay */
+.desktop-sidebar-toggle::after {
+  content: attr(title);
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  padding: 6px 12px;
+  background: rgba(9, 9, 11, 0.95);
+  border: 1px solid rgba(124, 77, 255, 0.3);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease 0.5s; /* Delay before showing */
+}
+
+.desktop-sidebar-toggle:hover::after {
+  opacity: 1;
+}
+
+/* When sidebar is collapsed, show hint on the right */
+.orchos-quantum-dashboard.sidebar-collapsed .desktop-sidebar-toggle::after {
+  left: 100%;
+  margin-left: 8px;
+}
+
+/* Enhanced focus states for accessibility */
+.desktop-sidebar-toggle:focus-visible,
+.mobile-sidebar-toggle:focus-visible {
+  outline: 2px solid #00faff;
+  outline-offset: 2px;
+}
+
+/* Smooth icon rotation for mobile toggle */
+.mobile-sidebar-toggle svg {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Header positioning - ultra compact */
+
+/* Header title with glow */

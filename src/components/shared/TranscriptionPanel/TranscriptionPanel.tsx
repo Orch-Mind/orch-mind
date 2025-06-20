@@ -50,6 +50,66 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   // Track processing state
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Sidebar visibility state with persistence
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Load from localStorage, default to true
+    const saved = localStorage.getItem("orchos-sidebar-open");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  // Mobile sidebar state (separate from desktop)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Save sidebar state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("orchos-sidebar-open", String(isSidebarOpen));
+  }, [isSidebarOpen]);
+
+  // Keyboard shortcut for toggling sidebar (Cmd/Ctrl + B)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Mobile soft dismiss - close sidebar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (mobileSidebarOpen) {
+        const sidebar = document.querySelector(".chat-history-sidebar");
+        const toggleButton = document.querySelector(".mobile-sidebar-toggle");
+
+        if (
+          sidebar &&
+          !sidebar.contains(e.target as Node) &&
+          toggleButton &&
+          !toggleButton.contains(e.target as Node)
+        ) {
+          setMobileSidebarOpen(false);
+        }
+      }
+    };
+
+    if (mobileSidebarOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      // Add overlay backdrop for mobile
+      document.body.classList.add("mobile-sidebar-open");
+    } else {
+      document.body.classList.remove("mobile-sidebar-open");
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.body.classList.remove("mobile-sidebar-open");
+    };
+  }, [mobileSidebarOpen]);
+
   if (!transcriptionManager) return null;
 
   // Move stable callbacks here when setTexts is already defined
@@ -206,7 +266,6 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   // Estados para modais
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Settings content for the chat component
   const settingsContent = (
@@ -291,7 +350,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
       <div
         className={`orchos-quantum-dashboard with-sidebar ${
           !enableMatrix ? "single-column" : ""
-        }`}
+        } ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}
         style={{
           flex: "1 1 auto",
         }}
@@ -300,7 +359,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
         <div
           className={`chat-history-sidebar ${
             mobileSidebarOpen ? "mobile-open" : ""
-          }`}
+          } ${!isSidebarOpen ? "desktop-collapsed" : ""}`}
         >
           <ChatHistorySidebar
             conversations={chatHistory.conversations}
@@ -322,6 +381,38 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             isProcessing={isProcessing}
           />
         </div>
+
+        {/* Desktop Sidebar Toggle Button - Outside sidebar as sibling */}
+        <button
+          className="desktop-sidebar-toggle"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          title={`${isSidebarOpen ? "Hide" : "Show"} sidebar (${
+            navigator.platform.includes("Mac") ? "⌘" : "Ctrl"
+          }+B)`}
+          aria-label={`${isSidebarOpen ? "Hide" : "Show"} sidebar`}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            {isSidebarOpen ? (
+              // Chevron left icon when sidebar is open
+              <path
+                d="M15 18l-6-6 6-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : (
+              // Chevron right icon when sidebar is closed
+              <path
+                d="M9 18l6-6-6-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+          </svg>
+        </button>
 
         {/* Quantum Visualization Zone - Left Panel with Golden Ratio */}
         {/* Lógica corrigida: enableMatrix = true mostra, false esconde */}

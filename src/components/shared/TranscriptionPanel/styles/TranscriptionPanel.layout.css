@@ -178,9 +178,21 @@ textarea.orchos-textarea-neural,
   box-sizing: border-box;
 }
 
+/* With sidebar open - add space for sidebar */
+.orchos-quantum-dashboard.with-sidebar {
+  padding-left: 280px; /* Space for sidebar */
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* With sidebar collapsed - remove sidebar space */
+.orchos-quantum-dashboard.with-sidebar.sidebar-collapsed {
+  padding-left: 0;
+}
+
 /* Override background when showing only chat (single column) */
 .orchos-quantum-dashboard.single-column {
   background: #0a0f1a !important;
+  grid-template-columns: 1fr;
 }
 
 /* Hide pseudo-element when showing only chat */

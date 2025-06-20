@@ -1,6 +1,10 @@
 /* Chat History Sidebar Styles */
 .chat-history-sidebar {
-  height: 100%;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
   background: rgba(9, 9, 11, 0.95);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -8,6 +12,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  z-index: 100;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Sidebar Header */
@@ -276,31 +282,14 @@
 }
 
 /* Main Dashboard Layout Update */
-.orchos-quantum-dashboard.with-sidebar {
-  display: grid;
-  grid-template-columns: 280px 1.618fr 1fr;
-  gap: 0;
-  height: 100%;
-}
-
-.orchos-quantum-dashboard.with-sidebar.single-column {
-  grid-template-columns: 280px 1fr;
-}
+/* Remove grid-based sidebar - sidebar is now position: fixed */
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
-  .orchos-quantum-dashboard.with-sidebar {
-    grid-template-columns: 1fr;
-  }
-  
   .chat-history-sidebar {
-    position: fixed;
     left: -280px;
-    top: 0;
-    width: 280px;
-    height: 100vh;
-    z-index: 1000;
-    transition: left 0.3s ease;
+    transition: left 0.3s ease, transform 0.3s ease;
+    transform: none; /* Reset transform on mobile */
   }
   
   .chat-history-sidebar.mobile-open {
@@ -308,7 +297,7 @@
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
   }
   
-  /* Mobile toggle button */
+  /* Mobile toggle button - ONLY show on mobile */
   .mobile-sidebar-toggle {
     position: fixed;
     left: 1rem;
@@ -320,16 +309,133 @@
     border: none;
     color: #ffffff;
     cursor: pointer;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 20px rgba(124, 77, 255, 0.4);
     z-index: 999;
   }
-  
-  @media (max-width: 768px) {
-    .mobile-sidebar-toggle {
-      display: flex;
-    }
+}
+
+/* Desktop-specific styles - Hide mobile toggle on desktop */
+@media (min-width: 769px) {
+  .mobile-sidebar-toggle {
+    display: none !important;
   }
+}
+
+/* Desktop Sidebar Toggle Button */
+.desktop-sidebar-toggle {
+  position: fixed; /* Fixed positioning for stability */
+  left: 280px; /* Position at edge of sidebar */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 64px;
+  background: rgba(9, 9, 11, 0.85);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid rgba(124, 77, 255, 0.3);
+  border-left: 1px solid rgba(124, 77, 255, 0.2);
+  border-radius: 0 12px 12px 0;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 101; /* Higher than sidebar */
+  box-shadow: 
+    2px 0 20px rgba(0, 0, 0, 0.2),
+    inset -1px 0 0 rgba(124, 77, 255, 0.2);
+}
+
+/* When sidebar is collapsed, move button along with it */
+.orchos-quantum-dashboard.sidebar-collapsed .desktop-sidebar-toggle {
+  left: 0; /* Move to edge when sidebar is hidden */
+}
+
+/* Hide desktop toggle on mobile */
+@media (max-width: 768px) {
+  .desktop-sidebar-toggle {
+    display: none;
+  }
+}
+
+/* Hover state for desktop toggle */
+.desktop-sidebar-toggle:hover {
+  background: rgba(9, 9, 11, 0.95);
+  border-color: rgba(124, 77, 255, 0.5);
+  color: #00faff;
+  box-shadow: 
+    2px 0 30px rgba(124, 77, 255, 0.3),
+    inset -1px 0 0 rgba(0, 250, 255, 0.3);
+  width: 36px;
+}
+
+/* Active state */
+.desktop-sidebar-toggle:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Sidebar collapsed state - use transform instead of margin */
+.chat-history-sidebar.desktop-collapsed {
+  transform: translateX(-280px);
+  opacity: 1; /* Keep visible during transform */
+  pointer-events: auto; /* Keep interactive for the toggle button */
+}
+
+/* Make sure the toggle button is still visible when sidebar is collapsed */
+.chat-history-sidebar.desktop-collapsed .desktop-sidebar-toggle {
+  /* Button stays in the same position relative to sidebar */
+}
+
+/* Smooth transitions for all grid changes */
+.orchos-quantum-dashboard {
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-history-sidebar {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Add pulse animation to indicate keyboard shortcut */
+@keyframes subtlePulse {
+  0%, 100% {
+    box-shadow: 
+      2px 0 20px rgba(0, 0, 0, 0.2),
+      inset -1px 0 0 rgba(124, 77, 255, 0.2);
+  }
+  50% {
+    box-shadow: 
+      2px 0 30px rgba(124, 77, 255, 0.4),
+      inset -1px 0 0 rgba(0, 250, 255, 0.4),
+      0 0 0 4px rgba(124, 77, 255, 0.1);
+  }
+}
+
+/* Apply pulse on first load to draw attention */
+.desktop-sidebar-toggle {
+  animation: subtlePulse 2s ease-in-out 1s;
+}
+
+/* Improved mobile toggle button with animation */
+.mobile-sidebar-toggle {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-sidebar-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(124, 77, 255, 0.6);
+}
+
+.mobile-sidebar-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Rotate icon when sidebar is open on mobile */
+.chat-history-sidebar.mobile-open ~ .mobile-sidebar-toggle svg {
+  transform: rotate(90deg);
+  transition: transform 0.3s ease;
 } 
