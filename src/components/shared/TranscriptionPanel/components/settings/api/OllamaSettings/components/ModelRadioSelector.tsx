@@ -150,14 +150,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
                 </div>
                 {statusIcon}
               </div>
-              <div
-                className={`text-xs mt-1 ${
-                  model.isDownloaded ? "text-cyan-400/60" : "text-gray-400/60"
-                }`}
-              >
-                {model.description}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-1">
                 <span
                   className={`text-xs ${
                     model.isDownloaded ? "text-cyan-400/60" : "text-gray-400/60"
