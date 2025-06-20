@@ -112,6 +112,9 @@ export const useModelDownload = ({
           speed: string,
           eta: string
         ) => {
+          // Always round progress to avoid decimal issues
+          const roundedProgress = Math.round(progress);
+
           setDownloadingModels((prev) => {
             const newMap = new Map(prev);
 
@@ -119,7 +122,7 @@ export const useModelDownload = ({
             // This prevents race conditions during the critical final phase
             const currentProgress = prev.get(modelId)?.progress || 0;
 
-            if (progress >= 100) {
+            if (roundedProgress >= 100) {
               // Only complete if we were already at 99% or if speed indicates completion
               if (
                 currentProgress >= 99 ||
@@ -134,13 +137,18 @@ export const useModelDownload = ({
                 console.log(
                   `[useModelDownload] Progress jumped to 100% from ${currentProgress}%, holding at 99% to avoid race condition`
                 );
-                progress = 99;
+                newMap.set(modelId, {
+                  progress: 99,
+                  speed,
+                  eta,
+                });
+                return newMap;
               }
             }
 
             // Update with real progress
             newMap.set(modelId, {
-              progress: Math.round(progress),
+              progress: roundedProgress,
               speed,
               eta,
             });
@@ -181,9 +189,10 @@ export const useModelDownload = ({
                 current.progress + Math.random() * 10,
                 100
               );
+              const roundedNewProgress = Math.round(newProgress);
               const newMap = new Map(prev);
 
-              if (newProgress >= 100) {
+              if (roundedNewProgress >= 100) {
                 clearInterval(progressInterval);
                 progressIntervals.current.delete(modelId);
                 newMap.delete(modelId);
@@ -192,9 +201,9 @@ export const useModelDownload = ({
                 handleDownloadComplete(modelId);
               } else {
                 newMap.set(modelId, {
-                  progress: newProgress,
+                  progress: roundedNewProgress,
                   speed: `${(Math.random() * 10 + 1).toFixed(1)} MB/s`,
-                  eta: `${Math.ceil((100 - newProgress) / 10)} min`,
+                  eta: `${Math.ceil((100 - roundedNewProgress) / 10)} min`,
                 });
               }
 

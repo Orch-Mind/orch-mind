@@ -141,8 +141,27 @@ export const useOllamaModels = () => {
     };
   });
 
+  // Add installed models that aren't in the static list
+  const dynamicModels = installedModels
+    .filter((modelId) => !availableModels.find((m) => m.id === modelId))
+    .map((modelId) => {
+      const isEmbedding = modelId.includes("embed");
+      return {
+        id: modelId,
+        name: modelId.split(":")[0], // Remove tag
+        description: "Installed model",
+        size: "Unknown",
+        category: isEmbedding ? "embedding" : "main",
+        isDownloaded: true,
+        isDownloading: false,
+      } as OllamaModel;
+    });
+
+  // Combine static models with dynamic installed models
+  const allModels = [...mappedModels, ...dynamicModels];
+
   return {
-    availableModels,
+    availableModels: allModels,
     installedModels,
     setInstalledModels,
     isLoadingModels,
@@ -155,6 +174,6 @@ export const useOllamaModels = () => {
     removeDownloadingModel,
     refreshData,
     fetchInstalledModels,
-    mappedModels,
+    mappedModels: allModels,
   };
 };

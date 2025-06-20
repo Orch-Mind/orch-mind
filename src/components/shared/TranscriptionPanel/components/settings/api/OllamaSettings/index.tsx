@@ -16,8 +16,7 @@ import { useModelStatus } from "./hooks/useModelStatus";
 import { useOllamaModels } from "./hooks/useOllamaModels";
 
 // Components
-import { ModelDropdown } from "./components/ModelDropdown";
-import { ModelItem } from "./components/ModelItem";
+import { ModelRadioSelector } from "./components/ModelRadioSelector";
 import { StoragePathInput } from "./components/StoragePathInput";
 
 // Utils
@@ -81,21 +80,15 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
     async (model: OllamaModel) => {
       setOllamaModel(model.id);
       if (!ollamaEnabled) setOllamaEnabled(true);
-      if (!model.isDownloaded && !model.isDownloading) {
-        await downloadModel(model.id);
-      }
     },
-    [ollamaEnabled, setOllamaEnabled, setOllamaModel, downloadModel]
+    [ollamaEnabled, setOllamaEnabled, setOllamaModel]
   );
 
   const handleSelectEmbeddingModel = useCallback(
     async (model: OllamaModel) => {
       setOllamaEmbeddingModel(model.id);
-      if (!model.isDownloaded && !model.isDownloading) {
-        await downloadModel(model.id);
-      }
     },
-    [setOllamaEmbeddingModel, downloadModel]
+    [setOllamaEmbeddingModel]
   );
 
   return (
@@ -158,68 +151,21 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
         <StoragePathInput value={storagePath} onChange={setStoragePath} />
       )}
 
-      {/* Model Selection Dropdowns */}
-      <div className="grid grid-cols-2 gap-2">
-        <ModelDropdown
-          label="Main Model"
-          value={ollamaModel}
-          models={mainModels}
-          onSelect={handleSelectMainModel}
-          disabled={isLoadingModels}
-          isLoading={isModelLoading(ollamaModel)}
-        />
-        <ModelDropdown
-          label="Embedding Model"
-          value={ollamaEmbeddingModel}
-          models={embeddingModels}
-          onSelect={handleSelectEmbeddingModel}
-          disabled={isLoadingModels}
-          isLoading={isModelLoading(ollamaEmbeddingModel)}
-        />
-      </div>
-
-      {/* Model management section */}
-      <div className="bg-black/30 border border-cyan-500/20 rounded-lg p-4 shadow-lg">
-        <h3 className="text-cyan-300 font-medium text-sm mb-3">
-          💎 Model Management
-        </h3>
-
-        {/* Info message when downloading */}
-        {downloadingModels.size > 0 && (
-          <div className="text-yellow-400 text-xs mb-2 px-2">
-            ℹ️ Concurrent downloads are blocked to avoid stability issues
-          </div>
-        )}
-
-        {isLoadingModels && !error ? (
-          <div className="text-center py-4">
-            <div className="animate-spin inline-block w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full"></div>
-            <p className="text-cyan-400/60 text-xs mt-2">Loading models...</p>
-          </div>
-        ) : (
-          <>
-            {/* Model list */}
-            {isLoadingModels ? (
-              <div className="flex items-center justify-center py-8 text-gray-400 text-sm">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Carregando modelos...
-              </div>
-            ) : (
-              <div className="space-y-1 max-h-64 overflow-y-auto">
-                {mappedModels.map((model) => (
-                  <ModelItem
-                    key={model.id}
-                    model={model}
-                    onDownload={downloadModel}
-                    onCancelDownload={cancelDownload}
-                    onRemove={removeModel}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {/* Model Selection with Radio Buttons */}
+      <ModelRadioSelector
+        mainValue={ollamaModel}
+        embeddingValue={ollamaEmbeddingModel}
+        mainModels={filterModelsByCategory(mappedModels, "main")}
+        embeddingModels={filterModelsByCategory(mappedModels, "embedding")}
+        onMainSelect={handleSelectMainModel}
+        onEmbeddingSelect={handleSelectEmbeddingModel}
+        onDownload={downloadModel}
+        onCancelDownload={cancelDownload}
+        onRemove={removeModel}
+        disabled={isLoadingModels}
+        isMainLoading={isModelLoading(ollamaModel)}
+        isEmbeddingLoading={isModelLoading(ollamaEmbeddingModel)}
+      />
     </div>
   );
 };
