@@ -9,7 +9,7 @@ import {
   TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /* ------------------------------------------------------------------
  * Local helper types & globals
@@ -146,6 +146,10 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
   const [mainDropdownOpen, setMainDropdownOpen] = useState(false);
   const [embeddingDropdownOpen, setEmbeddingDropdownOpen] = useState(false);
 
+  // Refs for dropdowns
+  const mainDropdownRef = useRef<HTMLDivElement>(null);
+  const embeddingDropdownRef = useRef<HTMLDivElement>(null);
+
   /* ------------------------------------------------------------------
    * Estado de carregamento dos modelos (vLLM) & polling
    * ------------------------------------------------------------------ */
@@ -169,6 +173,32 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
     interval = setInterval(fetchStatus, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  // Click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        mainDropdownRef.current &&
+        !mainDropdownRef.current.contains(event.target as Node)
+      ) {
+        setMainDropdownOpen(false);
+      }
+      if (
+        embeddingDropdownRef.current &&
+        !embeddingDropdownRef.current.contains(event.target as Node)
+      ) {
+        setEmbeddingDropdownOpen(false);
+      }
+    };
+
+    // Add event listener when dropdowns are open
+    if (mainDropdownOpen || embeddingDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [mainDropdownOpen, embeddingDropdownOpen]);
 
   // Função para buscar modelos instalados
   const fetchInstalledModels = useCallback(async () => {
@@ -526,96 +556,102 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
       <div className="grid grid-cols-2 gap-2">
         {/* Main Model */}
         <div className="relative">
-          <label className="block text-xs text-cyan-400 mb-1">Main Model</label>
-          <button
-            onClick={() => setMainDropdownOpen((prev) => !prev)}
-            disabled={isLoadingAvailable}
-            className="flex items-center justify-between w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30 focus:outline-none hover:bg-black/50 transition-colors text-xs"
-          >
-            <span className="text-left truncate">
-              {ollamaModel ? ollamaModel.split(":")[0] : "Select..."}
-            </span>
-            <ChevronDownIcon
-              className={`w-3 h-3 transition-transform ${
-                mainDropdownOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+          <div className="relative" ref={mainDropdownRef}>
+            <label className="block text-xs text-cyan-400 mb-1">
+              Main Model
+            </label>
+            <button
+              onClick={() => setMainDropdownOpen((prev) => !prev)}
+              disabled={isLoadingAvailable}
+              className="flex items-center justify-between w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30 focus:outline-none hover:bg-black/50 transition-colors text-xs"
+            >
+              <span className="text-left truncate">
+                {ollamaModel ? ollamaModel.split(":")[0] : "Select..."}
+              </span>
+              <ChevronDownIcon
+                className={`w-3 h-3 transition-transform ${
+                  mainDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          {mainDropdownOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-black/90 border border-cyan-500/30 rounded shadow-lg max-h-40 overflow-y-auto">
-              {mainModelsList.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => handleSelectMain(model)}
-                  className="w-full px-2 py-2 text-left hover:bg-cyan-500/20 transition-colors border-b border-cyan-500/10 last:border-b-0"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 truncate">
-                      <div className="text-white/90 font-medium text-xs truncate">
-                        {model.name}
+            {mainDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-black/90 border border-cyan-500/30 rounded shadow-lg max-h-40 overflow-y-auto">
+                {mainModelsList.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => handleSelectMain(model)}
+                    className="w-full px-2 py-2 text-left hover:bg-cyan-500/20 transition-colors border-b border-cyan-500/10 last:border-b-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 truncate">
+                        <div className="text-white/90 font-medium text-xs truncate">
+                          {model.name}
+                        </div>
+                        <div className="text-cyan-400/60 text-[10px]">
+                          {model.size}
+                        </div>
                       </div>
-                      <div className="text-cyan-400/60 text-[10px]">
-                        {model.size}
-                      </div>
+                      {model.isDownloaded && (
+                        <CheckCircleIcon className="w-3 h-3 text-green-400 ml-2" />
+                      )}
                     </div>
-                    {model.isDownloaded && (
-                      <CheckCircleIcon className="w-3 h-3 text-green-400 ml-2" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Embedding Model */}
         <div className="relative">
-          <label className="block text-xs text-cyan-400 mb-1">
-            Embedding Model
-          </label>
-          <button
-            onClick={() => setEmbeddingDropdownOpen((prev) => !prev)}
-            disabled={isLoadingAvailable}
-            className="flex items-center justify-between w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30 focus:outline-none hover:bg-black/50 transition-colors text-xs"
-          >
-            <span className="text-left truncate">
-              {ollamaEmbeddingModel
-                ? ollamaEmbeddingModel.split(":")[0]
-                : "Select..."}
-            </span>
-            <ChevronDownIcon
-              className={`w-3 h-3 transition-transform ${
-                embeddingDropdownOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+          <div className="relative" ref={embeddingDropdownRef}>
+            <label className="block text-xs text-cyan-400 mb-1">
+              Embedding Model
+            </label>
+            <button
+              onClick={() => setEmbeddingDropdownOpen((prev) => !prev)}
+              disabled={isLoadingAvailable}
+              className="flex items-center justify-between w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30 focus:outline-none hover:bg-black/50 transition-colors text-xs"
+            >
+              <span className="text-left truncate">
+                {ollamaEmbeddingModel
+                  ? ollamaEmbeddingModel.split(":")[0]
+                  : "Select..."}
+              </span>
+              <ChevronDownIcon
+                className={`w-3 h-3 transition-transform ${
+                  embeddingDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          {embeddingDropdownOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-black/90 border border-cyan-500/30 rounded shadow-lg max-h-40 overflow-y-auto">
-              {embeddingModelsList.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => handleSelectEmbedding(model)}
-                  className="w-full px-2 py-2 text-left hover:bg-cyan-500/20 transition-colors border-b border-cyan-500/10 last:border-b-0"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 truncate">
-                      <div className="text-white/90 font-medium text-xs truncate">
-                        {model.name}
+            {embeddingDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-black/90 border border-cyan-500/30 rounded shadow-lg max-h-40 overflow-y-auto">
+                {embeddingModelsList.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => handleSelectEmbedding(model)}
+                    className="w-full px-2 py-2 text-left hover:bg-cyan-500/20 transition-colors border-b border-cyan-500/10 last:border-b-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 truncate">
+                        <div className="text-white/90 font-medium text-xs truncate">
+                          {model.name}
+                        </div>
+                        <div className="text-cyan-400/60 text-[10px]">
+                          {model.size}
+                        </div>
                       </div>
-                      <div className="text-cyan-400/60 text-[10px]">
-                        {model.size}
-                      </div>
+                      {model.isDownloaded && (
+                        <CheckCircleIcon className="w-3 h-3 text-green-400 ml-2" />
+                      )}
                     </div>
-                    {model.isDownloaded && (
-                      <CheckCircleIcon className="w-3 h-3 text-green-400 ml-2" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
