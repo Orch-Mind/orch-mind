@@ -50,7 +50,7 @@ export const migrateOldChatMessages = (): boolean => {
     const now = new Date();
     const migrationConversation: ChatConversation = {
       id: nanoid(),
-      title: "Conversas Anteriores (Migradas)",
+      title: "Previous Conversations (Migrated)",
       lastMessage: oldMessages[oldMessages.length - 1]?.content || "",
       lastMessageTime: oldMessages[oldMessages.length - 1]?.timestamp || now,
       createdAt: oldMessages[0]?.timestamp || now,

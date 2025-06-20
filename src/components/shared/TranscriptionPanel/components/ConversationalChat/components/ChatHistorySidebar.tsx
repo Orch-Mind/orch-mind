@@ -36,10 +36,10 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Agora";
-    if (diffMins < 60) return `${diffMins}m atrás`;
-    if (diffHours < 24) return `${diffHours}h atrás`;
-    if (diffDays < 7) return `${diffDays}d atrás`;
+    if (diffMins < 1) return "Now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
 
     return date.toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -51,13 +51,13 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     <div className="chat-history-sidebar">
       {/* Header */}
       <div className="sidebar-header">
-        <h2 className="sidebar-title">Conversas</h2>
+        <h2 className="sidebar-title">Chat</h2>
         <button
           className={`new-chat-button ${isProcessing ? "disabled" : ""}`}
           onClick={onCreateNewConversation}
           disabled={isProcessing}
           title={
-            isProcessing ? "Aguarde o processamento terminar" : "Nova conversa"
+            isProcessing ? "Wait for the processing to finish" : "New chat"
           }
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -75,7 +75,7 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       <div className="sidebar-search">
         <input
           type="text"
-          placeholder="Buscar conversas..."
+          placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="search-input"
@@ -102,8 +102,8 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
         {displayedConversations.length === 0 ? (
           <div className="no-conversations">
             {searchQuery
-              ? "Nenhuma conversa encontrada"
-              : "Nenhuma conversa ainda"}
+              ? "No conversations found"
+              : "No conversations yet"}
           </div>
         ) : (
           displayedConversations.map((conv) => (
@@ -127,14 +127,14 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
               onMouseLeave={() => setHoveredId(null)}
               title={
                 isProcessing && conv.id !== currentConversationId
-                  ? "Aguarde o processamento terminar"
+                  ? "Wait for the processing to finish"
                   : undefined
               }
             >
               <div className="conversation-content">
                 <h3 className="conversation-title">{conv.title}</h3>
                 <p className="conversation-preview">
-                  {conv.lastMessage || "Conversa vazia"}
+                  {conv.lastMessage || "No messages yet"}
                 </p>
                 <span className="conversation-time">
                   {formatDate(conv.lastMessageTime)}
@@ -147,11 +147,11 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                   className="delete-button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("Excluir esta conversa?")) {
+                    if (window.confirm("Delete this conversation?")) {
                       onDeleteConversation(conv.id);
                     }
                   }}
-                  title="Excluir conversa"
+                  title="Delete conversation"
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path

@@ -30,6 +30,7 @@
   border: 1px solid rgba(0, 250, 255, 0.2);
   overflow: hidden; /* Garante que os cantos arredondados cortem o conteúdo */
   position: relative;
+  padding: 0; /* Sem padding interno - espaçamento já está nos elementos filhos */
 }
 
 /* Welcome Message */
@@ -39,7 +40,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 40px 20px;
+  padding: 1.5rem 1rem;
   color: rgba(255, 255, 255, 0.7);
   height: 100%;
 }

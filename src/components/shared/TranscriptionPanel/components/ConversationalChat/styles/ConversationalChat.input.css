@@ -21,8 +21,8 @@
   backdrop-filter: blur(12px);
   border: 1px solid rgba(0, 250, 255, 0.2);
   border-radius: 16px;
-  padding: 16px 20px;
-  margin-bottom: 16px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
   position: relative;
   box-shadow: 
     0 8px 32px rgba(0, 250, 255, 0.1),
@@ -83,7 +83,7 @@
 
 /* Main Input Area */
 .main-input-wrapper {
-  padding: 16px 24px 20px 24px; /* Increased padding for better breathing room */
+  padding: 0.5rem; /* Ajustado para corresponder ao layout de animação */
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.2) 0%,
@@ -113,14 +113,14 @@
 .input-row {
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Increased gap for better separation */
+  gap: 0.75rem; /* Ajustado proporcionalmente ao novo padrão */
 }
 
 /* Input bottom row - Enhanced layout */
 .input-bottom-row {
   display: flex;
   align-items: center;
-  gap: 12px; /* Add gap between input and controls */
+  gap: 0.5rem; /* Ajustado proporcionalmente ao novo padrão */
   position: relative;
 }
 
@@ -131,7 +131,7 @@
   backdrop-filter: blur(12px);
   border: 1px solid rgba(0, 250, 255, 0.2);
   border-radius: 16px;
-  padding: 16px 20px;
+  padding: 0.75rem;
   position: relative;
   max-height: 120px;
   overflow: hidden;
@@ -777,11 +777,11 @@
 /* Mobile Responsive Improvements */
 @media (max-width: 768px) {
   .main-input-wrapper {
-    padding: 12px 16px 16px 16px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
 
   .input-row {
-    gap: 12px;
+    gap: 0.5rem; /* Ajustado para mobile */
   }
 
   .control-btn {
@@ -805,9 +805,9 @@
     padding: 12px 0;
   }
 
+  .context-input-wrapper,
   .transcription-display {
-    padding: 12px 16px;
-    border-radius: 12px;
+    padding: 0.5rem; /* Ajustado para o novo padrão mobile */
   }
 
   .transcription-label {
@@ -823,11 +823,11 @@
 
 @media (max-width: 480px) {
   .main-input-wrapper {
-    padding: 8px 12px 12px 12px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
 
   .input-bottom-row {
-    gap: 8px;
+    gap: 0.4rem; /* Ajustado para mobile pequeno */
   }
 
   .input-controls {
@@ -846,6 +846,13 @@
 
   .message-input-wrapper {
     min-height: 44px;
+  }
+
+  /* Context and transcription for mobile */
+  .context-input-wrapper,
+  .transcription-display {
+    padding: 0.5rem; /* Ajustado para o novo padrão mobile */
+    margin-bottom: 0.5rem; /* Ajustado proporcionalmente */
   }
 }
 

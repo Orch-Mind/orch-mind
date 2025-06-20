@@ -37,7 +37,7 @@
   height: 0; /* TRUQUE: Força o container a respeitar o flex: 1 */
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 12px 32px 12px; /* Aumentado padding-bottom para garantir espaço de scroll */
+  padding: 0.5rem; /* Ajustado para corresponder ao layout de animação */
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
@@ -84,7 +84,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 40px 20px;
+  padding: 1.5rem 1rem; /* Ajustado para um espaçamento mais consistente */
   color: rgba(255, 255, 255, 0.7);
   width: 100%;
   /* flex-grow permite que ele ocupe o espaço vertical quando for o único elemento */

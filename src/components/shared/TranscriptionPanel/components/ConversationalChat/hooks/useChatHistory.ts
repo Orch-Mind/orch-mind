@@ -73,7 +73,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     const now = new Date();
     return {
       id: nanoid(),
-      title: "Nova Conversa",
+      title: "New Chat",
       lastMessage: "",
       lastMessageTime: now,
       createdAt: now,
@@ -185,7 +185,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
             const updatedMessages = [...conv.messages, message];
             const isFirstUserMessage =
               message.type === "user" &&
-              conv.title === "Nova Conversa" &&
+              conv.title === "New Chat" &&
               updatedMessages.filter((m) => m.type === "user").length === 1;
 
             return {

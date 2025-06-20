@@ -438,7 +438,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           style={{
             height: "100%",
             width: "100%",
-            padding: "1.2rem",
+            padding: "0.5rem",
             overflow: "hidden" /* Força o chat a usar scroll interno */,
             display: "flex",
             flexDirection: "column",
@@ -552,7 +552,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
       <button
         className="mobile-sidebar-toggle"
         onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-        title="Histórico de conversas"
+        title="Chat History"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path

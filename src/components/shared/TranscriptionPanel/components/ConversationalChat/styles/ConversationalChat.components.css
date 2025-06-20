@@ -11,8 +11,8 @@
 .scroll-to-bottom-btn {
   /* Posicionamento */
   position: absolute;
-  bottom: 24px;
-  right: 24px;
+  bottom: 0.75rem; /* Ajustado para corresponder ao novo padrão de espaçamento */
+  right: 0.75rem; /* Ajustado para corresponder ao novo padrão de espaçamento */
   z-index: 15;
   
   /* Dimensões */

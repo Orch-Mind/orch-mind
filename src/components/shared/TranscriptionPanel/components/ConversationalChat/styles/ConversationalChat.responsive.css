@@ -8,11 +8,11 @@
 /* ===== HIGH RESOLUTION / LARGE SCREENS ===== */
 @media (min-width: 1200px) {
   .chat-messages {
-    padding: 20px 16px;
+    padding: 0.75rem; /* Proporcional ao novo padrão */
   }
   
   .main-input-wrapper {
-    padding: 20px 32px;
+    padding: 0.75rem; /* Proporcional ao novo padrão */
   }
   
   .message-bubble-wrapper {
@@ -43,18 +43,18 @@
   }
 
   .chat-messages {
-    padding: 16px;
+    padding: 0.5rem; /* Ajustado para o novo padrão */
   }
 }
 
 /* ===== SMALL HEIGHT SCREENS ===== */
 @media (max-height: 600px) {
   .chat-messages {
-    padding: 12px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
   
   .welcome-message {
-    padding: 20px 16px;
+    padding: 1rem 0.75rem; /* Ajustado para o novo padrão */
   }
   
   .welcome-message h3 {
@@ -77,11 +77,11 @@
 /* ===== TABLET PORTRAIT ===== */
 @media (max-width: 768px) {
   .chat-messages {
-    padding: 16px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
 
   .main-input-wrapper {
-    padding: 12px 16px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
 
   /* Aumenta a largura máxima das mensagens em telas menores */
@@ -130,11 +130,11 @@
 /* ===== MOBILE LANDSCAPE ===== */
 @media (max-width: 768px) and (orientation: landscape) {
   .chat-messages {
-    padding: 12px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
   
   .main-input-wrapper {
-    padding: 8px 12px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
   
   .message-bubble-wrapper {
@@ -149,11 +149,11 @@
   }
   
   .chat-messages {
-    padding: 12px 8px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
 
   .main-input-wrapper {
-    padding: 8px 12px;
+    padding: 0.5rem; /* Mantém o padrão base */
   }
 
   /* Mobile specific message styling */
@@ -226,7 +226,7 @@
 
   /* Welcome message adjustments */
   .welcome-message {
-    padding: 20px 12px;
+    padding: 1rem 0.75rem; /* Ajustado para o novo padrão */
   }
 
   .welcome-message h3 {
@@ -241,19 +241,19 @@
   .scroll-to-bottom-btn {
     width: 40px;
     height: 40px;
-    bottom: 16px;
-    margin-right: 8px;
+    bottom: 0.75rem; /* Ajustado para o novo padrão */
+    margin-right: 0.5rem; /* Ajustado para o novo padrão */
   }
 }
 
 /* ===== VERY SMALL SCREENS ===== */
 @media (max-width: 320px) {
   .chat-messages {
-    padding: 8px 6px;
+    padding: 0.4rem; /* Levemente menor para telas muito pequenas */
   }
   
   .main-input-wrapper {
-    padding: 6px 8px;
+    padding: 0.4rem; /* Levemente menor para telas muito pequenas */
   }
   
   .message-bubble-wrapper {
