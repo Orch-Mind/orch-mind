@@ -29,7 +29,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
-      <div 
+      <div
         className="rounded-2xl p-6 w-full max-w-md relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300"
         style={{
           background:
@@ -76,11 +76,11 @@ const ImportModal: React.FC<ImportModalProps> = ({
         </div>
 
         {/* User info display */}
-        <div 
+        <div
           className="mb-4 p-3 rounded-xl"
           style={{
             background: "rgba(0, 0, 0, 0.3)",
-            border: "1px solid rgba(0, 250, 255, 0.1)"
+            border: "1px solid rgba(0, 250, 255, 0.1)",
           }}
         >
           <p className="text-cyan-200/80 text-sm flex items-center gap-2">
@@ -160,7 +160,9 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 className="w-4 h-4 text-cyan-400 bg-gray-800/50 border-gray-600 focus:ring-cyan-400"
                 disabled={isImporting}
               />
-              <span className="text-white group-hover:text-cyan-300 transition-colors">Increment</span>
+              <span className="text-white group-hover:text-cyan-300 transition-colors">
+                Increment
+              </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer group">
               <input
@@ -173,7 +175,9 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 className="w-4 h-4 text-cyan-400 bg-gray-800/50 border-gray-600 focus:ring-cyan-400"
                 disabled={isImporting}
               />
-              <span className="text-white group-hover:text-cyan-300 transition-colors">Overwrite</span>
+              <span className="text-white group-hover:text-cyan-300 transition-colors">
+                Overwrite
+              </span>
             </label>
           </div>
         </div>
@@ -209,11 +213,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
         {/* Progress bar */}
         {isImporting && (
           <div className="w-full flex flex-col items-center mb-6">
-            <div 
+            <div
               className="relative w-full h-9 rounded-full shadow-inner overflow-hidden mt-2 mb-3"
               style={{
-                background: "linear-gradient(to right, rgba(0, 245, 255, 0.1), rgba(139, 0, 255, 0.1))",
-                border: "1px solid rgba(0, 250, 255, 0.1)"
+                background:
+                  "linear-gradient(to right, rgba(0, 245, 255, 0.1), rgba(139, 0, 255, 0.1))",
+                border: "1px solid rgba(0, 250, 255, 0.1)",
               }}
             >
               <div
@@ -222,7 +227,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                   width: `${importProgress}%`, // This is ALWAYS the overall/global progress (0-100%)
                   minWidth: importProgress > 0 ? "2.5rem" : 0,
                   borderRadius: "9999px",
-                  boxShadow: "0 0 18px 2px rgba(0, 240, 255, 0.18)"
+                  boxShadow: "0 0 18px 2px rgba(0, 240, 255, 0.18)",
                 }}
               >
                 {/* Animated pulse effect on the progress bar */}
@@ -260,8 +265,8 @@ const ImportModal: React.FC<ImportModalProps> = ({
         {importSummary && (
           <div
             className={`text-sm mt-2 p-3 rounded-lg ${
-              importSummary.includes("Error") 
-                ? "text-red-400 bg-red-900/20 border border-red-500/30" 
+              importSummary.includes("Error")
+                ? "text-red-400 bg-red-900/20 border border-red-500/30"
                 : "text-green-400 bg-green-900/20 border border-green-500/30"
             }`}
             data-testid="import-summary"
