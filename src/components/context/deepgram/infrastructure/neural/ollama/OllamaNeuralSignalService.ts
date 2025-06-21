@@ -186,7 +186,7 @@ export class OllamaNeuralSignalService
         `🦙 [OllamaNeuralSignal] Response received from OllamaCompletionService`
       );
       ServiceLogger.logResponse(response);
-      
+
       // Extra debug for response content
       if (response.choices?.[0]?.message) {
         console.log(
@@ -338,26 +338,38 @@ export class OllamaNeuralSignalService
     const content = response.choices?.[0]?.message?.content;
     if (content) {
       console.log(
-        `🦙 [OllamaNeuralSignal] No tool calls, trying content parsing: ${content.substring(0, 200)}...`
+        `🦙 [OllamaNeuralSignal] No tool calls, trying content parsing: ${content.substring(
+          0,
+          200
+        )}...`
       );
 
       // Try python_tag format
       const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
       const pythonTagMatch = content.match(pythonTagRegex);
-      
+
       if (pythonTagMatch) {
         try {
           const pythonTagData = JSON.parse(pythonTagMatch[1]);
           console.log(
-            `🦙 [OllamaNeuralSignal] Found python_tag format: ${JSON.stringify(pythonTagData)}`
+            `🦙 [OllamaNeuralSignal] Found python_tag format: ${JSON.stringify(
+              pythonTagData
+            )}`
           );
-          
-          if (pythonTagData.function === "activateBrainArea" && pythonTagData.parameters) {
-            const signal = NeuralSignalBuilder.buildFromArgs(pythonTagData.parameters);
+
+          if (
+            pythonTagData.function === "activateBrainArea" &&
+            pythonTagData.parameters
+          ) {
+            const signal = NeuralSignalBuilder.buildFromArgs(
+              pythonTagData.parameters
+            );
             return [signal];
           }
         } catch (e) {
-          console.warn(`🦙 [OllamaNeuralSignal] Failed to parse python_tag: ${e}`);
+          console.warn(
+            `🦙 [OllamaNeuralSignal] Failed to parse python_tag: ${e}`
+          );
         }
       }
 
@@ -383,7 +395,9 @@ export class OllamaNeuralSignalService
       }
     }
 
-    console.warn(`🦙 [OllamaNeuralSignal] No signals could be extracted from response`);
+    console.warn(
+      `🦙 [OllamaNeuralSignal] No signals could be extracted from response`
+    );
     return [];
   }
 
