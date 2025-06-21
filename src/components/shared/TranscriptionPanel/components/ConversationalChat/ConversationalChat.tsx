@@ -3,11 +3,14 @@ import { useSettingsState } from "../settings/useSettingsState";
 import { AudioSettingsPopover } from "./components/AudioSettingsPopover";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { ChatMessagesContainer } from "./components/ChatMessagesContainer";
+import { SummarizationIndicator } from "./components/SummarizationIndicator";
+import { TokenStatusBar } from "./components/TokenStatusBar";
 import "./ConversationalChat.css";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatState } from "./hooks/useChatState";
 import { useConversationMessages } from "./hooks/useConversationMessages";
 import { usePersistentMessages } from "./hooks/usePersistentMessages";
+import { ConversationSyncService } from "./services/ConversationSyncService";
 import "./styles/ConversationalChat.input.css";
 import "./styles/ConversationalChat.messages.css";
 import { ConversationalChatProps } from "./types/ChatTypes";
@@ -58,6 +61,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   currentConversation,
   onAddMessageToConversation,
   onProcessingChange,
+  chatHistory,
 }) => {
   // Component lifecycle tracking
   const componentId = useRef(
@@ -67,6 +71,74 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
   // Ref para rastrear a conversa anterior
   const previousConversationId = useRef<string | null>(null);
+
+  // Conversation Sync Service
+  const syncServiceRef = useRef<ConversationSyncService | null>(null);
+  const [syncedMessages, setSyncedMessages] = useState<any[]>([]);
+
+  // Initialize sync service when conversation changes
+  useEffect(() => {
+    if (
+      currentConversation &&
+      currentConversation.id !== previousConversationId.current
+    ) {
+      console.log(
+        "[CHAT_SYNC] Initializing sync service for conversation:",
+        currentConversation.id
+      );
+
+      // Dispose previous sync service
+      if (syncServiceRef.current) {
+        syncServiceRef.current.dispose();
+      }
+
+      // Create new sync service
+      syncServiceRef.current = new ConversationSyncService({
+        autoSync: true,
+        syncInterval: 3000, // 3 seconds
+        onSyncComplete: (state) => {
+          console.log("[CHAT_SYNC] Sync completed:", {
+            conversationId: state.conversationId,
+            messageCount: state.messages.length,
+          });
+        },
+        onSyncError: (error) => {
+          console.error("[CHAT_SYNC] Sync error:", error);
+        },
+      });
+
+      // Initialize with current conversation
+      syncServiceRef.current.initialize(currentConversation).then((state) => {
+        setSyncedMessages(state.messages);
+
+        // Log summary stats
+        const stats = syncServiceRef.current!.getSummaryStats();
+        if (stats.hasActiveSummary) {
+          console.log("[CHAT_SYNC] Loaded conversation with summaries:", {
+            totalMessages: stats.totalMessages,
+            summaryCount: stats.summaryCount,
+            originalMessagesCompressed: stats.originalMessagesCompressed,
+          });
+        }
+      });
+    }
+  }, [currentConversation]);
+
+  // Clean up sync service on unmount
+  useEffect(() => {
+    return () => {
+      if (syncServiceRef.current) {
+        syncServiceRef.current.dispose();
+      }
+    };
+  }, []);
+
+  // Update sync service when messages change
+  useEffect(() => {
+    if (syncServiceRef.current && currentConversation?.messages) {
+      syncServiceRef.current.updateMessages(currentConversation.messages);
+    }
+  }, [currentConversation?.messages]);
 
   // Log prop changes
   useEffect(() => {
@@ -82,7 +154,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   const persistentMessagesHook = usePersistentMessages();
   const conversationMessagesHook = useConversationMessages({
     currentConversation: currentConversation || null,
-    onAddMessage: onAddMessageToConversation || (() => {}),
+    onAddMessage: onAddMessageToConversation || (async () => {}),
     onClearConversation: () => {}, // Will be implemented later
   });
 
@@ -352,10 +424,23 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
       }
     );
 
-    // Send prompt - pass message and context separately
+    // Get current conversation messages to pass to the prompt processor
+    // This includes any summaries that were created
+    const conversationMessages = syncServiceRef.current
+      ? syncServiceRef.current.getMessagesForProcessor()
+      : currentConversation?.messages.map((msg) => ({
+          role: msg.type === "user" ? "user" : "system", // All non-user messages are system
+          content: msg.content,
+        })) || [];
+
+    // Send prompt - pass message, context and conversation messages
     setTimeout(() => {
-      // Pass the message as first parameter and context as second
-      onSendPrompt(finalContent, chatState.currentContext || undefined);
+      // Pass the message as first parameter, context as second, and messages as third
+      onSendPrompt(
+        finalContent,
+        chatState.currentContext || undefined,
+        conversationMessages
+      );
     }, 0);
   }, [
     chatState,
@@ -365,6 +450,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     onSendPrompt,
     onClearTranscription,
     scrollState,
+    currentConversation,
   ]);
 
   // Handle key press (Enter to send, Shift+Enter for new line)
@@ -459,6 +545,24 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
   return (
     <div className="conversational-chat">
+      {/* Summarization Indicator - Shows when summarizing */}
+      {chatHistory?.isSummarizing && (
+        <SummarizationIndicator
+          isSummarizing={true}
+          tokenCount={chatHistory?.tokenStats?.currentTokens}
+          maxTokens={chatHistory?.tokenStats?.maxTokens}
+        />
+      )}
+
+      {/* Token Status Bar - Shows token usage */}
+      {currentConversation && chatHistory?.getTokenStats && (
+        <TokenStatusBar
+          currentTokens={chatHistory.getTokenStats()?.currentTokens || 0}
+          maxTokens={chatHistory.getTokenStats()?.maxTokens || 32000}
+          summarizationThreshold={30000}
+        />
+      )}
+
       {/* Chat Messages Container */}
       <ChatMessagesContainer
         messages={chatMessages}

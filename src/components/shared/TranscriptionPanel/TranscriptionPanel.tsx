@@ -469,6 +469,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             currentConversation={chatHistory.currentConversation}
             onAddMessageToConversation={chatHistory.addMessageToConversation}
             onProcessingChange={setIsProcessing}
+            chatHistory={chatHistory}
           />
         </div>
       </div>

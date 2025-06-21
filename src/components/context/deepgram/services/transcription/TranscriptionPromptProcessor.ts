@@ -116,31 +116,52 @@ export class TranscriptionPromptProcessor {
    * Process transcription with LLM backend (Ollama in Advanced mode, OpenAI compatible)
    * Full neural processing with symbolic cognition
    */
-  async processWithOpenAI(temporaryContext?: string): Promise<void> {
-    await this._processTranscriptionPrompt("openai", temporaryContext);
+  async processWithOpenAI(
+    temporaryContext?: string,
+    conversationMessages?: any[]
+  ): Promise<void> {
+    await this._processTranscriptionPrompt(
+      "openai",
+      temporaryContext,
+      conversationMessages
+    );
   }
 
   /**
    * Process transcription with HuggingFace backend
    * Local neural processing with enhanced privacy
    */
-  async processWithHuggingFace(temporaryContext?: string): Promise<void> {
-    await this._processTranscriptionPrompt("huggingface", temporaryContext);
+  async processWithHuggingFace(
+    temporaryContext?: string,
+    conversationMessages?: any[]
+  ): Promise<void> {
+    await this._processTranscriptionPrompt(
+      "huggingface",
+      temporaryContext,
+      conversationMessages
+    );
   }
 
   /**
    * Process direct message from chat (no transcription)
    * @param message The message from chat input
    * @param temporaryContext Optional additional context
+   * @param conversationMessages Optional conversation messages from chat
    */
   async processDirectMessage(
     message: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ): Promise<void> {
     const mode = this.llmService.constructor.name.includes("HuggingFace")
       ? "huggingface"
       : "openai";
-    await this._processDirectMessage(mode, message, temporaryContext);
+    await this._processDirectMessage(
+      mode,
+      message,
+      temporaryContext,
+      conversationMessages
+    );
   }
 
   /**
@@ -149,7 +170,8 @@ export class TranscriptionPromptProcessor {
   private async _processDirectMessage(
     mode: ProcessorMode,
     message: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ): Promise<void> {
     // Prevent concurrent processing
     if (this.isProcessingPrompt) {
@@ -189,7 +211,8 @@ export class TranscriptionPromptProcessor {
       const result = await this._executeProcessingPipeline(
         mode,
         message,
-        temporaryContext
+        temporaryContext,
+        conversationMessages
       );
 
       // Update UI and complete processing
@@ -212,7 +235,8 @@ export class TranscriptionPromptProcessor {
    */
   private async _processTranscriptionPrompt(
     mode: ProcessorMode,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ): Promise<void> {
     // Prevent concurrent processing
     if (this.isProcessingPrompt) {
@@ -283,7 +307,8 @@ export class TranscriptionPromptProcessor {
       const result = await this._executeProcessingPipeline(
         mode,
         promptText,
-        temporaryContext
+        temporaryContext,
+        conversationMessages
       );
 
       // Update UI and complete processing
@@ -315,7 +340,8 @@ export class TranscriptionPromptProcessor {
   private async _executeProcessingPipeline(
     mode: ProcessorMode,
     transcriptionToSend: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ): Promise<TranscriptionProcessingResponse> {
     // PHASE 1: Neural Signal Extraction
     LoggingUtils.logInfo(
@@ -363,7 +389,8 @@ export class TranscriptionPromptProcessor {
     // PHASE 4: Generate Response
     const fullResponse = await this.responseGenerator.generateResponse(
       cleanIntegratedPrompt,
-      temporaryContext
+      temporaryContext,
+      conversationMessages
     );
 
     const response = cleanThinkTags(fullResponse);

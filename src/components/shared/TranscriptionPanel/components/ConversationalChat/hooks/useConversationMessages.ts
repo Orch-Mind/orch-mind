@@ -17,7 +17,7 @@ interface UseConversationMessagesReturn {
 
 interface UseConversationMessagesProps {
   currentConversation: ChatConversation | null;
-  onAddMessage: (conversationId: string, message: ChatMessage) => void;
+  onAddMessage: (conversationId: string, message: ChatMessage) => Promise<void>;
   onClearConversation: (conversationId: string) => void;
 }
 

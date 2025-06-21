@@ -23,7 +23,8 @@ export class ResponseGenerator {
    */
   async generateResponse(
     integratedPrompt: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: Message[]
   ): Promise<string> {
     symbolicCognitionTimelineLogger.logFusionInitiated();
 
@@ -36,10 +37,24 @@ export class ResponseGenerator {
 
     const conversationHistory = this.memoryService.getConversationHistory();
 
-    const messages = this.memoryService.buildPromptMessagesForModel(
-      integratedPrompt,
-      conversationHistory
-    );
+    // If we have conversation messages from the chat (including summaries), use them
+    // Otherwise fall back to the default conversation history
+    let messages: Message[];
+
+    if (conversationMessages && conversationMessages.length > 0) {
+      // Build messages with chat conversation history
+      messages = this._buildMessagesWithChatHistory(
+        integratedPrompt,
+        conversationMessages,
+        conversationHistory
+      );
+    } else {
+      // Use default memory service method
+      messages = this.memoryService.buildPromptMessagesForModel(
+        integratedPrompt,
+        conversationHistory
+      );
+    }
 
     return await this._generate(messages);
   }
@@ -58,6 +73,41 @@ export class ResponseGenerator {
     }
 
     return contextMessages;
+  }
+
+  /**
+   * Build messages incorporating chat conversation history
+   */
+  private _buildMessagesWithChatHistory(
+    prompt: string,
+    chatMessages: Message[],
+    systemHistory: Message[]
+  ): Message[] {
+    const messages: Message[] = [];
+
+    // Start with system message from history
+    if (systemHistory.length > 0 && systemHistory[0].role === "system") {
+      messages.push(systemHistory[0]);
+    }
+
+    // Add chat messages (includes summaries as system messages)
+    // Filter out any duplicate system messages
+    const systemMessageContent = messages[0]?.content;
+    chatMessages.forEach((msg) => {
+      // Skip if it's a duplicate system message
+      if (msg.role === "system" && msg.content === systemMessageContent) {
+        return;
+      }
+      messages.push(msg);
+    });
+
+    // Add the current prompt as the last user message
+    messages.push({
+      role: "user",
+      content: prompt,
+    });
+
+    return messages;
   }
 
   /**

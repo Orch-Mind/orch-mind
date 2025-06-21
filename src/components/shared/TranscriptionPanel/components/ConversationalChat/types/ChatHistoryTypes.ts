@@ -26,7 +26,20 @@ export interface UseChatHistoryReturn {
   addMessageToConversation: (
     conversationId: string,
     message: ChatMessage
-  ) => void;
+  ) => Promise<void>;
   searchConversations: (query: string) => ChatConversation[];
   clearConversationMessages: (conversationId: string) => void;
+  isSummarizing: boolean;
+  tokenStats: {
+    currentTokens: number;
+    maxTokens: number;
+    percentageUsed: number;
+    tokensUntilSummarization: number;
+  } | null;
+  getTokenStats: () => {
+    currentTokens: number;
+    maxTokens: number;
+    percentageUsed: number;
+    tokensUntilSummarization: number;
+  } | null;
 }

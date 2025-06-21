@@ -194,7 +194,11 @@ export const useTranscriptionManager = () => {
 
   // Memoize handleSendPrompt to prevent recreating on every render
   const handleSendPrompt = useCallback(
-    async (messageContent?: string, contextContent?: string) => {
+    async (
+      messageContent?: string,
+      contextContent?: string,
+      conversationMessages?: any[]
+    ) => {
       // Proteção de duplicação agora é feita no DeepgramContext (global)
 
       try {
@@ -224,7 +228,8 @@ export const useTranscriptionManager = () => {
           console.log("💬 [SEND_PROMPT] Sending as direct message");
           await sendDirectMessage(
             messageContent,
-            contextContent || temporaryContextRef.current
+            contextContent || temporaryContextRef.current,
+            conversationMessages
           );
         } else {
           // Otherwise, use the transcription-based prompt

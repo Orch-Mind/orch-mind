@@ -119,7 +119,11 @@ export interface ConversationalChatProps {
   /** Handler to toggle recording on/off */
   onToggleRecording: () => void;
   /** Handler to send a prompt to the AI */
-  onSendPrompt: (messageContent?: string, contextContent?: string) => void;
+  onSendPrompt: (
+    messageContent?: string,
+    contextContent?: string,
+    conversationMessages?: any[]
+  ) => void;
 
   // Audio settings props (optional)
   /** Current selected language */
@@ -148,11 +152,15 @@ export interface ConversationalChatProps {
   onAddMessageToConversation?: (
     conversationId: string,
     message: PersistentChatMessage
-  ) => void;
+  ) => Promise<void>;
 
   // Processing state callback (optional)
   /** Handler called when processing state changes */
   onProcessingChange?: (isProcessing: boolean) => void;
+
+  // Chat history hook (optional)
+  /** Chat history hook return value for accessing summarization state */
+  chatHistory?: any;
 }
 
 /**

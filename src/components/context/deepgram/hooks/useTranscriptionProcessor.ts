@@ -8,7 +8,8 @@ interface TranscriptionActions {
   sendTranscriptionPrompt: (temporaryContext?: string) => Promise<void>;
   sendDirectMessage: (
     message: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ) => Promise<void>;
   flushTranscriptionsToUI: () => void;
   setAutoQuestionDetection: (enabled: boolean) => void;
@@ -155,10 +156,16 @@ export function useTranscriptionProcessor(
    * Send direct message from chat
    */
   const sendDirectMessage = useCallback(
-    async (message: string, temporaryContext?: string) => {
+    async (
+      message: string,
+      temporaryContext?: string,
+      conversationMessages?: any[]
+    ) => {
       console.log("💬 [TRANSCRIPTION] sendDirectMessage called:", {
         message: message.substring(0, 50),
         hasContext: !!temporaryContext,
+        hasConversationMessages: !!conversationMessages,
+        messageCount: conversationMessages?.length || 0,
         isProcessing,
         globalProcessingRef: globalProcessingRef.current,
         hasTranscriptionService: !!transcriptionRef.current,
@@ -201,7 +208,8 @@ export function useTranscriptionProcessor(
         // Use the transcription service
         await transcriptionRef.current!.sendDirectMessage(
           message,
-          temporaryContext
+          temporaryContext,
+          conversationMessages
         );
 
         console.log("✅ Direct message completed successfully");

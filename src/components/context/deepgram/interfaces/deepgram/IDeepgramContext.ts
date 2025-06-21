@@ -24,7 +24,8 @@ export interface IDeepgramContext {
   sendTranscriptionPrompt: (temporaryContext?: string) => Promise<void>;
   sendDirectMessage: (
     message: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ) => Promise<void>;
   transcriptionList: string[];
   waitForConnectionState: (

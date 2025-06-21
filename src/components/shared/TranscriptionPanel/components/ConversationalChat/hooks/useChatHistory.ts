@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { useCallback, useEffect, useState } from "react";
+import { ChatSummarizationService } from "../services/ChatSummarizationService";
 import {
   ChatConversation,
   UseChatHistoryReturn,
@@ -67,6 +68,9 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [currentConversationId, setCurrentConversationId] = useState<
     string | null
   >(null);
+  const [summarizationService] = useState(() => new ChatSummarizationService());
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [tokenStats, setTokenStats] = useState<any | null>(null);
 
   // Helper to create a new conversation object - moved up before useEffect
   const createNewConversationObject = (): ChatConversation => {
@@ -178,7 +182,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
 
   // Add message to a conversation
   const addMessageToConversation = useCallback(
-    (conversationId: string, message: ChatMessage) => {
+    async (conversationId: string, message: ChatMessage) => {
       setConversations((prev) =>
         prev.map((conv) => {
           if (conv.id === conversationId) {
@@ -202,9 +206,76 @@ export const useChatHistory = (): UseChatHistoryReturn => {
           return conv;
         })
       );
+
+      // Check if summarization is needed after adding the message
+      const conversation = conversations.find(
+        (conv) => conv.id === conversationId
+      );
+      if (conversation) {
+        const updatedMessages = [...conversation.messages, message];
+
+        // Check if we need to summarize
+        if (summarizationService.needsSummarization(updatedMessages)) {
+          console.log("[CHAT_HISTORY] Triggering automatic summarization");
+
+          // Get token stats before summarization
+          const tokenStats =
+            summarizationService.getTokenStats(updatedMessages);
+
+          // Set summarizing state with token info
+          setIsSummarizing(true);
+          setTokenStats(tokenStats);
+
+          try {
+            // Apply summarization asynchronously
+            const summarizedMessages =
+              await summarizationService.applySummarization(updatedMessages);
+
+            // Update the conversation with summarized messages
+            setConversations((prev) =>
+              prev.map((conv) => {
+                if (conv.id === conversationId) {
+                  return {
+                    ...conv,
+                    messages: summarizedMessages,
+                    lastMessage:
+                      summarizedMessages[summarizedMessages.length - 1]
+                        ?.content || conv.lastMessage,
+                    lastMessageTime:
+                      summarizedMessages[summarizedMessages.length - 1]
+                        ?.timestamp || conv.lastMessageTime,
+                  };
+                }
+                return conv;
+              })
+            );
+
+            // Get new token stats after summarization
+            const newTokenStats =
+              summarizationService.getTokenStats(summarizedMessages);
+
+            console.log(
+              `[CHAT_HISTORY] Summarization complete. Tokens reduced from ${tokenStats.currentTokens} to ${newTokenStats.currentTokens}`
+            );
+          } catch (error) {
+            console.error("[CHAT_HISTORY] Summarization failed:", error);
+          } finally {
+            // Clear summarizing state
+            setIsSummarizing(false);
+            setTokenStats(null);
+          }
+        }
+      }
     },
-    []
+    [conversations, summarizationService]
   );
+
+  // Get token statistics for current conversation
+  const getTokenStats = useCallback(() => {
+    const conv = conversations.find((c) => c.id === currentConversationId);
+    if (!conv) return null;
+    return summarizationService.getTokenStats(conv.messages);
+  }, [conversations, currentConversationId, summarizationService]);
 
   // Search conversations
   const searchConversations = useCallback(
@@ -253,5 +324,8 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     addMessageToConversation,
     searchConversations,
     clearConversationMessages,
+    isSummarizing,
+    tokenStats,
+    getTokenStats,
   };
 };

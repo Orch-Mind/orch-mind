@@ -201,11 +201,18 @@ export class DeepgramTranscriptionService
   /**
    * Processes the transcription using the appropriate AI service based on current mode
    * Automatically selects between Ollama (advanced mode) and HuggingFace (basic mode)
+   * @param temporaryContext Optional additional context
+   * @param conversationMessages Optional conversation messages from chat (including summaries)
    */
-  async sendTranscriptionPrompt(temporaryContext?: string): Promise<void> {
+  async sendTranscriptionPrompt(
+    temporaryContext?: string,
+    conversationMessages?: any[]
+  ): Promise<void> {
     console.log("🚀 [DEEPGRAM_SERVICE] sendTranscriptionPrompt called:", {
       temporaryContext,
       hasContext: !!temporaryContext,
+      hasConversationMessages: !!conversationMessages,
+      messageCount: conversationMessages?.length || 0,
       currentMode: ModeService.getMode(),
       timestamp: new Date().toISOString(),
     });
@@ -217,14 +224,16 @@ export class DeepgramTranscriptionService
         LoggingUtils.logInfo("🤖 Using HuggingFace service (Basic mode)");
         console.log("📤 [DEEPGRAM_SERVICE] Calling processWithHuggingFace");
         await this.transcriptionPromptProcessor.processWithHuggingFace(
-          temporaryContext
+          temporaryContext,
+          conversationMessages
         );
         console.log("✅ [DEEPGRAM_SERVICE] processWithHuggingFace completed");
       } else {
         LoggingUtils.logInfo("🧠 Using Ollama service (Advanced mode)");
         console.log("📤 [DEEPGRAM_SERVICE] Calling processWithOpenAI");
         await this.transcriptionPromptProcessor.processWithOpenAI(
-          temporaryContext
+          temporaryContext,
+          conversationMessages
         );
         console.log("✅ [DEEPGRAM_SERVICE] processWithOpenAI completed");
       }
@@ -241,21 +250,26 @@ export class DeepgramTranscriptionService
    * Processes a direct message from chat interface
    * @param message The message from chat input
    * @param temporaryContext Optional additional context
+   * @param conversationMessages Optional conversation messages from chat (including summaries)
    */
   async sendDirectMessage(
     message: string,
-    temporaryContext?: string
+    temporaryContext?: string,
+    conversationMessages?: any[]
   ): Promise<void> {
     console.log("💬 [DEEPGRAM_SERVICE] sendDirectMessage called:", {
       message: message.substring(0, 50),
       hasContext: !!temporaryContext,
+      hasConversationMessages: !!conversationMessages,
+      messageCount: conversationMessages?.length || 0,
       timestamp: new Date().toISOString(),
     });
 
     try {
       await this.transcriptionPromptProcessor.processDirectMessage(
         message,
-        temporaryContext
+        temporaryContext,
+        conversationMessages
       );
       console.log("✅ [DEEPGRAM_SERVICE] sendDirectMessage completed");
     } catch (error) {
