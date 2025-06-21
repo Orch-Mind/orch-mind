@@ -16,8 +16,8 @@
   position: relative;
   /* Isolamento do background do painel */
   isolation: isolate;
-  /* Background sólido para evitar vazamentos */
-  background: #0a0f1a;
+  /* Background transparente para permitir glassmorphism */
+  background: transparent;
 }
 
 /* Nível 1: Container de Mensagens (Filho do .conversational-chat) */
@@ -37,7 +37,7 @@
   height: 0; /* TRUQUE: Força o container a respeitar o flex: 1 */
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0.5rem; /* Ajustado para corresponder ao layout de animação */
+  padding: 60px 0.5rem 0.5rem 0.5rem; /* Reduzido de 90px para 60px devido à altura menor da barra */
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
@@ -112,4 +112,24 @@
   opacity: 0.8;
 }
 
-/* Debug button styles removed for cleaner UI */ 
+/* Debug button styles removed for cleaner UI */
+
+/* Message List */
+.conv-chat-message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-top: 60px; /* Space for token status bar */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+  min-height: 0;
+}
+
+/* Smooth transition when token bar hides at scroll top */
+@media (prefers-reduced-motion: no-preference) {
+  .conv-chat-message-list {
+    transition: padding-top 0.3s ease-out;
+  }
+} 

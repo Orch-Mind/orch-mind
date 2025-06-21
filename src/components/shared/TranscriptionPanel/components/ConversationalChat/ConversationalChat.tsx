@@ -76,52 +76,52 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   const syncServiceRef = useRef<ConversationSyncService | null>(null);
   const [syncedMessages, setSyncedMessages] = useState<any[]>([]);
 
-  // Initialize sync service when conversation changes
+  // Track if sync service is initialized
+  const [isSyncServiceInitialized, setIsSyncServiceInitialized] =
+    useState(false);
+
+  // Initialize conversation sync service
   useEffect(() => {
-    if (
-      currentConversation &&
-      currentConversation.id !== previousConversationId.current
-    ) {
-      console.log(
-        "[CHAT_SYNC] Initializing sync service for conversation:",
-        currentConversation.id
-      );
-
-      // Dispose previous sync service
-      if (syncServiceRef.current) {
-        syncServiceRef.current.dispose();
-      }
-
-      // Create new sync service
-      syncServiceRef.current = new ConversationSyncService({
-        autoSync: true,
-        syncInterval: 3000, // 3 seconds
-        onSyncComplete: (state) => {
-          console.log("[CHAT_SYNC] Sync completed:", {
-            conversationId: state.conversationId,
-            messageCount: state.messages.length,
-          });
-        },
-        onSyncError: (error) => {
-          console.error("[CHAT_SYNC] Sync error:", error);
-        },
-      });
-
-      // Initialize with current conversation
-      syncServiceRef.current.initialize(currentConversation).then((state) => {
-        setSyncedMessages(state.messages);
-
-        // Log summary stats
-        const stats = syncServiceRef.current!.getSummaryStats();
-        if (stats.hasActiveSummary) {
-          console.log("[CHAT_SYNC] Loaded conversation with summaries:", {
-            totalMessages: stats.totalMessages,
-            summaryCount: stats.summaryCount,
-            originalMessagesCompressed: stats.originalMessagesCompressed,
-          });
-        }
-      });
+    if (!currentConversation) {
+      setIsSyncServiceInitialized(false);
+      return;
     }
+
+    // Dispose previous sync service
+    if (syncServiceRef.current) {
+      syncServiceRef.current.dispose();
+    }
+
+    // Create new sync service
+    syncServiceRef.current = new ConversationSyncService({
+      autoSync: true,
+      syncInterval: 3000, // 3 seconds
+      onSyncComplete: (state) => {
+        console.log("[CHAT_SYNC] Sync completed:", {
+          conversationId: state.conversationId,
+          messageCount: state.messages.length,
+        });
+      },
+      onSyncError: (error) => {
+        console.error("[CHAT_SYNC] Sync error:", error);
+      },
+    });
+
+    // Initialize with current conversation
+    syncServiceRef.current.initialize(currentConversation).then((state) => {
+      setSyncedMessages(state.messages);
+      setIsSyncServiceInitialized(true);
+
+      // Log summary stats
+      const stats = syncServiceRef.current!.getSummaryStats();
+      if (stats.hasActiveSummary) {
+        console.log("[CHAT_SYNC] Loaded conversation with summaries:", {
+          totalMessages: stats.totalMessages,
+          summaryCount: stats.summaryCount,
+          originalMessagesCompressed: stats.originalMessagesCompressed,
+        });
+      }
+    });
   }, [currentConversation]);
 
   // Clean up sync service on unmount
@@ -135,10 +135,15 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
   // Update sync service when messages change
   useEffect(() => {
-    if (syncServiceRef.current && currentConversation?.messages) {
+    // Only update if service is initialized and we have messages
+    if (
+      isSyncServiceInitialized &&
+      syncServiceRef.current &&
+      currentConversation?.messages
+    ) {
       syncServiceRef.current.updateMessages(currentConversation.messages);
     }
-  }, [currentConversation?.messages]);
+  }, [currentConversation?.messages, isSyncServiceInitialized]);
 
   // Log prop changes
   useEffect(() => {
@@ -239,6 +244,31 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     messagesContainerRef,
   });
 
+  // Track scroll position to auto-hide TokenStatusBar when at top
+  const [isAtTop, setIsAtTop] = useState(false);
+
+  // Monitor scroll position
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // Consider "at top" if within 50 pixels of the top
+      const atTop = container.scrollTop <= 50;
+      setIsAtTop(atTop);
+    };
+
+    // Initial check
+    handleScroll();
+
+    // Add scroll listener
+    container.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [chatMessages.length]); // Re-attach when messages change
+
   // Log component lifecycle (only in development)
   useEffect(() => {
     // Clear state on mount
@@ -270,12 +300,15 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   const isReceivingResponse = useRef(false);
   const lastProcessedResponse = useRef<string>("");
   const responseDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const processingResponseRef = useRef<string>(""); // Track what we're currently processing
 
   // Não é mais necessário atualizar estado salvo pois bloqueamos mudança de conversa durante processamento
 
   // Handle AI response processing with debounce and better state management
   useEffect(() => {
     if (!aiResponseText || aiResponseText.trim() === "") {
+      // Clear processing ref when response is cleared
+      processingResponseRef.current = "";
       return;
     }
 
@@ -302,17 +335,56 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     responseDebounceTimer.current = setTimeout(() => {
       // Check if this is truly a new response
       if (aiResponseText === lastProcessedResponse.current) {
-        console.log("⚠️ [CHAT] Same response, skipping");
+        console.log("⚠️ [CHAT] Same response already processed, skipping");
         return;
       }
 
-      // Check for duplicates in existing messages
-      const isDuplicate = chatMessages.some(
+      // Check if we're already processing this response
+      if (aiResponseText === processingResponseRef.current) {
+        console.log("⚠️ [CHAT] Already processing this response, skipping");
+        return;
+      }
+
+      // Check for duplicates in existing messages AND in current conversation
+      const isDuplicateInHook = chatMessages.some(
         (msg) => msg.type === "system" && msg.content === aiResponseText
       );
 
+      // Also check in the currentConversation messages directly
+      const isDuplicateInConversation =
+        currentConversation?.messages?.some(
+          (msg) => msg.type === "system" && msg.content === aiResponseText
+        ) || false;
+
+      const isDuplicate = isDuplicateInHook || isDuplicateInConversation;
+
       if (isDuplicate) {
-        console.log("⚠️ [CHAT] Duplicate AI response in messages, skipping");
+        console.log(
+          "⚠️ [CHAT] Response already in messages, skipping duplicate"
+        );
+        console.log("[CHAT_DEBUG] Duplicate detection details:", {
+          aiResponseText: aiResponseText.substring(0, 100),
+          isDuplicateInHook,
+          isDuplicateInConversation,
+          messagesCount: chatMessages.length,
+          conversationMessagesCount: currentConversation?.messages?.length || 0,
+          systemMessagesCount: chatMessages.filter((m) => m.type === "system")
+            .length,
+          lastSystemMessage: chatMessages
+            .filter((m) => m.type === "system")
+            .slice(-1)[0]
+            ?.content?.substring(0, 100),
+          lastConversationSystemMessage: currentConversation?.messages
+            ?.filter((m) => m.type === "system")
+            .slice(-1)[0]
+            ?.content?.substring(0, 100),
+        });
+        // Update last processed to prevent re-processing
+        lastProcessedResponse.current = aiResponseText;
+        // Clear the response since it's already in messages
+        setTimeout(() => {
+          onClearAiResponse();
+        }, 100);
         return;
       }
 
@@ -329,6 +401,9 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           "✅ [CHAT] Adding final AI response:",
           aiResponseText.substring(0, 50)
         );
+
+        // Mark that we're processing this response
+        processingResponseRef.current = aiResponseText;
 
         // Add AI response
         addMessage({
@@ -359,7 +434,9 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         // Add a small delay to ensure the message is properly saved
         setTimeout(() => {
           onClearAiResponse();
-        }, 100);
+          // Clear processing ref after clearing response
+          processingResponseRef.current = "";
+        }, 500); // Increased delay to ensure message is saved
       } else {
         console.log("🔄 [CHAT] Partial response detected, waiting for more...");
         // For partial responses, just update the processing state
@@ -560,6 +637,7 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           currentTokens={chatHistory.getTokenStats()?.currentTokens || 0}
           maxTokens={chatHistory.getTokenStats()?.maxTokens || 32000}
           summarizationThreshold={30000}
+          isAtTop={isAtTop}
         />
       )}
 

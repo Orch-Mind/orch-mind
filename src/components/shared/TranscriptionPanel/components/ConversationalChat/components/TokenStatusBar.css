@@ -1,111 +1,962 @@
+/* Token Status Bar - Advanced AI Progress Interface */
 .token-status-bar {
-  padding: 12px 16px;
-  background: rgba(var(--background-secondary-rgb), 0.5);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  margin: 0;
+  z-index: 100;
+  
+  /* Container remains transparent */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  
+  /* Smooth transitions for all states */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.token-info-text {
+/* Progress wrapper - Minimal padding */
+.token-progress-wrapper {
+  position: relative;
+  background: transparent;
+  overflow: visible;
+}
+
+/* Progress track - Advanced glass morphism */
+.token-progress-track {
+  position: relative;
+  height: 40px;
+  /* Enhanced glass background with gradient */
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(200%);
+  border-radius: 20px;
+  overflow: hidden;
+  
+  /* Multi-layered glass border */
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  
+  /* Complex shadow system for depth */
+  box-shadow: 
+    /* Inner shadows for depth */
+    inset 0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    /* Outer shadows */
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  /* Micro-animation on state changes */
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Animated border gradient */
+.token-progress-track::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(
+    45deg,
+    rgba(0, 250, 255, 0.3),
+    rgba(124, 77, 255, 0.3),
+    rgba(255, 77, 210, 0.3),
+    rgba(0, 250, 255, 0.3)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0.5;
+  animation: borderRotate 8s linear infinite;
+}
+
+@keyframes borderRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Enhanced ambient glow */
+.token-progress-glow {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  height: 200%;
+  width: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 250, 255, 0.15) 0%,
+    rgba(124, 77, 255, 0.1) 30%,
+    rgba(255, 77, 210, 0.05) 60%,
+    transparent 100%
+  );
+  filter: blur(60px);
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: none;
+  opacity: 0;
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+
+/* Main progress bar - Liquid glass with particles */
+.token-progress-bar {
+  position: relative;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 250, 255, 0.3) 0%,
+    rgba(124, 77, 255, 0.35) 50%,
+    rgba(255, 77, 210, 0.3) 100%
+  );
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 18px;
+  overflow: hidden;
+  
+  /* Advanced glass effect */
+  backdrop-filter: brightness(1.4) saturate(2.5) blur(8px);
+  -webkit-backdrop-filter: brightness(1.4) saturate(2.5) blur(8px);
+  
+  /* Dynamic inner glow */
+  box-shadow: 
+    inset 0 2px 8px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.2),
+    0 0 40px rgba(0, 250, 255, 0.3);
+  
+  /* Micro-animation */
+  animation: progressPulse 3s ease-in-out infinite;
+}
+
+@keyframes progressPulse {
+  0%, 100% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+  50% {
+    filter: brightness(1.1) hue-rotate(10deg);
+  }
+}
+
+/* Particle effect layer */
+.token-progress-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 40% 50%, rgba(255, 255, 255, 0.25) 0%, transparent 50%);
+  background-size: 10px 10px, 15px 15px, 8px 8px;
+  background-position: 0 0, 10px 10px, 20px 20px;
+  animation: particleFloat 20s linear infinite;
+  opacity: 0.6;
+  mix-blend-mode: overlay;
+}
+
+@keyframes particleFloat {
+  to {
+    background-position: 200px 0, 210px 10px, 220px 20px;
+  }
+}
+
+/* Status-based dynamic colors with smooth transitions */
+.token-status-bar.safe .token-progress-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 250, 255, 0.25) 0%,
+    rgba(0, 212, 255, 0.3) 50%,
+    rgba(0, 180, 255, 0.25) 100%
+  );
+  box-shadow: 
+    inset 0 2px 8px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.2),
+    0 0 60px rgba(0, 250, 255, 0.4);
+  animation: safeGlow 4s ease-in-out infinite;
+}
+
+@keyframes safeGlow {
+  0%, 100% {
+    filter: brightness(1) hue-rotate(0deg) saturate(1);
+  }
+  50% {
+    filter: brightness(1.2) hue-rotate(-10deg) saturate(1.2);
+  }
+}
+
+.token-status-bar.warning .token-progress-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 77, 210, 0.3) 0%,
+    rgba(255, 143, 199, 0.35) 50%,
+    rgba(255, 77, 150, 0.3) 100%
+  );
+  box-shadow: 
+    inset 0 2px 8px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.2),
+    0 0 60px rgba(255, 77, 210, 0.4);
+  animation: warningGlow 3s ease-in-out infinite;
+}
+
+@keyframes warningGlow {
+  0%, 100% {
+    filter: brightness(1) hue-rotate(0deg) saturate(1);
+  }
+  50% {
+    filter: brightness(1.3) hue-rotate(20deg) saturate(1.3);
+  }
+}
+
+.token-status-bar.critical .token-progress-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(124, 77, 255, 0.35) 0%,
+    rgba(188, 143, 255, 0.4) 50%,
+    rgba(124, 77, 255, 0.35) 100%
+  );
+  box-shadow: 
+    inset 0 2px 8px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.2),
+    0 0 80px rgba(124, 77, 255, 0.5);
+  animation: criticalGlow 2s ease-in-out infinite;
+}
+
+@keyframes criticalGlow {
+  0%, 100% {
+    filter: brightness(1) hue-rotate(0deg) saturate(1);
+    transform: scaleY(1);
+  }
+  50% {
+    filter: brightness(1.4) hue-rotate(-20deg) saturate(1.5);
+    transform: scaleY(1.02);
+  }
+}
+
+/* Enhanced animated light sweep */
+.token-progress-shine {
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 75%,
+    transparent 100%
+  );
+  animation: advancedShine 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  mix-blend-mode: overlay;
+  transform: skewX(-25deg);
+}
+
+@keyframes advancedShine {
+  0% { 
+    left: -150%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% { 
+    left: 150%;
+    opacity: 0;
+  }
+}
+
+/* Info overlay - Enhanced glass elements */
+.token-info-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none;
+  z-index: 10;
 }
 
+.token-info-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+}
+
+/* Token count - Enhanced glowing text */
 .token-count {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.5px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  
+  /* Advanced glow effect */
+  text-shadow: 
+    0 0 20px rgba(0, 250, 255, 0.5),
+    0 0 10px rgba(0, 250, 255, 0.3),
+    0 0 5px rgba(0, 250, 255, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+  
+  /* Ensure readability */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  
+  /* Micro-animation */
+  animation: countPulse 2s ease-in-out infinite;
 }
 
+@keyframes countPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) brightness(1);
+  }
+  50% {
+    transform: scale(1.01);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) brightness(1.05);
+  }
+}
+
+/* Percentage badge - Floating glass pill with animation */
 .token-percentage {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 2px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Warning badge - Enhanced glowing alert */
+.token-warning-compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 77, 210, 0.18) 0%,
+    rgba(255, 77, 210, 0.12) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 77, 210, 0.25);
+  animation: warningPulsate 2s ease-in-out infinite;
+  box-shadow: 
+    0 0 24px rgba(255, 77, 210, 0.2),
+    0 2px 12px rgba(255, 77, 210, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@keyframes warningPulsate {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 
+      0 0 24px rgba(255, 77, 210, 0.2),
+      0 2px 12px rgba(255, 77, 210, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% { 
+    transform: scale(1.03);
+    box-shadow: 
+      0 0 32px rgba(255, 77, 210, 0.3),
+      0 4px 16px rgba(255, 77, 210, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+.token-warning-compact .warning-icon {
+  font-size: 12px;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9));
+  animation: iconPulse 1s ease-in-out infinite alternate;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+@keyframes iconPulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.token-warning-compact .warning-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 215, 0, 0.95);
+  text-shadow: 
+    0 0 12px rgba(255, 215, 0, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Summarization threshold - Elegant golden line with pulse */
+.summarization-threshold {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 12;
+}
+
+/* Show threshold on hover or when approaching */
+.token-status-bar:hover .summarization-threshold,
+.token-status-bar.warning .summarization-threshold,
+.token-status-bar.critical .summarization-threshold {
   opacity: 0.8;
 }
 
-.summarization-warning {
-  margin-left: auto;
-  color: var(--warning-color, #ff9800);
-  font-size: 12px;
-  animation: pulse 2s ease-in-out infinite;
+.threshold-line {
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 215, 0, 0.4) 20%,
+    rgba(255, 215, 0, 0.8) 50%,
+    rgba(255, 215, 0, 0.4) 80%,
+    transparent 100%
+  );
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 0 40px rgba(255, 215, 0, 0.3);
+  position: relative;
+  animation: thresholdPulse 3s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes thresholdPulse {
   0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
     opacity: 0.8;
+    filter: brightness(1.3);
+  }
+}
+
+/* Threshold dot indicator */
+.threshold-line::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 215, 0, 0.9);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.8),
+    0 0 40px rgba(255, 215, 0, 0.5);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+}
+
+/* Summarization alert - Minimal floating badge with animation */
+.summarization-alert-compact {
+  position: absolute;
+  top: -36px;
+  right: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.18) 0%,
+    rgba(255, 215, 0, 0.12) 100%
+  );
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 14px;
+  font-size: 11px;
+  box-shadow: 
+    0 6px 24px rgba(255, 215, 0, 0.2),
+    0 2px 12px rgba(255, 215, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  z-index: 25;
+  animation: alertSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.summarization-alert-compact .alert-icon {
+  font-size: 14px;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.9));
+  animation: iconRotate 3s linear infinite;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+@keyframes iconRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.summarization-alert-compact .alert-text {
+  font-weight: 600;
+  color: rgba(255, 215, 0, 0.95);
+  text-shadow: 
+    0 0 10px rgba(255, 215, 0, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Interactive hover effects */
+.token-status-bar {
+  cursor: default;
+}
+
+.token-status-bar:hover {
+  transform: translateY(-1px);
+}
+
+.token-status-bar:hover .token-progress-track {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    inset 0 2px 8px rgba(0, 0, 0, 0.18),
+    inset 0 -2px 6px rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    0 12px 48px rgba(0, 0, 0, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.token-status-bar:hover .token-progress-track::before {
+  opacity: 0.7;
+  animation-duration: 6s;
+}
+
+.token-status-bar:hover .token-progress-glow {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.15);
+}
+
+.token-status-bar:hover .token-percentage {
+  transform: scale(1.05);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Loading state animation */
+.token-status-bar.loading .token-progress-bar {
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% {
+    opacity: 0.7;
   }
   50% {
     opacity: 1;
   }
 }
 
-.token-progress-container {
-  position: relative;
-  height: 8px;
-}
-
-.token-progress-background {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: rgba(var(--text-primary-rgb), 0.1);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.token-progress-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease-out;
-}
-
-.token-progress-fill.green {
-  background: #4caf50;
-}
-
-.token-progress-fill.yellow {
-  background: #ff9800;
-}
-
-.token-progress-fill.red {
-  background: #f44336;
-}
-
-.summarization-threshold-marker {
-  position: absolute;
-  top: -2px;
-  width: 2px;
-  height: 12px;
-  background: var(--text-secondary);
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-
-.summarization-threshold-marker:hover {
-  opacity: 1;
-}
-
-.summarization-threshold-marker::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: -3px;
-  width: 8px;
-  height: 8px;
-  background: var(--text-secondary);
-  border-radius: 50%;
-}
-
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
+/* Light mode adjustments - Adaptive glass with better contrast */
+@media (prefers-color-scheme: light) {
   .token-status-bar {
-    background: rgba(40, 40, 40, 0.5);
+    /* Keep transparent in light mode */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .token-progress-track {
+    background: linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.02) 0%,
+      rgba(0, 0, 0, 0.04) 50%,
+      rgba(0, 0, 0, 0.02) 100%
+    );
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 
+      inset 0 2px 6px rgba(0, 0, 0, 0.08),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.6),
+      0 6px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  .token-progress-bar {
+    opacity: 0.9;
+  }
+
+  .token-count {
+    color: rgba(0, 0, 0, 0.9);
+    text-shadow: 
+      0 0 20px rgba(0, 250, 255, 0.4),
+      0 1px 3px rgba(255, 255, 255, 0.9);
+  }
+
+  .token-percentage {
+    color: rgba(0, 0, 0, 0.85);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.7) 0%,
+      rgba(255, 255, 255, 0.5) 100%
+    );
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .token-warning-compact {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 77, 210, 0.15) 0%,
+      rgba(255, 77, 210, 0.1) 100%
+    );
+    border-color: rgba(255, 77, 210, 0.25);
+  }
+}
+
+/* Responsive adjustments - Optimized for all devices */
+@media (max-width: 768px) {
+  .token-status-bar {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  .token-progress-track {
+    height: 36px;
+    border-radius: 18px;
+  }
+
+  .token-progress-track::before {
+    animation-duration: 10s;
+  }
+
+  .token-count {
+    font-size: 11px;
+  }
+
+  .token-percentage {
+    font-size: 10px;
+  }
+
+  .token-info-overlay {
+    padding: 0 16px;
   }
   
-  .token-progress-background {
-    background: rgba(255, 255, 255, 0.1);
+  .token-info-left {
+    gap: 10px;
+  }
+
+  .token-warning-compact {
+    padding: 3px 8px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .token-warning-compact .warning-icon {
+    font-size: 11px;
+  }
+
+  .token-warning-compact .warning-text {
+    font-size: 10px;
+  }
+  
+  .summarization-alert-compact {
+    top: -32px;
+    right: 16px;
+    padding: 5px 10px;
+    font-size: 10px;
+    border-radius: 12px;
+  }
+
+  .summarization-alert-compact .alert-icon {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .token-status-bar {
+    top: 6px;
+    left: 8px;
+    right: 8px;
+  }
+  
+  .token-progress-track {
+    height: 32px;
+    border-radius: 16px;
+  }
+
+  .token-info-overlay {
+    padding: 0 14px;
+  }
+
+  .token-info-left {
+    gap: 8px;
+  }
+
+  .token-count {
+    font-size: 11px;
+  }
+
+  .token-percentage {
+    font-size: 10px;
+  }
+
+  .token-warning-compact {
+    padding: 2px 6px;
+    gap: 3px;
+  }
+
+  .token-warning-compact .warning-icon {
+    font-size: 10px;
+  }
+
+  .token-warning-compact .warning-text {
+    font-size: 9px;
+  }
+  
+  .summarization-alert-compact {
+    top: -28px;
+    right: 14px;
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+
+  .summarization-alert-compact .alert-icon {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 320px) {
+  .token-status-bar {
+    top: 4px;
+    left: 4px;
+    right: 4px;
+  }
+  
+  .token-progress-track {
+    height: 28px;
+    border-radius: 14px;
+  }
+
+  .token-count {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
+  .token-percentage {
+    display: none;
+  }
+  
+  .token-info-overlay {
+    padding: 0 12px;
+  }
+  
+  .token-warning-compact {
+    .warning-text {
+      display: none;
+    }
+  }
+  
+  .summarization-alert-compact {
+    top: -26px;
+    right: 12px;
+    padding: 3px 6px;
+    
+    /* Compact version for small screens */
+    .alert-text {
+      display: none;
+    }
+  }
+}
+
+/* Performance optimizations */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .token-progress-track {
+    border-width: 2px;
+  }
+
+  .token-progress-bar {
+    opacity: 1;
+  }
+
+  .token-count,
+  .token-percentage,
+  .token-warning-compact {
+    font-weight: 700;
+  }
+}
+
+/* Remove legacy styles */
+.token-status-header,
+.token-status-icon,
+.token-status-text,
+.token-count-primary,
+.token-separator,
+.token-count-max,
+.token-percentage-badge,
+.token-warning-badge,
+.token-progress-particles,
+.indicator-dot,
+.indicator-label,
+.threshold-label,
+.summarization-alert,
+.alert-pulse,
+.progress-indicators,
+.indicator {
+  display: none !important;
+}
+
+/* Auto-hide when scroll is at top to prevent covering messages */
+.token-status-bar.at-top {
+  opacity: 0.05;
+  transform: translateY(-8px) scale(0.98);
+  transition: all 0.4s ease-out;
+}
+
+/* When hovering while at top, show a bit more but still subtle */
+.token-status-bar.at-top:hover {
+  opacity: 0.5;
+  transform: translateY(0) scale(1);
+  transition: all 0.2s ease-in;
+}
+
+/* Critical state at top - completely hide */
+.token-status-bar.critical.at-top {
+  opacity: 0.02;
+  transform: translateY(-12px) scale(0.95);
+}
+
+.token-status-bar.critical.at-top:hover {
+  opacity: 0.4;
+  transform: translateY(0) scale(1);
+}
+
+/* Hide all visual elements when at top */
+.token-status-bar.at-top .token-progress-glow,
+.token-status-bar.at-top .token-progress-shine {
+  opacity: 0;
+}
+
+.token-status-bar.at-top .summarization-alert-compact {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Show subtle indicator that bar exists */
+.token-status-bar.at-top::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.token-status-bar.at-top:hover::after {
+  opacity: 0;
+}
+
+/* Update message list padding when bar is hidden */
+@media (prefers-reduced-motion: no-preference) {
+  .conversational-chat:has(.token-status-bar.at-top) .conv-chat-message-list {
+    padding-top: 20px;
+    transition: padding-top 0.4s ease-out;
   }
 } 

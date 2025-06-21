@@ -276,12 +276,19 @@ describe("Summarization Integration Test", () => {
       const { container: tokenContainer } = render(
         <TokenStatusBar {...tokenStatsProps} />
       );
-      expect(screen.getByText(/25.0k \/ 32.0k tokens/)).toBeInTheDocument();
-      expect(screen.getByText(/\(78%\)/)).toBeInTheDocument();
 
-      // Progress bar should have yellow color when 50% < usage < 80%
-      const progressBar = tokenContainer.querySelector(".token-progress-fill");
-      expect(progressBar).toHaveClass("yellow");
+      // Check for the new compact token display format
+      expect(screen.getByText("25.0k / 32.0k")).toBeInTheDocument();
+      expect(screen.getByText("78%")).toBeInTheDocument();
+
+      // Check for the warning badge
+      expect(screen.getByText("5.0k left")).toBeInTheDocument();
+
+      // Progress bar should have warning class when 50% < usage < 80%
+      const statusBar = tokenContainer.querySelector(".token-status-bar");
+      expect(statusBar).toHaveClass("warning");
+
+      const progressBar = tokenContainer.querySelector(".token-progress-bar");
       expect(progressBar).toHaveStyle({ width: "78.125%" });
     });
 

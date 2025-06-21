@@ -8,7 +8,7 @@
 /* ===== HIGH RESOLUTION / LARGE SCREENS ===== */
 @media (min-width: 1200px) {
   .chat-messages {
-    padding: 0.75rem; /* Proporcional ao novo padrão */
+    padding: 60px 0.75rem 0.75rem 0.75rem; /* Padding-top reduzido */
   }
   
   .main-input-wrapper {
@@ -43,14 +43,14 @@
   }
 
   .chat-messages {
-    padding: 0.5rem; /* Ajustado para o novo padrão */
+    padding: 55px 0.5rem 0.5rem 0.5rem; /* Padding-top levemente menor */
   }
 }
 
 /* ===== SMALL HEIGHT SCREENS ===== */
 @media (max-height: 600px) {
   .chat-messages {
-    padding: 0.5rem; /* Mantém o padrão base */
+    padding: 50px 0.5rem 0.5rem 0.5rem; /* Padding-top ainda menor */
   }
   
   .welcome-message {
@@ -77,7 +77,7 @@
 /* ===== TABLET PORTRAIT ===== */
 @media (max-width: 768px) {
   .chat-messages {
-    padding: 0.5rem; /* Mantém o padrão base */
+    padding: 55px 0.5rem 0.5rem 0.5rem; /* Padding-top para TokenStatusBar */
   }
 
   .main-input-wrapper {
@@ -130,7 +130,7 @@
 /* ===== MOBILE LANDSCAPE ===== */
 @media (max-width: 768px) and (orientation: landscape) {
   .chat-messages {
-    padding: 0.5rem; /* Mantém o padrão base */
+    padding: 50px 0.5rem 0.5rem 0.5rem; /* Padding-top menor em landscape */
   }
   
   .main-input-wrapper {
@@ -149,7 +149,7 @@
   }
   
   .chat-messages {
-    padding: 0.5rem; /* Mantém o padrão base */
+    padding: 52px 0.5rem 0.5rem 0.5rem; /* Padding-top para TokenStatusBar mobile */
   }
 
   .main-input-wrapper {
@@ -249,7 +249,7 @@
 /* ===== VERY SMALL SCREENS ===== */
 @media (max-width: 320px) {
   .chat-messages {
-    padding: 0.4rem; /* Levemente menor para telas muito pequenas */
+    padding: 45px 0.4rem 0.4rem 0.4rem; /* Padding-top reduzido para telas muito pequenas */
   }
   
   .main-input-wrapper {
@@ -278,7 +278,7 @@
 /* ===== PRINT STYLES ===== */
 @media print {
   .conversational-chat {
-    background: white !important;
+    background: transparent !important; /* Mantém transparência */
     border: 1px solid #000 !important;
     box-shadow: none !important;
   }
@@ -290,7 +290,7 @@
   }
   
   .message-content {
-    background: #f5f5f5 !important;
+    background: rgba(245, 245, 245, 0.8) !important; /* Transparente para impressão */
     border: 1px solid #ddd !important;
     color: #000 !important;
   }

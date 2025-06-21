@@ -118,8 +118,16 @@ export class ConversationSyncService {
    */
   updateMessages(messages: ChatMessage[]): void {
     if (!this.currentState) {
+      LoggingUtils.logWarning(
+        "[ConversationSync] Cannot update messages without initialized conversation - ignoring update"
+      );
+      return;
+    }
+
+    // Validate messages array
+    if (!Array.isArray(messages)) {
       LoggingUtils.logError(
-        "[ConversationSync] Cannot update messages without initialized conversation"
+        "[ConversationSync] Invalid messages array provided to updateMessages"
       );
       return;
     }

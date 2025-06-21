@@ -5,22 +5,27 @@ interface TokenStatusBarProps {
   currentTokens: number;
   maxTokens: number;
   summarizationThreshold: number;
+  isAtTop?: boolean;
 }
 
 export const TokenStatusBar: React.FC<TokenStatusBarProps> = ({
   currentTokens,
   maxTokens,
   summarizationThreshold,
+  isAtTop = false,
 }) => {
   const percentage = (currentTokens / maxTokens) * 100;
   const summarizationPercentage = (summarizationThreshold / maxTokens) * 100;
   const willSummarize = currentTokens >= summarizationThreshold;
 
-  const getStatusColor = () => {
-    if (percentage < 50) return "green";
-    if (percentage < 80) return "yellow";
-    return "red";
+  const getStatusClass = () => {
+    if (percentage < 50) return "safe";
+    if (percentage < 80) return "warning";
+    return "critical";
   };
+
+  // Additional hiding when at scroll top
+  const scrollHideClass = isAtTop ? "at-top" : "";
 
   const formatTokenCount = (count: number) => {
     if (count >= 1000) {
@@ -29,32 +34,72 @@ export const TokenStatusBar: React.FC<TokenStatusBarProps> = ({
     return count.toString();
   };
 
+  // Calculate tokens remaining until summarization
+  const tokensUntilSummarization = Math.max(
+    0,
+    summarizationThreshold - currentTokens
+  );
+  const shouldShowWarning =
+    tokensUntilSummarization <= 5000 && tokensUntilSummarization > 0;
+
   return (
-    <div className="token-status-bar">
-      <div className="token-info-text">
-        <span className="token-count">
-          {formatTokenCount(currentTokens)} / {formatTokenCount(maxTokens)} tokens
-        </span>
-        <span className="token-percentage">({Math.round(percentage)}%)</span>
-        {willSummarize && (
-          <span className="summarization-warning">
-            📋 Summarization will trigger soon
-          </span>
-        )}
-      </div>
-      <div className="token-progress-container">
-        <div className="token-progress-background">
+    <div className={`token-status-bar ${getStatusClass()} ${scrollHideClass}`}>
+      {/* Progress wrapper */}
+      <div className="token-progress-wrapper">
+        <div className="token-progress-track">
+          {/* Background glow effect */}
           <div
-            className={`token-progress-fill ${getStatusColor()}`}
+            className="token-progress-glow"
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
+
+          {/* Main progress bar */}
           <div
-            className="summarization-threshold-marker"
+            className="token-progress-bar"
+            style={{ width: `${Math.min(percentage, 100)}%` }}
+          >
+            <div className="token-progress-shine" />
+          </div>
+
+          {/* Compact info inside the bar */}
+          <div className="token-info-overlay">
+            <div className="token-info-left">
+              <span className="token-count">
+                {formatTokenCount(currentTokens)} /{" "}
+                {formatTokenCount(maxTokens)}
+              </span>
+              <span className="token-percentage">
+                {Math.round(percentage)}%
+              </span>
+            </div>
+
+            {shouldShowWarning && (
+              <div className="token-warning-compact">
+                <span className="warning-icon">⚡</span>
+                <span className="warning-text">
+                  {formatTokenCount(tokensUntilSummarization)} left
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Summarization threshold marker */}
+          <div
+            className="summarization-threshold"
             style={{ left: `${summarizationPercentage}%` }}
-            title={`Summarization at ${formatTokenCount(summarizationThreshold)} tokens`}
-          />
+          >
+            <div className="threshold-line" />
+          </div>
         </div>
       </div>
+
+      {/* Summarization alert - only when triggered */}
+      {willSummarize && (
+        <div className="summarization-alert-compact">
+          <span className="alert-icon">🚀</span>
+          <span className="alert-text">Summarizing next message</span>
+        </div>
+      )}
     </div>
   );
-}; 
+};
