@@ -5,19 +5,19 @@
 // Symbolic: Neural signal extraction service using Ollama (cortex: ollama)
 
 import {
-  getOption,
-  STORAGE_KEYS,
+    getOption,
+    STORAGE_KEYS,
 } from "../../../../../../services/StorageService";
 import {
-  buildSystemPrompt,
-  buildUserPrompt,
+    buildSystemPrompt,
+    buildUserPrompt,
 } from "../../../../../../shared/utils/neuralPromptBuilder";
 import { NeuralSignalResponse } from "../../../interfaces/neural/NeuralSignalTypes";
 import { FunctionSchemaRegistry } from "../../../services/function-calling/FunctionSchemaRegistry";
 import { OllamaCompletionService } from "../../../services/ollama/neural/OllamaCompletionService";
 import {
-  cleanThinkTags,
-  cleanThinkTagsFromJSON,
+    cleanThinkTags,
+    cleanThinkTagsFromJSON,
 } from "../../../utils/ThinkTagCleaner";
 
 // SOLID: Interface Segregation Principle - Interfaces específicas
@@ -78,6 +78,11 @@ class NeuralSignalBuilder {
   static buildFromArgs(args: any): any {
     if (!args.core) {
       throw new Error("Missing required field 'core'");
+    }
+
+    // Debug log for keywords field
+    if (args.keywords !== undefined && !Array.isArray(args.keywords)) {
+      console.warn(`🦙 [NeuralSignalBuilder] Keywords field is not an array: ${JSON.stringify(args.keywords)}, type: ${typeof args.keywords}`);
     }
 
     return {
@@ -216,7 +221,9 @@ export class OllamaNeuralSignalService
           temperature: 0.2,
         });
 
-      return this.extractEnrichment(response, query);
+      const result = this.extractEnrichment(response, query);
+      console.log(`🦙 [OllamaNeuralSignal] Enrichment result: ${JSON.stringify(result)}`);
+      return result;
     } catch (error) {
       ServiceLogger.logError("enrichSemanticQueryForSignal", error);
       return { enrichedQuery: query, keywords: [] };
@@ -333,10 +340,22 @@ export class OllamaNeuralSignalService
         const args = ArgumentParser.parseToolCallArguments(
           toolCalls[0].function.arguments
         );
+        console.log(`🦙 [OllamaNeuralSignal] Enrichment args parsed: ${JSON.stringify(args)}`);
+        
         if (args.enrichedQuery) {
+          // Ensure keywords is an array
+          let keywords: string[] = [];
+          if (Array.isArray(args.keywords)) {
+            keywords = args.keywords;
+          } else if (typeof args.keywords === 'string') {
+            // Handle case where keywords might be a comma-separated string
+            keywords = args.keywords.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+            console.warn(`🦙 [OllamaNeuralSignal] Keywords was a string, converted to array: ${JSON.stringify(keywords)}`);
+          }
+          
           return {
             enrichedQuery: args.enrichedQuery,
-            keywords: args.keywords || [],
+            keywords: keywords,
           };
         }
       } catch (error) {

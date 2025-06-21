@@ -3,13 +3,12 @@
 
 import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
 import {
-  NeuralProcessingResult,
-  NeuralSignal,
+    NeuralProcessingResult,
+    NeuralSignal,
 } from "../../../interfaces/neural/NeuralSignalTypes";
 import { SymbolicInsight } from "../../../types/SymbolicInsight";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
-import { ProcessorMode } from "./NeuralSignalEnricher";
 
 /**
  * Neural memory cognitive retrieval processor
@@ -219,7 +218,7 @@ export class NeuralMemoryRetriever {
     );
     LoggingUtils.logInfo(
       `🔍 [NEURAL-MEMORY] Keywords: [${
-        signal.keywords?.join(", ") || "none"
+        Array.isArray(signal.keywords) ? signal.keywords.join(", ") : "none"
       }], topK: ${signal.topK || "default"}`
     );
 
@@ -399,7 +398,7 @@ export class NeuralMemoryRetriever {
     if (signal.intensity < 0.3) {
       emergentProperties.push("Low response diversity");
     }
-    if (signal.keywords && signal.keywords.length > 3) {
+    if (signal.keywords && Array.isArray(signal.keywords) && signal.keywords.length > 3) {
       emergentProperties.push("Cognitive dissonance");
     }
 
@@ -420,6 +419,7 @@ export class NeuralMemoryRetriever {
 
       // Keywords como fragmentos simbólicos
       ...(signal.keywords &&
+        Array.isArray(signal.keywords) &&
         signal.keywords.length > 0 && {
           symbolic_fragments: signal.keywords.map((keyword) => ({
             fragment: keyword,
