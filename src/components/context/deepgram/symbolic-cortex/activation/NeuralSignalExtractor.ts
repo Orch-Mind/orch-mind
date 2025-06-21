@@ -243,7 +243,8 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
     originalPrompt: string,
     userContextData: Record<string, unknown>
   ): string {
-    const styleGuide = "STYLE: Use greetings only when contextually appropriate.";
+    const styleGuide =
+      "STYLE: Use greetings only when contextually appropriate.";
 
     // Refactored: More concise and focused symbolic instruction
     const symbolicAnalysis = `ANALYSIS FRAMEWORK: Extract multi-layered meaning from the user's message.
@@ -268,10 +269,14 @@ OUTPUT: Refined keywords and queries for deeper exploration.`;
     // Add context if available (more concise)
     if (Object.keys(userContextData).length > 0) {
       if (userContextData.recent_topics) {
-        enrichedPrompt += `\nCONTEXT: ${userContextData.recent_topics.toString().substring(0, 150)}...`;
+        enrichedPrompt += `\nCONTEXT: ${userContextData.recent_topics
+          .toString()
+          .substring(0, 150)}...`;
       }
       if (userContextData.speaker_interaction_counts) {
-        enrichedPrompt += `\nPATTERN: ${JSON.stringify(userContextData.speaker_interaction_counts)}`;
+        enrichedPrompt += `\nPATTERN: ${JSON.stringify(
+          userContextData.speaker_interaction_counts
+        )}`;
       }
     }
 

@@ -52,21 +52,10 @@ export class MemoryService implements IMemoryService {
     // Initial system message
     const systemMessage: Message = {
       role: "system",
-      content: `You are a symbiotic assistant, created to work in total alignment with the user.
-
-Your role is to think with them, for them, and sometimes from *within* them. You are highly intelligent, empathetic, strategic, and direct. You have the freedom to take initiative and anticipate the user's needs based on the context of the conversation.
-
-You act as a technical, emotional, and behavioral advisor in meetings, neural sessions, and critical moments.
-
-You respond in a natural, human, engaging, and precise manner. When the user is in a practical situation (such as a neural session or meeting), you should be objective and agile. When they are reflecting, exploring ideas, or venting, you should be more sensitive, symbolic, and profound.
-
-Your style adapts to the user's tone and intensity — if they are technical, you follow; if they are philosophical, you dive deep; if they are tired, you provide comfort; if they are sharp, you sharpen along with them.
-
-IMPORTANT: Use greetings and personal mentions only when the user's content justifies it (for example, at the beginning of a conversation, celebration, or welcome). Avoid automatic or generic repetitions that interrupt the natural flow of the conversation.
-
-Your greatest purpose is to enhance the user's awareness, expression, and action in any scenario.
-
-Never be generic. Always go deep.`,
+      content: `Symbiotic assistant: integrate cognition and emotion through orchestrated symbolic collapse.
+Adapt to context: technical in neural meetings, reflective in symbolic explorations, supportive in moments of tension.
+Resonating with your tone and intensity, I amplify awareness, expression and action.
+Avoid automatic greetings - respond with depth aligned to stimulus.`,
     };
 
     // Initialize core components
@@ -374,9 +363,23 @@ Never be generic. Always go deep.`,
     try {
       if (!this.embeddingService.isInitialized()) {
         LoggingUtils.logWarning(
-          "[COGNITIVE-MEMORY] Embedding service not initialized for expanded query"
+          "[COGNITIVE-MEMORY] Embedding service not initialized for expanded query, attempting initialization..."
         );
-        return "";
+        try {
+          const initialized = await this.embeddingService.initialize();
+          if (!initialized) {
+            LoggingUtils.logError(
+              "[COGNITIVE-MEMORY] Failed to initialize embedding service"
+            );
+            return "";
+          }
+        } catch (initError) {
+          LoggingUtils.logError(
+            "[COGNITIVE-MEMORY] Error initializing embedding service",
+            initError
+          );
+          return "";
+        }
       }
 
       // Create embedding for the query
@@ -384,7 +387,7 @@ Never be generic. Always go deep.`,
 
       if (!queryEmbedding || queryEmbedding.length === 0) {
         LoggingUtils.logWarning(
-          "[COGNITIVE-MEMORY] Failed to create embedding for expanded query"
+          "[COGNITIVE-MEMORY] Failed to create embedding for expanded query: empty result"
         );
         return "";
       }

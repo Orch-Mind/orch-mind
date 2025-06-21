@@ -334,7 +334,7 @@ export class OllamaNeuralSignalService
     context?: string,
     language?: string
   ): any[] {
-    const systemPrompt = `You are a semantic enrichment system. Your task is to expand user queries by generating 3 to 8 related keywords or terms, while preserving the core meaning and intent. Respond using the enrichSemanticQuery function, returning only relevant keywords as an array. If a language is specified, generate keywords in that language.`;
+    const systemPrompt = `Enrichment system: expand queries with 3-8 keywords preserving symbolic resonance and productive contradictions.`;
 
     let userPrompt = `Core: ${core}
     Intensity: ${(intensity * 100).toFixed(0)}%

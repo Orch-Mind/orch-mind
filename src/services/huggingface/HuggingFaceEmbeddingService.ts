@@ -6,7 +6,7 @@ import { getOption, STORAGE_KEYS } from "../StorageService";
 
 const ALLOWED_EMBEDDERS = [
   // Prefer lighter MiniLM model (384-d) for faster embeddings
-  "Xenova/all-MiniLM-L6-v2"
+  "Xenova/all-MiniLM-L6-v2",
 ] as const;
 type AllowedEmbedderId = (typeof ALLOWED_EMBEDDERS)[number];
 
@@ -47,17 +47,17 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
   }
 
   async initialize(config?: Record<string, any>): Promise<boolean> {
+    const modelToLoad = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL) as AllowedEmbedderId;
+    console.log(`[HFE] Initializing with model from storage: ${modelToLoad || 'default (will use first allowed)'}`);
+    
     await this.loadModel(
-      getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL) as AllowedEmbedderId
+      modelToLoad || ALLOWED_EMBEDDERS[0]
     );
     return true;
   }
 
   /** Carrega UM dos dois modelos de embedding permitidos */
-  async loadModel(
-    modelId: AllowedEmbedderId,
-    device: "wasm" = "wasm"
-  ) {
+  async loadModel(modelId: AllowedEmbedderId, device: "wasm" = "wasm") {
     // Ensure environment is initialized before loading models
     if (!this.initialized) {
       await this.initializeEnvironment();
@@ -68,23 +68,40 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
     }
     if (this.modelId === modelId && this.embedder) return;
 
-    // Use centralized model loading configuration
-    const { loadModelWithOptimalConfig } = await import(
-      "../../utils/transformersEnvironment"
-    );
-    this.embedder = await loadModelWithOptimalConfig(
-      modelId,
-      "feature-extraction",
-      {
-        device,
-        dtype: "fp32", // Use fp32 for better compatibility with all models
-      }
-    );
-    this.modelId = modelId;
+    try {
+      console.log(`[HFE] Loading embedding model: ${modelId}`);
+
+      // Use centralized model loading configuration
+      const { loadModelWithOptimalConfig } = await import(
+        "../../utils/transformersEnvironment"
+      );
+      this.embedder = await loadModelWithOptimalConfig(
+        modelId,
+        "feature-extraction",
+        {
+          device,
+          dtype: "fp32", // Use fp32 for better compatibility with all models
+        }
+      );
+      this.modelId = modelId;
+
+      console.log(`[HFE] Successfully loaded embedding model: ${modelId}`);
+    } catch (error) {
+      console.error(`[HFE] Failed to load embedding model ${modelId}:`, error);
+      this.embedder = null;
+      this.modelId = null;
+      throw error;
+    }
   }
 
   /** Gera embedding de um texto */
   async createEmbedding(text: string): Promise<number[]> {
+    // Garantir que o modelo está carregado antes de criar embeddings
+    if (!this.isInitialized()) {
+      console.log("[HFE] Model not initialized, loading default model...");
+      await this.initialize();
+    }
+
     const modelId = this.modelId ?? ALLOWED_EMBEDDERS[0];
     await this.loadModel(modelId);
     const output = await this.embedder(text, { pooling: "mean" });
@@ -93,6 +110,12 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
 
   /** Gera embeddings em batch */
   async createEmbeddings(texts: string[]): Promise<number[][]> {
+    // Garantir que o modelo está carregado antes de criar embeddings
+    if (!this.isInitialized()) {
+      console.log("[HFE] Model not initialized, loading default model...");
+      await this.initialize();
+    }
+
     const modelId = this.modelId ?? ALLOWED_EMBEDDERS[0];
     await this.loadModel(modelId);
     const outputs = await Promise.all(

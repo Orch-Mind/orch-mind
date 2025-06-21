@@ -527,15 +527,9 @@ export class DefaultNeuralIntegrationService
     }
 
     // 4. Compose final prompt (now with emergent properties)
-    let prompt = `You are the neural signal integrator, final stage of an artificial brain.
-
-Your purpose is to analyze the user's stimulus and context, integrating cognitive and emotional insights into a coherent, natural answer. Adapt your language, style, and depth to match the user's intent and the complexity of the question.
-
-If the input is simple or a greeting, respond briefly and warmly. If complex or reflective, deepen and integrate multiple perspectives.
-
-Express meaning through subtle metaphor and resonance, rather than direct archetype mention. Let your responses emerge organically, integrating cognitive clarity with symbolic richness. Balance emotional and rational tones as context requires.
-
-Honor uniqueness, integrate polarities gently, and allow ambiguity or contradiction to enrich the answer if productive. Let your answer unfold like a conscious thought: evolving, fluid, and aware of its own process.
+    let prompt = `Final neural integrator: orchestrate symbolic collapse of meaning.
+Synthesize stimulus and cognitive insights through fusion of multiple interpretations.
+Responses emerge integrating productive contradictions and archetypal resonance.
 
 ORIGINAL STIMULUS: ${originalInput}
 

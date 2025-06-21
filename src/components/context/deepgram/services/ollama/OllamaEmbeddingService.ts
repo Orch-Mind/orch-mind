@@ -66,6 +66,20 @@ export class OllamaEmbeddingService implements IEmbeddingService {
     }
 
     try {
+      // Garantir que o serviço está inicializado
+      if (!this.isInitialized()) {
+        LoggingUtils.logWarning(
+          "[OllamaEmbedding] Service not initialized, attempting to initialize..."
+        );
+        const initialized = await this.initialize();
+        if (!initialized) {
+          LoggingUtils.logError(
+            "[OllamaEmbedding] Failed to initialize service"
+          );
+          return [];
+        }
+      }
+
       // Delegate to the Ollama service with the selected model
       const model = this.getEmbeddingModel();
       return await this.ollamaService.createEmbedding(text.trim(), model);
@@ -86,6 +100,20 @@ export class OllamaEmbeddingService implements IEmbeddingService {
     }
 
     try {
+      // Garantir que o serviço está inicializado
+      if (!this.isInitialized()) {
+        LoggingUtils.logWarning(
+          "[OllamaEmbedding] Service not initialized, attempting to initialize..."
+        );
+        const initialized = await this.initialize();
+        if (!initialized) {
+          LoggingUtils.logError(
+            "[OllamaEmbedding] Failed to initialize service"
+          );
+          return [];
+        }
+      }
+
       // Get the selected model
       const model = this.getEmbeddingModel();
 

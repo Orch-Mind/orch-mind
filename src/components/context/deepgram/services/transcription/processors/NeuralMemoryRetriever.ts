@@ -263,17 +263,50 @@ export class NeuralMemoryRetriever {
 
       // Criar embedding para a query
       const embeddingService = (this.memoryService as any).embeddingService;
-      if (!embeddingService?.isInitialized()) {
-        LoggingUtils.logWarning(
-          "[NEURAL-MEMORY] Embedding service not initialized"
+      if (!embeddingService) {
+        LoggingUtils.logError(
+          "[NEURAL-MEMORY] Embedding service not found in memory service"
         );
         const fallbackResults = await this._retrieveWithMemoryService(signal);
         return { results: fallbackResults, matchCount: fallbackResults.length };
       }
 
+      if (!embeddingService?.isInitialized()) {
+        LoggingUtils.logWarning(
+          "[NEURAL-MEMORY] Embedding service not initialized, attempting to initialize..."
+        );
+        try {
+          const initialized = await embeddingService.initialize();
+          if (!initialized) {
+            LoggingUtils.logError(
+              "[NEURAL-MEMORY] Failed to initialize embedding service"
+            );
+            const fallbackResults = await this._retrieveWithMemoryService(
+              signal
+            );
+            return {
+              results: fallbackResults,
+              matchCount: fallbackResults.length,
+            };
+          }
+        } catch (initError) {
+          LoggingUtils.logError(
+            "[NEURAL-MEMORY] Error initializing embedding service",
+            initError
+          );
+          const fallbackResults = await this._retrieveWithMemoryService(signal);
+          return {
+            results: fallbackResults,
+            matchCount: fallbackResults.length,
+          };
+        }
+      }
+
       const queryEmbedding = await embeddingService.createEmbedding(query);
       if (!queryEmbedding || queryEmbedding.length === 0) {
-        LoggingUtils.logWarning("[NEURAL-MEMORY] Failed to create embedding");
+        LoggingUtils.logWarning(
+          "[NEURAL-MEMORY] Failed to create embedding: empty result"
+        );
         return { results: [], matchCount: 0 };
       }
 

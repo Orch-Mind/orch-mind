@@ -4,6 +4,7 @@
 // HuggingFaceNeuralSignalService.ts
 // Symbolic: Neural signal extraction service using HuggingFace (cortex: huggingface)
 import { NeuralSignalResponse } from "../../../components/context/deepgram/interfaces/neural/NeuralSignalTypes";
+import { FunctionSchemaRegistry } from "../../../components/context/deepgram/services/function-calling/FunctionSchemaRegistry";
 import { HuggingFaceServiceFacade } from "../../../components/context/deepgram/services/huggingface/HuggingFaceServiceFacade";
 import { INeuralSignalService } from "../../../domain/core/neural/INeuralSignalService";
 import { ISemanticEnricher } from "../../../domain/core/neural/ISemanticEnricher";
@@ -16,7 +17,6 @@ import {
   extractNeuralSignalJsons,
   parseNeuralSignal,
 } from "../../../shared/utils/neuralSignalParser";
-import { FunctionSchemaRegistry } from "../../../components/context/deepgram/services/function-calling/FunctionSchemaRegistry";
 
 /**
  * Symbolic: HuggingFace implementation of neural signal service
@@ -48,7 +48,7 @@ export class HuggingFaceNeuralSignalService
       );
 
       // For HuggingFace models without native function-calling, force JSON output
-      userPromptContent += `\n\nIMPORTANT OUTPUT FORMAT:\nReturn ONLY a JSON array with objects following exactly this schema (no markdown, no extra text):\n[{\n  \"core\": \"area\",\n  \"query\": \"symbolic query\",\n  \"intensity\": 0.5,\n  \"keywords\": [\"k1\", \"k2\"],\n  \"topK\": 5,\n  \"filters\": { },\n  \"expand\": false,\n  \"symbolicInsights\": \"...\"\n}]`;
+      userPromptContent += `\n\nReturn JSON array: [{core, query, intensity, keywords[], symbolicInsights}]`;
 
       const activateBrainAreaSchema =
         FunctionSchemaRegistry.getInstance().get("activateBrainArea");
@@ -146,7 +146,7 @@ export class HuggingFaceNeuralSignalService
         ? [{ type: "function", function: enrichSchema }]
         : [];
 
-      const systemPrompt = `You are a semantic enrichment system. Expand queries with related terms while preserving intent. Generate 3-8 relevant keywords. Respond using enrichSemanticQuery function.`;
+      const systemPrompt = `Enrich queries with 3-8 keywords maintaining symbolic resonance and productive tensions.`;
 
       let userPrompt = `CORE: ${core}\nINTENSITY: ${intensity}\nORIGINAL QUERY: ${query}`;
       if (context) userPrompt += `\nCONTEXT: ${context}`;
@@ -175,7 +175,9 @@ export class HuggingFaceNeuralSignalService
         Array.isArray(toolCalls) &&
         toolCalls[0]?.function?.arguments
       ) {
-        const signal = parseNeuralSignal(toolCalls[0].function.arguments as string);
+        const signal = parseNeuralSignal(
+          toolCalls[0].function.arguments as string
+        );
         if (signal && signal.symbolic_query?.query) {
           return {
             enrichedQuery: signal.symbolic_query.query,

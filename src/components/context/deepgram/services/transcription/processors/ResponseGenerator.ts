@@ -55,6 +55,10 @@ export class ResponseGenerator {
         conversationHistory
       );
     }
+    
+    console.log("🧠 [ResponseGenerator] Conversation History:", conversationHistory);
+    console.log("🧠 [ResponseGenerator] Conversation Messages:", conversationMessages);
+    console.log("🧠 [ResponseGenerator] Messages:", messages);
 
     return await this._generate(messages);
   }
