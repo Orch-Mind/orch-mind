@@ -219,9 +219,17 @@ export class OllamaNeuralSignalService
 
       const model = this.getModel();
       if (model.includes("llama3.2")) {
-        console.log(`🦙 [OllamaNeuralSignal] Using Llama 3.2 - extra debug enabled`);
-        console.log(`🦙 [OllamaNeuralSignal] Enrichment messages:`, JSON.stringify(messages, null, 2));
-        console.log(`🦙 [OllamaNeuralSignal] Enrichment tools:`, JSON.stringify(tools, null, 2));
+        console.log(
+          `🦙 [OllamaNeuralSignal] Using Llama 3.2 - extra debug enabled`
+        );
+        console.log(
+          `🦙 [OllamaNeuralSignal] Enrichment messages:`,
+          JSON.stringify(messages, null, 2)
+        );
+        console.log(
+          `🦙 [OllamaNeuralSignal] Enrichment tools:`,
+          JSON.stringify(tools, null, 2)
+        );
       }
 
       const response =
@@ -297,7 +305,7 @@ export class OllamaNeuralSignalService
     context?: string,
     language?: string
   ): any[] {
-    const systemPrompt = `You are a semantic enrichment system. Your task is to expand user queries by generating 3 to 8 related keywords or terms, while preserving the core meaning and intent. Respond using the enrichSemanticQuery function. The keywords parameter MUST be an array of strings, not a comma-separated string. Each keyword should be a separate element in the array. If a language is specified, generate keywords in that language.`;
+    const systemPrompt = `You are a semantic enrichment system. Your task is to expand user queries by generating 3 to 8 related keywords or terms, while preserving the core meaning and intent. Respond using the enrichSemanticQuery function, returning only relevant keywords as an array. If a language is specified, generate keywords in that language.`;
 
     let userPrompt = `Core: ${core}
     Intensity: ${(intensity * 100).toFixed(0)}%

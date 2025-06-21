@@ -97,27 +97,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
     }
   }
 
-  /**
-   * Creates a fallback decision when the service is not available
-   */
-  private createFallbackDecision(
-    params: CollapseStrategyParams,
-    reason: string
-  ): CollapseStrategyDecision {
-    // Use heuristic-based decision as fallback
-    const shouldUseDeterministic =
-      params.averageEmotionalWeight < 0.5 &&
-      params.averageContradictionScore < 0.5;
-    const temperature = shouldUseDeterministic ? 0.3 : 1.2;
 
-    return {
-      deterministic: shouldUseDeterministic,
-      temperature: temperature,
-      justification: `Fallback decision (${reason}): emotional weight ${params.averageEmotionalWeight.toFixed(
-        2
-      )}, contradiction ${params.averageContradictionScore.toFixed(2)}`,
-    };
-  }
 
   /**
    * Symbolic: Collapse strategy decision using Ollama
@@ -128,6 +108,10 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
     try {
       // Ensure we have a valid service instance
       const validService = await this.ensureValidService();
+      // Get model info first
+      const model = getOption(STORAGE_KEYS.OLLAMA_MODEL) ?? "qwen3:latest";
+      const isLlama32 = model.includes("llama3.2");
+
       // Get the decideCollapseStrategy schema from the registry
       const collapseStrategySchema = FunctionSchemaRegistry.getInstance().get(
         "decideCollapseStrategy"
@@ -151,7 +135,6 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         },
       ];
 
-      // 2. Prompts enxutos
       const systemPrompt = {
         role: "system" as const,
         content: `You are a collapse strategy engine. Decide the optimal collapse approach (deterministic or probabilistic) based on the metrics provided.`,
@@ -189,8 +172,22 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         }
       );
 
+      if (isLlama32) {
+        console.log(
+          `🦙 [OllamaCollapseStrategy] Using Llama 3.2 - extra debug enabled`
+        );
+        console.log(
+          `🦙 [OllamaCollapseStrategy] System prompt:`,
+          systemPrompt.content
+        );
+        console.log(
+          `🦙 [OllamaCollapseStrategy] Tools:`,
+          JSON.stringify(tools, null, 2)
+        );
+      }
+
       const response = await validService.callModelWithFunctions({
-        model: getOption(STORAGE_KEYS.OLLAMA_MODEL) ?? "qwen3:latest", // Use compatible model
+        model: model,
         messages: [systemPrompt, userPrompt],
         tools: tools,
         // tool_choice is not supported yet by Ollama (future improvement)
@@ -203,6 +200,13 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         toolCallsLength:
           response.choices?.[0]?.message?.tool_calls?.length || 0,
       });
+
+      if (isLlama32 && response.choices?.[0]?.message) {
+        console.log(
+          `🦙 [OllamaCollapseStrategy] Llama 3.2 raw response:`,
+          JSON.stringify(response.choices[0].message, null, 2)
+        );
+      }
 
       // Try to extract decision from tool calls
       const toolCalls = response.choices?.[0]?.message?.tool_calls;
@@ -249,6 +253,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
               temperature: hasTemperature ? args.temperature : 0.1,
               justification: args.justification,
               userIntent: args.userIntent,
+              emergentProperties: args.emergentProperties,
             };
           } else if (hasLegacyShouldCollapse && hasLegacyReason) {
             // Handle legacy field names for backward compatibility
@@ -307,6 +312,113 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         try {
           // Clean think tags from content before processing
           const cleanedContent = cleanThinkTags(content);
+
+          // Special parsing for Llama 3.2 pythonic format
+          if (isLlama32) {
+            console.log(
+              `🦙 [OllamaCollapseStrategy] Trying Llama 3.2 pythonic format parsing`
+            );
+
+            // Look for python_tag format first
+            const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
+            const pythonTagMatch = cleanedContent.match(pythonTagRegex);
+
+            if (pythonTagMatch) {
+              console.log(
+                `🦙 [OllamaCollapseStrategy] Found python_tag format`
+              );
+              try {
+                const jsonData = JSON.parse(pythonTagMatch[1]);
+                if (
+                  jsonData.function === "decideCollapseStrategy" &&
+                  jsonData.parameters
+                ) {
+                  const params = jsonData.parameters;
+                  if (
+                    typeof params.deterministic === "boolean" &&
+                    params.justification
+                  ) {
+                    return {
+                      deterministic: params.deterministic,
+                      temperature: params.temperature || 0.1,
+                      justification: params.justification,
+                      userIntent: params.userIntent,
+                      emergentProperties: params.emergentProperties,
+                    };
+                  }
+                }
+              } catch (e) {
+                console.warn(
+                  `🦙 [OllamaCollapseStrategy] Failed to parse python_tag JSON:`,
+                  e
+                );
+              }
+            }
+
+            // Look for pythonic function calls like: decideCollapseStrategy(deterministic=True, temperature=0.3, ...)
+            const pythonFunctionRegex = /decideCollapseStrategy\s*\(([^)]+)\)/;
+            const pythonMatch = cleanedContent.match(pythonFunctionRegex);
+
+            if (pythonMatch) {
+              console.log(
+                `🦙 [OllamaCollapseStrategy] Found pythonic function call:`,
+                pythonMatch[0]
+              );
+
+              // Parse pythonic parameters
+              const paramsString = pythonMatch[1];
+              const params: any = {};
+
+              // Match parameter=value pairs
+              const paramRegex = /(\w+)\s*=\s*([^,]+)(?:,|$)/g;
+              let paramMatch;
+
+              while ((paramMatch = paramRegex.exec(paramsString)) !== null) {
+                const key = paramMatch[1];
+                let value = paramMatch[2].trim();
+
+                // Convert Python values to JavaScript
+                if (value === "True") value = "true";
+                if (value === "False") value = "false";
+                if (value === "None") value = "null";
+
+                // Remove quotes if present
+                if (
+                  (value.startsWith('"') && value.endsWith('"')) ||
+                  (value.startsWith("'") && value.endsWith("'"))
+                ) {
+                  value = value.slice(1, -1);
+                }
+
+                // Try to parse as JSON
+                try {
+                  params[key] = JSON.parse(value);
+                } catch {
+                  // If not valid JSON, keep as string
+                  params[key] = value;
+                }
+              }
+
+              console.log(
+                `🦙 [OllamaCollapseStrategy] Parsed pythonic params:`,
+                params
+              );
+
+              // Validate and return
+              if (
+                typeof params.deterministic === "boolean" &&
+                params.justification
+              ) {
+                return {
+                  deterministic: params.deterministic,
+                  temperature: params.temperature || 0.1,
+                  justification: params.justification,
+                  userIntent: params.userIntent,
+                  emergentProperties: params.emergentProperties,
+                };
+              }
+            }
+          }
 
           // Try multiple JSON extraction strategies
           const jsonExtractionStrategies = [
@@ -367,6 +479,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
               temperature: decisionData.temperature || 0.1,
               justification: decisionData.justification,
               userIntent: decisionData.userIntent,
+              emergentProperties: decisionData.emergentProperties,
             };
           }
         } catch (parseError) {
@@ -380,14 +493,15 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         }
       }
 
-      // Final fallback: use heuristic-based decision
-      console.warn(
-        `🦙 [OllamaCollapseStrategy] All parsing strategies failed, using heuristic fallback`
+      // No fallback - throw error if all parsing failed
+      console.error(
+        `🦙 [OllamaCollapseStrategy] All parsing strategies failed for model: ${model}`
       );
 
-      return this.createFallbackDecision(
-        params,
-        "All parsing strategies failed"
+      throw new Error(
+        `Failed to parse collapse strategy decision from ${model}. Response content: ${
+          content?.substring(0, 500) || "empty"
+        }`
       );
     } catch (error) {
       console.error(
@@ -395,24 +509,12 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         error
       );
 
-      // If it's a service-related error, try to provide more context
-      if (
-        error instanceof Error &&
-        error.message.includes("OllamaCompletionService")
-      ) {
-        return this.createFallbackDecision(
-          params,
-          `Service initialization error: ${error.message}`
-        );
+      // Re-throw the error with context
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(`Collapse strategy decision failed: ${String(error)}`);
       }
-
-      // Emergency fallback
-      return this.createFallbackDecision(
-        params,
-        `Error occurred: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
     }
   }
 
