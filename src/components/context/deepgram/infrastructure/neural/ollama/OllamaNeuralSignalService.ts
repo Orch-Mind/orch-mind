@@ -298,7 +298,7 @@ export class OllamaNeuralSignalService
     language?: string
   ): any[] {
     return [
-      { role: "developer", content: buildSystemPrompt() },
+      { role: "system", content: buildSystemPrompt() },
       {
         role: "user",
         content: buildUserPrompt(prompt, temporaryContext, language),

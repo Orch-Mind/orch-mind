@@ -35,9 +35,9 @@ export function buildUserPrompt(
   context?: string,
   language?: string
 ): string {
-   let userPromptText = `LANGUAGE: ${language || "PT-BR"}`;
-   userPromptText += `\n\nSENSORY STIMULUS: ${prompt}`;
-   if (context) userPromptText += `\n\nEPHEMERAL CONTEXT: ${context}`;
-   
-   return userPromptText;
- }
+  let userPromptText = `LANGUAGE: ${language || "PT-BR"}`;
+  userPromptText += `\n\nSENSORY STIMULUS: ${prompt}`;
+  if (context) userPromptText += `\n\nEPHEMERAL CONTEXT: ${context}`;
+
+  return userPromptText;
+}
