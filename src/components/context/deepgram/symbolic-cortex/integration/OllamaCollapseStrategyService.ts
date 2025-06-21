@@ -134,28 +134,65 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
       const systemPrompt = {
         role: "system" as const,
-        content: `You are a decision engine that analyzes multiple factors to determine response generation strategy.
-Evaluate the provided metrics and decide:
-1. Whether to use deterministic (single best answer) or probabilistic (weighted selection) approach
-2. Temperature value (0.1-1.5) for response variation
-3. Brief justification for your decision
-4. Overall emotional intensity detected (0-1) based on the input
-5. Any emergent properties observed (contradictions, patterns, redundancies) as an array of strings`,
+        content: `You are the Orchestrated Collapse Strategy System of the Orch-OS architecture.
+
+THEORETICAL FOUNDATION:
+- Penrose-Hameroff: Orchestrated Objective Reduction adapted for symbolic collapse
+- Brescia: The mind doesn't compute—it collapses meaning through superposition
+
+YOUR MISSION: Determine the optimal collapse strategy based on the cognitive state metrics.
+
+AVAILABLE COLLAPSE STRATEGIES:
+
+1. COLLAPSE BY DOMINANCE:
+   - When: One interpretation is clearly stronger
+   - Method: Preserve secondary interpretations as context
+   - Use: Situations with clear hierarchy of relevance
+
+2. COLLAPSE BY SYNTHESIS:
+   - When: Multiple complementary interpretations exist
+   - Method: Integrate into emergent synthesis
+   - Use: When cores reinforce each other
+
+3. COLLAPSE BY DIALECTIC:
+   - When: Fundamental contradictions exist
+   - Method: Transcend through dialectical resolution
+   - Use: When opposites create productive tension
+
+4. COLLAPSE BY CONTEXT:
+   - When: Context determines relevance
+   - Method: Select based on situational needs
+   - Use: When user intent is highly specific
+
+DECISION FACTORS:
+- Emotional intensity indicates need for nuanced response
+- Contradictions suggest dialectical approach
+- Multiple active cores suggest synthesis
+- Clear user intent suggests contextual collapse
+
+Decide:
+1. deterministic (true) vs probabilistic (false)
+2. temperature (0.1-1.5)
+3. justification for strategy
+4. emergent properties detected`,
       };
 
       const userPrompt = {
         role: "user" as const,
-        content: `LANGUAGE: ${
-          getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"
-        }
-      
-      Metrics:
-      - cores: ${params.activatedCores.join(", ")}
-      - emotion: ${params.averageEmotionalWeight.toFixed(2)}
-      - contradiction: ${params.averageContradictionScore.toFixed(2)}
-      - text: "${params.originalText || "Not provided"}"
-      
-      Please decide: deterministic/probabilistic, temperature, and justification (write justification in the language specified above).`,
+        content: `COGNITIVE STATE METRICS:
+Activated Cores: ${params.activatedCores.join(", ")}
+Emotional Weight: ${params.averageEmotionalWeight.toFixed(2)}
+Contradiction Score: ${params.averageContradictionScore.toFixed(2)}
+User Input: "${params.originalText || "Not provided"}"
+Language: ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"}
+
+ANALYZE: Which collapse strategy is optimal? Consider:
+- Dominance: Is one core clearly primary?
+- Synthesis: Do cores complement each other?
+- Dialectic: Are there productive contradictions?
+- Context: Does user intent require specific focus?
+
+DECIDE: Provide strategy decision with justification in the specified language.`,
       };
 
       console.log(

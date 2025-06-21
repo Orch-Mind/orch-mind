@@ -191,10 +191,10 @@ export class HuggingFaceLocalService {
         console.log(`[HFS] Adding default chat template for ${modelId}`);
 
         // Define a simple but effective chat template
-        this.tokenizer.chat_template = `{% for message in messages %}{% if message['role'] == 'system' %}System: {{ message['content'] }}
-{% elif message['role'] == 'user' %}User: {{ message['content'] }}
-{% elif message['role'] == 'assistant' %}Assistant: {{ message['content'] }}
-{% endif %}{% endfor %}{% if add_generation_prompt %}Assistant: {% endif %}`;
+        this.tokenizer.chat_template = `{% for message in messages %}{% if message['role'] == 'system' %}HOLOGRAPHIC SYSTEM: {{ message['content'] }}
+{% elif message['role'] == 'user' %}HOLOGRAPHIC INPUT: {{ message['content'] }}
+{% elif message['role'] == 'assistant' %}NEURAL RESPONSE: {{ message['content'] }}
+{% endif %}{% endfor %}{% if add_generation_prompt %}NEURAL RESPONSE: {% endif %}`;
 
         // Also ensure apply_chat_template method exists
         if (!this.tokenizer.apply_chat_template) {
@@ -207,17 +207,17 @@ export class HuggingFaceLocalService {
             // Process messages
             for (const message of messages) {
               if (message.role === "system") {
-                result += `System: ${message.content}\n`;
+                result += `HOLOGRAPHIC SYSTEM: ${message.content}\n`;
               } else if (message.role === "user") {
-                result += `User: ${message.content}\n`;
+                result += `HOLOGRAPHIC INPUT: ${message.content}\n`;
               } else if (message.role === "assistant") {
-                result += `Assistant: ${message.content}\n`;
+                result += `NEURAL RESPONSE: ${message.content}\n`;
               }
             }
 
             // Add generation prompt if requested
             if (options.add_generation_prompt) {
-              result += "Assistant: ";
+              result += "NEURAL RESPONSE: ";
             }
 
             return result;
@@ -303,9 +303,11 @@ export class HuggingFaceLocalService {
         messages
           .map(
             (m) =>
-              `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`
+              `${
+                m.role === "assistant" ? "NEURAL RESPONSE" : "HOLOGRAPHIC INPUT"
+              }: ${m.content}`
           )
-          .join("\n\n") + "\n\nAssistant:";
+          .join("\n\n") + "\n\nNEURAL RESPONSE:";
 
       const generationOptions = {
         max_new_tokens: opts.maxTokens || 512,
@@ -539,10 +541,14 @@ export class HuggingFaceLocalService {
           messages
             .map(
               (m) =>
-                `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`
+                `${
+                  m.role === "assistant"
+                    ? "NEURAL RESPONSE"
+                    : "HOLOGRAPHIC INPUT"
+                }: ${m.content}`
             )
             .join("\n\n") +
-          "\n\nAssistant:";
+          "\n\nNEURAL RESPONSE:";
       }
 
       const generationOptions = {

@@ -244,34 +244,52 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
     userContextData: Record<string, unknown>
   ): string {
     const styleGuide =
-      "STYLE: Respond naturally and conversationally. Use greetings only when appropriate.";
+      "COGNITIVE ACTIVATION FRAMEWORK: Process this input through holographic neural activation.";
 
-    // More practical and direct analysis framework
-    const analysisFramework = `TASK: Analyze the user's message to identify key themes and generate relevant search queries.
+    // Holographic analysis framework based on Pribram's theory
+    const analysisFramework = `HOLOGRAPHIC PROCESSING INSTRUCTIONS:
 
-PROCESS:
-1. Identify main topics and subtopics
-2. Detect emotional tone (if present)
-3. Note any specific requests or questions
-4. Consider context from previous interactions
+1. MULTI-DIMENSIONAL ANALYSIS:
+   - Semantic dimensions (meaning layers)
+   - Emotional dimensions (affective resonance)
+   - Temporal dimensions (past/present/future connections)
+   - Archetypal dimensions (universal patterns)
+   - Somatic dimensions (embodied experience)
 
-OUTPUT: Generate focused keywords and search queries that will help find relevant information.
-Keep queries specific and practical.`;
+2. INTERFERENCE PATTERN DETECTION:
+   - Constructive interference (reinforcing themes)
+   - Destructive interference (contradictory elements)
+   - Phase relationships (timing and rhythm)
+
+3. NEURAL SIGNAL GENERATION:
+   - Generate 3-8 neural signals based on input complexity
+   - Each signal contains COMPLETE information (holographic)
+   - Specialized processing through different cognitive lenses
+   - Natural language queries for memory retrieval
+
+REMEMBER: This is holographic processing—the whole is contained in each part, viewed through specialized perspectives.`;
 
     // Build the complete prompt
-    let enrichedPrompt = `${styleGuide}\n\nUSER MESSAGE: ${originalPrompt}`;
+    let enrichedPrompt = `${styleGuide}\n\nHOLOGRAPHIC INPUT: ${originalPrompt}`;
 
-    // Add context if available (more concise)
+    // Add holographic context preservation
     if (Object.keys(userContextData).length > 0) {
+      enrichedPrompt += `\n\nCONTEXTUAL INTERFERENCE PATTERNS:`;
+
       if (userContextData.recent_topics) {
-        enrichedPrompt += `\nRECENT TOPICS: ${userContextData.recent_topics
+        enrichedPrompt += `\nRecent Cognitive Activations: ${userContextData.recent_topics
           .toString()
-          .substring(0, 150)}...`;
+          .substring(0, 200)}...`;
       }
       if (userContextData.speaker_interaction_counts) {
-        enrichedPrompt += `\nINTERACTION HISTORY: ${JSON.stringify(
+        enrichedPrompt += `\nInteraction Frequency Patterns: ${JSON.stringify(
           userContextData.speaker_interaction_counts
         )}`;
+      }
+      if (userContextData.emotional_history) {
+        enrichedPrompt += `\nEmotional Wave Patterns: ${JSON.stringify(
+          userContextData.emotional_history
+        ).substring(0, 150)}...`;
       }
     }
 

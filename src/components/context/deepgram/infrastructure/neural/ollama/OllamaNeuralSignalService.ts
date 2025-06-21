@@ -300,27 +300,85 @@ export class OllamaNeuralSignalService
     context?: string,
     language?: string
   ): any[] {
-    const systemPrompt = `Query enrichment system: expand search queries with 3-8 relevant keywords to improve search results. 
-Focus on practical, related terms.
-IMPORTANT: Never include intensity percentages or metadata in the enriched query.
-The query should be natural search terms only.
+    const systemPrompt = `You are the Neural Signal Enrichment System based on David Bohm's Implicate Order theory.
 
-Optionally provide contextual hints including:
-- temporalScope: past, present, or future
-- emotionalDepth: 0-1 indicating emotional relevance
-- abstractionLevel: concrete, conceptual, symbolic, or archetypal
-- contradictionHandling: embrace, resolve, or explore`;
+THEORETICAL FOUNDATION:
+- Bohm's Implicate Order: Reality has an enfolded (implicate) order that unfolds into explicit manifestation
+- Your task: Unfold the implicate connections, memories, and patterns hidden within the neural signal
 
-    let userPrompt = `Core: ${core}
-    Intensity: ${(intensity * 100).toFixed(0)}%
-    Query: ${query}`;
+ENRICHMENT MISSION: Enrich this neural signal by unfolding its 'implicate order'—the hidden connections, associative memories, and implicit patterns folded within the information.
+
+UNFOLDING PROCESS:
+1. EPISODIC MEMORY ASSOCIATIONS:
+   - Similar past experiences
+   - Recurring patterns
+   - Temporal connections
+
+2. IMPLICIT SEMANTIC NETWORK:
+   - Non-obvious related concepts
+   - Indirect associations
+   - Emergent semantic fields
+
+3. HISTORICAL EMOTIONAL RESONANCE:
+   - Emotional echoes from past
+   - Recurring affective patterns
+   - Activated emotional memory
+
+4. IMPLICIT CULTURAL CONTEXT:
+   - Underlying cultural meanings
+   - Undeclared assumptions
+   - Implicit social codes
+
+5. DEVELOPMENTAL POTENTIAL:
+   - Possible evolution directions
+   - Future implications
+   - Latent potentialities
+
+BOHM PRINCIPLE: "What is implicit must become explicit through unfolding."
+
+Generate 3-8 keywords that unfold these hidden dimensions.
+IMPORTANT: Never include metadata or intensity percentages in the enriched query.`;
+
+    let userPrompt = `NEURAL SIGNAL TO ENRICH:
+Core: ${core} (Cognitive specialization: ${this.getCoreDescription(core)})
+Intensity: ${(intensity * 100).toFixed(0)}% (Signal strength)
+Original Query: ${query}`;
+
     if (context) userPrompt += `\nContext: ${context}`;
-    if (language) userPrompt += `\nLanguage: ${language}.`;
+    if (language) userPrompt += `\nLanguage: ${language}`;
+
+    userPrompt += `\n\nUNFOLD THE IMPLICATE ORDER: Generate enriched search query and keywords that reveal hidden connections.`;
 
     return [
       { role: "system" as const, content: systemPrompt },
       { role: "user" as const, content: userPrompt },
     ];
+  }
+
+  private getCoreDescription(core: string): string {
+    const coreDescriptions: Record<string, string> = {
+      // Executive cores
+      executive_central: "Control and coordination",
+      attention: "Salience and relevance detection",
+      working_memory: "Active information maintenance",
+      // Emotional cores
+      amygdala: "Threat and emotional significance",
+      hippocampus: "Memory and contextual navigation",
+      anterior_cingulate: "Conflict monitoring",
+      // Sensory cores
+      visual: "Visual and spatial processing",
+      auditory: "Auditory and linguistic processing",
+      somatosensorial: "Body sensations and proprioception",
+      // Language cores
+      broca: "Language production",
+      wernicke: "Language comprehension",
+      // Integration cores
+      thalamus: "Multi-modal relay and integration",
+      claustrum: "Consciousness unification",
+      default_mode: "Internal processing and self-reference",
+      salience: "Internal/external focus switching",
+    };
+    return coreDescriptions[core] || "Unknown specialization";
   }
 
   private extractSignals(response: any, originalPrompt?: string): any[] {

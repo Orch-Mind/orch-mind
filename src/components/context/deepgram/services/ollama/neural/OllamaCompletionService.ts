@@ -168,15 +168,6 @@ export class OllamaCompletionService implements ICompletionService {
         );
 
         // Perform the Ollama chat completion using the official API endpoint
-        // Add timeout to prevent hanging requests
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-          console.error(
-            `🦙 [OllamaCompletion] Request timeout after 60 seconds`
-          );
-        }, 60000); // 60 second timeout for tool calling
-
         try {
           const response = await fetch("http://localhost:11434/api/chat", {
             method: "POST",
@@ -184,10 +175,7 @@ export class OllamaCompletionService implements ICompletionService {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(requestBody),
-            signal: controller.signal,
           });
-
-          clearTimeout(timeoutId);
 
           if (!response.ok) {
             const errorText = await response.text();
@@ -259,16 +247,6 @@ export class OllamaCompletionService implements ICompletionService {
             ],
           };
         } catch (error) {
-          clearTimeout(timeoutId);
-
-          // Check if this is an abort error
-          if (error instanceof Error && error.name === "AbortError") {
-            console.error(
-              `🦙 [OllamaCompletion] Request aborted due to timeout. Is Ollama running? Try: ollama serve`
-            );
-            throw new Error("Ollama request timeout - is Ollama running?");
-          }
-
           throw error; // Re-throw to be handled by outer try-catch
         }
       } catch (error) {

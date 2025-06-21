@@ -55,9 +55,15 @@ export class ResponseGenerator {
         conversationHistory
       );
     }
-    
-    console.log("🧠 [ResponseGenerator] Conversation History:", conversationHistory);
-    console.log("🧠 [ResponseGenerator] Conversation Messages:", conversationMessages);
+
+    console.log(
+      "🧠 [ResponseGenerator] Conversation History:",
+      conversationHistory
+    );
+    console.log(
+      "🧠 [ResponseGenerator] Conversation Messages:",
+      conversationMessages
+    );
     console.log("🧠 [ResponseGenerator] Messages:", messages);
 
     return await this._generate(messages);
@@ -72,7 +78,19 @@ export class ResponseGenerator {
     if (temporaryContext?.trim()) {
       contextMessages.push({
         role: "system",
-        content: `🧠 Temporary instructions:\n${temporaryContext.trim()}`,
+        content: `TEMPORARY COGNITIVE MODULATION:
+        
+THEORETICAL BASIS: Jung's concept of directed thinking vs. passive association
+Your cognitive processing should be temporarily modulated by these specific instructions.
+
+MODULATION TYPE: Directed symbolic processing with focused intention
+DURATION: This current interaction cycle only
+INTEGRATION: Maintain coherence with your core identity while adapting to these parameters
+
+SPECIFIC INSTRUCTIONS:
+${temporaryContext.trim()}
+
+REMEMBER: These instructions create a temporary lens through which to process information, not a replacement of your core cognitive architecture.`,
       });
     }
 

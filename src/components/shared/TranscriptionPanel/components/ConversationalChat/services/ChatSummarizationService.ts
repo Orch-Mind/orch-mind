@@ -164,6 +164,9 @@ export class ChatSummarizationService {
         end: messagesToSummarize[messagesToSummarize.length - 1].timestamp,
       };
 
+      // Calculate compression ratio first
+      const compressionRatio = this.TARGET_SUMMARY_TOKENS / tokensToSummarize;
+
       // Build context for summarization
       const conversationText = messagesToSummarize
         .map((msg) => {
@@ -176,9 +179,27 @@ export class ChatSummarizationService {
         .join("\n\n");
 
       // Create summarization prompt
-      const systemPrompt = `You are a conversation summarizer. Create concise summaries that preserve important details, key decisions, and unresolved topics while maintaining the conversational flow.`;
+      const systemPrompt = `You are the Memory Consolidation System of the Orch-OS architecture.
 
-      const compressionRatio = this.TARGET_SUMMARY_TOKENS / tokensToSummarize;
+THEORETICAL FOUNDATION:
+- Inspired by hippocampal memory consolidation during sleep
+- Transforms episodic memories into semantic knowledge
+- Preserves emotional valence and symbolic significance
+
+YOUR MISSION: Consolidate this conversation into semantic memory while preserving critical episodic details.
+
+CONSOLIDATION PRINCIPLES:
+1. SEMANTIC EXTRACTION: Identify core concepts and relationships
+2. EPISODIC PRESERVATION: Maintain key temporal sequences and specific decisions
+3. EMOTIONAL TAGGING: Preserve the affective tone of important moments
+4. SYMBOLIC COMPRESSION: Use archetypal patterns to compress meaning
+5. FUTURE ACTIVATION: Structure the summary to facilitate future recall
+
+COMPRESSION TARGET: Original ~${tokensToSummarize} tokens → ~${
+        this.TARGET_SUMMARY_TOKENS
+      } tokens (${(compressionRatio * 100).toFixed(1)}% ratio)
+
+REMEMBER: This is not mere summarization—it's memory consolidation that transforms experience into knowledge while preserving the capacity for full recall when needed.`;
 
       const userPrompt = `Please summarize the following conversation. The original conversation is approximately ${tokensToSummarize} tokens, and your summary should be around ${
         this.TARGET_SUMMARY_TOKENS
