@@ -46,6 +46,7 @@ export class OllamaCompletionService implements ICompletionService {
     }>;
     temperature?: number;
     max_tokens?: number;
+    stream?: boolean;
   }): Promise<{
     choices: Array<{
       message: {
@@ -67,101 +68,96 @@ export class OllamaCompletionService implements ICompletionService {
         // Ensure the Ollama client is available
         await this.clientService.ensureClient();
 
-        // Convert messages to Ollama format
-        const formattedMessages = options.messages.map((m) => ({
-          // Convert 'developer' to 'system' for Ollama compatibility
-          role: m.role === "system" ? "system" : m.role,
-          content: m.content,
-        }));
+        // Convert messages to Ollama format and handle tool results
+        const formattedMessages = options.messages.map((m) => {
+          // Handle tool result messages
+          if (m.role === "tool") {
+            return {
+              role: "tool",
+              content: m.content,
+            };
+          }
+
+          // Convert 'system' role properly
+          return {
+            role:
+              m.role === "system" || m.role === "developer" ? "system" : m.role,
+            content: m.content,
+          };
+        });
 
         // Get model with fallback logic
         let selectedModel = getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:4b";
 
-        console.log(`🦙 [OllamaCompletion] Selected model: ${selectedModel}`);
-
         // Verify model is available before making the request
         try {
-          console.log(
-            `🦙 [OllamaCompletion] Checking if model ${selectedModel} is available...`
-          );
           const modelsResponse = await fetch("http://localhost:11434/api/tags");
           if (modelsResponse.ok) {
             const modelsData = await modelsResponse.json();
             const availableModels =
               modelsData.models?.map((m: any) => m.name) || [];
-            console.log(
-              `🦙 [OllamaCompletion] Available models: ${availableModels.join(
-                ", "
-              )}`
-            );
 
             if (!availableModels.includes(selectedModel)) {
-              console.warn(
-                `🦙 [OllamaCompletion] Model ${selectedModel} not found, available: ${availableModels.join(
-                  ", "
-                )}`
-              );
-              // Try to use the first available model that matches our filtered list
-              const fallbackModels = ["qwen3:4b", "llama3.2:latest"];
-              const availableFallback = fallbackModels.find((model) =>
+              // Try to use the first available model that supports tools
+              const toolSupportModels = [
+                "qwen3:4b",
+                "qwen3:latest",
+                "qwen2.5:latest",
+                "llama3.1:latest",
+                "granite3.3:latest",
+                "mistral-nemo:latest",
+              ];
+              const availableFallback = toolSupportModels.find((model) =>
                 availableModels.includes(model)
               );
               if (availableFallback) {
-                console.log(
-                  `🦙 [OllamaCompletion] Using fallback model: ${availableFallback}`
-                );
                 selectedModel = availableFallback;
               }
             }
           }
         } catch (modelCheckError) {
-          console.warn(
-            `🦙 [OllamaCompletion] Could not check available models:`,
-            modelCheckError
-          );
+          // Ignore model check errors
         }
 
         // Build request options following Ollama native API documentation
-        const requestOptions: any = {
+        const requestBody: any = {
           model: selectedModel,
           messages: formattedMessages,
-          stream: false, // Don't use stream for function calling
+          stream: !!options.stream,
           options: {
-            temperature: options.temperature || 0.1, // Lower temperature for more consistent function calling
-            num_predict: options.max_tokens || 4096,
-            top_p: 0.9,
-            repeat_penalty: 1.1,
+            temperature: options.temperature ?? 0.7,
+            num_ctx: options.max_tokens ?? 4096,
+            // Remove format: "json" for Command R7B as it causes empty responses
+            // See: https://github.com/ollama/ollama/issues/6771
           },
         };
 
-        // Add tools in native Ollama format if provided
-        if (options.tools && options.tools.length > 0) {
-          // Convert tools to Ollama's native format
-          requestOptions.tools = options.tools.map((tool) => ({
-            type: "function",
-            function: {
-              name: tool.function.name,
-              description: tool.function.description,
-              parameters: tool.function.parameters,
-            },
-          }));
+        // Add format: "json" only for models that handle it well
+        // Command R7B has issues with JSON format causing empty responses
+        const modelsWithGoodJsonSupport = ["qwen3", "llama3.1", "llama3.2"];
+        const modelBase = selectedModel.split(":")[0].toLowerCase();
 
-          LoggingUtils.logInfo(
-            `🦙 [OllamaCompletion] Using native tools: ${JSON.stringify(
-              requestOptions.tools,
-              null,
-              2
-            )}`
-          );
+        if (modelsWithGoodJsonSupport.includes(modelBase)) {
+          // Don't force JSON format when using tools - let the model decide
+          if (!options.tools || options.tools.length === 0) {
+            requestBody.format = "json";
+          }
         }
 
-        // Note: tool_choice is not supported yet by Ollama (as per official documentation)
-        // It's a planned future improvement
+        // Add tools in native Ollama format if provided
+        if (options.tools && options.tools.length > 0) {
+          requestBody.tools = options.tools;
+
+          // Force the model to use a tool (supported in newer Ollama versions)
+          // This helps ensure the model understands it should use tools
+          // Commented out for compatibility with older Ollama versions
+          // requestBody.tool_choice = "required";
+        }
 
         // Add GPU control for Metal acceleration issues (macOS)
         if (retryCount > 0) {
           // On retry, force CPU mode to avoid Metal acceleration issues
-          requestOptions.options.num_gpu = 0;
+          requestBody.options.num_gpu = 0;
           LoggingUtils.logWarning(
             `🦙 [OllamaCompletion] Retry ${retryCount}: Forcing CPU mode due to potential Metal acceleration issues`
           );
@@ -170,18 +166,16 @@ export class OllamaCompletionService implements ICompletionService {
         LoggingUtils.logInfo(
           `🦙 [OllamaCompletion] Calling Ollama API with model: ${selectedModel}`
         );
-        LoggingUtils.logInfo(
-          `🦙 [OllamaCompletion] Request options: ${JSON.stringify(
-            requestOptions,
-            null,
-            2
-          )}`
-        );
 
         // Perform the Ollama chat completion using the official API endpoint
-        console.log(`🦙 [OllamaCompletion] About to fetch with timeout...`);
-
-        let data: any;
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.error(
+            `🦙 [OllamaCompletion] Request timeout after 60 seconds`
+          );
+        }, 60000); // 60 second timeout for tool calling
 
         try {
           const response = await fetch("http://localhost:11434/api/chat", {
@@ -189,13 +183,11 @@ export class OllamaCompletionService implements ICompletionService {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(requestOptions),
+            body: JSON.stringify(requestBody),
+            signal: controller.signal,
           });
 
-          console.log(
-            `🦙 [OllamaCompletion] Fetch completed, response status: ${response.status}`
-          );
-          console.log(`🦙 [OllamaCompletion] Response ok: ${response.ok}`);
+          clearTimeout(timeoutId);
 
           if (!response.ok) {
             const errorText = await response.text();
@@ -207,237 +199,78 @@ export class OllamaCompletionService implements ICompletionService {
             );
           }
 
-          console.log(`🦙 [OllamaCompletion] About to parse JSON response...`);
-          data = await response.json();
-          console.log(`🦙 [OllamaCompletion] JSON parsed successfully`);
-        } catch (fetchError: any) {
-          console.warn(
-            `🦙 [OllamaCompletion] Fetch failed, trying curl fallback:`,
-            fetchError.message
-          );
-        }
+          const data = await response.json();
 
-        LoggingUtils.logInfo(
-          `🦙 [OllamaCompletion] Raw response data: ${JSON.stringify(
-            data,
-            null,
-            2
-          )}`
-        );
+          // Extract content and tool calls from native Ollama response
+          const rawContent = data.message?.content || "";
+          const content = cleanThinkTags(rawContent);
+          const nativeToolCalls = data.message?.tool_calls || [];
 
-        // Clean think tags from content immediately after receiving response
-        const rawContent = data.message?.content || "";
-        const content = cleanThinkTags(rawContent);
-        const nativeToolCalls = data.message?.tool_calls || [];
+          // Process native tool calls from Ollama (already in correct format)
+          let tool_calls:
+            | Array<{
+                function: {
+                  name: string;
+                  arguments: string | Record<string, any>;
+                };
+              }>
+            | undefined;
 
-        LoggingUtils.logInfo(
-          `🦙 [OllamaCompletion] Content (cleaned): ${content.substring(
-            0,
-            200
-          )}...`
-        );
-        LoggingUtils.logInfo(
-          `🦙 [OllamaCompletion] Native tool calls: ${JSON.stringify(
-            nativeToolCalls,
-            null,
-            2
-          )}`
-        );
-
-        // Process native tool calls from Ollama
-        let tool_calls:
-          | Array<{
-              function: {
-                name: string;
-                arguments: string | Record<string, any>;
-              };
-            }>
-          | undefined;
-
-        if (
-          nativeToolCalls &&
-          Array.isArray(nativeToolCalls) &&
-          nativeToolCalls.length > 0
-        ) {
-          tool_calls = nativeToolCalls.map((call: any) => {
-            const functionName = call.function?.name || call.name;
-            let functionArgs = call.function?.arguments || call.arguments;
-
-            // Ensure arguments are properly formatted
-            if (typeof functionArgs === "object" && functionArgs !== null) {
-              // If it's already an object, stringify it for consistency
-              functionArgs = JSON.stringify(functionArgs);
-            } else if (typeof functionArgs !== "string") {
-              // If it's neither string nor object, convert to string
-              functionArgs = JSON.stringify(functionArgs);
-            }
-
-            LoggingUtils.logInfo(
-              `🦙 [OllamaCompletion] Processed tool call: ${functionName} with args: ${functionArgs}`
-            );
-
-            return {
-              function: {
-                name: functionName,
-                arguments: functionArgs,
-              },
-            };
-          });
-
-          // Clean think tags from tool calls
-          tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
-
-          LoggingUtils.logInfo(
-            `🦙 [OllamaCompletion] Successfully processed ${tool_calls.length} native tool calls (cleaned)`
-          );
-        }
-
-        // Fallback: Try to parse function calls from content if no native tool calls
-        if (!tool_calls || tool_calls.length === 0) {
-          // Only attempt fallback parsing if tools were provided and content looks like it might have a function call
           if (
-            options.tools &&
-            options.tools.length > 0 &&
-            (content.includes("{") || content.includes("<|python_tag|>"))
+            nativeToolCalls &&
+            Array.isArray(nativeToolCalls) &&
+            nativeToolCalls.length > 0
           ) {
-            try {
-              const cleanContent = content.trim();
+            tool_calls = nativeToolCalls.map((call: any) => {
+              // Ollama returns tool calls in the correct format already
+              const functionName = call.function?.name;
+              let functionArgs = call.function?.arguments;
 
-              // First check for python_tag format (used by various models)
-              const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
-              const pythonTagMatch = cleanContent.match(pythonTagRegex);
-
-              if (pythonTagMatch) {
-                try {
-                  const pythonTagData = JSON.parse(pythonTagMatch[1]);
-                  LoggingUtils.logInfo(
-                    `🦙 [OllamaCompletion] Found a python_tag format: ${JSON.stringify(
-                      pythonTagData
-                    )}`
-                  );
-
-                  // Convert python_tag format to standard tool_calls
-                  if (pythonTagData.function) {
-                    tool_calls = [
-                      {
-                        function: {
-                          name: pythonTagData.function,
-                          arguments: JSON.stringify(
-                            pythonTagData.parameters || {}
-                          ),
-                        },
-                      },
-                    ];
-                    LoggingUtils.logInfo(
-                      `🦙 [OllamaCompletion] Converted python_tag to tool_call: ${pythonTagData.function}`
-                    );
-                  }
-                } catch (e) {
-                  LoggingUtils.logWarning(
-                    `🦙 [OllamaCompletion] Failed to parse python_tag JSON: ${e}`
-                  );
-                }
+              // Ensure arguments are properly formatted as string
+              if (typeof functionArgs === "object" && functionArgs !== null) {
+                functionArgs = JSON.stringify(functionArgs);
+              } else if (typeof functionArgs !== "string") {
+                functionArgs = JSON.stringify(functionArgs || {});
               }
 
-              // If no python_tag found, try other formats
-              if (!tool_calls || tool_calls.length === 0) {
-                // Try to extract JSON from content
-                let functionCallData = null;
+              return {
+                function: {
+                  name: functionName,
+                  arguments: functionArgs,
+                },
+              };
+            });
 
-                // Look for JSON in code blocks or standalone
-                const jsonMatches = [
-                  /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g,
-                  /(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
-                ];
-
-                for (const regex of jsonMatches) {
-                  const matches = [...cleanContent.matchAll(regex)];
-                  for (const match of matches) {
-                    try {
-                      const candidate = JSON.parse(match[1]);
-                      // Check if it looks like a function call
-                      if (
-                        candidate.function_name ||
-                        candidate.function_call ||
-                        candidate.function
-                      ) {
-                        functionCallData = candidate;
-                        LoggingUtils.logInfo(
-                          `🦙 [OllamaCompletion] Extracted function call from content (fallback)`
-                        );
-                        break;
-                      }
-                    } catch (e) {
-                      continue;
-                    }
-                  }
-                  if (functionCallData) break;
-                }
-
-                // Convert to tool_calls format if found
-                if (functionCallData) {
-                  let functionName =
-                    functionCallData.function_name ||
-                    functionCallData.function_call?.name ||
-                    functionCallData.function ||
-                    "";
-                  let functionArgs =
-                    functionCallData.parameters ||
-                    functionCallData.function_call?.arguments ||
-                    functionCallData.arguments ||
-                    {};
-
-                  if (functionName) {
-                    tool_calls = [
-                      {
-                        function: {
-                          name: functionName,
-                          arguments:
-                            typeof functionArgs === "string"
-                              ? functionArgs
-                              : JSON.stringify(functionArgs),
-                        },
-                      },
-                    ];
-                    LoggingUtils.logInfo(
-                      `🦙 [OllamaCompletion] Fallback function call parsed: ${functionName}`
-                    );
-                  }
-                }
-              }
-            } catch (parseError) {
-              LoggingUtils.logWarning(
-                `🦙 [OllamaCompletion] Fallback parsing failed: ${parseError}`
-              );
-            }
+            // Clean think tags from tool calls if present
+            tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
           }
-        }
 
-        console.log(
-          `🦙 [OllamaCompletion] About to return response with tool_calls: ${
-            tool_calls ? "YES" : "NO"
-          }`
-        );
-        console.log(
-          `🦙 [OllamaCompletion] Tool calls count: ${tool_calls?.length || 0}`
-        );
-
-        // Clean think tags from tool calls if present
-        if (tool_calls && tool_calls.length > 0) {
-          tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
-        }
-
-        // Convert the response to expected format
-        return {
-          choices: [
-            {
-              message: {
-                content: tool_calls ? undefined : content,
-                tool_calls,
+          // Return the response in expected format
+          // When there are tool calls, content should be undefined (as per OpenAI spec)
+          return {
+            choices: [
+              {
+                message: {
+                  content:
+                    tool_calls && tool_calls.length > 0 ? undefined : content,
+                  tool_calls,
+                },
               },
-            },
-          ],
-        };
+            ],
+          };
+        } catch (error) {
+          clearTimeout(timeoutId);
+
+          // Check if this is an abort error
+          if (error instanceof Error && error.name === "AbortError") {
+            console.error(
+              `🦙 [OllamaCompletion] Request aborted due to timeout. Is Ollama running? Try: ollama serve`
+            );
+            throw new Error("Ollama request timeout - is Ollama running?");
+          }
+
+          throw error; // Re-throw to be handled by outer try-catch
+        }
       } catch (error) {
         retryCount++;
 

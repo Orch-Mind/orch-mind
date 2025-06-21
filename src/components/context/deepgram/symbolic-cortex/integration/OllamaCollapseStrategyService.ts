@@ -134,15 +134,19 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
       const systemPrompt = {
         role: "system" as const,
-        content: `Symbolic collapse engine: analyze tensions and decide orchestrated strategy.
-Evaluate metrics of emotional valence, contradictions and narrative coherence.
-Return via decideCollapseStrategy: deterministic (bool), temperature (0.1-1.5), justification.`,
+        content: `You are a decision engine that analyzes multiple factors to determine response generation strategy.
+Evaluate the provided metrics and decide:
+1. Whether to use deterministic (single best answer) or probabilistic (weighted selection) approach
+2. Temperature value (0.1-1.5) for response variation
+3. Brief justification for your decision
+4. Overall emotional intensity detected (0-1) based on the input
+5. Any emergent properties observed (contradictions, patterns, redundancies) as an array of strings`,
       };
 
       const userPrompt = {
         role: "user" as const,
         content: `LANGUAGE: ${
-          getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "PT-BR"
+          getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"
         }
       
       Metrics:
@@ -295,220 +299,30 @@ Return via decideCollapseStrategy: deterministic (bool), temperature (0.1-1.5), 
         }
       } else {
         console.log(
-          `🦙 [OllamaCollapseStrategy] No valid tool calls found, trying content fallback`
+          `🦙 [OllamaCollapseStrategy] No tool calls found in response`
         );
       }
 
-      // Fallback: try to parse from content
-      const content = response.choices?.[0]?.message?.content;
-      if (content) {
-        console.log(
-          `🦙 [OllamaCollapseStrategy] Attempting to parse from content:`,
-          content.substring(0, 200) + "..."
-        );
-        try {
-          // Clean think tags from content before processing
-          const cleanedContent = cleanThinkTags(content);
-
-          // Try alternative parsing formats (python_tag, pythonic, etc)
-          // Various models may use these formats for function calling
-          console.log(
-            `🦙 [OllamaCollapseStrategy] Trying alternative format parsing (python_tag, pythonic)`
-          );
-
-          // Look for python_tag format first
-          const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
-          const pythonTagMatch = cleanedContent.match(pythonTagRegex);
-
-          if (pythonTagMatch) {
-            console.log(`🦙 [OllamaCollapseStrategy] Found python_tag format`);
-            try {
-              const jsonData = JSON.parse(pythonTagMatch[1]);
-              if (
-                jsonData.function === "decideCollapseStrategy" &&
-                jsonData.parameters
-              ) {
-                const params = jsonData.parameters;
-                if (
-                  typeof params.deterministic === "boolean" &&
-                  params.justification
-                ) {
-                  return {
-                    deterministic: params.deterministic,
-                    temperature: params.temperature || 0.1,
-                    justification: params.justification,
-                    userIntent: params.userIntent,
-                    emergentProperties: params.emergentProperties,
-                  };
-                }
-              }
-            } catch (e) {
-              console.warn(
-                `🦙 [OllamaCollapseStrategy] Failed to parse python_tag JSON:`,
-                e
-              );
-            }
-          }
-
-          // Look for pythonic function calls like: decideCollapseStrategy(deterministic=True, temperature=0.3, ...)
-          const pythonFunctionRegex = /decideCollapseStrategy\s*\(([^)]+)\)/;
-          const pythonMatch = cleanedContent.match(pythonFunctionRegex);
-
-          if (pythonMatch) {
-            console.log(
-              `🦙 [OllamaCollapseStrategy] Found pythonic function call:`,
-              pythonMatch[0]
-            );
-
-            // Parse pythonic parameters
-            const paramsString = pythonMatch[1];
-            const params: any = {};
-
-            // Match parameter=value pairs
-            const paramRegex = /(\w+)\s*=\s*([^,]+)(?:,|$)/g;
-            let paramMatch;
-
-            while ((paramMatch = paramRegex.exec(paramsString)) !== null) {
-              const key = paramMatch[1];
-              let value = paramMatch[2].trim();
-
-              // Convert Python values to JavaScript
-              if (value === "True") value = "true";
-              if (value === "False") value = "false";
-              if (value === "None") value = "null";
-
-              // Remove quotes if present
-              if (
-                (value.startsWith('"') && value.endsWith('"')) ||
-                (value.startsWith("'") && value.endsWith("'"))
-              ) {
-                value = value.slice(1, -1);
-              }
-
-              // Try to parse as JSON
-              try {
-                params[key] = JSON.parse(value);
-              } catch {
-                // If not valid JSON, keep as string
-                params[key] = value;
-              }
-            }
-
-            console.log(
-              `🦙 [OllamaCollapseStrategy] Parsed pythonic params:`,
-              params
-            );
-
-            // Validate and return
-            if (
-              typeof params.deterministic === "boolean" &&
-              params.justification
-            ) {
-              return {
-                deterministic: params.deterministic,
-                temperature: params.temperature || 0.1,
-                justification: params.justification,
-                userIntent: params.userIntent,
-                emergentProperties: params.emergentProperties,
-              };
-            }
-          }
-
-          // Try multiple JSON extraction strategies
-          const jsonExtractionStrategies = [
-            // Strategy 1: Look for JSON in code blocks
-            /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g,
-            // Strategy 2: Look for standalone JSON objects with deterministic
-            /(\{[\s\S]*?"deterministic"[\s\S]*?\})/g,
-            // Strategy 3: Look for standalone JSON objects with shouldCollapse (legacy)
-            /(\{[\s\S]*?"shouldCollapse"[\s\S]*?\})/g,
-            // Strategy 4: Look for any JSON object
-            /(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
-          ];
-
-          let decisionData = null;
-          for (const regex of jsonExtractionStrategies) {
-            const matches = [...cleanedContent.matchAll(regex)];
-            for (const match of matches) {
-              try {
-                const candidate = JSON.parse(match[1]);
-
-                // Check for new format
-                if (
-                  typeof candidate.deterministic === "boolean" &&
-                  candidate.justification
-                ) {
-                  decisionData = candidate;
-                  console.log(
-                    `🦙 [OllamaCollapseStrategy] Successfully extracted decision JSON from content (new format, cleaned)`
-                  );
-                  break;
-                }
-
-                // Check for legacy format
-                if (
-                  typeof candidate.shouldCollapse === "boolean" &&
-                  candidate.reason
-                ) {
-                  decisionData = {
-                    deterministic: candidate.shouldCollapse,
-                    justification: candidate.reason,
-                    temperature: candidate.temperature || 0.1,
-                  };
-                  console.log(
-                    `🦙 [OllamaCollapseStrategy] Successfully extracted decision JSON from content (legacy format, cleaned)`
-                  );
-                  break;
-                }
-              } catch (e) {
-                continue;
-              }
-            }
-            if (decisionData) break;
-          }
-
-          if (decisionData) {
-            return {
-              deterministic: decisionData.deterministic,
-              temperature: decisionData.temperature || 0.1,
-              justification: decisionData.justification,
-              userIntent: decisionData.userIntent,
-              emergentProperties: decisionData.emergentProperties,
-            };
-          }
-        } catch (parseError) {
-          console.warn(
-            `🦙 [OllamaCollapseStrategy] Failed to parse decision JSON from content:`,
-            {
-              error: parseError,
-              contentPreview: content.substring(0, 300),
-            }
-          );
-        }
-      }
-
-      // No fallback - throw error if all parsing failed
-      console.error(
-        `🦙 [OllamaCollapseStrategy] All parsing strategies failed for model: ${model}`
+      // Fallback: use conservative strategy if no tool calls found
+      console.warn(
+        `🦙 [OllamaCollapseStrategy] No valid collapse decision found - using conservative fallback`
       );
-
-      throw new Error(
-        `Failed to parse collapse strategy decision from ${model}. Response content: ${
-          content?.substring(0, 500) || "empty"
-        }`
-      );
+      return {
+        deterministic: false,
+        temperature: 0.7,
+        justification:
+          "No valid tool call response - using conservative fallback",
+      };
     } catch (error) {
       console.error(
-        "🦙 [OllamaCollapseStrategy] Error in collapse strategy decision:",
+        `🦙 [OllamaCollapseStrategy] Error deciding collapse strategy:`,
         error
       );
-
-      // Re-throw the error with context
-      if (error instanceof Error) {
-        throw error;
-      } else {
-        throw new Error(`Collapse strategy decision failed: ${String(error)}`);
-      }
+      return {
+        deterministic: false,
+        temperature: 0.7,
+        justification: `Error in strategy decision: ${error}`,
+      };
     }
   }
 
@@ -528,5 +342,47 @@ Return via decideCollapseStrategy: deterministic (bool), temperature (0.1-1.5), 
       return cleaned;
     }
     return obj;
+  }
+
+  /**
+   * Fix malformed Unicode escapes in JSON strings
+   * Common issue with Portuguese text from LLMs
+   */
+  private fixMalformedUnicodeEscapes(jsonString: string): string {
+    // Create a more comprehensive fix for malformed Unicode
+    let fixed = jsonString;
+
+    // Common Portuguese character issues
+    const replacements: Array<[RegExp, string]> = [
+      // Process compound patterns first to avoid partial replacements
+      [/redund\\u00an\\u00C7\\u00e3s/g, "redund\\u00e2ncias"], // redundâncias (process before \u00an)
+      [/n\\u00fao /g, "n\\u00e3o "], // não (with space)
+      [/varia\\u00dclibilidade/g, "variabilidade"], // variabilidade (process before \u00dc)
+      [/contradi\\u00e7\\u00f3es/g, "contradi\\u00e7\\u00f5es"], // contradições
+
+      // Then process individual patterns
+      [/\\u00fdo/g, "\\u00ed"], // ído
+      [/\\u00fao/g, "\\u00e3o"], // ão (keep the 'o')
+      [/\\u00f5o/g, "\\u00f5"], // õo
+      [/\\u00e7\\u00f3es/g, "\\u00e7\\u00f5es"], // ções
+      [/\\u00e1\\u00e7/g, "\\u00e1"], // áç -> á
+      [/\\u00f3\\u00e7/g, "\\u00e7"], // óç -> ç
+      [/\\u00e9\\u00e7/g, "\\u00e9"], // éç -> é
+      [/\\u00an/g, "\\u00e2n"], // ân (keep the 'n')
+      [/\\u00en/g, "\\u00ean"], // ên (keep the 'n')
+      [/\\u00on/g, "\\u00f4n"], // ôn (keep the 'n')
+      [/\\u00dclibil/g, "\\u00fa"], // úlibil -> ú
+      [/\\u00an\\u00C7\\u00e3s/g, "\\u00e2ncias"], // ânÇãs -> âncias (uppercase C7)
+      [/\\u00an\\u00c7/gi, "\\u00e2"], // ânÇ -> â (handle uppercase Ç)
+      [/\\u00e7\u00e3o/g, "\\u00e7\\u00e3o"], // ção
+      [/mem\\u00f3ria/g, "mem\\u00f3ria"], // memória
+      [/patternes/g, "patterns"], // fix common misspelling
+    ];
+
+    for (const [pattern, replacement] of replacements) {
+      fixed = fixed.replace(pattern, replacement);
+    }
+
+    return fixed;
   }
 }

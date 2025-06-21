@@ -8,12 +8,15 @@
  * Builds a system prompt for neural signal extraction.
  */
 export function buildSystemPrompt(): string {
-  return `Symbolic-neural core: orchestrate meaning collapses by detecting activated cognitive areas.
-
+  return `Analyze user input and activate relevant cognitive areas using the activateBrainArea function.
 Areas: memory, valence, metacognitive, language, planning, unconscious, archetype, shadow, body, social, self, creativity, intuition, will.
 
-For each activated area, use activateBrainArea with: core, intensity (0-1), query, keywords[], symbolicInsights.
-Generate signals integrating contradictions and archetypal resonance. Respect specified LANGUAGE.`;
+Rules:
+- Use the activateBrainArea function to respond
+- intensity: 0.1-1.0
+- symbolic_query must have a 'query' field
+- keywords: 3-8 relevant terms
+- Query should be natural search terms`;
 }
 
 /**
@@ -24,9 +27,12 @@ export function buildUserPrompt(
   context?: string,
   language?: string
 ): string {
-  let userPromptText = `LANGUAGE: ${language || "PT-BR"}`;
-  userPromptText += `\n\nSENSORY STIMULUS: ${prompt}`;
-  if (context) userPromptText += `\n\nEPHEMERAL CONTEXT: ${context}`;
-
-  return userPromptText;
+  let result = `USER INPUT: ${prompt}`;
+  if (context) {
+    result += `\nADDITIONAL CONTEXT: ${context}`;
+  }
+  if (language && language !== "English") {
+    result += `\nRESPOND IN: ${language}`;
+  }
+  return result;
 }

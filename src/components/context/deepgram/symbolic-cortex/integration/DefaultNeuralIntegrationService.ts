@@ -414,8 +414,30 @@ export class DefaultNeuralIntegrationService
     }
 
     // 3. Use emergent properties from the OpenAI function call
-    const emergentProperties: string[] =
-      strategyDecision.emergentProperties || [];
+    let emergentProperties: string[] = [];
+
+    // Ensure emergentProperties is always an array
+    if (strategyDecision.emergentProperties) {
+      if (Array.isArray(strategyDecision.emergentProperties)) {
+        emergentProperties = strategyDecision.emergentProperties;
+      } else if (typeof strategyDecision.emergentProperties === "string") {
+        // Try to parse if it's a JSON string
+        try {
+          const parsed = JSON.parse(strategyDecision.emergentProperties);
+          if (Array.isArray(parsed)) {
+            emergentProperties = parsed;
+          } else {
+            emergentProperties = [strategyDecision.emergentProperties];
+          }
+        } catch {
+          // If parsing fails, treat as single string
+          emergentProperties = [strategyDecision.emergentProperties];
+        }
+      } else {
+        // Convert to string array if it's some other type
+        emergentProperties = [String(strategyDecision.emergentProperties)];
+      }
+    }
 
     // === Orch-OS: Symbolic Pattern Analysis & Memory Integration ===
     // Atualizar o analisador de padrões com o contexto/métricas do ciclo atual
@@ -527,24 +549,26 @@ export class DefaultNeuralIntegrationService
     }
 
     // 4. Compose final prompt (now with emergent properties)
-    let prompt = `Final neural integrator: orchestrate symbolic collapse of meaning.
-Synthesize stimulus and cognitive insights through fusion of multiple interpretations.
-Responses emerge integrating productive contradictions and archetypal resonance.
+    let prompt = `You are an AI assistant helping to synthesize information from multiple cognitive areas.
 
-ORIGINAL STIMULUS: ${originalInput}
+TASK: Create a coherent, practical response based on the insights below.
 
-ACTIVATED AREAS INSIGHTS:
+USER'S ORIGINAL MESSAGE: ${originalInput}
+
+INSIGHTS FROM DIFFERENT AREAS:
 `;
 
     cleanedNeuralResults.forEach((result) => {
-      prompt += `[${result.core} | ${Math.round(result.intensity * 100)}%]\n`;
+      prompt += `[${result.core} area - Relevance: ${Math.round(
+        result.intensity * 100
+      )}%]\n`;
       const areaInsights = allInsights.filter(
         (insight) => insight.core === result.core
       );
 
       if (areaInsights.length > 0) {
         areaInsights.forEach((insight) => {
-          const type = insight.type ? insight.type.toUpperCase() : "CONCEPT";
+          const type = insight.type ? insight.type.toUpperCase() : "INSIGHT";
           prompt += `• ${type}: ${insight.content}\n`;
         });
       } else {
@@ -554,20 +578,24 @@ ACTIVATED AREAS INSIGHTS:
       }
     });
 
-    prompt += "\n\nDETECTED EMERGENT PROPERTIES:\n";
+    prompt += "\n\nKEY CONSIDERATIONS:\n";
     if (emergentProperties.length) {
       emergentProperties.forEach((prop) => (prompt += `- ${prop}\n`));
       prompt += `
-    Synthesize a final response that avoids the emergent issues above. Do NOT repeat earlier outputs. Integrate symbolic insights for an original, unified answer.
-    `;
+INSTRUCTIONS: 
+1. Synthesize the insights above into a helpful response
+2. Address any issues mentioned in the considerations
+3. Keep your response practical and actionable
+4. Avoid repeating information already stated`;
     } else {
       prompt += `- None detected.\n
-    Synthesize a final response integrating the symbolic insights above. Create an original, concise answer that naturally unifies the activated areas.
-    `;
+INSTRUCTIONS: Create a helpful response that naturally combines the insights above.
+Focus on being practical and directly addressing the user's needs.`;
     }
 
     // Always specify the language for consistency
-    prompt += `\n\nIMPORTANT: Respond in ${language}.\n`;
+    prompt += `\n\nRESPONSE STYLE: Be conversational, clear, and avoid overly philosophical or abstract language.`;
+    prompt += `\nLANGUAGE: Respond in ${language}.\n`;
 
     return prompt;
   }

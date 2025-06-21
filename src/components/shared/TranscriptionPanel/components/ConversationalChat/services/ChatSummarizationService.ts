@@ -176,7 +176,7 @@ export class ChatSummarizationService {
         .join("\n\n");
 
       // Create summarization prompt
-      const systemPrompt = `Narrative collapse specialist: summarize preserving symbolic tensions, productive contradictions and emergent insights.`;
+      const systemPrompt = `You are a conversation summarizer. Create concise summaries that preserve important details, key decisions, and unresolved topics while maintaining the conversational flow.`;
 
       const compressionRatio = this.TARGET_SUMMARY_TOKENS / tokensToSummarize;
 

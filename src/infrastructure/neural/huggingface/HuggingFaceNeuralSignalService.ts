@@ -146,7 +146,7 @@ export class HuggingFaceNeuralSignalService
         ? [{ type: "function", function: enrichSchema }]
         : [];
 
-      const systemPrompt = `Enrich queries with 3-8 keywords maintaining symbolic resonance and productive tensions.`;
+      const systemPrompt = `Expand the query with 3-8 relevant keywords to improve search results. Focus on practical, related terms.`;
 
       let userPrompt = `CORE: ${core}\nINTENSITY: ${intensity}\nORIGINAL QUERY: ${query}`;
       if (context) userPrompt += `\nCONTEXT: ${context}`;

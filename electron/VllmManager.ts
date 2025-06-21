@@ -352,7 +352,7 @@ export class VllmManager extends EventEmitter {
       ) {
         enhancedMessage =
           `Model '${modelId}' not found in Ollama registry. ` +
-          `Try one of these working models instead: qwen3:4b, llama3.2:latest`;
+          `Try one of these working models instead: qwen3:4b, granite3.3:latest`;
       } else if (
         errorMessage.includes("Cannot connect") ||
         errorMessage.includes("ECONNREFUSED")
@@ -759,14 +759,14 @@ export class VllmManager extends EventEmitter {
       {
         name: "qwen3:4b",
         label: "Qwen3 4B",
-        size: "1.7GB",
+        size: "2.6GB",
         tags: ["tools", "reasoning"],
         isRecommended: true,
       },
       {
-        name: "llama3.2:latest",
-        label: "Llama 3.2 Latest",
-        size: "3.8GB",
+        name: "granite3.3:latest",
+        label: "Granite 3.3 Latest",
+        size: "4.9GB",
         tags: ["tools", "chat"],
         isRecommended: true,
       },

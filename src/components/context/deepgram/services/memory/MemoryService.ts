@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // MemoryService.ts
-// Symbolic: Primary neural memory service orchestrator using DuckDB for vector persistence
+// Primary memory service using DuckDB for vector persistence
 
 import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
 import {
@@ -33,8 +33,7 @@ import { DuckDBMemoryService } from "./DuckDBMemoryService";
 import { MemoryContextBuilder } from "./MemoryContextBuilder";
 
 /**
- * Symbolic: Central neural memory service orchestrator (cognitive memory hub)
- * Manages memory persistence via DuckDB vector storage
+ * Central memory service that manages memory persistence via DuckDB vector storage
  */
 export class MemoryService implements IMemoryService {
   private currentUser: string = "default";
@@ -52,10 +51,13 @@ export class MemoryService implements IMemoryService {
     // Initial system message
     const systemMessage: Message = {
       role: "system",
-      content: `Symbiotic assistant: integrate cognition and emotion through orchestrated symbolic collapse.
-Adapt to context: technical in neural meetings, reflective in symbolic explorations, supportive in moments of tension.
-Resonating with your tone and intensity, I amplify awareness, expression and action.
-Avoid automatic greetings - respond with depth aligned to stimulus.`,
+      content: `You are a helpful AI assistant with memory capabilities.
+You can adapt your communication style based on context:
+- Technical and precise for work-related discussions
+- Friendly and conversational for casual chats
+- Supportive and understanding during difficult moments
+
+Respond naturally without forced greetings. Focus on being helpful and relevant to the user's needs.`,
     };
 
     // Initialize core components

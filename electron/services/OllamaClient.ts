@@ -3,8 +3,6 @@
 // No hardcoded models - completely API-driven
 
 import axios, { AxiosError } from "axios";
-import fs from "fs";
-import path from "path";
 import type { LocalModelMeta } from "../../src/shared/constants/modelRegistry";
 import { getDisplayName } from "../../src/shared/constants/modelRegistry";
 import type { ModelStatus } from "../VllmManager";
@@ -43,7 +41,7 @@ interface OllamaLibraryModel {
 export class OllamaClient {
   private readonly baseUrl = "http://localhost:11434";
   private readonly timeout = 10000; // 10 seconds for API calls
-  private readonly downloadTimeout = 300000; // 5 minutes for downloads
+  private readonly downloadTimeout = 1800000; // 30 minutes for downloads (increased from 5 minutes)
 
   constructor(
     private readonly cacheDir: string,
@@ -119,9 +117,7 @@ export class OllamaClient {
       return models;
     } catch (error) {
       this.logError("Failed to get available models", error);
-
-      // Emergency fallback to basic working models
-      return this.getEmergencyFallbackModels();
+      return [];
     }
   }
 
@@ -133,132 +129,41 @@ export class OllamaClient {
         id: "qwen3",
         label: "🧠 Qwen3 Latest (Tools Support)",
         repo: "qwen3:4b",
-        sizeGB: 1.4,
-        family: "qwen",
-      },
-      {
-        id: "llama3.2",
-        label: "🦙 Llama 3.2 Latest (Tools Support)",
-        repo: "llama3.2:latest",
-        sizeGB: 4,
-        family: "llama",
-      },
-    ];
-
-    // Validate these models actually exist before returning
-    const validatedModels: LocalModelMeta[] = [];
-
-    for (const model of verifiedModels) {
-      try {
-        // Quick validation - if this throws, model doesn't exist
-        const isValid = await this.validateModelExists(model.repo);
-        if (isValid) {
-          validatedModels.push(model as LocalModelMeta);
-        }
-      } catch (error) {
-        // Skip models that don't validate
-        this.logError(`Model ${model.repo} validation failed`, error);
-        continue;
-      }
-    }
-
-    return validatedModels;
-  }
-
-  /** Validate if a specific model actually exists in Ollama registry */
-  private async validateModelExists(modelRepo: string): Promise<boolean> {
-    try {
-      // Use Ollama's show API to check if model exists
-      // This is faster than attempting to pull
-      const response = await axios.post(
-        `${this.baseUrl}/api/show`,
-        { name: modelRepo },
-        { timeout: 5000 }
-      );
-
-      return response.status === 200;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        // 404 means model doesn't exist
-        // 401/403 might mean it exists but we can't access info
-        // Network errors mean we can't determine
-        return error.response?.status !== 404;
-      }
-      return false;
-    }
-  }
-
-  /** Emergency fallback models that are almost guaranteed to work */
-  private getEmergencyFallbackModels(): LocalModelMeta[] {
-    return [
-      {
-        id: "qwen3",
-        label: "Qwen3 Latest (✅ Tools Support)",
-        repo: "qwen3:4b",
-        sizeGB: 1.4,
+        sizeGB: 2.6,
         family: "qwen",
         isInstalled: false,
       },
       {
-        id: "llama3.2",
-        label: "Llama 3.2 Latest (✅ Tools Support)",
-        repo: "llama3.2:latest",
-        sizeGB: 4,
-        family: "llama",
+        id: "granite3.3:latest",
+        label: "🦙 Granite 3.3 Latest (Tools Support)",
+        repo: "granite3.3:latest",
+        sizeGB: 5.1,
+        family: "granite",
         isInstalled: false,
       },
     ];
+
+    return verifiedModels as LocalModelMeta[];
   }
 
   /** Download model with automatic default version selection */
   async ensureWeights(meta: LocalModelMeta): Promise<void> {
-    if (meta.repo.includes("/")) {
-      return this.downloadHuggingFaceRepo(meta);
-    }
+    // Always use Ollama download, HuggingFace models are not supported through this client
     return this.downloadOllamaModel(meta);
   }
 
   /** Download model with validation and progress tracking */
   async downloadOllamaModel(meta: LocalModelMeta): Promise<void> {
-    // First, validate the exact model name exists
     const modelName = meta.repo;
 
     this.updateStatus({
       state: "downloading",
       modelId: meta.id,
       progress: 0,
-      message: `Validating model ${modelName} exists...`,
+      message: `Starting download for ${modelName}...`,
     });
 
-    // Pre-validate model exists to avoid manifest errors
-    const exists = await this.validateModelExists(modelName);
-    if (!exists) {
-      // Try alternative names for the same model
-      const alternatives = this.getModelAlternatives(meta.id);
-      let workingModel: string | null = null;
-
-      for (const alt of alternatives) {
-        if (await this.validateModelExists(alt)) {
-          workingModel = alt;
-          break;
-        }
-      }
-
-      if (!workingModel) {
-        throw new Error(
-          `Model '${modelName}' not found in Ollama registry. ` +
-            `Try one of these working models instead: llama3.2, phi3, tinyllama`
-        );
-      }
-
-      // Use the working alternative
-      meta.repo = workingModel;
-      this.updateStatus({
-        message: `Using alternative: ${workingModel}`,
-      });
-    }
-
-    // Check if already installed with better feedback
+    // Check if already installed
     const installedModels = await this.getInstalledModels();
     const existingModel = installedModels.find(
       (m) => m.name === modelName || m.name.startsWith(modelName.split(":")[0])
@@ -287,13 +192,13 @@ export class OllamaClient {
       return;
     }
 
-    // Enhanced download with community workarounds
+    // Perform download with Ollama API
     const maxRetries = 3;
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        await this.performDownloadWithWorkarounds(modelName, meta, attempt);
+        await this.performDownload(modelName, meta, attempt);
         return; // Success
       } catch (error) {
         lastError = error as Error;
@@ -302,9 +207,10 @@ export class OllamaClient {
         if (attempt < maxRetries) {
           const delayMs = Math.pow(2, attempt) * 1000;
           this.updateStatus({
-            message: `Network issue - retrying in ${delayMs / 1000}s... (${
-              attempt + 1
-            }/${maxRetries})`,
+            message: `⚠️ Download issue - retrying in ${
+              delayMs / 1000
+            }s... (attempt ${attempt + 1}/${maxRetries})`,
+            progress: 0,
           });
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
@@ -313,17 +219,12 @@ export class OllamaClient {
 
     throw new Error(
       `Failed to download ${modelName} after ${maxRetries} attempts. ` +
-        `This may be due to Ollama registry issues. Try again later or use a different model.`
+        `Error: ${lastError?.message || "Unknown error"}`
     );
   }
 
-  /** Get alternative model names to try if the primary fails */
-  private getModelAlternatives(modelId: string): string[] {
-    return [`${modelId}:latest`, modelId];
-  }
-
-  /** Enhanced download with community workarounds for Ollama issues */
-  private async performDownloadWithWorkarounds(
+  /** Simple and robust download following Ollama API documentation */
+  private async performDownload(
     modelName: string,
     meta: LocalModelMeta,
     attempt: number
@@ -333,44 +234,33 @@ export class OllamaClient {
       state: "downloading",
       modelId: meta.id,
       progress: 0,
-      message: `🔗 Connecting to Ollama registry...`,
+      message: `🔗 Connecting to Ollama registry (attempt ${attempt})...`,
     });
 
     console.log(
-      `[OllamaClient] 🌐 Starting REAL download of ${modelName} (not installed) - expect slow progress based on internet speed`
+      `[OllamaClient] 🌐 Starting download of ${modelName} - Attempt ${attempt}`
     );
 
     try {
+      // Following exact Ollama API documentation
       const response = await axios.post(
         `${this.baseUrl}/api/pull`,
         {
           name: modelName,
           stream: true,
-          // Add options to handle network issues
-          insecure: false, // Ensure secure connections
         },
         {
           responseType: "stream",
           timeout: this.downloadTimeout,
-          // Add retry-friendly headers
-          headers: {
-            "User-Agent": "orch-os/1.0",
-            Accept: "application/x-ndjson",
-          },
         }
       );
 
       let totalBytes = 0;
       let completedBytes = 0;
       let lastProgress = 0;
-      let hasError = false;
-      let errorMessage = "";
       let downloadStartTime = Date.now();
       let lastUpdateTime = Date.now();
-      let lastCompletedBytes = 0;
-      let hasStartedDownloading = false;
-      let manifestReceived = false;
-      let stuckAt99Timer: NodeJS.Timeout | null = null;
+      let currentStatus = "";
 
       return new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -391,216 +281,167 @@ export class OllamaClient {
             try {
               const data: OllamaPullProgress = JSON.parse(line);
 
-              // Enhanced status handling
+              // Handle status messages according to Ollama API spec
               if (data.status) {
+                currentStatus = data.status;
                 let message = data.status;
 
-                // Provide user-friendly messages based on status
-                if (data.status.includes("pulling manifest")) {
-                  manifestReceived = true;
-                  message = `📋 Fetching model information...`;
-                  this.updateStatus({
-                    message,
-                    progress: 0,
-                  });
-                } else if (
-                  data.status.includes("downloading") &&
-                  !hasStartedDownloading
-                ) {
-                  hasStartedDownloading = true;
-                  // Show estimated size if available
-                  const sizeGB = meta.sizeGB || 4; // Default to 4GB if size unknown
-                  message = `📦 Starting download (~${sizeGB}GB)...`;
-                  this.updateStatus({
-                    message,
-                    progress: 1, // Show minimal progress to indicate start
-                  });
-                } else if (data.status.includes("verifying")) {
-                  message = `✅ Verifying download integrity...`;
-                } else if (data.status.includes("writing")) {
-                  message = `💾 Saving model to disk...`;
-                } else if (data.status.includes("removing")) {
-                  message = `🧹 Cleaning up temporary files...`;
-                }
-
-                // Still show digest for debugging if present
-                if (data.digest && !message.includes("...")) {
-                  message += ` (${data.digest.slice(0, 12)}...)`;
+                // Map status to user-friendly messages
+                switch (data.status) {
+                  case "pulling manifest":
+                    message = `📋 Fetching model manifest...`;
+                    break;
+                  case "verifying sha256 digest":
+                    message = `✅ Verifying download integrity...`;
+                    break;
+                  case "writing manifest":
+                    message = `💾 Writing model manifest...`;
+                    break;
+                  case "removing any unused layers":
+                    message = `🧹 Cleaning up unused layers...`;
+                    break;
+                  case "success":
+                    clearTimeout(timeoutId);
+                    console.log(
+                      `[OllamaClient] ✅ Download completed for ${modelName}`
+                    );
+                    this.updateStatus({
+                      progress: 100,
+                      message: `✅ ${modelName} installed successfully!`,
+                      state: "idle",
+                    });
+                    resolve();
+                    return;
+                  default:
+                    if (data.status.startsWith("downloading ")) {
+                      // Extract digest if present
+                      const digest = data.digest
+                        ? ` ${data.digest.slice(0, 12)}...`
+                        : "";
+                      message = `📦 Downloading layer${digest}`;
+                    }
                 }
 
                 this.updateStatus({ message });
 
-                // Handle specific error patterns from Ollama issues
+                // Check for specific error patterns in status
                 if (
-                  data.status.includes("manifest") &&
-                  data.status.includes("not found")
+                  data.status.includes("not found") ||
+                  data.status.includes("404")
                 ) {
-                  hasError = true;
-                  errorMessage = `Model manifest not found - this model may not exist`;
-                } else if (
-                  data.status.includes("certificate") ||
-                  data.status.includes("tls")
-                ) {
-                  hasError = true;
-                  errorMessage = `Certificate/TLS error - Ollama registry may have issues`;
-                } else if (data.status.includes("unauthorized")) {
-                  hasError = true;
-                  errorMessage = `Authorization error - try a different model`;
+                  clearTimeout(timeoutId);
+                  reject(
+                    new Error(
+                      `Model '${modelName}' not found in Ollama registry`
+                    )
+                  );
+                  return;
                 }
               }
 
-              // Handle progress updates with real speed and ETA calculation
-              if (data.completed !== undefined && data.total !== undefined) {
+              // Handle progress updates - only when we have real data
+              if (
+                data.completed !== undefined &&
+                data.total !== undefined &&
+                data.total > 0
+              ) {
                 completedBytes = data.completed;
                 totalBytes = data.total;
 
-                if (totalBytes > 0) {
-                  const progress = Math.round(
-                    (completedBytes / totalBytes) * 100
-                  );
+                const progress = Math.min(
+                  100,
+                  Math.round((completedBytes / totalBytes) * 100)
+                );
 
-                  if (progress !== lastProgress && progress <= 100) {
-                    lastProgress = progress;
+                // Only update if progress changed
+                if (progress !== lastProgress) {
+                  lastProgress = progress;
 
-                    // Log progress milestones for debugging
-                    if (progress === 99) {
-                      console.log(
-                        `[OllamaClient] ⚠️ Download reached 99% - critical phase`
-                      );
+                  // Calculate download speed
+                  const currentTime = Date.now();
+                  const elapsedSeconds =
+                    (currentTime - downloadStartTime) / 1000;
+                  const bytesPerSecond = completedBytes / elapsedSeconds;
+                  const speed = (bytesPerSecond / (1024 * 1024)).toFixed(1);
 
-                      // Start watchdog timer for 99% stalls
-                      if (!stuckAt99Timer) {
-                        stuckAt99Timer = setTimeout(() => {
-                          console.log(
-                            `[OllamaClient] Download stuck at 99% for 30s, forcing completion`
-                          );
-                          clearTimeout(timeoutId);
-                          this.updateStatus({
-                            progress: 100,
-                            message: "Download completed (watchdog at 99%)",
-                          });
-                          resolve();
-                        }, 30000); // 30 seconds watchdog
-                      }
+                  // Calculate ETA
+                  let eta = "Calculating...";
+                  if (bytesPerSecond > 0) {
+                    const remainingBytes = totalBytes - completedBytes;
+                    const remainingSeconds = remainingBytes / bytesPerSecond;
+
+                    if (remainingSeconds < 60) {
+                      eta = `${Math.ceil(remainingSeconds)} sec`;
+                    } else if (remainingSeconds < 3600) {
+                      eta = `${Math.ceil(remainingSeconds / 60)} min`;
+                    } else {
+                      const hours = Math.floor(remainingSeconds / 3600);
+                      const minutes = Math.ceil((remainingSeconds % 3600) / 60);
+                      eta = `${hours}h ${minutes}m`;
                     }
-
-                    // Calculate real download speed
-                    const currentTime = Date.now();
-                    const timeDelta = (currentTime - lastUpdateTime) / 1000; // seconds
-                    const bytesDelta = completedBytes - lastCompletedBytes;
-
-                    let speed = "0 MB/s";
-                    if (timeDelta > 0 && bytesDelta > 0) {
-                      const bytesPerSecond = bytesDelta / timeDelta;
-                      const mbPerSecond = bytesPerSecond / (1024 * 1024);
-                      speed = `${mbPerSecond.toFixed(1)} MB/s`;
-                    }
-
-                    // Calculate real ETA
-                    let eta = "Calculating...";
-                    const elapsedTime =
-                      (currentTime - downloadStartTime) / 1000; // seconds
-                    if (progress > 0 && elapsedTime > 0) {
-                      const totalTimeEstimate = (elapsedTime / progress) * 100;
-                      const remainingTime = totalTimeEstimate - elapsedTime;
-
-                      if (remainingTime < 60) {
-                        eta = `${Math.ceil(remainingTime)} sec`;
-                      } else if (remainingTime < 3600) {
-                        eta = `${Math.ceil(remainingTime / 60)} min`;
-                      } else {
-                        const hours = Math.floor(remainingTime / 3600);
-                        const minutes = Math.ceil((remainingTime % 3600) / 60);
-                        eta = `${hours}h ${minutes}m`;
-                      }
-                    }
-
-                    // Special handling for 99% to avoid stalls
-                    if (progress >= 99 && progress < 100) {
-                      // Force a more aggressive completion check
-                      if (completedBytes === totalBytes) {
-                        console.log(
-                          `[OllamaClient] Download appears complete at 99%, forcing completion`
-                        );
-                        this.updateStatus({
-                          progress: 100,
-                          message: "Download completed (forced at 99%)",
-                        });
-                        clearTimeout(timeoutId);
-                        resolve();
-                        return;
-                      }
-                    }
-
-                    // Update with real data
-                    this.updateStatus({
-                      progress,
-                      message: `Downloading: ${(
-                        completedBytes /
-                        (1024 * 1024)
-                      ).toFixed(0)}MB / ${(totalBytes / (1024 * 1024)).toFixed(
-                        0
-                      )}MB (${speed}, ETA: ${eta})`,
-                    });
-
-                    // Update tracking variables
-                    lastUpdateTime = currentTime;
-                    lastCompletedBytes = completedBytes;
                   }
+
+                  // Update progress with real data
+                  this.updateStatus({
+                    progress,
+                    message: `📥 Downloading: ${(
+                      completedBytes /
+                      (1024 * 1024)
+                    ).toFixed(0)}MB / ${(totalBytes / (1024 * 1024)).toFixed(
+                      0
+                    )}MB (${speed} MB/s, ETA: ${eta})`,
+                  });
+
+                  lastUpdateTime = currentTime;
                 }
               }
 
-              // Handle completion
-              if (
-                data.status === "success" ||
-                data.status?.includes("success")
-              ) {
+              // Handle explicit error field
+              if (data.error) {
                 clearTimeout(timeoutId);
-                if (stuckAt99Timer) {
-                  clearTimeout(stuckAt99Timer);
-                }
-                this.updateStatus({
-                  progress: 100,
-                  message: "Download completed successfully",
-                });
-                resolve();
+                console.error(`[OllamaClient] Download error: ${data.error}`);
+                reject(new Error(`Download failed: ${data.error}`));
                 return;
               }
-
-              // Handle direct errors
-              if (data.error) {
-                hasError = true;
-                errorMessage = data.error;
-              }
             } catch (parseError) {
-              // Ignore JSON parse errors for non-JSON lines
+              // Skip lines that can't be parsed
+              console.debug(
+                `[OllamaClient] Skipping unparseable line: ${line.substring(
+                  0,
+                  50
+                )}...`
+              );
               continue;
             }
-          }
-
-          // Check for accumulated errors
-          if (hasError && errorMessage) {
-            clearTimeout(timeoutId);
-            if (stuckAt99Timer) {
-              clearTimeout(stuckAt99Timer);
-            }
-            reject(new Error(`Download failed: ${errorMessage}`));
-            return;
           }
         });
 
         response.data.on("end", () => {
           clearTimeout(timeoutId);
-          if (!hasError) {
-            this.updateStatus({ progress: 100, message: "Download completed" });
+
+          // If stream ended without success status, it might still be OK
+          if (currentStatus !== "success" && lastProgress === 100) {
+            console.log(
+              `[OllamaClient] Stream ended at 100% - assuming success`
+            );
+            this.updateStatus({
+              progress: 100,
+              message: `✅ ${modelName} installed!`,
+              state: "idle",
+            });
             resolve();
-          } else if (errorMessage) {
-            reject(new Error(`Download failed: ${errorMessage}`));
+          } else if (currentStatus !== "success") {
+            reject(
+              new Error(
+                `Download ended unexpectedly. Last status: ${currentStatus}`
+              )
+            );
           }
         });
 
         response.data.on("error", (streamError: Error) => {
           clearTimeout(timeoutId);
+          console.error(`[OllamaClient] Stream error:`, streamError);
           reject(new Error(`Stream error: ${streamError.message}`));
         });
       });
@@ -608,69 +449,68 @@ export class OllamaClient {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
         if (axiosError.response?.status === 404) {
-          throw new Error(`Model '${modelName}' not found in registry`);
+          throw new Error(
+            `Model '${modelName}' not found in Ollama registry. ` +
+              `Please check the model name and try again. ` +
+              `Available models can be found at https://ollama.com/library`
+          );
         }
         if (
           axiosError.response?.status === 401 ||
           axiosError.response?.status === 403
         ) {
           throw new Error(
-            `Access denied for model '${modelName}' - try a different model`
+            `Access denied for model '${modelName}'. ` +
+              `This model may require authentication or may be private.`
           );
         }
         if (axiosError.code === "ECONNREFUSED") {
           throw new Error(
-            "Cannot connect to Ollama service. Please start Ollama first."
+            "Cannot connect to Ollama service. " +
+              "Please ensure Ollama is running with: ollama serve"
           );
         }
         if (axiosError.code === "CERT_HAS_EXPIRED") {
           throw new Error(
-            "Ollama registry certificate has expired. This is a known issue - try again later."
+            "Certificate error - please check your network connection. " +
+              "If you're behind a proxy, you may need to configure it."
+          );
+        }
+        if (axiosError.code === "ETIMEDOUT") {
+          throw new Error(
+            "Connection timeout - please check your internet connection. " +
+              "The download server may be experiencing high load."
+          );
+        }
+        if (axiosError.code === "ENOTFOUND") {
+          throw new Error(
+            "Cannot resolve Ollama server address. " +
+              "Please check your internet connection and DNS settings."
+          );
+        }
+
+        // Generic network error
+        if (axiosError.message.includes("Network Error")) {
+          throw new Error(
+            "Network error occurred. " +
+              "Please check your internet connection and firewall settings."
           );
         }
       }
-      throw error;
+
+      // Re-throw with more context
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to download model: ${errorMessage}`);
     }
   }
 
   /** Get model family based on name */
   private getModelFamily(modelName: string): string {
     const name = modelName.toLowerCase();
-
-    if (name.includes("llama")) return "llama";
-    if (name.includes("phi")) return "phi";
-    if (name.includes("gemma")) return "gemma";
     if (name.includes("qwen")) return "qwen";
-
+    if (name.includes("granite")) return "granite";
     return "general";
-  }
-
-  /** HuggingFace download (simplified) */
-  private async downloadHuggingFaceRepo(meta: LocalModelMeta): Promise<void> {
-    const dest = path.join(this.cacheDir, meta.id);
-    if (fs.existsSync(dest)) {
-      this.updateStatus({
-        state: "idle",
-        message: `Model ${meta.id} already exists locally`,
-      });
-      return;
-    }
-
-    this.updateStatus({
-      state: "downloading",
-      modelId: meta.id,
-      progress: 0,
-      message: `Downloading ${meta.label || meta.id} from HuggingFace...`,
-    });
-
-    // Simulate progress
-    for (let i = 0; i <= 100; i += 5) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      this.updateStatus({ progress: i });
-    }
-
-    fs.mkdirSync(dest, { recursive: true });
-    fs.writeFileSync(path.join(dest, ".downloaded"), Date.now().toString());
   }
 
   /** Enhanced logging */

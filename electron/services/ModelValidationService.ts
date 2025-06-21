@@ -94,7 +94,7 @@ export class ModelValidationService {
       // Models that support tools/function calling (filtered by user)
       const recommendedModels = [
         { name: "qwen3:4b", minRam: 3 },
-        { name: "llama3.2:latest", minRam: 4 },
+        { name: "granite3.3:latest", minRam: 4 },
       ];
 
       const installedModels = await this.getInstalledModels();
@@ -178,13 +178,10 @@ export class ModelValidationService {
   private estimateSize(modelName: string): number {
     const name = modelName.toLowerCase();
 
-    if (name.includes("tinyllama")) return 1;
-    if (name.includes("phi3")) return 2;
-    if (name.includes("llama3.2")) return 3;
-    if (name.includes("gemma2")) return 6;
-    if (name.includes("qwen")) return 5;
+    if (name.includes("granite3.3:latest")) return 1;
+    if (name.includes("qwen")) return 2;
 
-    return 4; // Default
+    return 3; // Default
   }
 
   /**

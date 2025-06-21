@@ -598,12 +598,24 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
 
       // Find the model metadata
       const availableModels = await ollamaClient.getAvailableModels();
-      const modelMeta = availableModels.find(
-        (m) => m.id === modelId || m.repo === modelId
+      let modelMeta = availableModels.find(
+        (m) =>
+          m.id === modelId ||
+          m.repo === modelId ||
+          m.id === modelId.split(":")[0] || // Handle case where modelId includes tag
+          m.repo.split(":")[0] === modelId.split(":")[0] // Compare base names
       );
 
+      // If not found in the list, create a simple metadata
       if (!modelMeta) {
-        throw new Error(`Model ${modelId} not found in available models`);
+        modelMeta = {
+          id: modelId.split(":")[0],
+          repo: modelId,
+          label: modelId,
+          sizeGB: 5, // Default size estimate
+          family: "general",
+          isInstalled: false,
+        };
       }
 
       // Create a temporary OllamaClient with progress callback

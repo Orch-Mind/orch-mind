@@ -25,10 +25,10 @@ export const OLLAMA_FUNCTION_CALLING_MODELS: OllamaModelInfo[] = [
     description: "Qwen 3 - Excelente suporte multilíngue e tools",
   },
   {
-    name: "llama3.2",
+    name: "granite3.3:latest",
     supportsFunctionCalling: true,
     recommended: true,
-    description: "Llama 3.2 - Excelente integração com tools",
+    description: "Granite 3.3 Latest - Excelente integração com tools",
   },
 ];
 

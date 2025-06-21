@@ -62,7 +62,8 @@ export class FunctionSchemaRegistry {
     // Neural signal activation function
     this.register("activateBrainArea", {
       name: "activateBrainArea",
-      description: "Activates a symbolic neural area of the artificial brain, defining the focus, emotional weight, and symbolic search parameters.",
+      description:
+        "Activates a cognitive processing area of the AI system, defining the focus, relevance, and search parameters.",
       parameters: {
         type: "object",
         properties: {
@@ -84,149 +85,166 @@ export class FunctionSchemaRegistry {
               "self",
               "creativity",
               "intuition",
-              "will"
+              "will",
             ],
-            description: "Symbolic brain area to activate."
+            description: "Cognitive area to activate.",
           },
           intensity: {
             type: "number",
             minimum: 0,
             maximum: 1,
-            description: "Activation intensity from 0.0 to 1.0."
+            description: "Relevance intensity (0-1) for this cognitive area.",
           },
-          query: {
-            type: "string",
-            description: "Main symbolic or conceptual query."
+          symbolic_query: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "Main query or search term.",
+              },
+              filters: {
+                type: "object",
+                additionalProperties: { type: "string" },
+                description: "Optional filters for the query.",
+              },
+            },
+            required: ["query"],
+            description: "Query structure for semantic search.",
           },
           keywords: {
             type: "array",
             items: { type: "string" },
-            description: "Expanded semantic keywords related to the query."
+            description: "Keywords for expanded search.",
+          },
+          symbolicInsights: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                hypothesis: {
+                  type: "string",
+                  description: "A hypothesis or interpretation.",
+                },
+                emotionalTone: {
+                  type: "string",
+                  description: "Emotional tone detected in the input.",
+                },
+                archetypalResonance: {
+                  type: "string",
+                  description: "Core theme or pattern identified.",
+                },
+              },
+              anyOf: [
+                { required: ["hypothesis"] },
+                { required: ["emotionalTone"] },
+                { required: ["archetypalResonance"] },
+              ],
+              description:
+                "At least one insight must be included: hypothesis, emotionalTone, or archetypalResonance.",
+            },
+            description: "Insights derived from the analysis.",
           },
           topK: {
             type: "number",
-            description: "Number of memory items or insights to retrieve."
+            minimum: 1,
+            maximum: 20,
+            description: "Number of memories to retrieve (1-20).",
           },
-          filters: {
-            type: "object",
-            description: "Optional filters to constrain retrieval."
-          },
-          expand: {
-            type: "boolean",
-            description: "Whether to semantically expand the query."
-          },
-          symbolicInsights: {
-            type: "object",
-            description: "At least one symbolic insight must be included: hypothesis, emotionalTone, or archetypalResonance.",
-            properties: {
-              hypothesis: {
-                type: "string",
-                description: "A symbolic hypothesis or interpretative conjecture."
-              },
-              emotionalTone: {
-                type: "string",
-                description: "Emotional tone associated with the symbolic material."
-              },
-              archetypalResonance: {
-                type: "string",
-                description: "Archetypal patterns or figures evoked."
-              }
-            }
-          }
         },
-        required: ["core", "intensity", "query", "symbolicInsights"]
-      }
+        required: ["core", "intensity", "symbolic_query"],
+      },
     });
 
     // Collapse strategy decision function
     this.register("decideCollapseStrategy", {
       name: "decideCollapseStrategy",
-      description: "Decides the symbolic collapse strategy (deterministic or not) based on emotional intensity, symbolic tension, and nature of the user's input.",
+      description:
+        "Decides the response generation strategy (deterministic or probabilistic) based on various factors from the user's input.",
       parameters: {
         type: "object",
         properties: {
           deterministic: {
             type: "boolean",
-            description: "Whether to use deterministic collapse (true) or probabilistic collapse (false)."
+            description:
+              "Whether to use deterministic (true) or probabilistic (false) approach.",
           },
           temperature: {
             type: "number",
             minimum: 0.1,
             maximum: 1.5,
-            description: "Temperature for probabilistic collapse (0.1-1.5)."
+            description: "Temperature value for response variation (0.1-1.5).",
           },
           justification: {
             type: "string",
-            description: "Reasoning behind the collapse strategy decision."
+            description: "Brief justification for the decision.",
           },
-          userIntent: {
-            type: "object",
-            description: "User intent weights for different categories. Each value represents the intensity/importance of that intent type (0-1).",
-            properties: {
-              practical: { type: "number", minimum: 0, maximum: 1, description: "Weight for practical intent." },
-              analytical: { type: "number", minimum: 0, maximum: 1, description: "Weight for analytical intent." },
-              reflective: { type: "number", minimum: 0, maximum: 1, description: "Weight for reflective intent." },
-              existential: { type: "number", minimum: 0, maximum: 1, description: "Weight for existential intent." },
-              symbolic: { type: "number", minimum: 0, maximum: 1, description: "Weight for symbolic intent." },
-              emotional: { type: "number", minimum: 0, maximum: 1, description: "Weight for emotional intent." },
-              narrative: { type: "number", minimum: 0, maximum: 1, description: "Weight for narrative intent." },
-              mythic: { type: "number", minimum: 0, maximum: 1, description: "Weight for mythic intent." },
-              trivial: { type: "number", minimum: 0, maximum: 1, description: "Weight for trivial intent." },
-              ambiguous: { type: "number", minimum: 0, maximum: 1, description: "Weight for ambiguous intent." }
-            }
+          emotionalIntensity: {
+            type: "number",
+            minimum: 0,
+            maximum: 1,
+            description: "Overall emotional intensity detected (0-1).",
           },
           emergentProperties: {
             type: "array",
-            description: "Emergent properties detected in the neural responses, such as redundancies, contradictions, or patterns",
-            items: {
-              type: "string"
-            }
-          }
+            items: { type: "string" },
+            description:
+              "Emergent properties detected: contradictions, patterns, redundancies, etc.",
+          },
         },
-        required: ["deterministic", "temperature", "justification", "userIntent", "emergentProperties"]
-      }
+        required: ["deterministic", "temperature", "justification"],
+      },
     });
 
     // Semantic enrichment function
     this.register("enrichSemanticQuery", {
       name: "enrichSemanticQuery",
-      description: "Enriches a semantic query with expanded keywords and contextual information for a specific brain core.",
+      description:
+        "Enriches a semantic query with expanded keywords and contextual information for a specific brain core.",
       parameters: {
         type: "object",
         properties: {
           enrichedQuery: {
             type: "string",
-            description: "The enriched version of the original query with expanded semantic context."
+            description:
+              "The enriched version of the original query with expanded semantic context.",
           },
           keywords: {
             type: "array",
             items: { type: "string" },
-            description: "Array of semantically related keywords for the query."
+            description:
+              "Array of semantically related keywords for the query.",
           },
           contextualHints: {
             type: "object",
-            description: "Additional contextual information to guide the search.",
+            description:
+              "Additional contextual information to guide the search.",
             properties: {
               temporalScope: {
                 type: "string",
-                description: "Temporal scope of the query (past, present, future)."
+                description:
+                  "Temporal scope of the query (past, present, future).",
               },
               emotionalDepth: {
                 type: "number",
                 minimum: 0,
                 maximum: 1,
-                description: "Emotional depth of the query (0-1)."
+                description: "Emotional depth of the query (0-1).",
               },
               abstractionLevel: {
                 type: "string",
                 enum: ["concrete", "conceptual", "symbolic", "archetypal"],
-                description: "Level of abstraction for the query."
-              }
-            }
-          }
+                description: "Level of abstraction for the query.",
+              },
+              contradictionHandling: {
+                type: "string",
+                enum: ["embrace", "resolve", "explore"],
+                description: "How to handle contradictory information.",
+              },
+            },
+          },
         },
-        required: ["enrichedQuery", "keywords"]
-      }
+        required: ["enrichedQuery", "keywords"],
+      },
     });
   }
 }

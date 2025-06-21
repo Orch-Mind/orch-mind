@@ -213,6 +213,15 @@ export class NeuralMemoryRetriever {
     signal: NeuralSignal
   ): Promise<string[]> {
     const query = signal.symbolic_query?.query || "";
+
+    // Skip if query is empty
+    if (!query || query.trim().length === 0) {
+      LoggingUtils.logWarning(
+        `⚠️ [NEURAL-MEMORY] Skipping retrieval for empty query in core: ${signal.core}`
+      );
+      return [];
+    }
+
     LoggingUtils.logInfo(
       `🧠 [NEURAL-MEMORY] Querying: "${query}" for core: ${signal.core}`
     );
@@ -250,6 +259,14 @@ export class NeuralMemoryRetriever {
     signal: NeuralSignal
   ): Promise<{ results: string[]; matchCount: number }> {
     const query = signal.symbolic_query?.query || "";
+
+    // Skip if query is empty
+    if (!query || query.trim().length === 0) {
+      LoggingUtils.logWarning(
+        `⚠️ [NEURAL-MEMORY] Skipping retrieval for empty query in core: ${signal.core}`
+      );
+      return { results: [], matchCount: 0 };
+    }
 
     try {
       // 🔧 CORREÇÃO: Consultar DuckDB diretamente para obter contagem real
@@ -375,92 +392,46 @@ export class NeuralMemoryRetriever {
   }
 
   /**
-   * Extract and normalize insights from neural signal following Orch-OS theory
+   * Extract and normalize insights from neural signal
    */
   private _extractInsightsFromSignal(
     signal: NeuralSignal
   ): Record<string, unknown> {
     let insights: Record<string, unknown> = {};
 
-    // 🎭 ORCH-OS: Mapear cores para arquétipos junguianos
-    const coreArchetypes: Record<
-      string,
-      { archetype: string; essence: string }
-    > = {
-      "valência emocional": {
-        archetype: "The Mirror",
-        essence: "emotional reflection and inner truth",
-      },
-      "intensidade emocional": {
-        archetype: "The Warrior",
-        essence: "emotional strength and resilience",
-      },
-      "conexões interacionais": {
-        archetype: "The Lover",
-        essence: "bonds and relational harmony",
-      },
-      "estado emocional": {
-        archetype: "The Wanderer",
-        essence: "emotional journey and discovery",
-      },
-      memory: {
-        archetype: "The Sage",
-        essence: "wisdom and accumulated knowledge",
-      },
-      metacognitive: {
-        archetype: "The Seeker",
-        essence: "self-awareness and introspection",
-      },
-      shadow: {
-        archetype: "The Shadow",
-        essence: "hidden aspects and inner conflicts",
-      },
-      soul: { archetype: "The Hero", essence: "purpose and transcendence" },
-      self: {
-        archetype: "The Pioneer",
-        essence: "identity and authentic expression",
-      },
-    };
-
-    // 🔮 ORCH-OS: Detectar propriedades emergentes baseadas na intensidade e contexto
+    // Detect properties based on intensity and context
     const emergentProperties: string[] = [];
 
     if (signal.intensity > 0.8) {
-      emergentProperties.push("High symbolic resonance");
+      emergentProperties.push("High relevance detected");
     }
     if (signal.intensity < 0.3) {
-      emergentProperties.push("Low response diversity");
+      emergentProperties.push("Low relevance to query");
     }
     if (
       signal.keywords &&
       Array.isArray(signal.keywords) &&
       signal.keywords.length > 3
     ) {
-      emergentProperties.push("Cognitive dissonance");
+      emergentProperties.push("Multiple related topics identified");
     }
 
-    // 🎯 ORCH-OS: Criar insights simbólicos baseados na teoria
-    const coreInfo = coreArchetypes[signal.core] || {
-      archetype: "The Unknown",
-      essence: "unexplored symbolic territory",
-    };
-
     insights = {
-      // Query simbólica (se disponível)
+      // Query (se disponível)
       ...(signal.symbolic_query?.query && {
-        symbolic_query: {
-          query: signal.symbolic_query.query,
-          symbolic_tension: "meaning collapse in progress",
+        query_info: {
+          original_query: signal.symbolic_query.query,
+          status: "processing",
         },
       }),
 
-      // Keywords como fragmentos simbólicos
+      // Keywords como termos relacionados
       ...(signal.keywords &&
         Array.isArray(signal.keywords) &&
         signal.keywords.length > 0 && {
-          symbolic_fragments: signal.keywords.map((keyword) => ({
-            fragment: keyword,
-            resonance: "active",
+          related_terms: signal.keywords.map((keyword) => ({
+            term: keyword,
+            status: "identified",
           })),
         }),
     };

@@ -237,31 +237,26 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
    * Prepares an enriched prompt with full user context.
    * @param originalPrompt The user's original prompt
    * @param userContextData Contextual data related to the user
-   * @returns A contextually enriched symbolic/psychoanalytic prompt
+   * @returns A contextually enriched prompt
    */
   private prepareEnrichedPrompt(
     originalPrompt: string,
     userContextData: Record<string, unknown>
   ): string {
     const styleGuide =
-      "STYLE: Use greetings only when contextually appropriate.";
+      "STYLE: Respond naturally and conversationally. Use greetings only when appropriate.";
 
-    // Refactored: More concise and focused symbolic instruction
-    const symbolicAnalysis = `ANALYSIS FRAMEWORK: Extract multi-layered meaning from the user's message.
+    // More practical and direct analysis framework
+    const analysisFramework = `TASK: Analyze the user's message to identify key themes and generate relevant search queries.
 
-DETECT:
-• Explicit content + implicit patterns (emotions, symbols, archetypes)
-• Multiple interpretations coexisting (quantum superposition of meanings)
-• Consciousness levels: surface → intermediate → unconscious
-• Temporal echoes: past patterns → present expression → future potential
-• Tensions and paradoxes that reveal deeper insights
+PROCESS:
+1. Identify main topics and subtopics
+2. Detect emotional tone (if present)
+3. Note any specific requests or questions
+4. Consider context from previous interactions
 
-GENERATE:
-• Keywords and queries that explore symbolic/emotional dimensions
-• Focus on: conflicts, desires, patterns, transformative potential
-• Only expand when detecting rich symbolic material
-
-OUTPUT: Refined keywords and queries for deeper exploration.`;
+OUTPUT: Generate focused keywords and search queries that will help find relevant information.
+Keep queries specific and practical.`;
 
     // Build the complete prompt
     let enrichedPrompt = `${styleGuide}\n\nUSER MESSAGE: ${originalPrompt}`;
@@ -269,18 +264,18 @@ OUTPUT: Refined keywords and queries for deeper exploration.`;
     // Add context if available (more concise)
     if (Object.keys(userContextData).length > 0) {
       if (userContextData.recent_topics) {
-        enrichedPrompt += `\nCONTEXT: ${userContextData.recent_topics
+        enrichedPrompt += `\nRECENT TOPICS: ${userContextData.recent_topics
           .toString()
           .substring(0, 150)}...`;
       }
       if (userContextData.speaker_interaction_counts) {
-        enrichedPrompt += `\nPATTERN: ${JSON.stringify(
+        enrichedPrompt += `\nINTERACTION HISTORY: ${JSON.stringify(
           userContextData.speaker_interaction_counts
         )}`;
       }
     }
 
-    enrichedPrompt += `\n\n${symbolicAnalysis}`;
+    enrichedPrompt += `\n\n${analysisFramework}`;
 
     return enrichedPrompt;
   }
