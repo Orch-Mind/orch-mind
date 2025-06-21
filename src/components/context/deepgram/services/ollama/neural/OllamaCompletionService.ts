@@ -303,7 +303,7 @@ export class OllamaCompletionService implements ICompletionService {
             try {
               const cleanContent = content.trim();
 
-              // First check for Llama 3.2 python_tag format
+              // First check for python_tag format (used by various models)
               const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
               const pythonTagMatch = cleanContent.match(pythonTagRegex);
 
