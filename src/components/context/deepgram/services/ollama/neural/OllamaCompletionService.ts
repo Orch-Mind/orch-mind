@@ -75,8 +75,7 @@ export class OllamaCompletionService implements ICompletionService {
         }));
 
         // Get model with fallback logic
-        let selectedModel =
-          getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:4b";
+        let selectedModel = getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:4b";
 
         console.log(`🦙 [OllamaCompletion] Selected model: ${selectedModel}`);
 
@@ -295,70 +294,115 @@ export class OllamaCompletionService implements ICompletionService {
 
         // Fallback: Try to parse function calls from content if no native tool calls
         if (!tool_calls || tool_calls.length === 0) {
-          // Only attempt fallback parsing if tools were provided and content looks like JSON
+          // Only attempt fallback parsing if tools were provided and content looks like it might have a function call
           if (
             options.tools &&
             options.tools.length > 0 &&
-            content.includes("{")
+            (content.includes("{") || content.includes("<|python_tag|>"))
           ) {
             try {
               const cleanContent = content.trim();
 
-              // Try to extract JSON from content
-              let functionCallData = null;
+              // First check for Llama 3.2 python_tag format
+              const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
+              const pythonTagMatch = cleanContent.match(pythonTagRegex);
 
-              // Look for JSON in code blocks or standalone
-              const jsonMatches = [
-                /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g,
-                /(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
-              ];
+              if (pythonTagMatch) {
+                try {
+                  const pythonTagData = JSON.parse(pythonTagMatch[1]);
+                  LoggingUtils.logInfo(
+                    `🦙 [OllamaCompletion] Found a python_tag format: ${JSON.stringify(
+                      pythonTagData
+                    )}`
+                  );
 
-              for (const regex of jsonMatches) {
-                const matches = [...cleanContent.matchAll(regex)];
-                for (const match of matches) {
-                  try {
-                    const candidate = JSON.parse(match[1]);
-                    // Check if it looks like a function call
-                    if (candidate.function_name || candidate.function_call) {
-                      functionCallData = candidate;
-                      LoggingUtils.logInfo(
-                        `🦙 [OllamaCompletion] Extracted function call from content (fallback)`
-                      );
-                      break;
-                    }
-                  } catch (e) {
-                    continue;
+                  // Convert python_tag format to standard tool_calls
+                  if (pythonTagData.function) {
+                    tool_calls = [
+                      {
+                        function: {
+                          name: pythonTagData.function,
+                          arguments: JSON.stringify(
+                            pythonTagData.parameters || {}
+                          ),
+                        },
+                      },
+                    ];
+                    LoggingUtils.logInfo(
+                      `🦙 [OllamaCompletion] Converted python_tag to tool_call: ${pythonTagData.function}`
+                    );
                   }
+                } catch (e) {
+                  LoggingUtils.logWarning(
+                    `🦙 [OllamaCompletion] Failed to parse python_tag JSON: ${e}`
+                  );
                 }
-                if (functionCallData) break;
               }
 
-              // Convert to tool_calls format if found
-              if (functionCallData) {
-                let functionName =
-                  functionCallData.function_name ||
-                  functionCallData.function_call?.name ||
-                  "";
-                let functionArgs =
-                  functionCallData.parameters ||
-                  functionCallData.function_call?.arguments ||
-                  {};
+              // If no python_tag found, try other formats
+              if (!tool_calls || tool_calls.length === 0) {
+                // Try to extract JSON from content
+                let functionCallData = null;
 
-                if (functionName) {
-                  tool_calls = [
-                    {
-                      function: {
-                        name: functionName,
-                        arguments:
-                          typeof functionArgs === "string"
-                            ? functionArgs
-                            : JSON.stringify(functionArgs),
+                // Look for JSON in code blocks or standalone
+                const jsonMatches = [
+                  /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g,
+                  /(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
+                ];
+
+                for (const regex of jsonMatches) {
+                  const matches = [...cleanContent.matchAll(regex)];
+                  for (const match of matches) {
+                    try {
+                      const candidate = JSON.parse(match[1]);
+                      // Check if it looks like a function call
+                      if (
+                        candidate.function_name ||
+                        candidate.function_call ||
+                        candidate.function
+                      ) {
+                        functionCallData = candidate;
+                        LoggingUtils.logInfo(
+                          `🦙 [OllamaCompletion] Extracted function call from content (fallback)`
+                        );
+                        break;
+                      }
+                    } catch (e) {
+                      continue;
+                    }
+                  }
+                  if (functionCallData) break;
+                }
+
+                // Convert to tool_calls format if found
+                if (functionCallData) {
+                  let functionName =
+                    functionCallData.function_name ||
+                    functionCallData.function_call?.name ||
+                    functionCallData.function ||
+                    "";
+                  let functionArgs =
+                    functionCallData.parameters ||
+                    functionCallData.function_call?.arguments ||
+                    functionCallData.arguments ||
+                    {};
+
+                  if (functionName) {
+                    tool_calls = [
+                      {
+                        function: {
+                          name: functionName,
+                          arguments:
+                            typeof functionArgs === "string"
+                              ? functionArgs
+                              : JSON.stringify(functionArgs),
+                        },
                       },
-                    },
-                  ];
-                  LoggingUtils.logInfo(
-                    `🦙 [OllamaCompletion] Fallback function call parsed: ${functionName}`
-                  );
+                    ];
+                    LoggingUtils.logInfo(
+                      `🦙 [OllamaCompletion] Fallback function call parsed: ${functionName}`
+                    );
+                  }
                 }
               }
             } catch (parseError) {

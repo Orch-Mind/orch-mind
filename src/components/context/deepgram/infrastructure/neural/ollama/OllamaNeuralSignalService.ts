@@ -373,16 +373,39 @@ export class OllamaNeuralSignalService
           if (Array.isArray(args.keywords)) {
             keywords = args.keywords;
           } else if (typeof args.keywords === "string") {
-            // Handle case where keywords might be a comma-separated string
-            keywords = args.keywords
-              .split(",")
-              .map((k: string) => k.trim())
-              .filter((k: string) => k.length > 0);
-            console.warn(
-              `🦙 [OllamaNeuralSignal] Keywords was a string, converted to array: ${JSON.stringify(
-                keywords
-              )}`
-            );
+            // Check if it's a JSON string first
+            if (args.keywords.startsWith("[") && args.keywords.endsWith("]")) {
+              try {
+                keywords = JSON.parse(args.keywords);
+                console.warn(
+                  `🦙 [OllamaNeuralSignal] Keywords was a JSON string, parsed to array: ${JSON.stringify(
+                    keywords
+                  )}`
+                );
+              } catch (e) {
+                // If JSON parsing fails, treat as comma-separated
+                keywords = args.keywords
+                  .split(",")
+                  .map((k: string) => k.trim())
+                  .filter((k: string) => k.length > 0);
+                console.warn(
+                  `🦙 [OllamaNeuralSignal] Keywords was a string, split by comma: ${JSON.stringify(
+                    keywords
+                  )}`
+                );
+              }
+            } else {
+              // Handle case where keywords might be a comma-separated string
+              keywords = args.keywords
+                .split(",")
+                .map((k: string) => k.trim())
+                .filter((k: string) => k.length > 0);
+              console.warn(
+                `🦙 [OllamaNeuralSignal] Keywords was a string, converted to array: ${JSON.stringify(
+                  keywords
+                )}`
+              );
+            }
           }
 
           return {

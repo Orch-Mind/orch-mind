@@ -135,7 +135,19 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
       const systemPrompt = {
         role: "system" as const,
-        content: `You are a collapse strategy engine. Decide the optimal collapse approach (deterministic or probabilistic) based on the metrics provided.`,
+        content: `You are a collapse strategy engine. Decide the optimal collapse approach (deterministic or probabilistic) based on the metrics provided.
+        
+${
+  isLlama32
+    ? `IMPORTANT for Llama 3.2: You MUST respond using this exact format:
+<|python_tag|>{"function": "decideCollapseStrategy", "parameters": {"deterministic": true, "temperature": 0.3, "justification": "Your justification here"}}
+
+The response MUST include:
+- deterministic: boolean (true or false)
+- temperature: number between 0.1 and 1.5
+- justification: string explaining the decision`
+    : ""
+}`,
       };
 
       const userPrompt = {
