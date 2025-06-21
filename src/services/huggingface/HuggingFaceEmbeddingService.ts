@@ -47,12 +47,16 @@ export class HuggingFaceEmbeddingService implements IEmbeddingService {
   }
 
   async initialize(config?: Record<string, any>): Promise<boolean> {
-    const modelToLoad = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL) as AllowedEmbedderId;
-    console.log(`[HFE] Initializing with model from storage: ${modelToLoad || 'default (will use first allowed)'}`);
-    
-    await this.loadModel(
-      modelToLoad || ALLOWED_EMBEDDERS[0]
+    const modelToLoad = getOption(
+      STORAGE_KEYS.HF_EMBEDDING_MODEL
+    ) as AllowedEmbedderId;
+    console.log(
+      `[HFE] Initializing with model from storage: ${
+        modelToLoad || "default (will use first allowed)"
+      }`
     );
+
+    await this.loadModel(modelToLoad || ALLOWED_EMBEDDERS[0]);
     return true;
   }
 

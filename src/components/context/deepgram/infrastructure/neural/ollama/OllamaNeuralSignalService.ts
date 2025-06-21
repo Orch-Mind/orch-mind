@@ -99,13 +99,13 @@ class NeuralSignalBuilder {
           }
         } catch (e) {
           // Not valid JSON, treat as empty array
-          console.warn(
-            `🦙 [NeuralSignalBuilder] Keywords is string but not valid JSON: "${args.keywords}"`
+          console.log(
+            `🦙 [NeuralSignalBuilder] Keywords string is not valid JSON, using empty array: "${args.keywords}"`
           );
         }
       } else {
-        console.warn(
-          `🦙 [NeuralSignalBuilder] Unexpected keywords type: ${typeof args.keywords}`
+        console.log(
+          `🦙 [NeuralSignalBuilder] Unexpected keywords type (${typeof args.keywords}), using empty array`
         );
       }
     }
@@ -470,8 +470,8 @@ export class OllamaNeuralSignalService
             if (args.keywords.startsWith("[") && args.keywords.endsWith("]")) {
               try {
                 keywords = JSON.parse(args.keywords);
-                console.warn(
-                  `🦙 [OllamaNeuralSignal] Keywords was a JSON string, parsed to array: ${JSON.stringify(
+                console.log(
+                  `🦙 [OllamaNeuralSignal] Keywords received as JSON string, successfully parsed: ${JSON.stringify(
                     keywords
                   )}`
                 );
@@ -481,8 +481,8 @@ export class OllamaNeuralSignalService
                   .split(",")
                   .map((k: string) => k.trim())
                   .filter((k: string) => k.length > 0);
-                console.warn(
-                  `🦙 [OllamaNeuralSignal] Keywords was a string, split by comma: ${JSON.stringify(
+                console.log(
+                  `🦙 [OllamaNeuralSignal] Keywords parsed from comma-separated string: ${JSON.stringify(
                     keywords
                   )}`
                 );
@@ -493,8 +493,8 @@ export class OllamaNeuralSignalService
                 .split(",")
                 .map((k: string) => k.trim())
                 .filter((k: string) => k.length > 0);
-              console.warn(
-                `🦙 [OllamaNeuralSignal] Keywords was a string, converted to array: ${JSON.stringify(
+              console.log(
+                `🦙 [OllamaNeuralSignal] Keywords converted from string to array: ${JSON.stringify(
                   keywords
                 )}`
               );
