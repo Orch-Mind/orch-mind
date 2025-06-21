@@ -80,13 +80,32 @@ class NeuralSignalBuilder {
       throw new Error("Missing required field 'core'");
     }
 
-    // Debug log for keywords field
-    if (args.keywords !== undefined && !Array.isArray(args.keywords)) {
-      console.warn(
-        `🦙 [NeuralSignalBuilder] Keywords field is not an array: ${JSON.stringify(
-          args.keywords
-        )}, type: ${typeof args.keywords}`
-      );
+    // Process keywords - handle string arrays like "[]" or "[\"word1\", \"word2\"]"
+    let keywords: string[] = [];
+    if (args.keywords !== undefined) {
+      if (Array.isArray(args.keywords)) {
+        keywords = args.keywords;
+      } else if (typeof args.keywords === "string") {
+        // Try to parse string as JSON array
+        try {
+          const parsed = JSON.parse(args.keywords);
+          if (Array.isArray(parsed)) {
+            keywords = parsed;
+            console.log(
+              `🦙 [NeuralSignalBuilder] Parsed keywords from JSON string: ${JSON.stringify(keywords)}`
+            );
+          }
+        } catch (e) {
+          // Not valid JSON, treat as empty array
+          console.warn(
+            `🦙 [NeuralSignalBuilder] Keywords is string but not valid JSON: "${args.keywords}"`
+          );
+        }
+      } else {
+        console.warn(
+          `🦙 [NeuralSignalBuilder] Unexpected keywords type: ${typeof args.keywords}`
+        );
+      }
     }
 
     return {
@@ -95,7 +114,7 @@ class NeuralSignalBuilder {
       symbolic_query: {
         query: typeof args.query === "string" ? args.query.trim() : "",
       },
-      keywords: Array.isArray(args.keywords) ? args.keywords : [],
+      keywords: keywords,
       topK: args.topK,
       symbolicInsights: args.symbolicInsights,
     };
