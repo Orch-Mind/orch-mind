@@ -106,9 +106,8 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
     try {
       // Ensure we have a valid service instance
       const validService = await this.ensureValidService();
-      // Get model info first
+      // Get model info
       const model = getOption(STORAGE_KEYS.OLLAMA_MODEL) ?? "qwen3:latest";
-      const isLlama32 = model.includes("llama3.2");
 
       // Get the decideCollapseStrategy schema from the registry
       const collapseStrategySchema = FunctionSchemaRegistry.getInstance().get(
@@ -136,18 +135,14 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
       const systemPrompt = {
         role: "system" as const,
         content: `You are a collapse strategy engine. Decide the optimal collapse approach (deterministic or probabilistic) based on the metrics provided.
-        
-${
-  isLlama32
-    ? `IMPORTANT for Llama 3.2: You MUST respond using this exact format:
+
+IMPORTANT: Some models may respond using this format:
 <|python_tag|>{"function": "decideCollapseStrategy", "parameters": {"deterministic": true, "temperature": 0.3, "justification": "Your justification here"}}
 
 The response MUST include:
 - deterministic: boolean (true or false)
 - temperature: number between 0.1 and 1.5
-- justification: string explaining the decision`
-    : ""
-}`,
+- justification: string explaining the decision`,
       };
 
       const userPrompt = {
@@ -182,19 +177,16 @@ The response MUST include:
         }
       );
 
-      if (isLlama32) {
-        console.log(
-          `🦙 [OllamaCollapseStrategy] Using Llama 3.2 - extra debug enabled`
-        );
-        console.log(
-          `🦙 [OllamaCollapseStrategy] System prompt:`,
-          systemPrompt.content
-        );
-        console.log(
-          `🦙 [OllamaCollapseStrategy] Tools:`,
-          JSON.stringify(tools, null, 2)
-        );
-      }
+      // Debug logging for models that might use alternative formats
+      console.log(`🦙 [OllamaCollapseStrategy] Model: ${model}`);
+      console.log(
+        `🦙 [OllamaCollapseStrategy] System prompt:`,
+        systemPrompt.content
+      );
+      console.log(
+        `🦙 [OllamaCollapseStrategy] Tools:`,
+        JSON.stringify(tools, null, 2)
+      );
 
       const response = await validService.callModelWithFunctions({
         model: model,
@@ -211,9 +203,10 @@ The response MUST include:
           response.choices?.[0]?.message?.tool_calls?.length || 0,
       });
 
-      if (isLlama32 && response.choices?.[0]?.message) {
+      // Log raw response for debugging alternative formats
+      if (response.choices?.[0]?.message) {
         console.log(
-          `🦙 [OllamaCollapseStrategy] Llama 3.2 raw response:`,
+          `🦙 [OllamaCollapseStrategy] Raw response from ${model}:`,
           JSON.stringify(response.choices[0].message, null, 2)
         );
       }
@@ -324,7 +317,7 @@ The response MUST include:
           const cleanedContent = cleanThinkTags(content);
 
           // Try alternative parsing formats (python_tag, pythonic, etc)
-          // Some models use these formats even if they're not Llama 3.2
+          // Various models may use these formats for function calling
           console.log(
             `🦙 [OllamaCollapseStrategy] Trying alternative format parsing (python_tag, pythonic)`
           );
