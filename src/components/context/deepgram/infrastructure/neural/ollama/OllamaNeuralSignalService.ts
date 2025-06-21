@@ -186,6 +186,14 @@ export class OllamaNeuralSignalService
         `🦙 [OllamaNeuralSignal] Response received from OllamaCompletionService`
       );
       ServiceLogger.logResponse(response);
+      
+      // Extra debug for response content
+      if (response.choices?.[0]?.message) {
+        console.log(
+          `🦙 [OllamaNeuralSignal] Raw response message:`,
+          JSON.stringify(response.choices[0].message, null, 2)
+        );
+      }
 
       const signals = this.extractSignals(response);
       console.log(
@@ -326,6 +334,56 @@ export class OllamaNeuralSignalService
       return this.extractFromToolCalls(toolCalls);
     }
 
+    // Fallback: Try to parse function calls from content
+    const content = response.choices?.[0]?.message?.content;
+    if (content) {
+      console.log(
+        `🦙 [OllamaNeuralSignal] No tool calls, trying content parsing: ${content.substring(0, 200)}...`
+      );
+
+      // Try python_tag format
+      const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
+      const pythonTagMatch = content.match(pythonTagRegex);
+      
+      if (pythonTagMatch) {
+        try {
+          const pythonTagData = JSON.parse(pythonTagMatch[1]);
+          console.log(
+            `🦙 [OllamaNeuralSignal] Found python_tag format: ${JSON.stringify(pythonTagData)}`
+          );
+          
+          if (pythonTagData.function === "activateBrainArea" && pythonTagData.parameters) {
+            const signal = NeuralSignalBuilder.buildFromArgs(pythonTagData.parameters);
+            return [signal];
+          }
+        } catch (e) {
+          console.warn(`🦙 [OllamaNeuralSignal] Failed to parse python_tag: ${e}`);
+        }
+      }
+
+      // Try JSON extraction
+      const jsonMatches = [
+        /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g,
+        /(\{[\s\S]*?"core"[\s\S]*?\})/g,
+      ];
+
+      for (const regex of jsonMatches) {
+        const matches = [...content.matchAll(regex)];
+        for (const match of matches) {
+          try {
+            const candidate = JSON.parse(match[1]);
+            if (candidate.core && typeof candidate.intensity === "number") {
+              const signal = NeuralSignalBuilder.buildFromArgs(candidate);
+              return [signal];
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    }
+
+    console.warn(`🦙 [OllamaNeuralSignal] No signals could be extracted from response`);
     return [];
   }
 

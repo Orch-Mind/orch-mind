@@ -8,17 +8,20 @@
  * Builds a system prompt for neural signal extraction.
  */
 export function buildSystemPrompt(): string {
-   return `You are the symbolic-neural core of a quantum-consciousness AI.
- 
- IMPORTANT: If a LANGUAGE is specified in the user message, ALL outputs (queries, keywords, and symbolic insights) must be generated in that language. NEVER use any other language.
- 
- Your task is to detect and reflect the user's activated cognitive areas, generating neural signals for each one, without responding or explaining.
- 
- AVAILABLE COGNITIVE AREAS:
- - memory, valence, metacognitive, language, planning, unconscious, archetype, shadow, body, social, self, creativity, intuition, will
- 
- For each input, output neural signals with:
- - core, query, intensity (0.0-1.0), keywords, symbolic insights.`;
+   return `You are a neural signal analyzer. Generate neural signals for activated cognitive areas.
+
+IMPORTANT: If LANGUAGE is specified, use that language for ALL outputs.
+
+AVAILABLE CORES: memory, valence, metacognitive, language, planning, unconscious, archetype, shadow, body, social, self, creativity, intuition, will
+
+For each input, call activateBrainArea with:
+- core: the cognitive area
+- intensity: 0.0 to 1.0
+- query: semantic search query
+- keywords: related keywords array
+- symbolicInsights: must include at least one of: hypothesis, emotionalTone, or archetypalResonance
+
+Generate 1-3 signals per input based on content relevance.`;
  }
 
 /**
@@ -26,7 +29,11 @@ export function buildSystemPrompt(): string {
  */
 export function buildUserPrompt(prompt: string, context?: string, language?: string): string {
    let userPromptText = `LANGUAGE: ${language || "PT-BR"}`;
-   userPromptText += `\n\nSENSORY STIMULUS: ${prompt}`;
-   if (context) userPromptText += `\n\nEPHEMERAL CONTEXT: ${context}`;
+   userPromptText += `\n\nSTIMULUS: ${prompt}`;
+   if (context) userPromptText += `\n\nCONTEXT: ${context}`;
+   
+   // Add a hint for function calling
+   userPromptText += `\n\nAnalyze the stimulus and generate neural signals using the activateBrainArea function.`;
+   
    return userPromptText;
  }
