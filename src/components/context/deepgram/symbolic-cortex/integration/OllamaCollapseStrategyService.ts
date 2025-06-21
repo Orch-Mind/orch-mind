@@ -97,8 +97,6 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
     }
   }
 
-
-
   /**
    * Symbolic: Collapse strategy decision using Ollama
    */
@@ -313,110 +311,107 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
           // Clean think tags from content before processing
           const cleanedContent = cleanThinkTags(content);
 
-          // Special parsing for Llama 3.2 pythonic format
-          if (isLlama32) {
+          // Try alternative parsing formats (python_tag, pythonic, etc)
+          // Some models use these formats even if they're not Llama 3.2
+          console.log(
+            `🦙 [OllamaCollapseStrategy] Trying alternative format parsing (python_tag, pythonic)`
+          );
+
+          // Look for python_tag format first
+          const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
+          const pythonTagMatch = cleanedContent.match(pythonTagRegex);
+
+          if (pythonTagMatch) {
+            console.log(`🦙 [OllamaCollapseStrategy] Found python_tag format`);
+            try {
+              const jsonData = JSON.parse(pythonTagMatch[1]);
+              if (
+                jsonData.function === "decideCollapseStrategy" &&
+                jsonData.parameters
+              ) {
+                const params = jsonData.parameters;
+                if (
+                  typeof params.deterministic === "boolean" &&
+                  params.justification
+                ) {
+                  return {
+                    deterministic: params.deterministic,
+                    temperature: params.temperature || 0.1,
+                    justification: params.justification,
+                    userIntent: params.userIntent,
+                    emergentProperties: params.emergentProperties,
+                  };
+                }
+              }
+            } catch (e) {
+              console.warn(
+                `🦙 [OllamaCollapseStrategy] Failed to parse python_tag JSON:`,
+                e
+              );
+            }
+          }
+
+          // Look for pythonic function calls like: decideCollapseStrategy(deterministic=True, temperature=0.3, ...)
+          const pythonFunctionRegex = /decideCollapseStrategy\s*\(([^)]+)\)/;
+          const pythonMatch = cleanedContent.match(pythonFunctionRegex);
+
+          if (pythonMatch) {
             console.log(
-              `🦙 [OllamaCollapseStrategy] Trying Llama 3.2 pythonic format parsing`
+              `🦙 [OllamaCollapseStrategy] Found pythonic function call:`,
+              pythonMatch[0]
             );
 
-            // Look for python_tag format first
-            const pythonTagRegex = /<\|python_tag\|>\s*(\{[\s\S]*?\})/;
-            const pythonTagMatch = cleanedContent.match(pythonTagRegex);
+            // Parse pythonic parameters
+            const paramsString = pythonMatch[1];
+            const params: any = {};
 
-            if (pythonTagMatch) {
-              console.log(
-                `🦙 [OllamaCollapseStrategy] Found python_tag format`
-              );
+            // Match parameter=value pairs
+            const paramRegex = /(\w+)\s*=\s*([^,]+)(?:,|$)/g;
+            let paramMatch;
+
+            while ((paramMatch = paramRegex.exec(paramsString)) !== null) {
+              const key = paramMatch[1];
+              let value = paramMatch[2].trim();
+
+              // Convert Python values to JavaScript
+              if (value === "True") value = "true";
+              if (value === "False") value = "false";
+              if (value === "None") value = "null";
+
+              // Remove quotes if present
+              if (
+                (value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'"))
+              ) {
+                value = value.slice(1, -1);
+              }
+
+              // Try to parse as JSON
               try {
-                const jsonData = JSON.parse(pythonTagMatch[1]);
-                if (
-                  jsonData.function === "decideCollapseStrategy" &&
-                  jsonData.parameters
-                ) {
-                  const params = jsonData.parameters;
-                  if (
-                    typeof params.deterministic === "boolean" &&
-                    params.justification
-                  ) {
-                    return {
-                      deterministic: params.deterministic,
-                      temperature: params.temperature || 0.1,
-                      justification: params.justification,
-                      userIntent: params.userIntent,
-                      emergentProperties: params.emergentProperties,
-                    };
-                  }
-                }
-              } catch (e) {
-                console.warn(
-                  `🦙 [OllamaCollapseStrategy] Failed to parse python_tag JSON:`,
-                  e
-                );
+                params[key] = JSON.parse(value);
+              } catch {
+                // If not valid JSON, keep as string
+                params[key] = value;
               }
             }
 
-            // Look for pythonic function calls like: decideCollapseStrategy(deterministic=True, temperature=0.3, ...)
-            const pythonFunctionRegex = /decideCollapseStrategy\s*\(([^)]+)\)/;
-            const pythonMatch = cleanedContent.match(pythonFunctionRegex);
+            console.log(
+              `🦙 [OllamaCollapseStrategy] Parsed pythonic params:`,
+              params
+            );
 
-            if (pythonMatch) {
-              console.log(
-                `🦙 [OllamaCollapseStrategy] Found pythonic function call:`,
-                pythonMatch[0]
-              );
-
-              // Parse pythonic parameters
-              const paramsString = pythonMatch[1];
-              const params: any = {};
-
-              // Match parameter=value pairs
-              const paramRegex = /(\w+)\s*=\s*([^,]+)(?:,|$)/g;
-              let paramMatch;
-
-              while ((paramMatch = paramRegex.exec(paramsString)) !== null) {
-                const key = paramMatch[1];
-                let value = paramMatch[2].trim();
-
-                // Convert Python values to JavaScript
-                if (value === "True") value = "true";
-                if (value === "False") value = "false";
-                if (value === "None") value = "null";
-
-                // Remove quotes if present
-                if (
-                  (value.startsWith('"') && value.endsWith('"')) ||
-                  (value.startsWith("'") && value.endsWith("'"))
-                ) {
-                  value = value.slice(1, -1);
-                }
-
-                // Try to parse as JSON
-                try {
-                  params[key] = JSON.parse(value);
-                } catch {
-                  // If not valid JSON, keep as string
-                  params[key] = value;
-                }
-              }
-
-              console.log(
-                `🦙 [OllamaCollapseStrategy] Parsed pythonic params:`,
-                params
-              );
-
-              // Validate and return
-              if (
-                typeof params.deterministic === "boolean" &&
-                params.justification
-              ) {
-                return {
-                  deterministic: params.deterministic,
-                  temperature: params.temperature || 0.1,
-                  justification: params.justification,
-                  userIntent: params.userIntent,
-                  emergentProperties: params.emergentProperties,
-                };
-              }
+            // Validate and return
+            if (
+              typeof params.deterministic === "boolean" &&
+              params.justification
+            ) {
+              return {
+                deterministic: params.deterministic,
+                temperature: params.temperature || 0.1,
+                justification: params.justification,
+                userIntent: params.userIntent,
+                emergentProperties: params.emergentProperties,
+              };
             }
           }
 
