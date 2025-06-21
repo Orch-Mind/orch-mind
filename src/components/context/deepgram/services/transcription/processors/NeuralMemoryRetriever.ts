@@ -3,8 +3,8 @@
 
 import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
 import {
-    NeuralProcessingResult,
-    NeuralSignal,
+  NeuralProcessingResult,
+  NeuralSignal,
 } from "../../../interfaces/neural/NeuralSignalTypes";
 import { SymbolicInsight } from "../../../types/SymbolicInsight";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
@@ -398,7 +398,11 @@ export class NeuralMemoryRetriever {
     if (signal.intensity < 0.3) {
       emergentProperties.push("Low response diversity");
     }
-    if (signal.keywords && Array.isArray(signal.keywords) && signal.keywords.length > 3) {
+    if (
+      signal.keywords &&
+      Array.isArray(signal.keywords) &&
+      signal.keywords.length > 3
+    ) {
       emergentProperties.push("Cognitive dissonance");
     }
 
