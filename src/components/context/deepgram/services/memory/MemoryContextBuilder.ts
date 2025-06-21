@@ -255,7 +255,7 @@ export class MemoryContextBuilder implements IMemoryContextBuilder {
     ].join("\n");
     
     messages.push({
-      role: "developer",
+      role: "system",
       content: instructionsContext
     });
     
@@ -265,7 +265,7 @@ export class MemoryContextBuilder implements IMemoryContextBuilder {
     
     if (memoryTemporaryContext) {
       messages.push({
-        role: "developer",
+        role: "system",
         content: `${MEMORY_INSTRUCTIONS_HEADER}:\n${memoryTemporaryContext}`
       });
     }
@@ -297,7 +297,7 @@ export class MemoryContextBuilder implements IMemoryContextBuilder {
     // Add primary user context only if not empty
     if (userContext.trim()) {
       messages.push({
-        role: "developer",
+        role: "system",
         content: `${MEMORY_USER_HEADER}:\n${userContext}`
       });
     }
@@ -308,7 +308,7 @@ export class MemoryContextBuilder implements IMemoryContextBuilder {
       const formattedExternalContext = this.formatter.formatExternalSpeakerContent(externalContext);
       
       messages.push({
-        role: "developer",
+        role: "system",
         content: `${MEMORY_EXTERNAL_HEADER} ${EXTERNAL_SPEAKER_LABEL}:\n${formattedExternalContext}`
       });
     }

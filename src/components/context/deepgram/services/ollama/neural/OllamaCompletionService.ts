@@ -70,7 +70,7 @@ export class OllamaCompletionService implements ICompletionService {
         // Convert messages to Ollama format
         const formattedMessages = options.messages.map((m) => ({
           // Convert 'developer' to 'system' for Ollama compatibility
-          role: m.role === "developer" ? "system" : m.role,
+          role: m.role === "system" ? "system" : m.role,
           content: m.content,
         }));
 
@@ -488,7 +488,7 @@ export class OllamaCompletionService implements ICompletionService {
 
       // Convert messages to Ollama format
       const formattedMessages = messages.map((m) => ({
-        role: m.role === "developer" ? "system" : m.role,
+        role: m.role === "system" ? "system" : m.role,
         content: m.content,
       }));
 

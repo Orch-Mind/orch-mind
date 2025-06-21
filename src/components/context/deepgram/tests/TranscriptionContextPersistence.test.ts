@@ -101,7 +101,7 @@ describe("TranscriptionContextPersistence", () => {
   test("Temporary context should persist between different MemoryContextBuilder instances", () => {
     // Basic test setup
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
     
     const transcricoes: SpeakerTranscription[] = [
@@ -128,7 +128,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify temporary context in the first execution
-    const developerMessages1 = firstRun.filter(m => m.role === "developer");
+    const developerMessages1 = firstRun.filter(m => m.role === "system");
     const hasTemporaryContext1 = developerMessages1.some(m => 
       m.content.includes("Instructions important"));
     expect(hasTemporaryContext1).toBe(true);
@@ -147,7 +147,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify if the temporary context was persisted in the second instance
-    const developerMessages2 = secondRun.filter(m => m.role === "developer");
+    const developerMessages2 = secondRun.filter(m => m.role === "system");
     const hasTemporaryContext2 = developerMessages2.some(m => 
       m.content.includes("Instructions important"));
     
@@ -158,7 +158,7 @@ describe("TranscriptionContextPersistence", () => {
   test("Resetting temporaryContext should affect all instances", () => {
     // Basic test setup
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
     
     const transcricoes: SpeakerTranscription[] = [
@@ -185,7 +185,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify temporary context in the first execution
-    const developerMessages1 = firstRun.filter(m => m.role === "developer");
+    const developerMessages1 = firstRun.filter(m => m.role === "system");
     const hasTemporaryContext1 = developerMessages1.some(m => 
       m.content.includes("Instructions important"));
     expect(hasTemporaryContext1).toBe(true);
@@ -206,7 +206,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify that the context was cleared (should be absent)
-    const developerMessages2 = secondRun.filter(m => m.role === "developer");
+    const developerMessages2 = secondRun.filter(m => m.role === "system");
     const hasTemporaryContext2 = developerMessages2.some(m => 
       m.content.includes("Instructions important"));
     
@@ -217,7 +217,7 @@ describe("TranscriptionContextPersistence", () => {
   test("resetAll should clear both snapshot and temporary context", () => {
     // Basic test setup
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
     
     const transcricoes: SpeakerTranscription[] = [
@@ -260,7 +260,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify that the temporary context was cleared
-    const developerMessages = secondRun.filter(m => m.role === "developer");
+    const developerMessages = secondRun.filter(m => m.role === "system");
     const hasTemporaryContext = developerMessages.some(m => 
       m.content.includes("Instructions important"));
     expect(hasTemporaryContext).toBe(false);
@@ -283,7 +283,7 @@ describe("TranscriptionContextPersistence", () => {
     
     // Setup básico
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
     
     const transcricoes: SpeakerTranscription[] = [
@@ -303,7 +303,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify that the temporary context memory is in the messages
-    const firstDevMessages = firstMessages.filter(m => m.role === "developer");
+    const firstDevMessages = firstMessages.filter(m => m.role === "system");
     const hasMemoryContext = firstDevMessages.some(m => 
       m.content.includes("Context memory retrieved from Pinecone"));
     expect(hasMemoryContext).toBe(true);
@@ -321,7 +321,7 @@ describe("TranscriptionContextPersistence", () => {
     );
     
     // Verify that the temporary context memory IS STILL in the messages
-    const secondDevMessages = secondMessages.filter(m => m.role === "developer");
+    const secondDevMessages = secondMessages.filter(m => m.role === "system");
     const stillHasMemoryContext = secondDevMessages.some(m => 
       m.content.includes("Context memory retrieved from Pinecone"));
     expect(stillHasMemoryContext).toBe(true);

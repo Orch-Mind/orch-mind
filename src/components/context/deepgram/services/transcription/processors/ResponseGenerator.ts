@@ -67,7 +67,7 @@ export class ResponseGenerator {
 
     if (temporaryContext?.trim()) {
       contextMessages.push({
-        role: "developer",
+        role: "system",
         content: `🧠 Temporary instructions:\n${temporaryContext.trim()}`,
       });
     }

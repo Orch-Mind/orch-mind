@@ -11,7 +11,7 @@ export interface ChatGPTMessageContent {
 }
 
 export interface ChatGPTMessageAuthor {
-  role: "user" | "assistant" | "developer" | string;
+  role: "user" | "assistant" | string;
   name?: string;
 }
 

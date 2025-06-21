@@ -55,7 +55,7 @@ describe("TranscriptionSnapshotTracker", () => {
   test("New message is processed correctly without duplicates or context confusion", () => {
     // Arrange
     const conversationHistory: Message[] = [
-      { role: "developer", content: "📦 User relevant memory:\n[Guilherme] Hello, how are you?" },
+      { role: "system", content: "📦 User relevant memory:\n[Guilherme] Hello, how are you?" },
       // Remove the user message from history - this would be handled by deduplication
       // { role: "user", content: "[Guilherme] Olá, tudo bem?" },
       { role: "assistant", content: "Hello, how are you?" }
@@ -129,7 +129,7 @@ describe("TranscriptionSnapshotTracker", () => {
   test("Multiple messages are properly deduplicated", () => {
     // Arrange
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
 
     const transcricoesCompletas: SpeakerTranscription[] = [
@@ -205,7 +205,7 @@ describe("TranscriptionSnapshotTracker", () => {
   test("Temporary context is deduplicated between executions", () => {
     // Arrange
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
 
     const transcricoes: SpeakerTranscription[] = [
@@ -235,7 +235,7 @@ describe("TranscriptionSnapshotTracker", () => {
     );
 
     // Verify that the temporary context is present
-    const developerMessages = firstRun.filter(m => m.role === "developer");
+    const developerMessages = firstRun.filter(m => m.role === "system");
     const hasTemporaryContext = developerMessages.some(m => 
       m.content.includes("Instructions important"));
     expect(hasTemporaryContext).toBe(true);
@@ -265,7 +265,7 @@ describe("TranscriptionSnapshotTracker", () => {
     );
     
     // Verify that the temporary context IS STILL present in the second prompt
-    const secondRunDeveloperMessages = secondRun.filter(m => m.role === "developer");
+    const secondRunDeveloperMessages = secondRun.filter(m => m.role === "system");
     console.log("Second run developer messages:", 
       secondRunDeveloperMessages.map(m => m.content.substring(0, 30) + "..."));
     
@@ -287,7 +287,7 @@ describe("TranscriptionSnapshotTracker", () => {
     memoryContextBuilder.resetAll();
     
     const conversationHistory: Message[] = [
-      { role: "developer", content: "System message" }
+      { role: "system", content: "System message" }
     ];
     
     const transcricoes: SpeakerTranscription[] = [
@@ -317,7 +317,7 @@ describe("TranscriptionSnapshotTracker", () => {
     );
     
     // Verify that the temporary context is present 
-    const developerMessages = firstRun.filter(m => m.role === "developer");
+    const developerMessages = firstRun.filter(m => m.role === "system");
     const hasTemporaryContext = developerMessages.some(m => 
       m.content.includes("Instructions important"));
     expect(hasTemporaryContext).toBe(true);
@@ -339,7 +339,7 @@ describe("TranscriptionSnapshotTracker", () => {
     );
     
     // 5. Verify the instructions in the developer messages
-    const developerMessages2 = secondRun.filter(m => m.role === "developer");
+    const developerMessages2 = secondRun.filter(m => m.role === "system");
     console.log("Dynamic context developer messages:", 
       developerMessages2.map(m => m.content.substring(0, 50) + "..."));
     
