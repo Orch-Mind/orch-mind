@@ -243,71 +243,40 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
     originalPrompt: string,
     userContextData: Record<string, unknown>
   ): string {
-    const styleInstruction =
-      "STYLE INSTRUCTION: Only use greetings and personal references when the user's content clearly justifies it — never automatically.";
+    const styleGuide = "STYLE: Use greetings only when contextually appropriate.";
 
-    // Base symbolic instruction with enhanced quantum and multi-level consciousness dimensions
-    const symbolicInstruction = `INSTRUCTION: Analyze the user's message and context in a quantum-symbolic framework to identify:
+    // Refactored: More concise and focused symbolic instruction
+    const symbolicAnalysis = `ANALYSIS FRAMEWORK: Extract multi-layered meaning from the user's message.
 
-1. EXPLICIT AND IMPLICIT ELEMENTS:
-   - Keywords, emotional themes, symbols, archetypes, dilemmas, and unconscious patterns
-   - Potential quantum states of meaning in superposition (multiple interpretations coexisting)
-   - Signs of instructional collapse (where multiple potential meanings converge)
+DETECT:
+• Explicit content + implicit patterns (emotions, symbols, archetypes)
+• Multiple interpretations coexisting (quantum superposition of meanings)
+• Consciousness levels: surface → intermediate → unconscious
+• Temporal echoes: past patterns → present expression → future potential
+• Tensions and paradoxes that reveal deeper insights
 
-2. MULTI-LEVEL CONSCIOUSNESS:
-   - Surface level: Immediate conscious content and stated intentions
-   - Intermediate level: Partially conscious patterns, emotional undercurrents
-   - Deep level: Unconscious material, potential symbolic resonance, dormant insights
+GENERATE:
+• Keywords and queries that explore symbolic/emotional dimensions
+• Focus on: conflicts, desires, patterns, transformative potential
+• Only expand when detecting rich symbolic material
 
-3. ARCHETYPAL RESONANCE AND INTERPLAY:
-   - Primary archetypes activated in the communication
-   - Secondary/shadow archetypes operating in tension or harmony with primary ones
-   - Potential dialogue or conflict between different archetypal energies
+OUTPUT: Refined keywords and queries for deeper exploration.`;
 
-4. TEMPORAL DIMENSIONS:
-   - Past: Echoes, patterns, and unresolved elements influencing present communication
-   - Present: Immediate symbolic significance of current expression
-   - Future: Potential trajectories, symbolic seeds, emergent possibilities
+    // Build the complete prompt
+    let enrichedPrompt = `${styleGuide}\n\nUSER MESSAGE: ${originalPrompt}`;
 
-5. POLARITIES AND PARADOXES:
-   - Tensions between opposing symbolic forces
-   - Potential integration points for apparently contradictory elements
-   - Productive tensions that could lead to emergent understanding
-
-Suggest refined or expanded keywords, queries, and topics that could deepen the symbolic, emotional, and unconscious investigation — even if they are not explicitly verbalized.
-
-Be selective: only expand when there are strong indicators of symbolic or unconscious material.
-
-Prioritize expressions and themes that reveal tensions, paradoxes, hidden desires, blockages, or deep self-knowledge potential that exist in quantum superposition awaiting conscious observation.`;
-
-    // If no user context exists, return the basic symbolic enrichment prompt
-    if (Object.keys(userContextData).length === 0) {
-      return `${styleInstruction}\n\n${originalPrompt}\n\n${symbolicInstruction}`;
+    // Add context if available (more concise)
+    if (Object.keys(userContextData).length > 0) {
+      if (userContextData.recent_topics) {
+        enrichedPrompt += `\nCONTEXT: ${userContextData.recent_topics.toString().substring(0, 150)}...`;
+      }
+      if (userContextData.speaker_interaction_counts) {
+        enrichedPrompt += `\nPATTERN: ${JSON.stringify(userContextData.speaker_interaction_counts)}`;
+      }
     }
 
-    // Start building contextualized prompt
-    let contextualPrompt = `${styleInstruction}\n\n${originalPrompt}`;
+    enrichedPrompt += `\n\n${symbolicAnalysis}`;
 
-    // Add recent symbolic or emotional topics, if present
-    if (userContextData.recent_topics) {
-      const recentTopics =
-        userContextData.recent_topics.toString().substring(0, 200) + "...";
-      contextualPrompt += `\n\nRecent topics context: ${recentTopics}`;
-    }
-
-    // Add interaction patterns if present
-    if (userContextData.speaker_interaction_counts) {
-      const interactionPattern = JSON.stringify(
-        userContextData.speaker_interaction_counts
-      );
-      contextualPrompt += `\n\nInteraction pattern: ${interactionPattern}`;
-    }
-
-    // Add symbolic instruction + adaptive note
-    contextualPrompt += `\n\n${symbolicInstruction}
-
-Note: If other relevant symbolic or emotional patterns are available in the long-term memory or historical user data, feel free to incorporate them into the keyword/query suggestions — as long as they resonate symbolically with the current stimulus.`;
-
-    return contextualPrompt;
+    return enrichedPrompt;
   }
 }

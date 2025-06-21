@@ -92,7 +92,9 @@ class NeuralSignalBuilder {
           if (Array.isArray(parsed)) {
             keywords = parsed;
             console.log(
-              `🦙 [NeuralSignalBuilder] Parsed keywords from JSON string: ${JSON.stringify(keywords)}`
+              `🦙 [NeuralSignalBuilder] Parsed keywords from JSON string: ${JSON.stringify(
+                keywords
+              )}`
             );
           }
         } catch (e) {
