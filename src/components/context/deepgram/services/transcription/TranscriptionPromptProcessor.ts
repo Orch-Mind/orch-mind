@@ -386,9 +386,7 @@ export class TranscriptionPromptProcessor {
       this.currentLanguage
     );
 
-    const integratedSystemPrompt = integrationResult.prompt[0];
-
-    const integratedUserPrompt = integrationResult.prompt[1];
+    const integratedUserPrompt = integrationResult.prompt;
 
     // Log integration decision
     LoggingUtils.logInfo(

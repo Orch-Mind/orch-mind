@@ -207,8 +207,9 @@ describe("TranscriptionPromptProcessor with Summarization Integration", () => {
     // Gerar resposta
     await responseGenerator.generateResponse(
       "Show me the token refresh implementation",
-      undefined,
-      summarizedConversation as any
+      0.7, // temperature
+      undefined, // temporaryContext
+      summarizedConversation as any // conversationMessages
     );
 
     // Verificar que o LLM foi chamado corretamente

@@ -14,6 +14,10 @@ import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimeli
  * Responsible for generating responses using different AI backends
  */
 export class ResponseGenerator {
+  // Configuration constants
+  private readonly MIN_TEMPERATURE = 0.1;
+  private readonly MAX_TEMPERATURE = 1.5;
+
   constructor(
     private memoryService: IMemoryService,
     private llmService: IOpenAIService
@@ -32,19 +36,27 @@ export class ResponseGenerator {
     temporaryContext?: string,
     conversationMessages?: Message[]
   ): Promise<string> {
-    symbolicCognitionTimelineLogger.logFusionInitiated();
+    // Validate temperature parameter
+    const validatedTemperature = Math.max(
+      this.MIN_TEMPERATURE,
+      Math.min(this.MAX_TEMPERATURE, temperature)
+    );
 
-    // Prepare context messages (shared by both backends)
-    const contextMessages = this._prepareContextMessages(temporaryContext);
-
-    if (contextMessages.length > 0) {
-      this.memoryService.addContextToHistory(contextMessages);
+    if (temperature !== validatedTemperature) {
+      LoggingUtils.logWarning(
+        `[ResponseGenerator] Temperature ${temperature} was clamped to ${validatedTemperature}`
+      );
     }
 
+    symbolicCognitionTimelineLogger.logFusionInitiated();
+
+    // Get the current conversation history
     const conversationHistory = this.memoryService.getConversationHistory();
 
-    // If we have conversation messages from the chat (including summaries), use them
-    // Otherwise fall back to the default conversation history
+    // Prepare the appropriate system message based on context
+    const systemMessage = this._prepareSystemMessage(temporaryContext);
+
+    // Build the final messages array
     let messages: Message[];
 
     if (conversationMessages && conversationMessages.length > 0) {
@@ -52,37 +64,39 @@ export class ResponseGenerator {
       messages = this._buildMessagesWithChatHistory(
         integratedPrompt,
         conversationMessages,
-        conversationHistory
+        systemMessage
       );
     } else {
-      // Use default memory service method
-      messages = this.memoryService.buildPromptMessagesForModel(
+      // Build messages with standard conversation history
+      messages = this._buildMessagesWithConversationHistory(
         integratedPrompt,
-        conversationHistory
+        conversationHistory,
+        systemMessage
       );
     }
 
-    console.log(
-      "🧠 [ResponseGenerator] Conversation History:",
-      conversationHistory
-    );
-    console.log(
-      "🧠 [ResponseGenerator] Conversation Messages:",
-      conversationMessages
-    );
-    console.log("🧠 [ResponseGenerator] Messages:", messages);
+    // Log messages in development only
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "🧠 [ResponseGenerator] Conversation History:",
+        conversationHistory
+      );
+      console.log(
+        "🧠 [ResponseGenerator] Conversation Messages:",
+        conversationMessages
+      );
+      console.log("🧠 [ResponseGenerator] Messages:", messages);
+    }
 
-    return await this._generate(messages, temperature);
+    return await this._generate(messages, validatedTemperature);
   }
 
   /**
-   * Prepare context messages for processing
+   * Prepare the appropriate system message based on context
    */
-  private _prepareContextMessages(temporaryContext?: string): Message[] {
-    const contextMessages: Message[] = [];
-
+  private _prepareSystemMessage(temporaryContext?: string): Message {
     if (temporaryContext?.trim()) {
-      contextMessages.push({
+      return {
         role: "system",
         content: `TEMPORARY COGNITIVE MODULATION
     
@@ -95,16 +109,41 @@ export class ResponseGenerator {
     SPECIFIC INSTRUCTIONS:
     ${temporaryContext.trim()}
     
-    REMEMBER: This is a temporary lens, not a replacement of your core symbolic architecture.`
-      });
+    REMEMBER: This is a temporary lens, not a replacement of your core symbolic architecture.`,
+      };
     } else {
-      contextMessages.push({
+      return {
         role: "system",
         content: buildIntegrationSystemPrompt(),
-      });
+      };
     }
+  }
 
-    return contextMessages;
+  /**
+   * Build messages with standard conversation history
+   */
+  private _buildMessagesWithConversationHistory(
+    prompt: string,
+    conversationHistory: Message[],
+    systemMessage: Message
+  ): Message[] {
+    const messages: Message[] = [];
+
+    // Always start with our system message
+    messages.push(systemMessage);
+
+    // Add conversation history (excluding any existing system messages to avoid duplication)
+    conversationHistory
+      .filter((msg) => msg.role !== "system")
+      .forEach((msg) => messages.push(msg));
+
+    // Add the current prompt as the last user message
+    messages.push({
+      role: "user",
+      content: prompt,
+    });
+
+    return messages;
   }
 
   /**
@@ -112,23 +151,20 @@ export class ResponseGenerator {
    */
   private _buildMessagesWithChatHistory(
     prompt: string,
-    chatMessages: Message[],
-    systemHistory: Message[]
+    conversationMessages: Message[],
+    systemMessage: Message
   ): Message[] {
-    const messages: Message[] = [];
+    const messages: Message[] = [systemMessage];
 
-    // Start with system message from history
-    if (systemHistory.length > 0 && systemHistory[0].role === "system") {
-      messages.push(systemHistory[0]);
-    }
-
-    // Add chat messages (includes summaries as system messages)
-    // Filter out any duplicate system messages
-    const systemMessageContent = messages[0]?.content;
-    chatMessages.forEach((msg) => {
-      // Skip if it's a duplicate system message
-      if (msg.role === "system" && msg.content === systemMessageContent) {
-        return;
+    // Add all conversation messages from chat
+    // This includes user messages, assistant responses, and summary messages
+    conversationMessages.forEach((msg) => {
+      // Skip system messages that aren't summaries to avoid duplication
+      if (
+        msg.role === "system" &&
+        !msg.content.includes("📋 **Conversation Summary**")
+      ) {
+        return; // Skip regular system messages
       }
       messages.push(msg);
     });

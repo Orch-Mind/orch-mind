@@ -222,8 +222,9 @@ describe("Summarization Integration Test", () => {
 
       await responseGenerator.generateResponse(
         "Tell me more about React hooks",
+        0.7, // temperature
         undefined, // temporaryContext
-        messageFormat as any
+        messageFormat as any // conversationMessages
       );
 
       // Verify the LLM was called with messages including the summary
