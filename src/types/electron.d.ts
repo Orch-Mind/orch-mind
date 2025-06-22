@@ -53,7 +53,13 @@ export interface ElectronAPI {
 
   // 📝 Method to send prompt updates directly
   sendPromptUpdate: (
-    type: "partial" | "complete" | "error",
+    type:
+      | "partial"
+      | "complete"
+      | "error"
+      | "stream-start"
+      | "stream-chunk"
+      | "stream-end",
     content: string
   ) => void;
 

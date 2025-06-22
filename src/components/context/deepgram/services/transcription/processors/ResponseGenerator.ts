@@ -29,12 +29,14 @@ export class ResponseGenerator {
    * @param temperature Temperature for response generation (0.1-1.5)
    * @param temporaryContext Optional temporary context
    * @param conversationMessages Optional conversation messages
+   * @param onStreamingChunk Optional callback for streaming chunks
    */
   async generateResponse(
     integratedPrompt: string,
     temperature: number,
     temporaryContext?: string,
-    conversationMessages?: Message[]
+    conversationMessages?: Message[],
+    onStreamingChunk?: (chunk: string) => void
   ): Promise<string> {
     // Validate temperature parameter
     const validatedTemperature = Math.max(
@@ -88,7 +90,11 @@ export class ResponseGenerator {
       console.log("🧠 [ResponseGenerator] Messages:", messages);
     }
 
-    return await this._generate(messages, validatedTemperature);
+    return await this._generate(
+      messages,
+      validatedTemperature,
+      onStreamingChunk
+    );
   }
 
   /**
@@ -183,12 +189,14 @@ export class ResponseGenerator {
    */
   private async _generate(
     messages: Message[],
-    temperature: number
+    temperature: number,
+    onStreamingChunk?: (chunk: string) => void
   ): Promise<string> {
     try {
       const response = await this.llmService.streamOpenAIResponse(
         messages,
-        temperature
+        temperature,
+        onStreamingChunk
       );
 
       LoggingUtils.logInfo(

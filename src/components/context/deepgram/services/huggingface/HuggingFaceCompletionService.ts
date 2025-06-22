@@ -13,6 +13,7 @@ import { IClientManagementService } from "../../interfaces/openai/IClientManagem
 import {
   ICompletionService,
   ModelStreamResponse,
+  StreamingCallback,
 } from "../../interfaces/openai/ICompletionService";
 import { LoggingUtils } from "../../utils/LoggingUtils";
 import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
@@ -167,7 +168,8 @@ export class HuggingFaceCompletionService implements ICompletionService {
    */
   async streamModelResponse(
     messages: Array<{ role: string; content: string }>,
-    temperature?: number
+    temperature?: number,
+    onChunk?: StreamingCallback
   ): Promise<ModelStreamResponse> {
     try {
       // Ensure HuggingFace client is available
@@ -184,12 +186,30 @@ export class HuggingFaceCompletionService implements ICompletionService {
         throw new Error("HuggingFace local service not available");
       }
 
+      // Note: HuggingFace local doesn't support true streaming yet
+      // We'll generate the full response and simulate streaming
       const response = await hfService.generateResponse(formattedMessages, {
         temperature: temperature ?? 0.7,
       });
 
-      // Clean think tags from streaming response
+      // Clean think tags from response
       const cleanedResponse = cleanThinkTags(response.response);
+
+      // Simulate streaming by sending chunks
+      if (onChunk && cleanedResponse) {
+        const words = cleanedResponse.split(" ");
+        const chunkSize = 3; // Send 3 words at a time
+
+        for (let i = 0; i < words.length; i += chunkSize) {
+          const chunk = words.slice(i, i + chunkSize).join(" ");
+          const isLastChunk = i + chunkSize >= words.length;
+
+          onChunk(chunk + (isLastChunk ? "" : " "));
+
+          // Small delay to simulate streaming
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      }
 
       return {
         responseText: cleanedResponse,

@@ -11,6 +11,7 @@ import { IClientManagementService } from "../../../interfaces/openai/IClientMana
 import {
   ICompletionService,
   ModelStreamResponse,
+  StreamingCallback,
 } from "../../../interfaces/openai/ICompletionService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import {
@@ -295,7 +296,8 @@ export class OllamaCompletionService implements ICompletionService {
    */
   async streamModelResponse(
     messages: Array<{ role: string; content: string }>,
-    temperature?: number
+    temperature?: number,
+    onChunk?: StreamingCallback
   ): Promise<ModelStreamResponse> {
     try {
       // Ensure the Ollama client is available
@@ -307,7 +309,7 @@ export class OllamaCompletionService implements ICompletionService {
         content: m.content,
       }));
 
-      // Use the official Ollama API endpoint
+      // Use the official Ollama API endpoint with streaming
       const response = await fetch("http://localhost:11434/api/chat", {
         method: "POST",
         headers: {
@@ -316,7 +318,7 @@ export class OllamaCompletionService implements ICompletionService {
         body: JSON.stringify({
           model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:latest",
           messages: formattedMessages,
-          stream: false,
+          stream: true, // Enable streaming
           options: {
             temperature: temperature ?? 0.7,
           },
@@ -330,24 +332,90 @@ export class OllamaCompletionService implements ICompletionService {
         );
       }
 
-      const data = await response.json();
-      const rawResponse = data.message?.content || "";
+      // Process streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body reader available");
+      }
 
-      // Clean think tags from streaming response
-      const fullResponse = cleanThinkTags(rawResponse);
+      const decoder = new TextDecoder();
+      let fullResponse = "";
+      let buffer = "";
 
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Decode the chunk
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete lines
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.trim() === "") continue;
+
+            try {
+              const data = JSON.parse(line);
+
+              // Extract content from the chunk
+              const chunkContent = data.message?.content || "";
+
+              if (chunkContent) {
+                fullResponse += chunkContent;
+
+                // Send chunk to callback if provided
+                if (onChunk) {
+                  onChunk(chunkContent);
+                }
+              }
+
+              // Check if streaming is complete
+              if (data.done) {
+                // Process any remaining buffer
+                if (buffer.trim()) {
+                  try {
+                    const finalData = JSON.parse(buffer);
+                    const finalContent = finalData.message?.content || "";
+                    if (finalContent) {
+                      fullResponse += finalContent;
+                      if (onChunk) {
+                        onChunk(finalContent);
+                      }
+                    }
+                  } catch (e) {
+                    // Ignore parsing errors for incomplete data
+                  }
+                }
+                break;
+              }
+            } catch (e) {
+              // Skip invalid JSON lines
+              LoggingUtils.logWarning(`Skipping invalid JSON line: ${line}`);
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      // Clean think tags from the complete response
+      const cleanedResponse = cleanThinkTags(fullResponse);
+
+      // End of stream - the response has been fully streamed via onChunk
       return {
-        responseText: fullResponse,
+        responseText: "", // Return empty as the response was streamed
         messageId: Date.now().toString(),
         isComplete: true,
         isDone: true,
       };
     } catch (error) {
-      LoggingUtils.logError(
-        `Error streaming model response: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+      console.error("Error streaming from Ollama:", error);
+      if (onChunk) {
+        onChunk("Error during streaming.");
+      }
       throw error;
     }
   }

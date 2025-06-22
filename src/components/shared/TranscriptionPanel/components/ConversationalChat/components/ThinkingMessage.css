@@ -1,0 +1,109 @@
+/* Thinking Message Styles */
+.thinking-message {
+  opacity: 0.9;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  padding: 4px 0;
+}
+
+.thinking-header:hover {
+  opacity: 0.8;
+}
+
+.thinking-icon {
+  font-size: 1.2em;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.thinking-label {
+  font-weight: 500;
+  color: #6c5ce7;
+  flex: 1;
+}
+
+.expand-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c5ce7;
+  transition: all 0.3s ease;
+}
+
+.expand-button:hover {
+  background: rgba(108, 92, 231, 0.1);
+  border-radius: 4px;
+}
+
+.expand-button svg {
+  transition: transform 0.3s ease;
+}
+
+.expand-button svg.expanded {
+  transform: rotate(180deg);
+}
+
+.thinking-content {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(108, 92, 231, 0.2);
+  color: #666;
+  font-size: 0.95em;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.thinking-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.thinking-content::-webkit-scrollbar-track {
+  background: rgba(108, 92, 231, 0.1);
+  border-radius: 3px;
+}
+
+.thinking-content::-webkit-scrollbar-thumb {
+  background: rgba(108, 92, 231, 0.3);
+  border-radius: 3px;
+}
+
+.thinking-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(108, 92, 231, 0.5);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

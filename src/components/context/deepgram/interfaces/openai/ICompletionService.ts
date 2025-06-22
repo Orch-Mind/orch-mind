@@ -15,6 +15,11 @@ export interface ModelStreamResponse {
 }
 
 /**
+ * Callback para processar chunks de streaming
+ */
+export type StreamingCallback = (chunk: string) => void;
+
+/**
  * Interface para o serviço de completions com ou sem function calling
  * Symbolic: Representa o córtex de geração de texto e execução de funções simbólicas
  */
@@ -55,8 +60,13 @@ export interface ICompletionService {
   /**
    * Envia requisição para o modelo e processa o stream de resposta
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
+   * @param messages Array de mensagens
+   * @param temperature Temperatura para geração
+   * @param onChunk Callback opcional para processar chunks de streaming
    */
   streamModelResponse(
-    messages: Array<{ role: string; content: string }>
+    messages: Array<{ role: string; content: string }>,
+    temperature?: number,
+    onChunk?: StreamingCallback
   ): Promise<ModelStreamResponse>;
 }

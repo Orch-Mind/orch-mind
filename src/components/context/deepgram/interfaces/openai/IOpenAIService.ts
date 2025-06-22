@@ -2,63 +2,61 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // IOpenAIService.ts
-// Interface para o serviço de comunicação com a API OpenAI
+// Interface for the OpenAI service
 
 import { NeuralSignalResponse } from "../neural/NeuralSignalTypes";
 import { Message } from "../transcription/TranscriptionTypes";
-import { ModelStreamResponse } from "./ICompletionService";
+import { ModelStreamResponse, StreamingCallback } from "./ICompletionService";
 
+/**
+ * Interface para serviços compatíveis com OpenAI (Ollama, HuggingFace, etc.)
+ * Define os métodos que devem ser implementados por cada provedor de LLM
+ */
 export interface IOpenAIService {
   /**
-   * Inicializa o cliente OpenAI
+   * Inicializa o cliente do provedor LLM com configuração opcional
    */
-  initializeOpenAI(apiKey: string): void;
+  initializeOpenAI(config?: string): void;
 
   /**
-   * Carrega a chave da API do OpenAI do ambiente
+   * Carrega configurações do armazenamento local
    */
   loadApiKey(): Promise<void>;
 
   /**
-   * Garante que o cliente OpenAI está disponível
+   * Garante que o cliente está disponível e configurado
    */
   ensureOpenAIClient(): Promise<boolean>;
 
   /**
-   * Envia requisição para OpenAI e processa o stream de resposta
-   * @param messages Array de mensagens para enviar ao modelo
-   * @param temperature Temperatura opcional para controlar a aleatoriedade da resposta (0-2)
+   * Envia mensagens para o LLM e processa resposta em stream
+   * @param messages Array de mensagens da conversa
+   * @param temperature Temperatura para geração (0.0-2.0)
+   * @param onChunk Callback opcional para processar chunks de streaming
    */
   streamOpenAIResponse(
     messages: Message[],
-    temperature?: number
+    temperature?: number,
+    onChunk?: StreamingCallback
   ): Promise<ModelStreamResponse>;
 
   /**
-   * Cria embeddings para o texto fornecido
-   * @param text Texto para gerar embedding
-   * @param model Modelo de embedding a ser usado (opcional)
+   * Cria embeddings para um texto
    */
-  createEmbedding(text: string, model?: string): Promise<number[]>;
+  createEmbedding(text: string): Promise<number[]>;
 
   /**
-   * Cria embeddings para um lote de textos (processamento em batch)
-   * @param texts Array de textos para gerar embeddings
-   * @param model Modelo de embedding a ser usado (opcional)
-   * @returns Array de arrays de numbers representando os embeddings
+   * Cria embeddings para múltiplos textos
    */
-  createEmbeddings?(texts: string[], model?: string): Promise<number[][]>;
+  createEmbeddings(texts: string[]): Promise<number[][]>;
 
   /**
-   * Verifica se o cliente OpenAI está inicializado
+   * Verifica se o cliente está inicializado
    */
   isInitialized(): boolean;
 
   /**
-   * Gera sinais neurais simbólicos baseados em um prompt para ativação do cérebro artificial
-   * @param prompt O prompt estruturado para gerar sinais neurais (estímulo sensorial)
-   * @param temporaryContext Contexto temporário opcional (campo contextual efêmero)
-   * @returns Resposta contendo array de sinais neurais para ativação das áreas cerebrais
+   * Gera sinais neurais baseados em prompt
    */
   generateNeuralSignal(
     prompt: string,
@@ -67,7 +65,7 @@ export interface IOpenAIService {
   ): Promise<NeuralSignalResponse>;
 
   /**
-   * Expande semanticamente a query de um núcleo cerebral, retornando uma versão enriquecida, palavras-chave e dicas de contexto.
+   * Expande semanticamente uma query para busca em memórias
    */
   enrichSemanticQueryForSignal(
     core: string,
@@ -78,9 +76,7 @@ export interface IOpenAIService {
   ): Promise<{ enrichedQuery: string; keywords: string[] }>;
 
   /**
-   * Envia uma requisição ao OpenAI com suporte a function calling
-   * @param options Opções da requisição incluindo modelo, mensagens, ferramentas, etc.
-   * @returns Resposta completa após o processamento
+   * Chama o modelo com suporte a function calling
    */
   callOpenAIWithFunctions(options: {
     model: string;

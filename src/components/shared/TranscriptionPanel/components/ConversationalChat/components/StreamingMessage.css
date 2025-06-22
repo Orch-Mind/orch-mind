@@ -1,0 +1,65 @@
+/* Streaming message container */
+.streaming-message {
+  position: relative;
+  width: 100%;
+}
+
+/* Streaming text container */
+.streaming-text {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* Character fade-in animation */
+@keyframes charFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.char-fade-in {
+  animation: charFadeIn 0.08s ease-out forwards;
+  display: inline;
+}
+
+/* Streaming cursor */
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background: linear-gradient(180deg, #00faff 0%, #7c4dff 100%);
+  margin-left: 2px;
+  animation: cursorBlink 1s infinite;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+}
+
+@keyframes cursorBlink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Smooth text appearance */
+.streaming-text span {
+  transition: all 0.05s ease-out;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .streaming-text {
+    font-size: 14px;
+  }
+}

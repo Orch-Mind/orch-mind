@@ -76,6 +76,11 @@ export interface ScrollButtonProps {
 export interface ChatMessagesContainerProps {
   messages: ChatMessage[];
   isProcessing: boolean;
+  processingStatus?: string;
+  streamingContent?: string;
+  isStreaming?: boolean;
+  isThinking?: boolean;
+  thinkingContent?: string;
   onScrollChange: (isNearBottom: boolean) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   showScrollButton: boolean;

@@ -42,7 +42,13 @@ interface ElectronAPI {
   onStopTTS: (callback: () => void) => () => void;
   setDeepgramLanguage: (lang: string) => void;
   sendPromptUpdate: (
-    type: "partial" | "complete" | "error",
+    type:
+      | "partial"
+      | "complete"
+      | "error"
+      | "stream-start"
+      | "stream-chunk"
+      | "stream-end",
     content: string
   ) => void;
   // Pinecone methods removed - using DuckDB only

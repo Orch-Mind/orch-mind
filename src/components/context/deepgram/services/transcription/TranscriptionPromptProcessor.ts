@@ -51,6 +51,7 @@ export interface TranscriptionProcessingResponse {
 export class TranscriptionPromptProcessor {
   private isProcessingPrompt: boolean = false;
   private currentLanguage: string;
+  private phaseUpdateInterval: NodeJS.Timeout | null = null;
 
   // Neural components
   private _neuralSignalExtractor: NeuralSignalExtractor;
@@ -335,6 +336,93 @@ export class TranscriptionPromptProcessor {
   }
 
   /**
+   * Show processing phase in chat with animated dots
+   */
+  private showProcessingPhase(phaseName: string): void {
+    // Clear any existing interval
+    if (this.phaseUpdateInterval) {
+      clearInterval(this.phaseUpdateInterval);
+    }
+
+    let dotCount = 0;
+    const dotPatterns = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]; // Braille spinner
+
+    const updatePhase = () => {
+      // Create animated pattern
+      const spinner = dotPatterns[dotCount % dotPatterns.length];
+      const dots = ".".repeat((dotCount % 3) + 1);
+
+      // Build the message with animation
+      const message = `${phaseName}${dots} ${spinner}`;
+
+      // Update processing status via window function
+      if (
+        typeof window !== "undefined" &&
+        (window as any).__updateProcessingStatus
+      ) {
+        (window as any).__updateProcessingStatus(message);
+      }
+
+      dotCount++;
+    };
+
+    // Initial update
+    updatePhase();
+
+    // Update every 300ms for smoother animation
+    this.phaseUpdateInterval = setInterval(updatePhase, 300);
+  }
+
+  /**
+   * Show processing phase with progress indicator
+   */
+  private showProcessingPhaseWithProgress(
+    phaseName: string,
+    phaseNumber: number,
+    totalPhases: number
+  ): void {
+    // Clear any existing interval
+    if (this.phaseUpdateInterval) {
+      clearInterval(this.phaseUpdateInterval);
+    }
+
+    let dotCount = 0;
+    const updatePhase = () => {
+      const dots = ".".repeat((dotCount % 3) + 1);
+      const progress = `[${phaseNumber}/${totalPhases}]`;
+
+      // Build the message with phase progress
+      const message = `${progress} ${phaseName}${dots}`;
+
+      // Update processing status via window function
+      if (
+        typeof window !== "undefined" &&
+        (window as any).__updateProcessingStatus
+      ) {
+        (window as any).__updateProcessingStatus(message);
+      }
+
+      dotCount++;
+    };
+
+    // Initial update
+    updatePhase();
+
+    // Update every 500ms
+    this.phaseUpdateInterval = setInterval(updatePhase, 500);
+  }
+
+  /**
+   * Clear phase animation
+   */
+  private clearPhaseAnimation(): void {
+    if (this.phaseUpdateInterval) {
+      clearInterval(this.phaseUpdateInterval);
+      this.phaseUpdateInterval = null;
+    }
+  }
+
+  /**
    * Execute the full neural processing pipeline using specialized processors
    */
   private async _executeProcessingPipeline(
@@ -343,90 +431,156 @@ export class TranscriptionPromptProcessor {
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<TranscriptionProcessingResponse> {
-    // PHASE 1: Neural Signal Extraction
-    LoggingUtils.logInfo(
-      "🧠 Starting neural system: Phase 1 - Sensory analysis..."
-    );
+    try {
+      // PHASE 1: Neural Signal Extraction
+      LoggingUtils.logInfo(
+        "🧠 Starting neural system: Phase 1 - Sensory analysis..."
+      );
+      this.showProcessingPhaseWithProgress(
+        "🧠 Extracting Neural Signals",
+        1,
+        5
+      );
 
-    const extractionConfig =
-      await this.configurationBuilder.buildExtractionConfig(
-        transcriptionToSend,
-        temporaryContext,
+      const extractionConfig =
+        await this.configurationBuilder.buildExtractionConfig(
+          transcriptionToSend,
+          temporaryContext,
+          this.currentLanguage
+        );
+      const neuralActivation =
+        await this._neuralSignalExtractor.extractNeuralSignals(
+          extractionConfig
+        );
+
+      // PHASE 2: Query Enrichment
+      this.showProcessingPhaseWithProgress("✨ Enriching Signals", 2, 5);
+      const enrichedSignals = await this.signalEnricher.enrichSignals(
+        neuralActivation.signals,
         this.currentLanguage
       );
-    const neuralActivation =
-      await this._neuralSignalExtractor.extractNeuralSignals(extractionConfig);
 
-    // PHASE 2: Query Enrichment
-    const enrichedSignals = await this.signalEnricher.enrichSignals(
-      neuralActivation.signals,
-      this.currentLanguage
-    );
+      // PHASE 3: PARALLEL MEMORY RETRIEVAL (Jung + Modern Neuroscience)
+      LoggingUtils.logInfo(
+        "🧠 PHASE 3 - Parallel Specialized Memory Processing..."
+      );
+      this.showProcessingPhaseWithProgress("🔍 Retrieving Memories", 3, 5);
 
-    // PHASE 3: PARALLEL MEMORY RETRIEVAL (Jung + Modern Neuroscience)
-    LoggingUtils.logInfo(
-      "🧠 PHASE 3 - Parallel Specialized Memory Processing..."
-    );
+      const processingResults = await this.memoryRetriever.processSignals(
+        enrichedSignals
+      );
 
-    const processingResults = await this.memoryRetriever.processSignals(
-      enrichedSignals
-    );
+      LoggingUtils.logInfo(
+        `✅ Phase 3 complete: ${processingResults.length} memory retrievals processed`
+      );
 
-    LoggingUtils.logInfo(
-      `✅ Phase 3 complete: ${processingResults.length} memory retrievals processed`
-    );
+      // PHASE 4: Neural Integration
+      LoggingUtils.logInfo(
+        "💥 PHASE 4 - Integrating neural processing into final prompt..."
+      );
+      this.showProcessingPhaseWithProgress(
+        "🔗 Integrating Neural Patterns",
+        4,
+        5
+      );
 
-    // PHASE 4: Neural Integration
-    LoggingUtils.logInfo(
-      "💥 PHASE 4 - Integrating neural processing into final prompt..."
-    );
-    const integrationResult = await this.neuralIntegrationService.integrate(
-      processingResults,
-      transcriptionToSend,
-      this.currentLanguage
-    );
+      const integrationResult = await this.neuralIntegrationService.integrate(
+        processingResults,
+        transcriptionToSend,
+        this.currentLanguage
+      );
 
-    const integratedUserPrompt = integrationResult.prompt;
+      const integratedUserPrompt = integrationResult.prompt;
 
-    // Log integration decision
-    LoggingUtils.logInfo(
-      `📊 Integration decision: ${
-        integrationResult.isDeterministic ? "Deterministic" : "Probabilistic"
-      }, Temperature: ${integrationResult.temperature}`
-    );
+      // Log integration decision
+      LoggingUtils.logInfo(
+        `📊 Integration decision: ${
+          integrationResult.isDeterministic ? "Deterministic" : "Probabilistic"
+        }, Temperature: ${integrationResult.temperature}`
+      );
 
-    // Log symbolic context synthesis
-    symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
-      summary: integratedUserPrompt, // summary is required in SymbolicContext
-      modules: processingResults.map((r: NeuralProcessingResult) => ({
-        core: r.core,
-        intensity: r.intensity,
-      })),
-    });
+      // Log symbolic context synthesis
+      symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
+        summary: integratedUserPrompt, // summary is required in SymbolicContext
+        modules: processingResults.map((r: NeuralProcessingResult) => ({
+          core: r.core,
+          intensity: r.intensity,
+        })),
+      });
 
-    // PHASE 5: Generate Response with dynamic temperature
-    const fullResponse = await this.responseGenerator.generateResponse(
-      integratedUserPrompt,
-      integrationResult.temperature,
-      temporaryContext,
-      conversationMessages
-    );
+      // PHASE 5: Generate Response with dynamic temperature
+      this.showProcessingPhaseWithProgress("🎯 Finalizing Response", 5, 5);
 
-    const response = cleanThinkTags(fullResponse);
+      // Track if we've received the first chunk
+      let firstChunkReceived = false;
 
-    // PHASE 6: Save and Log Results
-    await this.resultsSaver.saveResults(
-      transcriptionToSend,
-      response,
-      neuralActivation,
-      processingResults
-    );
+      // Create streaming chunk handler
+      const onStreamingChunk = (chunk: string) => {
+        // Don't update status for empty chunks (end of stream)
+        if (!chunk || chunk.trim() === "") {
+          return;
+        }
 
-    return {
-      response,
-      neuralActivation,
-      processingResults,
-    };
+        // On first real chunk, clear phase animation and notify streaming started
+        if (!firstChunkReceived) {
+          firstChunkReceived = true;
+
+          // Clear phase animation
+          this.clearPhaseAnimation();
+          if (
+            typeof window !== "undefined" &&
+            (window as any).__updateProcessingStatus
+          ) {
+            (window as any).__updateProcessingStatus("");
+          }
+
+          // Notify streaming started
+          if (this.uiService.notifyStreamingStarted) {
+            this.uiService.notifyStreamingStarted();
+          }
+        }
+
+        // Send chunk via IPC if available
+        if (this.uiService.notifyStreamingChunk) {
+          this.uiService.notifyStreamingChunk(chunk);
+        }
+      };
+
+      const fullResponse = await this.responseGenerator.generateResponse(
+        integratedUserPrompt,
+        integrationResult.temperature,
+        temporaryContext,
+        conversationMessages,
+        onStreamingChunk
+      );
+
+      // Notify streaming complete
+      if (this.uiService.notifyStreamingComplete) {
+        this.uiService.notifyStreamingComplete();
+      }
+
+      const response = cleanThinkTags(fullResponse);
+
+      // PHASE 6: Save and Log Results
+      await this.resultsSaver.saveResults(
+        transcriptionToSend,
+        response,
+        neuralActivation,
+        processingResults
+      );
+
+      // Clear animation before returning
+      this.clearPhaseAnimation();
+
+      return {
+        response,
+        neuralActivation,
+        processingResults,
+      };
+    } finally {
+      // Ensure animation is cleared even on error
+      this.clearPhaseAnimation();
+    }
   }
 
   /**
@@ -455,6 +609,7 @@ export class TranscriptionPromptProcessor {
    */
   public reset(): void {
     this.isProcessingPrompt = false;
+    this.clearPhaseAnimation();
     this.transcriptionExtractor.reset();
     this.sessionManager.resetSession();
   }

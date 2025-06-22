@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { cleanThinkTags } from "../../../../context/deepgram/utils/ThinkTagCleaner";
 import { useSettingsState } from "../settings/useSettingsState";
 import { AudioSettingsPopover } from "./components/AudioSettingsPopover";
 import { ChatInputArea } from "./components/ChatInputArea";
@@ -71,6 +72,21 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
   // Ref para rastrear a conversa anterior
   const previousConversationId = useRef<string | null>(null);
+
+  // Track saved conversation ID
+  const savedConversationIdRef = useRef<string | null>(null);
+
+  // Add processing status state
+  const [processingStatus, setProcessingStatus] = useState<string>("");
+
+  // Add streaming response state
+  const [streamingResponse, setStreamingResponse] = useState<string>("");
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const streamingChunksRef = useRef<string>("");
+
+  // Thinking state - tracks when AI is in thinking phase
+  const [isThinking, setIsThinking] = useState(false);
+  const [thinkingContent, setThinkingContent] = useState("");
 
   // Conversation Sync Service
   const syncServiceRef = useRef<ConversationSyncService | null>(null);
@@ -345,27 +361,40 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     // Clear any existing debounce timer
     if (responseDebounceTimer.current) {
       clearTimeout(responseDebounceTimer.current);
-      responseDebounceTimer.current = null;
     }
 
-    // Debounce the response processing to avoid rapid updates
     responseDebounceTimer.current = setTimeout(() => {
-      // Double-check if response was cleared while waiting
       if (!aiResponseText || aiResponseText.trim() === "") {
-        processingResponseRef.current = "";
+        // If we get an empty response, ensure processing state is cleared
+        if (chatState.isProcessing) {
+          console.log(
+            "🔓 [CHAT] Empty response received, clearing processing state"
+          );
+          chatState.setIsProcessing(false);
+          isReceivingResponse.current = false;
+        }
         return;
       }
 
-      // Check if we're already processing this response
-      if (aiResponseText === processingResponseRef.current) {
-        // This is expected during normal processing, don't log as it's not an error
+      const isProcessingMessage =
+        aiResponseText.includes("Processando") ||
+        aiResponseText.includes("Generating") ||
+        aiResponseText.includes("...");
+
+      if (isProcessingMessage) {
+        console.log(
+          "Cleanup: aiResponseText contains processing message, clearing.",
+          aiResponseText
+        );
+        // Clear processing state when filtering out processing messages
+        chatState.setIsProcessing(false);
+        isReceivingResponse.current = false;
+        onClearAiResponse();
         return;
       }
 
-      // Also check if this response was already processed
       if (aiResponseText === lastProcessedResponse.current) {
         console.log("⚠️ [CHAT] Response already processed, clearing");
-        // Clear the processing ref and response since it was already processed
         processingResponseRef.current = "";
         onClearAiResponse();
         return;
@@ -399,31 +428,61 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
       }
 
       // Check if this looks like a final response (not partial)
-      // A final response typically doesn't end with "..." and has reasonable length
+      // A final response is something that is not a processing/status message.
       const looksLikeFinalResponse =
-        !aiResponseText.endsWith("...") &&
-        aiResponseText.length > 10 &&
-        !aiResponseText.includes("Processando") &&
-        !aiResponseText.includes("Processing");
+        !isProcessingMessage && !aiResponseText.endsWith("...");
+
+      // Clean think tags from the response
+      const cleanedResponse = cleanThinkTags(aiResponseText);
 
       if (looksLikeFinalResponse) {
+        // Check if this response was already shown via streaming
+        const wasStreamedAndAdded =
+          (lastProcessedResponse.current &&
+            cleanedResponse.trim() === lastProcessedResponse.current.trim()) ||
+          (processingResponseRef.current &&
+            (aiResponseText.trim() === processingResponseRef.current.trim() ||
+              cleanedResponse.trim() ===
+                cleanThinkTags(processingResponseRef.current).trim()));
+
+        if (wasStreamedAndAdded) {
+          console.log(
+            "✅ [CHAT] Response already added via streaming, clearing states"
+          );
+
+          // Clear processing state since streaming already handled it
+          chatState.setIsProcessing(false);
+          isReceivingResponse.current = false;
+
+          // Clear any processing timeout
+          if (chatState.processingTimeoutRef.current) {
+            clearTimeout(chatState.processingTimeoutRef.current);
+            chatState.processingTimeoutRef.current = null;
+          }
+
+          // Just clear the AI response since message was already added
+          processingResponseRef.current = "";
+          onClearAiResponse();
+          return;
+        }
+
         // Mark that we're processing this response IMMEDIATELY
         processingResponseRef.current = aiResponseText;
-        lastProcessedResponse.current = aiResponseText;
+        lastProcessedResponse.current = cleanedResponse;
 
         console.log(
           "✅ [CHAT] Adding final AI response:",
-          aiResponseText.substring(0, 50),
+          cleanedResponse.substring(0, 50),
           {
             wasLastProcessed: lastProcessedResponse.current.substring(0, 50),
-            willBeLastProcessed: aiResponseText.substring(0, 50),
+            willBeLastProcessed: cleanedResponse.substring(0, 50),
           }
         );
 
-        // Add AI response
+        // Add AI response with cleaned content
         addMessage({
           type: "system",
-          content: aiResponseText,
+          content: cleanedResponse,
         });
 
         // Clear processing state
@@ -643,6 +702,217 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     return () => clearTimeout(scrollTimer);
   }, []); // Only run once on mount
 
+  // Expose processing status updater to window for TranscriptionPromptProcessor
+  useEffect(() => {
+    // Create a function that can be called from TranscriptionPromptProcessor
+    const updateProcessingStatus = (status: string) => {
+      setProcessingStatus(status);
+    };
+
+    // Expose it on window
+    if (typeof window !== "undefined") {
+      (window as any).__updateProcessingStatus = updateProcessingStatus;
+    }
+
+    // Cleanup
+    return () => {
+      if (typeof window !== "undefined") {
+        delete (window as any).__updateProcessingStatus;
+      }
+    };
+  }, []);
+
+  // Clear processing status when processing completes
+  useEffect(() => {
+    if (!chatState.isProcessing) {
+      setProcessingStatus("");
+    }
+  }, [chatState.isProcessing]);
+
+  // Expose streaming handlers to window for TranscriptionPromptProcessor
+  useEffect(() => {
+    // Create handlers for streaming
+    const handleStreamingStart = () => {
+      console.log("🚀 [STREAMING] Started");
+      setIsStreaming(true);
+      setStreamingResponse("");
+      streamingChunksRef.current = "";
+      setIsThinking(false);
+      setThinkingContent("");
+      // Clear any processing status when streaming starts
+      setProcessingStatus("");
+      // Ensure we're in processing state during streaming
+      chatState.setIsProcessing(true);
+
+      // Debug: Log current state
+      console.log("🚀 [STREAMING] Start state:", {
+        isProcessing: chatState.isProcessing,
+        processingStatus,
+        isStreaming: true,
+        isThinking: false,
+      });
+    };
+
+    const handleStreamingChunk = (chunk: string) => {
+      // Add chunk to accumulator
+      streamingChunksRef.current += chunk;
+      const fullContent = streamingChunksRef.current;
+
+      console.log("📝 [STREAMING] Chunk received:", chunk);
+
+      // Check if we're in a thinking phase
+      const thinkOpenMatch = fullContent.match(/<think[^>]*>/i);
+      const thinkCloseMatch = fullContent.match(/<\/think>/i);
+
+      if (thinkOpenMatch && thinkCloseMatch) {
+        // We have a complete think tag
+        const thinkMatch = fullContent.match(
+          /<think[^>]*>([\s\S]*?)<\/think>/i
+        );
+        if (thinkMatch && thinkMatch[1]) {
+          setThinkingContent(thinkMatch[1].trim());
+          setIsThinking(true);
+        }
+
+        // For streaming, only show content after the closing think tag
+        const afterThinkIndex =
+          fullContent.lastIndexOf("</think>") + "</think>".length;
+        const contentAfterThink = fullContent.substring(afterThinkIndex).trim();
+        setStreamingResponse(contentAfterThink);
+
+        // If we have content after think, we're no longer thinking
+        if (contentAfterThink) {
+          setIsThinking(false);
+          console.log(
+            "🧠 [STREAMING] Exited thinking, showing content:",
+            contentAfterThink.substring(0, 50)
+          );
+        }
+      } else if (thinkOpenMatch && !thinkCloseMatch) {
+        // We're inside a think tag - extract and show thinking content
+        const partialMatch = fullContent.match(/<think[^>]*>([\s\S]*?)$/i);
+        if (partialMatch && partialMatch[1]) {
+          setThinkingContent(partialMatch[1].trim());
+          setIsThinking(true);
+          console.log(
+            "🤔 [STREAMING] Thinking:",
+            partialMatch[1].substring(0, 50)
+          );
+        }
+        // Don't show any streaming content while inside think tags
+        setStreamingResponse("");
+      } else {
+        // No think tags or we're past them - show all content
+        setIsThinking(false);
+        // Clean any complete think tags that might have been there before
+        const cleanedContent = cleanThinkTags(fullContent);
+        setStreamingResponse(cleanedContent);
+        console.log(
+          "💬 [STREAMING] Regular content:",
+          cleanedContent.substring(0, 50)
+        );
+      }
+    };
+
+    const handleStreamingEnd = () => {
+      console.log("🏁 [STREAMING] Ended");
+
+      // Get the final streamed content for tracking
+      const finalContent = streamingChunksRef.current
+        ? cleanThinkTags(streamingChunksRef.current)
+        : "";
+
+      if (finalContent && finalContent.trim() !== "") {
+        console.log(
+          "✅ [STREAMING] Streaming completed:",
+          finalContent.substring(0, 50)
+        );
+
+        // Add the final message to the chat history FIRST
+        addMessage({
+          type: "system",
+          content: finalContent,
+        });
+
+        // Mark as processed to prevent duplication
+        lastProcessedResponse.current = finalContent;
+        processingResponseRef.current = streamingChunksRef.current;
+
+        // Clear aiResponseText to prevent double processing
+        if (onClearAiResponse) {
+          onClearAiResponse();
+        }
+
+        // Small delay before clearing streaming states to ensure smooth transition
+        setTimeout(() => {
+          // Now clear streaming states after message is in the list
+          setIsStreaming(false);
+          setStreamingResponse("");
+        }, 50); // Small delay for visual smoothness
+      } else {
+        console.log("⚠️ [STREAMING] No content after cleaning");
+        // Clear states immediately if no content
+        setIsStreaming(false);
+        setStreamingResponse("");
+      }
+
+      // Clear other states
+      setIsThinking(false);
+      setThinkingContent("");
+      streamingChunksRef.current = "";
+
+      // Clear processing state
+      chatState.setIsProcessing(false);
+      isReceivingResponse.current = false;
+
+      // Force a re-render by updating a different state
+      if (onProcessingChange) {
+        onProcessingChange(false);
+      }
+
+      // Ensure we're scrolled to bottom
+      setTimeout(() => {
+        scrollState.scrollToBottom(true);
+      }, 100);
+    };
+
+    // Expose handlers on window
+    if (typeof window !== "undefined") {
+      (window as any).__handleStreamingStart = handleStreamingStart;
+      (window as any).__handleStreamingChunk = handleStreamingChunk;
+      (window as any).__handleStreamingEnd = handleStreamingEnd;
+    }
+
+    // Cleanup only
+    return () => {
+      if (typeof window !== "undefined") {
+        delete (window as any).__handleStreamingStart;
+        delete (window as any).__handleStreamingChunk;
+        delete (window as any).__handleStreamingEnd;
+      }
+    };
+  }, [addMessage, scrollState, chatState, onClearAiResponse]);
+
+  // Clear streaming when full response arrives
+  useEffect(() => {
+    if (
+      aiResponseText &&
+      aiResponseText !== "Processing..." &&
+      aiResponseText !== "Processando..." &&
+      !aiResponseText.startsWith("Processing... [")
+    ) {
+      // Full response arrived
+      if (isStreaming) {
+        console.log(
+          "🔄 [STREAMING] Clearing streaming state due to aiResponseText arrival"
+        );
+        setIsStreaming(false);
+        setStreamingResponse("");
+        streamingChunksRef.current = "";
+      }
+    }
+  }, [aiResponseText, isStreaming]);
+
   return (
     <div className="conversational-chat">
       {/* Summarization Indicator - Shows when summarizing */}
@@ -675,6 +945,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         onAddTestMessage={debugFunctions.addTestMessage}
         onResetState={debugFunctions.resetChatState}
         onClearMessages={clearMessages}
+        processingStatus={processingStatus}
+        streamingContent={streamingResponse}
+        isStreaming={isStreaming}
+        isThinking={isThinking}
+        thinkingContent={thinkingContent}
       />
 
       {/* Chat Input Area */}

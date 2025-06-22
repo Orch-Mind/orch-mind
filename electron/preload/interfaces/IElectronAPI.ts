@@ -89,10 +89,16 @@ export interface IEnvironmentManager {
 
 // Communication Interface
 export interface ICommunicationManager {
-  sendPromptUpdate(
-    type: "partial" | "complete" | "error",
+  sendPromptUpdate: (
+    type:
+      | "partial"
+      | "complete"
+      | "error"
+      | "stream-start"
+      | "stream-chunk"
+      | "stream-end",
     content: string
-  ): void;
+  ) => void;
 }
 
 // Import Interface

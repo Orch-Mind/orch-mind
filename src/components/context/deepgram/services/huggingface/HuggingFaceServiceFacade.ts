@@ -6,11 +6,13 @@
 
 import { HuggingFaceNeuralSignalService } from "../../../../../infrastructure/neural/huggingface/HuggingFaceNeuralSignalService";
 import { NeuralSignalResponse } from "../../interfaces/neural/NeuralSignalTypes";
-import { ModelStreamResponse } from "../../interfaces/openai/ICompletionService";
+import {
+  ModelStreamResponse,
+  StreamingCallback,
+} from "../../interfaces/openai/ICompletionService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { Message } from "../../interfaces/transcription/TranscriptionTypes";
 import { LoggingUtils } from "../../utils/LoggingUtils";
-import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
 import { HuggingFaceCompletionService } from "./HuggingFaceCompletionService";
 import { HuggingFaceClientService } from "./neural/HuggingFaceClientService";
 
@@ -62,28 +64,21 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
    * Envia requisição para HuggingFace e processa o stream de resposta
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
-  async streamOpenAIResponse(
+  public async streamOpenAIResponse(
     messages: Message[],
-    temperature?: number
+    temperature?: number,
+    onChunk?: StreamingCallback
   ): Promise<ModelStreamResponse> {
-    // Mapear as mensagens para o formato esperado pelo serviço de completion
     const mappedMessages = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    const response = await this.completionService.streamModelResponse(
+    return this.completionService.streamModelResponse(
       mappedMessages,
-      temperature
+      temperature,
+      onChunk
     );
-
-    // Clean think tags from the response
-    const cleanedResponse = cleanThinkTags(response.responseText);
-
-    return {
-      ...response,
-      responseText: cleanedResponse,
-    };
   }
 
   /**

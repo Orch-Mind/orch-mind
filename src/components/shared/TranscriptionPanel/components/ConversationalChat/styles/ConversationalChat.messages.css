@@ -205,18 +205,38 @@
 
 .typing-animation {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
   gap: 4px;
-  height: 24px;
-  padding: 0; /* Removido padding extra que estava desalinhando */
+  align-items: center;
+  height: 20px;
 }
 
 .typing-animation span {
   width: 8px;
   height: 8px;
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff4dd2 0%, #7c4dff 100%);
+  animation: typing 1.4s infinite;
+}
+
+.typing-animation span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-animation span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 0.8;
+  }
 }
 
 /* Messages container styles */
@@ -335,4 +355,35 @@
   font-size: 11px;
   color: #7c4dff;
   margin-top: 4px;
+}
+
+/* Typing indicator specific styles */
+.typing-indicator .message-content {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 77, 210, 0.15) 0%,
+    rgba(124, 77, 255, 0.15) 100%
+  );
+  border: 1px solid rgba(255, 77, 210, 0.3);
+}
+
+/* Processing status text */
+.processing-status {
+  display: inline-block;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: processingPulse 2s ease-in-out infinite;
+}
+
+@keyframes processingPulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
 }
