@@ -2,6 +2,9 @@ import { MicrophoneState, SelectedDevices } from "../../../../../context";
 import { ChatMessage as PersistentChatMessage } from "../hooks/usePersistentMessages";
 import { ChatConversation } from "./ChatHistoryTypes";
 
+// Re-export ChatConversation for convenience
+export type { ChatConversation } from "./ChatHistoryTypes";
+
 /**
  * Core chat message interface representing a single message in the chat
  */
