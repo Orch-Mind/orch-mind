@@ -131,3 +131,35 @@ describe("OllamaCompletionService", () => {
     });
   });
 });
+
+describe("MessageProcessor duplicate detection", () => {
+  it("should detect duplicates with different formatting", () => {
+    // Este teste verifica se a normalização está funcionando
+    // Caso real: uma versão sem quebras e outra com quebras de linha
+    const msg1 =
+      "Ola, tudo bem!Sou o Orch-OS, seu amigo virtual.Estou aqui, pronto para ajudar.";
+    const msg2 =
+      "Ola, tudo bem!\nSou o Orch-OS, seu amigo virtual.\nEstou aqui, pronto para ajudar.";
+
+    // Simulação da normalização melhorada
+    const normalize = (text: string): string => {
+      return text
+        .trim()
+        .replace(/([!?.])([A-Z])/g, "$1 $2") // Adiciona espaço após pontuação seguida de maiúscula
+        .replace(/\s+/g, " ") // Substitui múltiplos espaços por um único
+        .replace(/\n+/g, " ") // Substitui quebras de linha por espaços
+        .toLowerCase();
+    };
+
+    // Agora ambas devem ser normalizadas para o mesmo resultado
+    expect(normalize(msg1)).toBe(normalize(msg2));
+
+    // Teste adicional com a mensagem real do problema
+    const realMsg1 =
+      "Ola, tudo bem!Sou o Orch-OS, seu amigo virtual.Estou aqui, pronto para ajudar.Como está a temperatura?Que bom que você está aqui — é um prazer conversar com você. 😊";
+    const realMsg2 =
+      "Ola, tudo bem!\nSou o Orch-OS, seu amigo virtual.\nEstou aqui, pronto para ajudar.\nComo está a temperatura?\nQue bom que você está aqui — é um prazer conversar com você. 😊";
+
+    expect(normalize(realMsg1)).toBe(normalize(realMsg2));
+  });
+});

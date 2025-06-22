@@ -107,8 +107,11 @@ export class MessageProcessor {
     });
 
     // Marca como processada para evitar duplicação
+    // Armazena o conteúdo original (não normalizado) para comparação precisa
     this.lastProcessedResponse = content;
     this.processingResponseRef = content;
+
+    console.log("✅ [MESSAGE_PROCESSOR] Streaming complete, message added");
 
     // Limpa resposta de IA
     this.onClearAiResponse();
@@ -180,7 +183,12 @@ export class MessageProcessor {
     if (
       this.isDuplicate(aiResponseText, currentMessages, conversationMessages)
     ) {
-      console.log("⚠️ [MESSAGE_PROCESSOR] Duplicate response detected");
+      console.log("⚠️ [MESSAGE_PROCESSOR] Duplicate response detected", {
+        normalized: this.normalizeForComparison(aiResponseText),
+        lastProcessed: this.lastProcessedResponse
+          ? this.normalizeForComparison(this.lastProcessedResponse)
+          : null,
+      });
       this.lastProcessedResponse = aiResponseText;
       this.processingResponseRef = "";
       this.onClearAiResponse();
@@ -255,20 +263,30 @@ export class MessageProcessor {
     currentMessages: ChatMessage[],
     conversationMessages?: ChatMessage[]
   ): boolean {
+    // Normaliza texto para comparação (remove diferenças de formatação)
+    const normalizedText = this.normalizeForComparison(text);
+
     // Verifica se já foi processada
-    if (text === this.lastProcessedResponse) {
+    if (
+      this.lastProcessedResponse &&
+      normalizedText === this.normalizeForComparison(this.lastProcessedResponse)
+    ) {
       return true;
     }
 
     // Verifica duplicação nas mensagens atuais
     const isDuplicateInCurrent = currentMessages.some(
-      (msg) => msg.type === "system" && msg.content === text
+      (msg) =>
+        msg.type === "system" &&
+        this.normalizeForComparison(msg.content) === normalizedText
     );
 
     // Verifica duplicação nas mensagens da conversa
     const isDuplicateInConversation =
       conversationMessages?.some(
-        (msg) => msg.type === "system" && msg.content === text
+        (msg) =>
+          msg.type === "system" &&
+          this.normalizeForComparison(msg.content) === normalizedText
       ) || false;
 
     return isDuplicateInCurrent || isDuplicateInConversation;
@@ -278,14 +296,35 @@ export class MessageProcessor {
     response: string,
     cleanedResponse: string
   ): boolean {
-    return !!(
-      (this.lastProcessedResponse &&
-        cleanedResponse.trim() === this.lastProcessedResponse.trim()) ||
-      (this.processingResponseRef &&
-        (response.trim() === this.processingResponseRef.trim() ||
-          cleanedResponse.trim() ===
-            cleanThinkTags(this.processingResponseRef).trim()))
-    );
+    // Usa normalização para comparação mais robusta
+    const normalizedCleaned = this.normalizeForComparison(cleanedResponse);
+
+    if (this.lastProcessedResponse) {
+      const normalizedLast = this.normalizeForComparison(
+        this.lastProcessedResponse
+      );
+      if (normalizedCleaned === normalizedLast) {
+        return true;
+      }
+    }
+
+    if (this.processingResponseRef) {
+      const normalizedRef = this.normalizeForComparison(
+        this.processingResponseRef
+      );
+      const normalizedRefCleaned = this.normalizeForComparison(
+        cleanThinkTags(this.processingResponseRef)
+      );
+
+      if (
+        normalizedCleaned === normalizedRef ||
+        normalizedCleaned === normalizedRefCleaned
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private startProcessingTimeout(): void {
@@ -298,5 +337,19 @@ export class MessageProcessor {
       console.warn("[MESSAGE_PROCESSOR] Processing timeout reached");
       this.clearProcessingState();
     }, 30000);
+  }
+
+  /**
+   * Normaliza texto para comparação removendo diferenças de formatação
+   * Remove espaços extras, quebras de linha múltiplas e normaliza espaços
+   * Adiciona espaços após pontuação quando necessário
+   */
+  private normalizeForComparison(text: string): string {
+    return text
+      .trim()
+      .replace(/([!?.])([A-Z])/g, "$1 $2") // Adiciona espaço após pontuação seguida de maiúscula
+      .replace(/\s+/g, " ") // Substitui múltiplos espaços por um único
+      .replace(/\n+/g, " ") // Substitui quebras de linha por espaços
+      .toLowerCase(); // Converte para minúsculas
   }
 }
