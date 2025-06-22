@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { act, renderHook } from "@testing-library/react";
 import { ChatSummarizationService } from "../../services/ChatSummarizationService";
 import { useChatHistory } from "../useChatHistory";

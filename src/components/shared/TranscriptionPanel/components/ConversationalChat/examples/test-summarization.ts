@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 // Example test scenario for chat summarization integration
 
 // Mock conversation with many messages that would exceed 30k tokens

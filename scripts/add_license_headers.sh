@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# Copyright (c) 2025 Guilherme Ferrari Brescia
 # Script to add SPDX license headers to source files
 # Following Orch-OS principles of symbolic clarity and cognitive precision
 

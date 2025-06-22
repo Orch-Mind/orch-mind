@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AudioSettingsPopover } from "./components/AudioSettingsPopover";
 import { ChatInputArea } from "./components/ChatInputArea";

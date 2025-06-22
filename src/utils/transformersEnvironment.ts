@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { pipeline } from "@huggingface/transformers";
 
 // Função modificada para sempre escolher wasm como dispositivo e dtype automático

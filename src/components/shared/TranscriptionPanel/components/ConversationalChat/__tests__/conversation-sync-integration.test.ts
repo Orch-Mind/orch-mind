@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 /**
  * Integration test for Conversation Sync Service
  * Tests the complete flow of loading, syncing, and summarizing conversations

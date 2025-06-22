@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 // src/polyfills/sharpStub.js
 // Minimal stub for the "sharp" native module so that bundlers/electron can resolve it
 // without trying to include the native binary. Any runtime call will explicitly throw

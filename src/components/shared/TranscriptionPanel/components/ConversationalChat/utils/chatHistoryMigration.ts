@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import { nanoid } from "nanoid";
 import { ChatMessage } from "../hooks/usePersistentMessages";
 import { ChatConversation } from "../types/ChatHistoryTypes";

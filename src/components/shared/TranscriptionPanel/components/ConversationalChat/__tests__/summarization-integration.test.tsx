@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { ResponseGenerator } from "../../../../../context/deepgram/services/transcription/processors/ResponseGenerator";

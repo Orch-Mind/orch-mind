@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
 import React, { useEffect, useState } from "react";
 import { MessageItem } from "../components/MessageItem";
 import { SummarizationIndicator } from "../components/SummarizationIndicator";
