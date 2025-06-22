@@ -404,9 +404,9 @@ export class OllamaCompletionService implements ICompletionService {
       // Clean think tags from the complete response
       const cleanedResponse = cleanThinkTags(fullResponse);
 
-      // End of stream - the response has been fully streamed via onChunk
+      // Return the complete response text
       return {
-        responseText: "", // Return empty as the response was streamed
+        responseText: cleanedResponse, // Return the accumulated response
         messageId: Date.now().toString(),
         isComplete: true,
         isDone: true,
