@@ -9,8 +9,8 @@ import {
   STORAGE_KEYS,
 } from "../../../../../../services/StorageService";
 import {
-  buildErichSystemPrompt,
-  buildErichUserPrompt,
+  buildBatchEnrichSystemPrompt,
+  buildBatchEnrichUserPrompt,
   buildSystemPrompt,
   buildUserPrompt,
 } from "../../../../../../shared/utils/neuralPromptBuilder";
@@ -19,7 +19,6 @@ import { FunctionSchemaRegistry } from "../../../services/function-calling/Funct
 import { OllamaCompletionService } from "../../../services/ollama/neural/OllamaCompletionService";
 import { cleanThinkTagsFromJSON } from "../../../utils/ThinkTagCleaner";
 
-// SOLID: Interface Segregation Principle - Interfaces específicas
 // SOLID: Interface Segregation Principle - Interfaces específicas
 interface INeuralSignalService {
   generateNeuralSignal(
@@ -30,13 +29,15 @@ interface INeuralSignalService {
 }
 
 interface ISemanticEnricher {
-  enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
+  enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }>;
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>>;
 }
 
 // SOLID: Single Responsibility - Classe para parsing de argumentos
@@ -159,24 +160,47 @@ export class OllamaNeuralSignalService
     }
   }
 
-  async enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
+  /**
+   * Batch semantic enrichment for multiple neural signals
+   * Processes multiple signals in a single LLM call for improved efficiency
+   */
+  async enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }> {
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>> {
     try {
-      const tools = this.getEnrichmentTools();
-      const messages = this.buildEnrichmentMessages(
-        core,
-        query,
-        intensity,
-        context,
+      const enrichBatchSchema = FunctionSchemaRegistry.getInstance().get(
+        "enrichSemanticQueryBatch"
+      );
+      if (!enrichBatchSchema) {
+        throw new Error("enrichSemanticQueryBatch schema not found");
+      }
+      const tools = [
+        { type: "function" as const, function: enrichBatchSchema },
+      ];
+
+      // Use centralized prompts
+      const systemPrompt = buildBatchEnrichSystemPrompt(
+        signals.length,
         language
       );
+      const userPrompt = buildBatchEnrichUserPrompt(signals, language);
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ];
 
       const model = getOption(STORAGE_KEYS.OLLAMA_MODEL);
+
+      console.log(
+        `🦙 [OllamaNeuralSignal] Batch enriching ${signals.length} signals`
+      );
 
       const response =
         await this.ollamaCompletionService.callModelWithFunctions({
@@ -186,11 +210,54 @@ export class OllamaNeuralSignalService
           temperature: 0.2,
         });
 
-      const result = this.extractEnrichment(response, query);
-      return result;
+      // Extract batch results
+      const toolCalls = response.choices?.[0]?.message?.tool_calls;
+
+      if (toolCalls && toolCalls.length > 0) {
+        try {
+          const args = ArgumentParser.parseToolCallArguments(
+            toolCalls[0].function.arguments
+          );
+
+          if (args.enrichedSignals && Array.isArray(args.enrichedSignals)) {
+            // Map results ensuring same order as input
+            const results = signals.map((signal, index) => {
+              const enriched = args.enrichedSignals[index];
+              if (enriched && enriched.enrichedQuery) {
+                return {
+                  enrichedQuery: enriched.enrichedQuery,
+                  keywords: Array.isArray(enriched.keywords)
+                    ? enriched.keywords
+                    : [],
+                };
+              }
+              // Fallback to original if enrichment failed for this signal
+              return { enrichedQuery: signal.query, keywords: [] };
+            });
+
+            console.log(`🦙 [OllamaNeuralSignal] Batch enrichment successful`);
+            return results;
+          }
+        } catch (error) {
+          ServiceLogger.logError("parsing batch enrichment", error);
+        }
+      }
+
+      // Fallback: if batch processing fails, return original queries
+      console.warn(
+        "🦙 [OllamaNeuralSignal] Batch enrichment failed, returning original queries"
+      );
+      return signals.map((signal) => ({
+        enrichedQuery: signal.query,
+        keywords: [],
+      }));
     } catch (error) {
-      ServiceLogger.logError("enrichSemanticQueryForSignal", error);
-      return { enrichedQuery: query, keywords: [] };
+      ServiceLogger.logError("enrichSemanticQuery", error);
+      // Return original queries as fallback
+      return signals.map((signal) => ({
+        enrichedQuery: signal.query,
+        keywords: [],
+      }));
     }
   }
 
@@ -203,22 +270,12 @@ export class OllamaNeuralSignalService
     return [{ type: "function" as const, function: schema }];
   }
 
-  private getEnrichmentTools(): any[] {
-    const schema = FunctionSchemaRegistry.getInstance().get(
-      "enrichSemanticQuery"
-    );
-    if (!schema) {
-      throw new Error("enrichSemanticQuery schema not found");
-    }
-    return [{ type: "function" as const, function: schema }];
-  }
-
   private buildMessages(
     prompt: string,
     temporaryContext?: string,
     language?: string
   ): Array<{ role: string; content: string }> {
-    const systemPrompt = buildSystemPrompt();
+    const systemPrompt = buildSystemPrompt(language);
     const userPrompt = buildUserPrompt(prompt, temporaryContext, language);
 
     const messages = [
@@ -227,29 +284,6 @@ export class OllamaNeuralSignalService
     ];
 
     return messages;
-  }
-
-  private buildEnrichmentMessages(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
-    language?: string
-  ): any[] {
-    const systemPrompt = buildErichSystemPrompt();
-
-    const userPrompt = buildErichUserPrompt(
-      core,
-      query,
-      intensity,
-      context,
-      language
-    );
-
-    return [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ];
   }
 
   private extractSignals(response: any, originalPrompt?: string): any[] {
@@ -322,57 +356,5 @@ export class OllamaNeuralSignalService
     }
 
     return signal;
-  }
-
-  private extractEnrichment(
-    response: any,
-    originalQuery: string
-  ): { enrichedQuery: string; keywords: string[] } {
-    const toolCalls = response.choices?.[0]?.message?.tool_calls;
-
-    if (toolCalls?.length > 0) {
-      try {
-        const args = ArgumentParser.parseToolCallArguments(
-          toolCalls[0].function.arguments
-        );
-
-        if (args.enrichedQuery) {
-          // Ensure keywords is an array
-          let keywords: string[] = [];
-          if (Array.isArray(args.keywords)) {
-            keywords = args.keywords;
-          } else if (typeof args.keywords === "string") {
-            // Check if it's a JSON string first
-            if (args.keywords.startsWith("[") && args.keywords.endsWith("]")) {
-              try {
-                keywords = JSON.parse(args.keywords);
-              } catch (e) {
-                // If JSON parsing fails, treat as comma-separated
-                keywords = args.keywords
-                  .split(",")
-                  .map((k: string) => k.trim())
-                  .filter((k: string) => k.length > 0);
-              }
-            } else {
-              // Handle case where keywords might be a comma-separated string
-              keywords = args.keywords
-                .split(",")
-                .map((k: string) => k.trim())
-                .filter((k: string) => k.length > 0);
-            }
-          }
-
-          return {
-            enrichedQuery: args.enrichedQuery,
-            keywords: keywords,
-          };
-        }
-      } catch (error) {
-        ServiceLogger.logError("parsing enrichment", error);
-      }
-    }
-
-    // KISS: Fallback simples
-    return { enrichedQuery: originalQuery, keywords: [] };
   }
 }

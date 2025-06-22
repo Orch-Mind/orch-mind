@@ -10,18 +10,24 @@ import { CollapseStrategyDecision } from "../../components/context/deepgram/symb
  * Builds a system prompt for holographic neural signal extraction following Orch-OS architecture.
  * Based on Pribram's Holographic Brain Theory and Brescia's Orchestrated Symbolic Collapse.
  */
-export function buildSystemPrompt(): string {
-  return`You are the Neural Signal Activator for Orch-OS.
+export function buildSystemPrompt(language?: string): string {
+  const targetLanguage = language || "English";
+
+  return `You are the Neural Signal Activator for Orch-OS.
 
 Task: For each prominent cognitive activation detected, call activateBrainArea.
+
+LANGUAGE DIRECTIVE: All text content must be generated in ${targetLanguage}.
 
 Arguments for each call:
 • core             – (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 • intensity        – (number, 0.1–1.0, higher = stronger)
-• symbolic_query   – (object: query [string], filters [object, optional])
-• keywords         – (array of 3–8 strings, semantic expansion of the signal)
+• symbolic_query   – (object: query [string in ${targetLanguage}], filters [object, optional])
+• keywords         – (array of 3–8 strings in ${targetLanguage}, semantic expansion of the signal)
 • symbolicInsights – (object, optional, any structure)
 • topK             – (number, 1–20, Math.round(5 + intensity * 10))
+
+CRITICAL: Maintain semantic coherence and cultural nuances in ${targetLanguage}.
 
 Call activateBrainArea for each detected activation. Respond only via the tool call.`;
 }
@@ -34,20 +40,22 @@ export function buildUserPrompt(
   context?: string,
   language?: string
 ): string {
+  const targetLanguage = language || "English";
+
   let result = `COGNITIVE INPUT\n`;
   result += `User message: "${prompt}"\n`;
   if (context) result += `CONTEXT: ${context}\n`;
-  if (language && language !== "English") result += `USER LANGUAGE: ${language}\n`;
+  result += `PROCESSING LANGUAGE: ${targetLanguage}\n`;
 
   result += `
-ANALYZE:
+ANALYZE in ${targetLanguage}:
 Identify up to 2–3 most relevant cognitive core activations.
 
 For each, call activateBrainArea with:
 - core                  (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 - intensity             (0.1–1.0, higher = stronger)
-- symbolic_query        (object: query [string], filters [object, optional])
-- keywords              (3–8 semantic keywords for this core)
+- symbolic_query        (object: query [string in ${targetLanguage}], filters [object, optional])
+- keywords              (3–8 semantic keywords in ${targetLanguage} for this core)
 - symbolicInsights      (object, optional)
 - topK                  (number, 1–20; calculate as Math.round(5 + intensity × 10))
 
@@ -57,43 +65,62 @@ Respond only via the tool call.
   return result;
 }
 
-export function buildErichSystemPrompt(): string {
-  return `You are the Semantic Enrichment Engine in Orch-OS.
-
-Task: Unfold the implicate order (Bohm) of each signal by calling enrichSemanticQuery.
-
-Arguments:
-• enrichedQuery        – string, capturing hidden connections & meaning
-• keywords             – 3–8 strings: episodic, semantic, emotional, cultural, or developmental
-• contextualHints      – object, optional, with:
-    - temporalScope           ("past", "present", "future", "timeless")
-    - emotionalDepth         (0–1)
-    - abstractionLevel       ("concrete", "conceptual", "symbolic", "archetypal")
-    - contradictionHandling  ("embrace", "resolve", "explore", "transcend")
-
-Respond only via the tool call.`;
-}
-
-export function buildErichUserPrompt(
-  core: string,
-  query: string,
-  intensity: number,
-  context?: string,
+/**
+ * Builds a system prompt for batch semantic enrichment following Bohm's implicate order
+ */
+export function buildBatchEnrichSystemPrompt(
+  signalCount: number,
   language?: string
 ): string {
-  return `NEURAL SIGNAL TO ENRICH
+  const targetLanguage = language || "English";
 
-  Core: ${core}
-  Base Query: "${query}"
-  Intensity: ${(intensity * 100).toFixed(1)}%
-  Context: ${context || "None"}
-  Language: ${language || "English"}
-  
-  Expand the hidden semantic, emotional, and cultural dimensions of this signal.
-  Call enrichSemanticQuery with:
-  - enrichedQuery (one sentence, unfolded meaning)
-  - keywords (3–8)
-  - contextualHints (if relevant)`;
+  return `You are the Neural Signal Batch Enrichment System in Orch-OS.
+
+Task: Unfold the implicate order (Bohm) of ALL signals by calling enrichSemanticQueryBatch ONCE.
+
+LANGUAGE DIRECTIVE: Generate ALL content exclusively in ${targetLanguage}.
+
+Process all ${signalCount} signals and return enrichedSignals array with:
+• enrichedQuery for each signal - capturing hidden connections & meaning in ${targetLanguage}
+• keywords for each signal - 3–8 strings per signal in ${targetLanguage}
+• contextualHints (optional) for signals that need it
+
+CRITICAL INSTRUCTIONS:
+• Return exactly ${signalCount} enriched entries in the same order as input
+• ALL text content must be in ${targetLanguage} - no translations or mixed languages
+• Preserve the semantic and cultural nuances of ${targetLanguage}
+• Maintain consistency across all signals`;
+}
+
+/**
+ * Builds a user prompt for batch semantic enrichment
+ */
+export function buildBatchEnrichUserPrompt(
+  signals: Array<{
+    core: string;
+    query: string;
+    intensity: number;
+    context?: string;
+  }>,
+  language?: string
+): string {
+  const targetLanguage = language || "English";
+
+  let userPrompt = `NEURAL SIGNALS TO ENRICH IN ${targetLanguage}:\n\n`;
+
+  signals.forEach((signal, index) => {
+    userPrompt += `SIGNAL ${index + 1}:
+Core: ${signal.core}
+Base Query: "${signal.query}"
+Intensity: ${(signal.intensity * 100).toFixed(1)}%
+Context: ${signal.context || "None"}\n\n`;
+  });
+
+  userPrompt += `OUTPUT LANGUAGE: ${targetLanguage}\n`;
+  userPrompt += `REMINDER: ALL enrichedQuery and keywords must be in ${targetLanguage}.\n\n`;
+  userPrompt += `Call enrichSemanticQueryBatch with enrichedSignals array containing ${signals.length} enriched entries.`;
+
+  return userPrompt;
 }
 
 export function buildIntegrationSystemPrompt(): string {
@@ -117,15 +144,15 @@ export function buildIntegrationUserPrompt(
   language: string,
   strategyDecision: CollapseStrategyDecision
 ): string {
-let prompt = `USER INPUT:
+  let prompt = `USER INPUT:
 ${originalInput}
 
 NEURAL INSIGHTS:`;
-topCores.forEach((result) => {
-  prompt += `\n• ${result.core}: ${result.output.slice(0, 100)}`;
-});
+  topCores.forEach((result) => {
+    prompt += `\n• ${result.core}: ${result.output.slice(0, 100)}`;
+  });
 
-prompt += `INTEGRATION TASK:
+  prompt += `INTEGRATION TASK:
 Integrate these neural perspectives into a single, meaningful response that captures the essence of the user's input.
 
 STYLE:
@@ -137,5 +164,5 @@ STYLE:
   }
 - Preserve symbolic depth and the unique voice of Orch-OS.`;
 
-return prompt;
+  return prompt;
 }

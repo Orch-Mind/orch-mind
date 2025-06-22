@@ -123,24 +123,20 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
   }
 
   /**
-   * Expande semanticamente a query de um núcleo cerebral
-   * Symbolic: Expansão de campo semântico para ativação cortical específica
+   * Batch semantic enrichment for multiple neural signals
+   * Processes multiple signals in a single LLM call for improved efficiency
    */
-  async enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
+  async enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }> {
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>> {
     const neuralSignalService = await this.ensureNeuralSignalService();
-    return neuralSignalService.enrichSemanticQueryForSignal(
-      core,
-      query,
-      intensity,
-      context,
-      language
-    );
+    return neuralSignalService.enrichSemanticQuery(signals, language);
   }
 
   /**

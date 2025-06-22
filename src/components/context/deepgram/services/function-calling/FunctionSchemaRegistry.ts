@@ -241,5 +241,69 @@ export class FunctionSchemaRegistry {
         required: ["enrichedQuery", "keywords"],
       },
     });
+
+    // Batch semantic enrichment function
+    this.register("enrichSemanticQueryBatch", {
+      name: "enrichSemanticQueryBatch",
+      description:
+        "Batch enriches multiple neural signals by unfolding their implicate order (Bohm) in a single operation. Processes multiple signals efficiently, revealing hidden connections, memories, and patterns folded within each signal.",
+      parameters: {
+        type: "object",
+        properties: {
+          enrichedSignals: {
+            type: "array",
+            description:
+              "Array of enriched signals with unfolded queries and keywords",
+            items: {
+              type: "object",
+              properties: {
+                enrichedQuery: {
+                  type: "string",
+                  description:
+                    "The unfolded query revealing implicit connections and hidden dimensions of meaning for this signal.",
+                },
+                keywords: {
+                  type: "array",
+                  items: { type: "string" },
+                  description:
+                    "3-8 keywords that unfold the implicate order for this signal.",
+                },
+                contextualHints: {
+                  type: "object",
+                  description:
+                    "Optional Bohm-inspired contextual dimensions for this signal.",
+                  properties: {
+                    temporalScope: {
+                      type: "string",
+                      enum: ["past", "present", "future", "timeless"],
+                    },
+                    emotionalDepth: {
+                      type: "number",
+                      minimum: 0,
+                      maximum: 1,
+                    },
+                    abstractionLevel: {
+                      type: "string",
+                      enum: [
+                        "concrete",
+                        "conceptual",
+                        "symbolic",
+                        "archetypal",
+                      ],
+                    },
+                    contradictionHandling: {
+                      type: "string",
+                      enum: ["embrace", "resolve", "explore", "transcend"],
+                    },
+                  },
+                },
+              },
+              required: ["enrichedQuery", "keywords"],
+            },
+          },
+        },
+        required: ["enrichedSignals"],
+      },
+    });
   }
 }

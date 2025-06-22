@@ -124,23 +124,19 @@ export class OllamaServiceFacade implements IOpenAIService {
   }
 
   /**
-   * Expande semanticamente a query de um núcleo cerebral
-   * Symbolic: Expansão de campo semântico para ativação cortical específica
+   * Batch semantic enrichment for multiple neural signals
+   * Processes multiple signals in a single LLM call for improved efficiency
    */
-  async enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
+  async enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }> {
-    return this.neuralSignalService.enrichSemanticQueryForSignal(
-      core,
-      query,
-      intensity,
-      context,
-      language
-    );
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>> {
+    return this.neuralSignalService.enrichSemanticQuery(signals, language);
   }
 
   /**

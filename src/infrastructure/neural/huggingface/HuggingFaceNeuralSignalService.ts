@@ -10,6 +10,8 @@ import { INeuralSignalService } from "../../../domain/core/neural/INeuralSignalS
 import { ISemanticEnricher } from "../../../domain/core/neural/ISemanticEnricher";
 import { getOption, STORAGE_KEYS } from "../../../services/StorageService";
 import {
+  buildBatchEnrichSystemPrompt,
+  buildBatchEnrichUserPrompt,
   buildSystemPrompt,
   buildUserPrompt,
 } from "../../../shared/utils/neuralPromptBuilder";
@@ -40,7 +42,7 @@ export class HuggingFaceNeuralSignalService
     language?: string
   ): Promise<NeuralSignalResponse> {
     try {
-      const systemPromptContent = buildSystemPrompt();
+      const systemPromptContent = buildSystemPrompt(language);
       let userPromptContent = buildUserPrompt(
         prompt,
         temporaryContext,
@@ -129,70 +131,32 @@ export class HuggingFaceNeuralSignalService
   }
 
   /**
-   * Symbolic: Semantic enrichment using HuggingFace
+   * Batch semantic enrichment using HuggingFace
+   * Processes multiple signals in a single LLM call for improved efficiency
    */
-  async enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
+  async enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }> {
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>> {
     try {
-      const enrichSchema = FunctionSchemaRegistry.getInstance().get(
-        "enrichSemanticQuery"
+      const enrichBatchSchema = FunctionSchemaRegistry.getInstance().get(
+        "enrichSemanticQueryBatch"
       );
-      const enrichmentTools = enrichSchema
-        ? [{ type: "function", function: enrichSchema }]
+      const enrichmentTools = enrichBatchSchema
+        ? [{ type: "function", function: enrichBatchSchema }]
         : [];
 
-      const systemPrompt = `You are the Neural Signal Enrichment System based on David Bohm's Implicate Order theory.
-
-THEORETICAL FOUNDATION:
-- Bohm's Implicate Order: Reality has an enfolded (implicate) order that unfolds into explicit manifestation
-- Your task: Unfold the implicate connections, memories, and patterns hidden within the neural signal
-
-ENRICHMENT MISSION: Enrich this neural signal by unfolding its 'implicate order'—the hidden connections, associative memories, and implicit patterns folded within the information.
-
-UNFOLDING PROCESS:
-1. EPISODIC MEMORY ASSOCIATIONS:
-   - Similar past experiences
-   - Recurring patterns
-   - Temporal connections
-
-2. IMPLICIT SEMANTIC NETWORK:
-   - Non-obvious related concepts
-   - Indirect associations
-   - Emergent semantic fields
-
-3. HISTORICAL EMOTIONAL RESONANCE:
-   - Emotional echoes from past
-   - Recurring affective patterns
-   - Activated emotional memory
-
-4. IMPLICIT CULTURAL CONTEXT:
-   - Underlying cultural meanings
-   - Undeclared assumptions
-   - Implicit social codes
-
-5. DEVELOPMENTAL POTENTIAL:
-   - Possible evolution directions
-   - Future implications
-   - Latent potentialities
-
-BOHM PRINCIPLE: "What is implicit must become explicit through unfolding."
-
-Generate 3-8 keywords that unfold these hidden dimensions.`;
-
-      let userPrompt = `NEURAL SIGNAL TO ENRICH:
-Core: ${core} (Cognitive specialization: ${this.getCoreDescription(core)})
-Intensity: ${(intensity * 100).toFixed(0)}% (Signal strength)
-Original Query: ${query}`;
-
-      if (context) userPrompt += `\nContext: ${context}`;
-      if (language) userPrompt += `\nLanguage: ${language}`;
-
-      userPrompt += `\n\nUNFOLD THE IMPLICATE ORDER: Generate enriched search query and keywords that reveal hidden connections.`;
+      // Use same prompts as Ollama
+      const systemPrompt = buildBatchEnrichSystemPrompt(
+        signals.length,
+        language
+      );
+      const userPrompt = buildBatchEnrichUserPrompt(signals, language);
 
       const messages = [
         { role: "system" as const, content: systemPrompt },
@@ -205,54 +169,56 @@ Original Query: ${query}`;
         tools: enrichmentTools,
         tool_choice: {
           type: "function",
-          function: { name: "enrichSemanticQuery" },
+          function: { name: "enrichSemanticQueryBatch" },
         },
         temperature: 0.2,
       });
 
-      // Symbolic: Use central neural signal parser for all JSON arguments (tool_calls)
+      // Extract batch results
       const toolCalls = response.choices?.[0]?.message?.tool_calls;
       if (
         toolCalls &&
         Array.isArray(toolCalls) &&
         toolCalls[0]?.function?.arguments
       ) {
-        const signal = parseNeuralSignal(
-          toolCalls[0].function.arguments as string
-        );
-        if (signal && signal.symbolic_query?.query) {
-          return {
-            enrichedQuery: signal.symbolic_query.query,
-            keywords: signal.keywords || [],
-          };
-        } else {
-          return { enrichedQuery: query, keywords: [] };
+        try {
+          const args =
+            typeof toolCalls[0].function.arguments === "string"
+              ? JSON.parse(toolCalls[0].function.arguments)
+              : toolCalls[0].function.arguments;
+          if (args.enrichedSignals && Array.isArray(args.enrichedSignals)) {
+            // Ensure we return the same number of results as inputs
+            const results = signals.map((signal, index) => {
+              const enriched = args.enrichedSignals[index];
+              if (enriched && enriched.enrichedQuery) {
+                return {
+                  enrichedQuery: enriched.enrichedQuery,
+                  keywords: enriched.keywords || [],
+                };
+              }
+              // Fallback to original if enrichment failed for this signal
+              return { enrichedQuery: signal.query, keywords: [] };
+            });
+            return results;
+          }
+        } catch (error) {
+          console.error("Batch enrichment parsing error:", error);
         }
       }
-      return { enrichedQuery: query, keywords: [] };
+
+      // Fallback: return original queries if batch processing fails
+      console.warn("Batch enrichment failed, returning original queries");
+      return signals.map((signal) => ({
+        enrichedQuery: signal.query,
+        keywords: [],
+      }));
     } catch (error) {
-      // Handle general service errors with original query fallback
-      console.error("Semantic enrichment error:", error);
-      return { enrichedQuery: query, keywords: [] };
+      console.error("Batch semantic enrichment error:", error);
+      // Return original queries as fallback
+      return signals.map((signal) => ({
+        enrichedQuery: signal.query,
+        keywords: [],
+      }));
     }
-  }
-
-  private getCoreDescription(core: string): string {
-    const coreDescriptions: Record<string, string> = {
-      valence: "Emotional polarity and affective resonance processing",
-      memory: "Episodic and semantic memory retrieval and consolidation",
-      metacognitive: "Self-awareness and cognitive monitoring processes",
-      relational: "Interpersonal dynamics and social cognition",
-      creativity: "Creative thinking and novel connection generation",
-      will: "Volition, agency and intentional action",
-      planning: "Executive planning and strategic thinking",
-      language: "Linguistic processing and communication",
-      shadow: "Unconscious patterns and repressed content",
-      symbolic_alignment: "Symbolic meaning and archetypal pattern recognition",
-      integrity: "Core values and ethical alignment",
-      evolution: "Growth, learning, and adaptive change processes",
-    };
-
-    return coreDescriptions[core] || "Specialized cognitive processing domain";
   }
 }

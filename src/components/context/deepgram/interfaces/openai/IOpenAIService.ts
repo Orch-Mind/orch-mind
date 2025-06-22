@@ -65,15 +65,21 @@ export interface IOpenAIService {
   ): Promise<NeuralSignalResponse>;
 
   /**
-   * Expande semanticamente uma query para busca em memórias
+   * Batch semantic enrichment for multiple neural signals
+   * Processes multiple signals in a single LLM call for improved efficiency
+   * @param signals Array of signal data to enrich
+   * @param language Language context for enrichment
+   * @returns Array of enrichment results in the same order as input
    */
-  enrichSemanticQueryForSignal(
-    core: string,
-    query: string,
-    intensity: number,
-    context?: string,
+  enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string; keywords: string[] }>;
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>>;
 
   /**
    * Chama o modelo com suporte a function calling

@@ -15,20 +15,29 @@ export interface INeuralSignalService {
    * Gera sinais neurais simbólicos baseados em um prompt para ativação do cérebro artificial
    * @param prompt O prompt estruturado para gerar sinais neurais (estímulo sensorial)
    * @param temporaryContext Contexto temporário opcional (campo contextual efêmero)
+   * @param language Idioma para processamento
    * @returns Resposta contendo array de sinais neurais para ativação das áreas cerebrais
    */
-  generateNeuralSignal(prompt: string, temporaryContext?: string, language?: string): Promise<NeuralSignalResponse>;
+  generateNeuralSignal(
+    prompt: string,
+    temporaryContext?: string,
+    language?: string
+  ): Promise<NeuralSignalResponse>;
 
   /**
-   * Expande semanticamente a query de um núcleo cerebral, retornando uma versão enriquecida, 
-   * palavras-chave e dicas de contexto.
-   * Symbolic: Expansão de campo semântico para ativação cortical
+   * Batch semantic enrichment for multiple neural signals
+   * Processes multiple signals in a single LLM call for improved efficiency
+   * @param signals Array of signal data to enrich
+   * @param language Language context for enrichment
+   * @returns Array of enrichment results in the same order as input
    */
-  enrichSemanticQueryForSignal(
-    core: string, 
-    query: string, 
-    intensity: number, 
-    context?: string, 
+  enrichSemanticQuery(
+    signals: Array<{
+      core: string;
+      query: string;
+      intensity: number;
+      context?: string;
+    }>,
     language?: string
-  ): Promise<{ enrichedQuery: string, keywords: string[] }>;
+  ): Promise<Array<{ enrichedQuery: string; keywords: string[] }>>;
 }
