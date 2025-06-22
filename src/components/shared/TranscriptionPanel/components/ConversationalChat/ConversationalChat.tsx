@@ -302,13 +302,25 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
   const responseDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const processingResponseRef = useRef<string>(""); // Track what we're currently processing
 
+  // Clear processingResponseRef when aiResponseText is cleared
+  // This prevents the "Already processing" warning when response is cleared externally
+  useEffect(() => {
+    if (!aiResponseText || aiResponseText.trim() === "") {
+      processingResponseRef.current = "";
+    }
+  }, [aiResponseText]);
+
   // Não é mais necessário atualizar estado salvo pois bloqueamos mudança de conversa durante processamento
 
   // Handle AI response processing with debounce and better state management
   useEffect(() => {
     if (!aiResponseText || aiResponseText.trim() === "") {
-      // Clear processing ref when response is cleared
+      // Clear processing ref AND debounce timer when response is cleared
       processingResponseRef.current = "";
+      if (responseDebounceTimer.current) {
+        clearTimeout(responseDebounceTimer.current);
+        responseDebounceTimer.current = null;
+      }
       return;
     }
 
@@ -333,13 +345,31 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     // Clear any existing debounce timer
     if (responseDebounceTimer.current) {
       clearTimeout(responseDebounceTimer.current);
+      responseDebounceTimer.current = null;
     }
 
     // Debounce the response processing to avoid rapid updates
     responseDebounceTimer.current = setTimeout(() => {
+      // Double-check if response was cleared while waiting
+      if (!aiResponseText || aiResponseText.trim() === "") {
+        processingResponseRef.current = "";
+        return;
+      }
+
       // Check if we're already processing this response
       if (aiResponseText === processingResponseRef.current) {
-        console.log("⚠️ [CHAT] Already processing this response, skipping");
+        // This is expected during normal processing, only log in dev mode
+        if (process.env.NODE_ENV !== "production") {
+          console.log("⚠️ [CHAT] Already processing this response, skipping");
+        }
+        return;
+      }
+
+      // Also check if this response was already processed
+      if (aiResponseText === lastProcessedResponse.current) {
+        console.log("⚠️ [CHAT] Response already processed, clearing");
+        // Clear the response since it was already processed
+        onClearAiResponse();
         return;
       }
 
@@ -361,18 +391,12 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           "⚠️ [CHAT] Response already in messages, skipping duplicate"
         );
 
-        // Only update lastProcessedResponse if this is truly a duplicate in messages
-        if (isDuplicate && aiResponseText !== lastProcessedResponse.current) {
-          console.log(
-            "[CHAT_DEBUG] Updating lastProcessedResponse for existing message"
-          );
-          lastProcessedResponse.current = aiResponseText;
-        }
+        // Update tracking refs
+        lastProcessedResponse.current = aiResponseText;
+        processingResponseRef.current = "";
 
         // Clear the response since it's already in messages
-        setTimeout(() => {
-          onClearAiResponse();
-        }, 100);
+        onClearAiResponse();
         return;
       }
 
@@ -410,8 +434,6 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         chatState.setIsProcessing(false);
         isReceivingResponse.current = false;
 
-        // Não é mais necessário limpar do Map pois não estamos mais salvando estados
-
         if (chatState.processingTimeoutRef.current) {
           clearTimeout(chatState.processingTimeoutRef.current);
           chatState.processingTimeoutRef.current = null;
@@ -422,13 +444,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           scrollState.scrollToBottom(true);
         }, 150);
 
-        // Only clear AI response after successfully adding the message
-        // Add a small delay to ensure the message is properly saved
+        // Clear AI response after successfully adding the message
+        // We delay this to ensure the message is properly saved
         setTimeout(() => {
           onClearAiResponse();
-          // Clear processing ref after clearing response
-          processingResponseRef.current = "";
-        }, 500); // Increased delay to ensure message is saved
+        }, 500);
       } else {
         console.log("🔄 [CHAT] Partial response detected, waiting for more...");
         // For partial responses, just update the processing state
@@ -440,9 +460,18 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     return () => {
       if (responseDebounceTimer.current) {
         clearTimeout(responseDebounceTimer.current);
+        responseDebounceTimer.current = null;
       }
     };
-  }, [aiResponseText, chatMessages, addMessage, onClearAiResponse, chatState]);
+  }, [
+    aiResponseText,
+    chatMessages,
+    addMessage,
+    onClearAiResponse,
+    chatState,
+    currentConversation,
+    scrollState,
+  ]);
 
   // Handle send message (KISS principle - simple and clear)
   const handleSendMessage = useCallback(() => {

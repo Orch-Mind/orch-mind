@@ -15,10 +15,7 @@ import {
 import { NeuralSignalResponse } from "../../../interfaces/neural/NeuralSignalTypes";
 import { FunctionSchemaRegistry } from "../../../services/function-calling/FunctionSchemaRegistry";
 import { OllamaCompletionService } from "../../../services/ollama/neural/OllamaCompletionService";
-import {
-  cleanThinkTags,
-  cleanThinkTagsFromJSON,
-} from "../../../utils/ThinkTagCleaner";
+import { cleanThinkTagsFromJSON } from "../../../utils/ThinkTagCleaner";
 
 // SOLID: Interface Segregation Principle - Interfaces específicas
 // SOLID: Interface Segregation Principle - Interfaces específicas
@@ -43,128 +40,18 @@ interface ISemanticEnricher {
 // SOLID: Single Responsibility - Classe para parsing de argumentos
 class ArgumentParser {
   static parseToolCallArguments(rawArguments: any): any {
+    // Ollama já retorna os argumentos no formato correto
+    if (typeof rawArguments === "object" && rawArguments !== null) {
+      return rawArguments;
+    }
+
+    // Se for string, faz parse do JSON após limpar think tags
     if (typeof rawArguments === "string") {
       const cleanedArguments = cleanThinkTagsFromJSON(rawArguments);
       return JSON.parse(cleanedArguments);
     }
 
-    if (typeof rawArguments === "object" && rawArguments !== null) {
-      return this.cleanObjectValues(rawArguments);
-    }
-
     throw new Error("Invalid arguments type");
-  }
-
-  private static cleanObjectValues(obj: any): any {
-    if (typeof obj === "string") {
-      return cleanThinkTags(obj);
-    }
-    if (Array.isArray(obj)) {
-      return obj.map((item) => this.cleanObjectValues(item));
-    }
-    if (obj && typeof obj === "object") {
-      const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        cleaned[key] = this.cleanObjectValues(value);
-      }
-      return cleaned;
-    }
-    return obj;
-  }
-}
-
-// SOLID: Single Responsibility - Classe para construção de sinais neurais
-class NeuralSignalBuilder {
-  static buildFromArgs(args: any, originalPrompt?: string): any {
-    if (!args.core) {
-      throw new Error("Missing required field 'core'");
-    }
-
-    // Initialize default values
-    let query = "";
-    let keywords: string[] = [];
-
-    // Extract keywords first (they might be at the top level)
-    if (Array.isArray(args.keywords) && args.keywords.length > 0) {
-      keywords = args.keywords.filter(
-        (k: string) => typeof k === "string" && k.trim().length > 0
-      );
-    }
-
-    // First check if symbolic_query is provided as expected
-    if (args.symbolic_query && typeof args.symbolic_query === "object") {
-      // Check for query field
-      if (
-        args.symbolic_query.query &&
-        typeof args.symbolic_query.query === "string"
-      ) {
-        query = args.symbolic_query.query.trim();
-      }
-      // If symbolic_query is empty object or missing query, generate from keywords
-      else if (keywords.length > 0) {
-        query = keywords.join(" ");
-      }
-    }
-    // Also check if symbolic_query is a string that needs parsing
-    else if (args.symbolic_query && typeof args.symbolic_query === "string") {
-      try {
-        const parsed = JSON.parse(args.symbolic_query);
-        if (parsed.query && typeof parsed.query === "string") {
-          query = parsed.query.trim();
-        }
-      } catch {
-        // Not JSON, treat as query directly
-        query = args.symbolic_query.trim();
-      }
-    }
-
-    // Clean query from any metadata patterns
-    if (query.includes("intensity") && query.includes("%")) {
-      // Remove patterns like "(valence intensity 0%)" from query
-      query = query.replace(/\([^)]*intensity\s*\d+%[^)]*\)/gi, "").trim();
-    }
-
-    // If query still contains metadata patterns, try to extract meaningful part
-    if (query.includes("(") && query.includes(")")) {
-      const cleanQuery = query.replace(/\([^)]+\)/g, "").trim();
-      if (cleanQuery.length > 3) {
-        query = cleanQuery;
-      }
-    }
-
-    // Fallback: Generate a meaningful query if empty or too short
-    if (!query || query.length < 5) {
-      // Try to generate from keywords if available
-      if (keywords.length > 0) {
-        query = keywords.join(" ");
-      } else {
-        // Extract first meaningful words from the original input
-        const inputContext =
-          originalPrompt || args.userInput || args.context || "";
-        const meaningfulWords = inputContext
-          .split(/\s+/)
-          .filter((word: string) => word.length > 3)
-          .slice(0, 5)
-          .join(" ");
-
-        query = `analyze ${meaningfulWords || "user input"} from ${
-          args.core
-        } perspective`;
-      }
-    }
-
-    const signal = {
-      core: args.core,
-      intensity: Math.max(0.3, Math.min(1, args.intensity ?? 0.5)),
-      symbolic_query: {
-        query: query,
-      },
-      keywords: keywords,
-      topK: args.topK,
-      symbolicInsights: args.symbolicInsights,
-    };
-
-    return signal;
   }
 }
 
@@ -192,9 +79,11 @@ export class OllamaNeuralSignalService
     language?: string
   ): Promise<NeuralSignalResponse> {
     try {
-      const model = this.getModel();
+      const model = getOption(STORAGE_KEYS.OLLAMA_MODEL);
       const tools = this.getTools();
       const messages = this.buildMessages(prompt, temporaryContext, language);
+
+      console.log(`🦙 [OllamaNeuralSignal] Using model: ${model}`);
 
       const response =
         await this.ollamaCompletionService.callModelWithFunctions({
@@ -254,7 +143,7 @@ export class OllamaNeuralSignalService
         language
       );
 
-      const model = this.getModel();
+      const model = getOption(STORAGE_KEYS.OLLAMA_MODEL);
 
       const response =
         await this.ollamaCompletionService.callModelWithFunctions({
@@ -271,17 +160,7 @@ export class OllamaNeuralSignalService
       return { enrichedQuery: query, keywords: [] };
     }
   }
-
-  // SOLID: Open/Closed - Métodos privados podem ser estendidos sem modificar a interface pública
-  private getModel(): string {
-    // Use one of the filtered models that support tools
-    const configuredModel = getOption(STORAGE_KEYS.OLLAMA_MODEL);
-    const fallbackModel = "qwen3:4b";
-
-    const finalModel = configuredModel || fallbackModel;
-    return finalModel;
-  }
-
+  
   private getTools(): any[] {
     const schema =
       FunctionSchemaRegistry.getInstance().get("activateBrainArea");
@@ -405,6 +284,7 @@ Unfold the implicate order of this signal to reveal its hidden semantic connecti
   }
 
   private extractSignals(response: any, originalPrompt?: string): any[] {
+    // Ollama retorna tool_calls no formato padrão quando usa models com suporte a tools
     const toolCalls = response.choices?.[0]?.message?.tool_calls;
 
     console.log("🦙 [OllamaNeuralSignal] extractSignals:", {
@@ -416,79 +296,8 @@ Unfold the implicate order of this signal to reveal its hidden semantic connecti
       return this.extractFromToolCalls(toolCalls, originalPrompt);
     }
 
-    // Fallback: Try to extract from content if no tool calls found
-    const content = response.choices?.[0]?.message?.content;
-    console.log("🦙 [OllamaNeuralSignal] Fallback content check:", {
-      hasContent: !!content,
-      contentLength: content?.length || 0,
-      contentPreview: content?.substring(0, 200),
-    });
-
-    if (content && typeof content === "string") {
-      // Try to find JSON array or objects
-      const jsonArrayMatch = content.match(/\[[^\[\]]*\]/);
-      const jsonMatches = content.match(/\{[^{}]*\}/g);
-
-      if (jsonArrayMatch) {
-        try {
-          const array = JSON.parse(jsonArrayMatch[0]);
-          if (Array.isArray(array)) {
-            const extractedSignals = [];
-            for (const item of array) {
-              if (item.core) {
-                const signal = NeuralSignalBuilder.buildFromArgs(
-                  item,
-                  originalPrompt
-                );
-                if (signal) {
-                  extractedSignals.push(signal);
-                }
-              }
-            }
-            if (extractedSignals.length > 0) {
-              console.log(
-                "🦙 [OllamaNeuralSignal] Extracted from JSON array:",
-                extractedSignals.length
-              );
-              return extractedSignals;
-            }
-          }
-        } catch (e) {
-          console.log("🦙 [OllamaNeuralSignal] JSON array parse error:", e);
-        }
-      }
-
-      if (jsonMatches) {
-        const extractedSignals = [];
-        for (const match of jsonMatches) {
-          try {
-            const parsed = JSON.parse(match);
-            // Check if it looks like a brain activation
-            if (parsed.core) {
-              const signal = NeuralSignalBuilder.buildFromArgs(
-                parsed,
-                originalPrompt
-              );
-              if (signal) {
-                extractedSignals.push(signal);
-              }
-            }
-          } catch (e) {
-            // Ignore parsing errors
-          }
-        }
-
-        if (extractedSignals.length > 0) {
-          console.log(
-            "🦙 [OllamaNeuralSignal] Extracted from JSON objects:",
-            extractedSignals.length
-          );
-          return extractedSignals;
-        }
-      }
-    }
-
-    // No tool calls found - return empty array
+    // Se não houver tool_calls, modelo não suporta ou não identificou necessidade de tools
+    console.log("🦙 [OllamaNeuralSignal] No tool calls found in response");
     return [];
   }
 
@@ -504,36 +313,46 @@ Unfold the implicate order of this signal to reveal its hidden semantic connecti
       )
       .map((call) => {
         try {
+          // Ollama já retorna arguments como objeto quando suporta tools nativamente
           const args = ArgumentParser.parseToolCallArguments(
             call.function.arguments
           );
 
-          // Validate and fix arguments if needed
-          if (!args.symbolic_query || typeof args.symbolic_query !== "object") {
-            args.symbolic_query = {};
-          }
-
-          // If symbolic_query.query is missing but we have keywords, generate it
-          if (
-            !args.symbolic_query.query &&
-            args.keywords &&
-            args.keywords.length > 0
-          ) {
-            args.symbolic_query.query = args.keywords.join(" ");
-          }
-
-          // If still no query, use the original prompt
-          if (!args.symbolic_query.query) {
-            args.symbolic_query.query = originalPrompt || "analyze user input";
-          }
-
-          return NeuralSignalBuilder.buildFromArgs(args, originalPrompt);
+          // Validate and build signal
+          return this.buildSignalFromArgs(args, originalPrompt);
         } catch (error) {
           ServiceLogger.logError("parsing tool call", error);
           return null;
         }
       })
       .filter((signal) => signal !== null);
+  }
+
+  private buildSignalFromArgs(args: any, originalPrompt?: string): any {
+    // Validate required fields
+    if (!args.core) {
+      console.warn("🦙 [OllamaNeuralSignal] Missing core field in args");
+      return null;
+    }
+
+    // Initialize signal with defaults
+    const signal = {
+      core: args.core,
+      intensity: Math.max(0.3, Math.min(1, args.intensity ?? 0.5)),
+      symbolic_query: args.symbolic_query || {
+        query: originalPrompt || "analyze user input",
+      },
+      keywords: Array.isArray(args.keywords) ? args.keywords : [],
+      topK: args.topK,
+      symbolicInsights: args.symbolicInsights,
+    };
+
+    // Ensure symbolic_query has a query field
+    if (!signal.symbolic_query.query && signal.keywords.length > 0) {
+      signal.symbolic_query.query = signal.keywords.join(" ");
+    }
+
+    return signal;
   }
 
   private extractEnrichment(
