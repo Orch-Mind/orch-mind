@@ -125,27 +125,42 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
       <ul className="space-y-2 mt-3">
         {insights.map((insight, i) => {
           // Handle string insights
-          if (typeof insight === 'string') {
+          if (typeof insight === "string") {
             return (
-              <li key={i} className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700">
+              <li
+                key={i}
+                className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700"
+              >
                 {insight}
               </li>
             );
           }
           // Handle SymbolicInsight objects
-          else if (insight && typeof insight === 'object' && 'type' in insight) {
+          else if (
+            insight &&
+            typeof insight === "object" &&
+            "type" in insight
+          ) {
             const insightObj = insight as SymbolicInsight;
 
             return (
-              <li key={i} className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700">
-                <span className="text-teal-400 font-medium">{insightObj.type}</span>: {' '}
-                <span>{String(insightObj.content || '')}</span>
+              <li
+                key={i}
+                className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700"
+              >
+                <span className="text-teal-400 font-medium">
+                  {insightObj.type}
+                </span>
+                : <span>{String(insightObj.content || "")}</span>
               </li>
             );
           }
           // Fallback for other structures
           return (
-            <li key={i} className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700">
+            <li
+              key={i}
+              className="text-sm bg-gray-800/50 p-2 rounded border border-gray-700"
+            >
               {JSON.stringify(insight)}
             </li>
           );
@@ -315,7 +330,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
                 <div className="text-gray-400 text-sm mb-1">Memory Matches</div>
                 <div className="text-white font-medium">{event.matchCount}</div>
               </div>
-              
+
               <div className="bg-gray-800/50 p-3 rounded-lg border border-green-500/30 flex-1">
                 <div className="text-gray-400 text-sm mb-1">Duration</div>
                 <div className="text-green-400 font-medium">
@@ -323,7 +338,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {event.insights && event.insights.length > 0 && (
               <div>
                 <div className="text-blue-400 mb-2 font-medium">Insights</div>
@@ -395,13 +410,21 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
 
             <div className="flex flex-wrap gap-4">
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
-                <div className="text-gray-400 text-sm mb-1">Emotional Weight</div>
-                <div className="text-pink-400 font-medium">{event.emotionalWeight.toFixed(2)}</div>
+                <div className="text-gray-400 text-sm mb-1">
+                  Emotional Weight
+                </div>
+                <div className="text-pink-400 font-medium">
+                  {event.emotionalWeight.toFixed(2)}
+                </div>
               </div>
 
               <div className="bg-gray-800/50 p-3 rounded-lg border border-pink-500/30 flex-1">
-                <div className="text-gray-400 text-sm mb-1">Contradiction Score</div>
-                <div className="text-pink-400 font-medium">{event.contradictionScore.toFixed(2)}</div>
+                <div className="text-gray-400 text-sm mb-1">
+                  Contradiction Score
+                </div>
+                <div className="text-pink-400 font-medium">
+                  {event.contradictionScore.toFixed(2)}
+                </div>
               </div>
 
               {event.temperature !== undefined && (
@@ -460,7 +483,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
             <div className="text-lg text-red-300 font-medium">GPT Response</div>
 
             <div className="p-4 bg-gray-800/50 rounded-lg border border-red-500/30 whitespace-pre-wrap text-gray-200">
-              {event.response}
+              {event.response || "(Empty response)"}
             </div>
 
             {event.symbolicTopics && event.symbolicTopics.length > 0 && (
@@ -468,7 +491,10 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
                 <div className="text-gray-400 mb-2">Symbolic Topics</div>
                 <div className="flex flex-wrap gap-2">
                   {event.symbolicTopics.map((topic: string, i: number) => (
-                    <span key={i} className="px-2 py-1 bg-gray-800 rounded-full text-xs text-red-300 border border-red-500/30">
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-gray-800 rounded-full text-xs text-red-300 border border-red-500/30"
+                    >
                       {topic}
                     </span>
                   ))}

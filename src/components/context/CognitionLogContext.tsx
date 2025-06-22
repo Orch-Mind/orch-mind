@@ -4,11 +4,11 @@
 // CognitionLogContext.tsx
 // Context for managing cognition logs in the application
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { CognitionEvent } from './deepgram/types/CognitionEvent';
-import symbolicCognitionTimelineLogger from './deepgram/services/utils/SymbolicCognitionTimelineLoggerSingleton';
-import { CognitionLogExporter } from './deepgram/services/utils/CognitionLogExporter';
-import cognitionLogExporterFactory from './deepgram/services/utils/CognitionLogExporterFactory';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { CognitionLogExporter } from "./deepgram/services/utils/CognitionLogExporter";
+import cognitionLogExporterFactory from "./deepgram/services/utils/CognitionLogExporterFactory";
+import symbolicCognitionTimelineLogger from "./deepgram/services/utils/SymbolicCognitionTimelineLoggerSingleton";
+import { CognitionEvent } from "./deepgram/types/CognitionEvent";
 
 /**
  * Interface for the cognition log context
@@ -32,7 +32,9 @@ const CognitionLogContext = createContext<CognitionLogContextType | null>(null);
 /**
  * Provider for the cognition log context
  */
-export const CognitionLogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CognitionLogProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [events, setEvents] = useState<CognitionEvent[]>([]);
   const [exporters] = useState<CognitionLogExporter[]>(
     cognitionLogExporterFactory.getExporters()
@@ -60,14 +62,16 @@ export const CognitionLogProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Exports events using the specified exporter
   const exportEvents = (exporterLabel: string) => {
-    const exporter = exporters.find(e => e.label === exporterLabel);
+    const exporter = exporters.find((e) => e.label === exporterLabel);
     if (exporter) {
       exporter.export(events);
     }
   };
 
   return (
-    <CognitionLogContext.Provider value={{ events, exporters, clearEvents, exportEvents }}>
+    <CognitionLogContext.Provider
+      value={{ events, exporters, clearEvents, exportEvents }}
+    >
       {children}
     </CognitionLogContext.Provider>
   );
@@ -79,7 +83,9 @@ export const CognitionLogProvider: React.FC<{ children: React.ReactNode }> = ({ 
 export const useCognitionLog = (): CognitionLogContextType => {
   const context = useContext(CognitionLogContext);
   if (!context) {
-    throw new Error('useCognitionLog must be used within a CognitionLogProvider');
+    throw new Error(
+      "useCognitionLog must be used within a CognitionLogProvider"
+    );
   }
   return context;
 };

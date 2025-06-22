@@ -9,7 +9,6 @@ import {
 import { ITranscriptionStorageService } from "../../../interfaces/transcription/ITranscriptionStorageService";
 import { ISpeakerIdentificationService } from "../../../interfaces/utils/ISpeakerIdentificationService";
 import { SymbolicInsight } from "../../../types/SymbolicInsight";
-import { LoggingUtils } from "../../../utils/LoggingUtils";
 import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
 import { SessionManager } from "./SessionManager";
 
@@ -34,7 +33,7 @@ export class ProcessingResultsSaver {
     neuralActivation: NeuralSignalResponse,
     processingResults: NeuralProcessingResult[]
   ): Promise<void> {
-    // Log symbolic cognitive response
+    // Log symbolic cognitive response with insights
     await this._logSymbolicResponse(response, processingResults);
 
     // Update conversation history
@@ -45,7 +44,6 @@ export class ProcessingResultsSaver {
 
     // Save to long-term memory
     await this._saveToLongTermMemory(transcription, response);
-
   }
 
   /**

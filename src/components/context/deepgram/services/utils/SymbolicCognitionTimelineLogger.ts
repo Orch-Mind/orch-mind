@@ -4,12 +4,12 @@
 // SymbolicCognitionTimelineLogger.ts
 // Logging structure for symbolic timeline with precise timestamps
 
-import { CognitionEvent } from '../../types/CognitionEvent';
-import { SymbolicInsight } from '../../types/SymbolicInsight';
-import { SymbolicQuery } from '../../types/SymbolicQuery';
-import { SymbolicContext } from '../../types/SymbolicContext';
-import { LoggingUtils } from '../../utils/LoggingUtils';
-import { UserIntentWeights } from '../../symbolic-cortex/integration/ICollapseStrategyService';
+import { UserIntentWeights } from "../../symbolic-cortex/integration/ICollapseStrategyService";
+import { CognitionEvent } from "../../types/CognitionEvent";
+import { SymbolicContext } from "../../types/SymbolicContext";
+import { SymbolicInsight } from "../../types/SymbolicInsight";
+import { SymbolicQuery } from "../../types/SymbolicQuery";
+import { LoggingUtils } from "../../utils/LoggingUtils";
 
 export class SymbolicCognitionTimelineLogger {
   private timeline: CognitionEvent[] = [];
@@ -23,7 +23,7 @@ export class SymbolicCognitionTimelineLogger {
    * @param content Textual content of the prompt sent to the system.
    */
   logRawPrompt(content: string): void {
-    this.timeline.push({ type: 'raw_prompt', timestamp: this.now(), content });
+    this.timeline.push({ type: "raw_prompt", timestamp: this.now(), content });
   }
 
   /**
@@ -31,7 +31,11 @@ export class SymbolicCognitionTimelineLogger {
    * @param context Temporary textual context used in processing.
    */
   logTemporaryContext(context: string): void {
-    this.timeline.push({ type: 'temporary_context', timestamp: this.now(), context });
+    this.timeline.push({
+      type: "temporary_context",
+      timestamp: this.now(),
+      context,
+    });
   }
 
   /**
@@ -42,15 +46,21 @@ export class SymbolicCognitionTimelineLogger {
    * @param topK TopK parameter used in search.
    * @param params Additional signal parameters.
    */
-  logNeuralSignal(core: string, symbolic_query: SymbolicQuery, intensity: number, topK: number, params: Record<string, unknown>): void {
+  logNeuralSignal(
+    core: string,
+    symbolic_query: SymbolicQuery,
+    intensity: number,
+    topK: number,
+    params: Record<string, unknown>
+  ): void {
     this.timeline.push({
-      type: 'neural_signal',
+      type: "neural_signal",
       timestamp: this.now(),
       core,
       symbolic_query,
       intensity,
       topK,
-      params
+      params,
     });
   }
 
@@ -61,18 +71,23 @@ export class SymbolicCognitionTimelineLogger {
    * @param matchCount Number of matches found.
    * @param durationMs Search duration in milliseconds.
    */
-  logSymbolicRetrieval(core: string, insights: SymbolicInsight[], matchCount: number, durationMs: number): void {
+  logSymbolicRetrieval(
+    core: string,
+    insights: SymbolicInsight[],
+    matchCount: number,
+    durationMs: number
+  ): void {
     const safeInsights = Array.isArray(insights) ? insights : [];
     if (!insights || safeInsights.length === 0) {
       LoggingUtils.logInfo(`No insights extracted for core: ${core}`);
     }
     this.timeline.push({
-      type: 'symbolic_retrieval',
+      type: "symbolic_retrieval",
       timestamp: this.now(),
       core,
       insights: safeInsights,
       matchCount,
-      durationMs
+      durationMs,
     });
   }
 
@@ -80,7 +95,7 @@ export class SymbolicCognitionTimelineLogger {
    * Records the initiation of a symbolic fusion process in the timeline.
    */
   logFusionInitiated(): void {
-    this.timeline.push({ type: 'fusion_initiated', timestamp: this.now() });
+    this.timeline.push({ type: "fusion_initiated", timestamp: this.now() });
   }
 
   /**
@@ -96,9 +111,20 @@ export class SymbolicCognitionTimelineLogger {
    * @param insights Symbolic insights associated with the collapse
    * @param emergentProperties Emergent properties detected in the neural response patterns
    */
-  logNeuralCollapse(isDeterministic: boolean, selectedCore: string, numCandidates: number, emotionalWeight: number, contradictionScore: number, temperature?: number, justification?: string, userIntent?: UserIntentWeights, insights?: SymbolicInsight[], emergentProperties?: string[]): void {
-    this.timeline.push({ 
-      type: 'neural_collapse',
+  logNeuralCollapse(
+    isDeterministic: boolean,
+    selectedCore: string,
+    numCandidates: number,
+    emotionalWeight: number,
+    contradictionScore: number,
+    temperature?: number,
+    justification?: string,
+    userIntent?: UserIntentWeights,
+    insights?: SymbolicInsight[],
+    emergentProperties?: string[]
+  ): void {
+    this.timeline.push({
+      type: "neural_collapse",
       timestamp: this.now(),
       isDeterministic,
       selectedCore,
@@ -109,7 +135,7 @@ export class SymbolicCognitionTimelineLogger {
       justification,
       userIntent,
       insights,
-      emergentProperties
+      emergentProperties,
     });
   }
 
@@ -118,34 +144,57 @@ export class SymbolicCognitionTimelineLogger {
    * @param context Synthesized symbolic context object.
    */
   logSymbolicContextSynthesized(context: SymbolicContext): void {
-    this.timeline.push({ type: 'symbolic_context_synthesized', timestamp: this.now(), context });
+    this.timeline.push({
+      type: "symbolic_context_synthesized",
+      timestamp: this.now(),
+      context,
+    });
   }
 
   /**
    * Records the GPT model response in the timeline, including symbolic topics and insights.
    * @param data Response string or detailed object with topics and insights.
    */
-  logGptResponse(data: string | { response: string; symbolicTopics?: string[]; insights?: SymbolicInsight[] }): void {
-    if (typeof data === 'string') {
-      LoggingUtils.logInfo('No insights extracted in GPT response (string).');
-      this.timeline.push({ 
-        type: 'gpt_response', 
-        timestamp: this.now(), 
-        response: data, 
-        insights: []
-      });
+  logGptResponse(
+    data:
+      | string
+      | {
+          response: string;
+          symbolicTopics?: string[];
+          insights?: SymbolicInsight[];
+        }
+  ): void {
+    if (typeof data === "string") {
+      LoggingUtils.logInfo("No insights extracted in GPT response (string).");
+      const event = {
+        type: "gpt_response" as const,
+        timestamp: this.now(),
+        response: data,
+        insights: [],
+      };
+      this.timeline.push(event);
     } else {
-      const hasInsights = data.insights && Array.isArray(data.insights) && data.insights.length > 0;
+      const hasInsights =
+        data.insights &&
+        Array.isArray(data.insights) &&
+        data.insights.length > 0;
       if (!hasInsights) {
-        LoggingUtils.logInfo('No insights extracted in GPT response (object).');
+        LoggingUtils.logInfo("No insights extracted in GPT response (object).");
       }
-      this.timeline.push({
-        type: 'gpt_response',
+      const event = {
+        type: "gpt_response" as const,
         timestamp: this.now(),
         response: data.response,
         symbolicTopics: data.symbolicTopics,
-        insights: hasInsights ? data.insights : []
-      });
+        insights: hasInsights ? data.insights : [],
+      };
+
+      // Debug check for empty response
+      if (!event.response || event.response.length === 0) {
+        console.warn("🔍 [WARNING] Empty GPT response being logged!");
+      }
+
+      this.timeline.push(event);
     }
   }
 
@@ -160,24 +209,29 @@ export class SymbolicCognitionTimelineLogger {
    * Logs detected emergent symbolic patterns.
    * This is part of the Orch-OS scientific introspection layer for tracking
    * emergent cognitive phenomena across processing cycles.
-   * 
+   *
    * @param patterns Array of emergent symbolic pattern descriptions
    * @param metrics Scientific metrics associated with the patterns
    */
-  logEmergentPatterns(patterns: string[], metrics?: { 
-    archetypalStability?: number; 
-    cycleEntropy?: number; 
-    insightDepth?: number 
-  }): void {
+  logEmergentPatterns(
+    patterns: string[],
+    metrics?: {
+      archetypalStability?: number;
+      cycleEntropy?: number;
+      insightDepth?: number;
+    }
+  ): void {
     this.timeline.push({
-      type: 'emergent_patterns',
+      type: "emergent_patterns",
       timestamp: this.now(),
       patterns,
-      metrics
+      metrics,
     });
-    
+
     // Log para debugging/monitoramento
-    LoggingUtils.logInfo(`[Timeline] Logged ${patterns.length} emergent patterns`);
+    LoggingUtils.logInfo(
+      `[Timeline] Logged ${patterns.length} emergent patterns`
+    );
   }
 
   clear() {
