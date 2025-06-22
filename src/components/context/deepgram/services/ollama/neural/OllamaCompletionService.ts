@@ -126,7 +126,10 @@ export class OllamaCompletionService implements ICompletionService {
           stream: !!options.stream,
           options: {
             temperature: options.temperature ?? 0.7,
-            num_ctx: options.max_tokens ?? 4096,
+            // num_predict controls the maximum tokens in the response
+            num_predict: options.max_tokens ?? 2048,
+            // num_ctx is the context window size (should be larger)
+            num_ctx: 8192,
             // Remove format: "json" for Command R7B as it causes empty responses
             // See: https://github.com/ollama/ollama/issues/6771
           },

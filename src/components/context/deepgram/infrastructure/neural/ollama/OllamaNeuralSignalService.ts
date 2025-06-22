@@ -9,6 +9,8 @@ import {
   STORAGE_KEYS,
 } from "../../../../../../services/StorageService";
 import {
+  buildErichSystemPrompt,
+  buildErichUserPrompt,
   buildSystemPrompt,
   buildUserPrompt,
 } from "../../../../../../shared/utils/neuralPromptBuilder";
@@ -47,8 +49,39 @@ class ArgumentParser {
 
     // Se for string, faz parse do JSON após limpar think tags
     if (typeof rawArguments === "string") {
-      const cleanedArguments = cleanThinkTagsFromJSON(rawArguments);
-      return JSON.parse(cleanedArguments);
+      try {
+        const cleanedArguments = cleanThinkTagsFromJSON(rawArguments);
+
+        // Log para debug
+        if (cleanedArguments.length > 200) {
+          console.log("🦙 [ArgumentParser] Long arguments detected:", {
+            length: cleanedArguments.length,
+            preview: cleanedArguments.substring(0, 200) + "...",
+            lastChars: cleanedArguments.substring(cleanedArguments.length - 50),
+          });
+        }
+
+        return JSON.parse(cleanedArguments);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
+        console.error("🦙 [ArgumentParser] JSON parse error:", {
+          error: errorMessage,
+          rawLength: rawArguments.length,
+          rawPreview: rawArguments.substring(0, 200),
+          rawLastChars: rawArguments.substring(rawArguments.length - 50),
+        });
+
+        // Try to salvage partial JSON if possible
+        if (errorMessage.includes("Unexpected end of JSON input")) {
+          console.warn("🦙 [ArgumentParser] Attempting to fix truncated JSON");
+          // This is a basic attempt - in production you might want more sophisticated handling
+          return null;
+        }
+
+        throw error;
+      }
     }
 
     throw new Error("Invalid arguments type");
@@ -91,7 +124,7 @@ export class OllamaNeuralSignalService
           messages,
           tools,
           temperature: 0.7, // Higher for more natural response
-          max_tokens: 1000, // More space for response
+          max_tokens: 2048, // Increased for complete JSON responses
         });
 
       // Debug logging
@@ -160,7 +193,7 @@ export class OllamaNeuralSignalService
       return { enrichedQuery: query, keywords: [] };
     }
   }
-  
+
   private getTools(): any[] {
     const schema =
       FunctionSchemaRegistry.getInstance().get("activateBrainArea");
@@ -203,84 +236,20 @@ export class OllamaNeuralSignalService
     context?: string,
     language?: string
   ): any[] {
-    const systemPrompt = `You are the Neural Signal Enrichment System based on David Bohm's Implicate Order theory.
+    const systemPrompt = buildErichSystemPrompt();
 
-THEORETICAL FOUNDATION:
-- Bohm's Implicate Order: Reality has an enfolded (implicate) order that unfolds into explicit manifestation
-- Your task: Unfold the implicate connections, memories, and patterns hidden within the neural signal
-
-ENRICHMENT MISSION: Enrich this neural signal by unfolding its 'implicate order'—the hidden connections, associative memories, and implicit patterns folded within the information.
-
-UNFOLDING PROCESS:
-1. EPISODIC MEMORY ASSOCIATIONS:
-   - Similar past experiences
-   - Recurring patterns
-   - Temporal connections
-
-2. IMPLICIT SEMANTIC NETWORK:
-   - Non-obvious related concepts
-   - Indirect associations
-   - Emergent semantic fields
-
-3. HISTORICAL EMOTIONAL RESONANCE:
-   - Emotional echoes from past
-   - Recurring affective patterns
-   - Activated emotional memory
-
-4. IMPLICIT CULTURAL CONTEXT:
-   - Underlying cultural meanings
-   - Undeclared assumptions
-   - Implicit social codes
-
-5. DEVELOPMENTAL POTENTIAL:
-   - Possible evolution directions
-   - Future implications
-   - Latent potentialities
-
-BOHM PRINCIPLE: "What is implicit must become explicit through unfolding."
-
-CURRENT SIGNAL CONTEXT:
-- Symbolic Core: ${core} (${this.getCoreDescription(core)})
-- Base Query: ${query}
-- Signal Intensity: ${(intensity * 100).toFixed(1)}%${
-      context ? `\n- Contextual Frame: ${context}` : ""
-    }
-- Processing Language: ${language || "pt-BR"}
-
-Generate 3-8 keywords that unfold these hidden dimensions.
-
-Use the enrichSemanticQuery function.`;
-
-    const userPrompt = `NEURAL SIGNAL TO ENRICH:
-Core: ${core}
-Query: "${query}"
-Intensity: ${intensity}
-
-Unfold the implicate order of this signal to reveal its hidden semantic connections and associative patterns.`;
+    const userPrompt = buildErichUserPrompt(
+      core,
+      query,
+      intensity,
+      context,
+      language
+    );
 
     return [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ];
-  }
-
-  private getCoreDescription(core: string): string {
-    const coreDescriptions: Record<string, string> = {
-      valence: "Emotional polarity and affective resonance processing",
-      memory: "Episodic and semantic memory retrieval and consolidation",
-      metacognitive: "Self-awareness and cognitive monitoring processes",
-      relational: "Interpersonal dynamics and social cognition",
-      creativity: "Creative thinking and novel connection generation",
-      will: "Volition, agency and intentional action",
-      planning: "Executive planning and strategic thinking",
-      language: "Linguistic processing and communication",
-      shadow: "Unconscious patterns and repressed content",
-      symbolic_alignment: "Symbolic meaning and archetypal pattern recognition",
-      integrity: "Core values and ethical alignment",
-      evolution: "Growth, learning, and adaptive change processes",
-    };
-
-    return coreDescriptions[core] || "Specialized cognitive processing domain";
   }
 
   private extractSignals(response: any, originalPrompt?: string): any[] {

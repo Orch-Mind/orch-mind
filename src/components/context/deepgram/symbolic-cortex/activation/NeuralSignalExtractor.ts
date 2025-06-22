@@ -76,13 +76,15 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
       // Prepare an enriched prompt with all available contextual data
       const enrichedPrompt = this.prepareEnrichedPrompt(
         transcription,
-        userContextData
+        userContextData,
+        language
       );
 
       LoggingUtils.logInfo(
         `🧠 [NeuralSignalExtractor] Enriched prompt prepared: ${JSON.stringify({
           enrichedPromptLength: enrichedPrompt.length,
           enrichedPromptPreview: enrichedPrompt.substring(0, 200) + "...",
+          language: language || "not specified",
         })}`
       );
 
@@ -397,58 +399,52 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
    * Prepares an enriched prompt with full user context.
    * @param originalPrompt The user's original prompt
    * @param userContextData Contextual data related to the user
+   * @param language The language/locale for the response
    * @returns A contextually enriched prompt
    */
   private prepareEnrichedPrompt(
     originalPrompt: string,
-    userContextData: Record<string, unknown>
+    userContextData: Record<string, unknown>,
+    language?: string
   ): string {
-    const styleGuide =
-      "COGNITIVE ACTIVATION FRAMEWORK: Process this input through holographic neural activation.";
-
-    // Reverse-engineering framework - analyzing user's brain activation
-    const analysisFramework = `USER BRAIN ANALYSIS:
-
-1. DETECTION:
-   - Emotional aspects (if any)
-   - Cognitive processes involved
-   - Social elements (if any)
-   - Memory or planning aspects
-   - Language complexity
-
-2. ACTIVATION:
-   - Identify the main brain areas used
-   - Assign intensity based on prominence
-   - Focus on the most active 2-3 areas
-
-3. Call activateBrainArea for each main activation.`;
-
-    // Build the complete prompt
-    let enrichedPrompt = `${styleGuide}\n\nHOLOGRAPHIC INPUT: ${originalPrompt}`;
-
-    // Add holographic context preservation
+    const styleGuide = `COGNITIVE ACTIVATION FRAMEWORK (Orch-OS):
+  Process this input using holographic neural simulation. Each cognitive core represents a functional module based on symbolic and neurobiological mappings.`;
+  
+    const languageSpec = language
+      ? `\n\nLANGUAGE CONTEXT: All analysis must respect the cultural and linguistic characteristics of ${language}.`
+      : "";
+  
+    const analysisProtocol = `USER BRAIN ANALYSIS PROTOCOL:
+  
+  1. DETECT which cognitive processes are activated in the input.
+  2. IDENTIFY the 2–3 most relevant cognitive cores based on symbolic resonance.
+  3. ESTIMATE their intensity (between 0.3 and 1.0).
+  4. CALL the function activateBrainArea for each activation.`;
+  
+    let prompt = `${styleGuide}${languageSpec}\n\nHOLOGRAPHIC INPUT:\n${originalPrompt}`;
+  
     if (Object.keys(userContextData).length > 0) {
-      enrichedPrompt += `\n\nCONTEXTUAL INTERFERENCE PATTERNS:`;
-
+      prompt += `\n\nCONTEXTUAL MEMORY PATTERNS:`;
+  
       if (userContextData.recent_topics) {
-        enrichedPrompt += `\nRecent Cognitive Activations: ${userContextData.recent_topics
+        prompt += `\n- Recent Activations: ${userContextData.recent_topics
           .toString()
           .substring(0, 200)}...`;
       }
       if (userContextData.speaker_interaction_counts) {
-        enrichedPrompt += `\nInteraction Frequency Patterns: ${JSON.stringify(
+        prompt += `\n- Interaction Frequency: ${JSON.stringify(
           userContextData.speaker_interaction_counts
         )}`;
       }
       if (userContextData.emotional_history) {
-        enrichedPrompt += `\nEmotional Wave Patterns: ${JSON.stringify(
+        prompt += `\n- Emotional History: ${JSON.stringify(
           userContextData.emotional_history
         ).substring(0, 150)}...`;
       }
     }
-
-    enrichedPrompt += `\n\n${analysisFramework}`;
-
-    return enrichedPrompt;
+  
+    prompt += `\n\n${analysisProtocol}`;
+  
+    return prompt;
   }
 }

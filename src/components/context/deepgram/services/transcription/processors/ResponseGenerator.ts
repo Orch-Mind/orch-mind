@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { buildIntegrationSystemPrompt } from "../../../../../../shared/utils/neuralPromptBuilder";
 import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
 import { IOpenAIService } from "../../../interfaces/openai/IOpenAIService";
 import { Message } from "../../../interfaces/transcription/TranscriptionTypes";
@@ -83,19 +84,23 @@ export class ResponseGenerator {
     if (temporaryContext?.trim()) {
       contextMessages.push({
         role: "system",
-        content: `TEMPORARY COGNITIVE MODULATION:
-        
-THEORETICAL BASIS: Jung's concept of directed thinking vs. passive association
-Your cognitive processing should be temporarily modulated by these specific instructions.
-
-MODULATION TYPE: Directed symbolic processing with focused intention
-DURATION: This current interaction cycle only
-INTEGRATION: Maintain coherence with your core identity while adapting to these parameters
-
-SPECIFIC INSTRUCTIONS:
-${temporaryContext.trim()}
-
-REMEMBER: These instructions create a temporary lens through which to process information, not a replacement of your core cognitive architecture.`,
+        content: `TEMPORARY COGNITIVE MODULATION
+    
+    THEORETICAL BASIS: Jung's directed thinking vs. passive association.
+    Your cognitive processing should be modulated by the instructions below for this interaction cycle only.
+    
+    MODULATION TYPE: Directed symbolic processing with focused intention.
+    INTEGRATION: Adapt these instructions while preserving your core Orch-OS symbolic identity.
+    
+    SPECIFIC INSTRUCTIONS:
+    ${temporaryContext.trim()}
+    
+    REMEMBER: This is a temporary lens, not a replacement of your core symbolic architecture.`
+      });
+    } else {
+      contextMessages.push({
+        role: "system",
+        content: buildIntegrationSystemPrompt(),
       });
     }
 

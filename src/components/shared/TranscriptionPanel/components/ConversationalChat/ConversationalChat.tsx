@@ -358,17 +358,15 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
       // Check if we're already processing this response
       if (aiResponseText === processingResponseRef.current) {
-        // This is expected during normal processing, only log in dev mode
-        if (process.env.NODE_ENV !== "production") {
-          console.log("⚠️ [CHAT] Already processing this response, skipping");
-        }
+        // This is expected during normal processing, don't log as it's not an error
         return;
       }
 
       // Also check if this response was already processed
       if (aiResponseText === lastProcessedResponse.current) {
         console.log("⚠️ [CHAT] Response already processed, clearing");
-        // Clear the response since it was already processed
+        // Clear the processing ref and response since it was already processed
+        processingResponseRef.current = "";
         onClearAiResponse();
         return;
       }
@@ -409,6 +407,10 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         !aiResponseText.includes("Processing");
 
       if (looksLikeFinalResponse) {
+        // Mark that we're processing this response IMMEDIATELY
+        processingResponseRef.current = aiResponseText;
+        lastProcessedResponse.current = aiResponseText;
+
         console.log(
           "✅ [CHAT] Adding final AI response:",
           aiResponseText.substring(0, 50),
@@ -418,17 +420,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
           }
         );
 
-        // Mark that we're processing this response
-        processingResponseRef.current = aiResponseText;
-
         // Add AI response
         addMessage({
           type: "system",
           content: aiResponseText,
         });
-
-        // Update last processed response
-        lastProcessedResponse.current = aiResponseText;
 
         // Clear processing state
         chatState.setIsProcessing(false);
@@ -447,6 +443,8 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         // Clear AI response after successfully adding the message
         // We delay this to ensure the message is properly saved
         setTimeout(() => {
+          // Clear the processing ref before clearing the AI response
+          processingResponseRef.current = "";
           onClearAiResponse();
         }, 500);
       } else {

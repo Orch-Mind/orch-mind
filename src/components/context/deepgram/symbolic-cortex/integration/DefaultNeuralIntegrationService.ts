@@ -10,6 +10,9 @@ import {
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
+import {
+  buildIntegrationUserPrompt
+} from "../../../../../shared/utils/neuralPromptBuilder";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { HuggingFaceServiceFacade } from "../../services/huggingface/HuggingFaceServiceFacade";
@@ -561,31 +564,15 @@ export class DefaultNeuralIntegrationService
     }
 
     // 4. Compose final prompt
-    let prompt = `USER INPUT: ${originalInput}
-
-NEURAL INSIGHTS:`;
-
-    // Filter and sort by intensity to show only TOP 3 most relevant cores
-    const topCores = cleanedNeuralResults
-      .sort((a, b) => b.intensity - a.intensity)
-      .slice(0, 3);
-
-    // Add only the top specialized interpretations
-    topCores.forEach((result) => {
-      prompt += `\n• ${result.core}: ${result.output.slice(0, 100)}`;
-    });
-
-    // Simple integration instructions without technical details
-    prompt += `\n\nRESPOND naturally in ${
-      language ? language : "pt-BR"
-    }, integrating these neural perspectives. Be ${
-      strategyDecision.deterministic
-        ? "clear and direct"
-        : "creative and nuanced"
-    }.`;
+    const userPrompt = buildIntegrationUserPrompt(
+      originalInput,
+      cleanedNeuralResults,
+      language,
+      strategyDecision
+    );
 
     return {
-      prompt,
+      prompt: userPrompt,
       temperature: strategyDecision.temperature,
       isDeterministic: strategyDecision.deterministic,
     };

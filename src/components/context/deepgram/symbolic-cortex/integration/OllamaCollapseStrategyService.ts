@@ -134,65 +134,53 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
       const systemPrompt = {
         role: "system" as const,
-        content: `You are the Orchestrated Collapse Strategy System of the Orch-OS architecture.
+        content: `You are the Collapse-Strategy Orchestrator in Orch-OS.
 
-THEORETICAL FOUNDATION:
-- Penrose-Hameroff: Orchestrated Objective Reduction adapted for symbolic collapse
-- Brescia: The mind doesn't compute—it collapses meaning through superposition
+Choose the best symbolic collapse approach:
+- Dominance      (clear hierarchy)
+- Synthesis      (complementary cores)
+- Dialectic      (productive contradictions)
+- Context        (user intent focus)
 
-YOUR MISSION: Determine the optimal collapse strategy based on the cognitive state metrics.
+Call decideCollapseStrategy with:
+• deterministic          (true/false)
+• temperature            (0.1–1.5)
+• justification          (in LANGUAGE specified in the user prompt, mention the approach)
+• emotionalIntensity     (0–1, optional)
+• emergentProperties     (string[], optional)
+• userIntent             (object: technical, philosophical, creative, emotional, relational, all 0–1, optional)
 
-AVAILABLE COLLAPSE STRATEGIES:
-
-1. COLLAPSE BY DOMINANCE:
-   - When: One interpretation is clearly stronger
-   - Method: Preserve secondary interpretations as context
-   - Use: Situations with clear hierarchy of relevance
-
-2. COLLAPSE BY SYNTHESIS:
-   - When: Multiple complementary interpretations exist
-   - Method: Integrate into emergent synthesis
-   - Use: When cores reinforce each other
-
-3. COLLAPSE BY DIALECTIC:
-   - When: Fundamental contradictions exist
-   - Method: Transcend through dialectical resolution
-   - Use: When opposites create productive tension
-
-4. COLLAPSE BY CONTEXT:
-   - When: Context determines relevance
-   - Method: Select based on situational needs
-   - Use: When user intent is highly specific
-
-DECISION FACTORS:
-- Emotional intensity indicates need for nuanced response
-- Contradictions suggest dialectical approach
-- Multiple active cores suggest synthesis
-- Clear user intent suggests contextual collapse
-
-Decide:
-1. deterministic (true) vs probabilistic (false)
-2. temperature (0.1-1.5)
-3. justification for strategy
-4. emergent properties detected`,
+Respond only via the tool call.`,
       };
 
       const userPrompt = {
         role: "user" as const,
-        content: `COGNITIVE STATE METRICS:
-Activated Cores: ${params.activatedCores.join(", ")}
-Emotional Weight: ${params.averageEmotionalWeight.toFixed(2)}
-Contradiction Score: ${params.averageContradictionScore.toFixed(2)}
-User Input: "${params.originalText || "Not provided"}"
-Language: ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"}
-
-ANALYZE: Which collapse strategy is optimal? Consider:
-- Dominance: Is one core clearly primary?
-- Synthesis: Do cores complement each other?
-- Dialectic: Are there productive contradictions?
-- Context: Does user intent require specific focus?
-
-DECIDE: Provide strategy decision with justification in the specified language.`,
+        content: `
+      COGNITIVE METRICS:
+      Activated Cores: ${params.activatedCores.join(", ")}
+      Emotional Weight: ${params.averageEmotionalWeight.toFixed(2)}
+      Contradiction Score: ${params.averageContradictionScore.toFixed(2)}
+      
+      USER INPUT:
+      "${params.originalText || "Not provided"}"
+      
+      LANGUAGE:
+      ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"}
+      
+      ANALYZE:
+      Select the most suitable collapse approach: dominance, synthesis, dialectic, or context.
+      
+      DECIDE:
+      Call decideCollapseStrategy with:
+      - deterministic          (true or false)
+      - temperature           (0.1–1.5)
+      - justification         (short, in ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"}, referencing the chosen approach)
+      - emotionalIntensity    (optional, 0–1)
+      - emergentProperties    (optional, string array)
+      - userIntent            (optional, object: technical, philosophical, creative, emotional, relational — all 0–1)
+      
+      Respond only via the tool call.
+      `
       };
 
       console.log(
@@ -379,47 +367,5 @@ DECIDE: Provide strategy decision with justification in the specified language.`
       return cleaned;
     }
     return obj;
-  }
-
-  /**
-   * Fix malformed Unicode escapes in JSON strings
-   * Common issue with Portuguese text from LLMs
-   */
-  private fixMalformedUnicodeEscapes(jsonString: string): string {
-    // Create a more comprehensive fix for malformed Unicode
-    let fixed = jsonString;
-
-    // Common Portuguese character issues
-    const replacements: Array<[RegExp, string]> = [
-      // Process compound patterns first to avoid partial replacements
-      [/redund\\u00an\\u00C7\\u00e3s/g, "redund\\u00e2ncias"], // redundâncias (process before \u00an)
-      [/n\\u00fao /g, "n\\u00e3o "], // não (with space)
-      [/varia\\u00dclibilidade/g, "variabilidade"], // variabilidade (process before \u00dc)
-      [/contradi\\u00e7\\u00f3es/g, "contradi\\u00e7\\u00f5es"], // contradições
-
-      // Then process individual patterns
-      [/\\u00fdo/g, "\\u00ed"], // ído
-      [/\\u00fao/g, "\\u00e3o"], // ão (keep the 'o')
-      [/\\u00f5o/g, "\\u00f5"], // õo
-      [/\\u00e7\\u00f3es/g, "\\u00e7\\u00f5es"], // ções
-      [/\\u00e1\\u00e7/g, "\\u00e1"], // áç -> á
-      [/\\u00f3\\u00e7/g, "\\u00e7"], // óç -> ç
-      [/\\u00e9\\u00e7/g, "\\u00e9"], // éç -> é
-      [/\\u00an/g, "\\u00e2n"], // ân (keep the 'n')
-      [/\\u00en/g, "\\u00ean"], // ên (keep the 'n')
-      [/\\u00on/g, "\\u00f4n"], // ôn (keep the 'n')
-      [/\\u00dclibil/g, "\\u00fa"], // úlibil -> ú
-      [/\\u00an\\u00C7\\u00e3s/g, "\\u00e2ncias"], // ânÇãs -> âncias (uppercase C7)
-      [/\\u00an\\u00c7/gi, "\\u00e2"], // ânÇ -> â (handle uppercase Ç)
-      [/\\u00e7\u00e3o/g, "\\u00e7\\u00e3o"], // ção
-      [/mem\\u00f3ria/g, "mem\\u00f3ria"], // memória
-      [/patternes/g, "patterns"], // fix common misspelling
-    ];
-
-    for (const [pattern, replacement] of replacements) {
-      fixed = fixed.replace(pattern, replacement);
-    }
-
-    return fixed;
   }
 }

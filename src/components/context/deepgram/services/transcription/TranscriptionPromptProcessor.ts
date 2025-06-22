@@ -386,7 +386,9 @@ export class TranscriptionPromptProcessor {
       this.currentLanguage
     );
 
-    const cleanIntegratedPrompt = cleanThinkTags(integrationResult.prompt);
+    const integratedSystemPrompt = integrationResult.prompt[0];
+
+    const integratedUserPrompt = integrationResult.prompt[1];
 
     // Log integration decision
     LoggingUtils.logInfo(
@@ -397,7 +399,7 @@ export class TranscriptionPromptProcessor {
 
     // Log symbolic context synthesis
     symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
-      summary: cleanIntegratedPrompt, // summary is required in SymbolicContext
+      summary: integratedUserPrompt, // summary is required in SymbolicContext
       modules: processingResults.map((r: NeuralProcessingResult) => ({
         core: r.core,
         intensity: r.intensity,
@@ -406,7 +408,7 @@ export class TranscriptionPromptProcessor {
 
     // PHASE 5: Generate Response with dynamic temperature
     const fullResponse = await this.responseGenerator.generateResponse(
-      cleanIntegratedPrompt,
+      integratedUserPrompt,
       integrationResult.temperature,
       temporaryContext,
       conversationMessages
