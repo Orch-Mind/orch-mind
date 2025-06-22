@@ -46,8 +46,6 @@ export class ProcessingResultsSaver {
     // Save to long-term memory
     await this._saveToLongTermMemory(transcription, response);
 
-    // Save neural processing data for brain evolution tracking
-    await this._saveNeuralProcessingData(neuralActivation, processingResults);
   }
 
   /**
@@ -84,30 +82,5 @@ export class ProcessingResultsSaver {
       this.storageService.getSpeakerTranscriptions(),
       this.speakerService.getPrimaryUserSpeaker()
     );
-  }
-
-  /**
-   * Save neural processing data for brain evolution tracking
-   */
-  private async _saveNeuralProcessingData(
-    activation: NeuralSignalResponse,
-    processingResults: NeuralProcessingResult[] = []
-  ): Promise<void> {
-    try {
-      const neuralData = {
-        sessionId: this.sessionManager.getCurrentSessionId(),
-        timestamp: new Date().toISOString(),
-        activation,
-        results: processingResults,
-        interactionCount: this.sessionManager.incrementInteraction(),
-      };
-
-      // TODO: Implement neural data persistence storage
-      LoggingUtils.logInfo(
-        `Neural processing data saved: ${JSON.stringify(neuralData)}`
-      );
-    } catch (error) {
-      LoggingUtils.logError("Error saving neural processing data", error);
-    }
   }
 }
