@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { IMemoryService } from '../../../interfaces/memory/IMemoryService';
-import { NeuralProcessingResult, NeuralSignalResponse } from '../../../interfaces/neural/NeuralSignalTypes';
-import { ITranscriptionStorageService } from '../../../interfaces/transcription/ITranscriptionStorageService';
-import { ISpeakerIdentificationService } from '../../../interfaces/utils/ISpeakerIdentificationService';
-import { SymbolicInsight } from '../../../types/SymbolicInsight';
-import { LoggingUtils } from '../../../utils/LoggingUtils';
-import symbolicCognitionTimelineLogger from '../../utils/SymbolicCognitionTimelineLoggerSingleton';
-import { SessionManager } from './SessionManager';
+import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
+import {
+  NeuralProcessingResult,
+  NeuralSignalResponse,
+} from "../../../interfaces/neural/NeuralSignalTypes";
+import { ITranscriptionStorageService } from "../../../interfaces/transcription/ITranscriptionStorageService";
+import { ISpeakerIdentificationService } from "../../../interfaces/utils/ISpeakerIdentificationService";
+import { SymbolicInsight } from "../../../types/SymbolicInsight";
+import { LoggingUtils } from "../../../utils/LoggingUtils";
+import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
+import { SessionManager } from "./SessionManager";
 
 /**
  * Neural processing results cognitive saver
@@ -31,12 +34,14 @@ export class ProcessingResultsSaver {
     neuralActivation: NeuralSignalResponse,
     processingResults: NeuralProcessingResult[]
   ): Promise<void> {
-    
     // Log symbolic cognitive response
     await this._logSymbolicResponse(response, processingResults);
 
     // Update conversation history
-    this.memoryService.addToConversationHistory({ role: "user", content: transcription });
+    this.memoryService.addToConversationHistory({
+      role: "user",
+      content: transcription,
+    });
 
     // Save to long-term memory
     await this._saveToLongTermMemory(transcription, response);
@@ -47,24 +52,32 @@ export class ProcessingResultsSaver {
 
   /**
    * Log symbolic cognitive response with insights
+   * This logs the response enriched with symbolic topics and insights
+   * (Different from the raw response log in TranscriptionPromptProcessor)
    */
-  private async _logSymbolicResponse(response: string, processingResults: NeuralProcessingResult[]): Promise<void> {
-    const symbolicTopics = processingResults.map(r => r.core);
+  private async _logSymbolicResponse(
+    response: string,
+    processingResults: NeuralProcessingResult[]
+  ): Promise<void> {
+    const symbolicTopics = processingResults.map((r) => r.core);
     const importantInsights: SymbolicInsight[] = processingResults
-      .flatMap(r => Array.isArray(r.insights) ? r.insights : [])
-      .filter(insight => insight && typeof insight.type === 'string');
-    
+      .flatMap((r) => (Array.isArray(r.insights) ? r.insights : []))
+      .filter((insight) => insight && typeof insight.type === "string");
+
     symbolicCognitionTimelineLogger.logGptResponse({
       response,
       symbolicTopics,
-      insights: importantInsights
+      insights: importantInsights,
     });
   }
 
   /**
    * Save interaction to long-term memory
    */
-  private async _saveToLongTermMemory(transcription: string, response: string): Promise<void> {
+  private async _saveToLongTermMemory(
+    transcription: string,
+    response: string
+  ): Promise<void> {
     await this.memoryService.saveToLongTermMemory(
       transcription,
       response,
@@ -86,13 +99,15 @@ export class ProcessingResultsSaver {
         timestamp: new Date().toISOString(),
         activation,
         results: processingResults,
-        interactionCount: this.sessionManager.incrementInteraction()
+        interactionCount: this.sessionManager.incrementInteraction(),
       };
 
       // TODO: Implement neural data persistence storage
-      LoggingUtils.logInfo(`Neural processing data saved: ${JSON.stringify(neuralData)}`);
+      LoggingUtils.logInfo(
+        `Neural processing data saved: ${JSON.stringify(neuralData)}`
+      );
     } catch (error) {
       LoggingUtils.logError("Error saving neural processing data", error);
     }
   }
-} 
+}

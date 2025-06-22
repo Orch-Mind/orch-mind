@@ -561,7 +561,12 @@ export class TranscriptionPromptProcessor {
 
       const response = cleanThinkTags(fullResponse);
 
+      // Log the complete AI response immediately after generation
+      // This captures the raw response as soon as it's complete
+      symbolicCognitionTimelineLogger.logGptResponse(response);
+
       // PHASE 6: Save and Log Results
+      // Note: resultsSaver will also log the response with symbolic insights
       await this.resultsSaver.saveResults(
         transcriptionToSend,
         response,
