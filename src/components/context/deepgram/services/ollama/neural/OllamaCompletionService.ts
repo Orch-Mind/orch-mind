@@ -291,7 +291,8 @@ export class OllamaCompletionService implements ICompletionService {
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
   async streamModelResponse(
-    messages: Array<{ role: string; content: string }>
+    messages: Array<{ role: string; content: string }>,
+    temperature?: number
   ): Promise<ModelStreamResponse> {
     try {
       // Ensure the Ollama client is available
@@ -313,6 +314,9 @@ export class OllamaCompletionService implements ICompletionService {
           model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:latest",
           messages: formattedMessages,
           stream: false,
+          options: {
+            temperature: temperature ?? 0.7,
+          },
         }),
       });
 

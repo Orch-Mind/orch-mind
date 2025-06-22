@@ -4,7 +4,10 @@
 // NeuralSignalExtractor.ts
 // Module responsible for extracting symbolic neural signals from the transcription context
 
-import { NeuralSignalResponse } from "../../interfaces/neural/NeuralSignalTypes";
+import {
+  NeuralSignal,
+  NeuralSignalResponse,
+} from "../../interfaces/neural/NeuralSignalTypes";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { LoggingUtils } from "../../utils/LoggingUtils";
 import {
@@ -167,11 +170,52 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
         return this.generateFallbackSignals(transcription);
       }
 
-      LoggingUtils.logInfo(
-        `✅ [NeuralSignalExtractor] Successfully validated ${validSignals.length} neural signals`
+      // Natural cognitive limits - be more selective
+      let finalSignals = validSignals;
+
+      // Filter out very weak signals (intensity < 0.4)
+      const MIN_INTENSITY_THRESHOLD = 0.4;
+      finalSignals = finalSignals.filter(
+        (s) => s.intensity >= MIN_INTENSITY_THRESHOLD
       );
 
-      return { signals: validSignals };
+      if (finalSignals.length === 0 && validSignals.length > 0) {
+        // If all signals are weak, keep the strongest 2
+        finalSignals = validSignals
+          .sort((a, b) => b.intensity - a.intensity)
+          .slice(0, 2);
+      } else {
+        // Always sort by intensity
+        finalSignals.sort((a, b) => b.intensity - a.intensity);
+      }
+
+      // Apply strict limiting - maximum 3 cores for most cases
+      const maxSignals = 3;
+
+      if (finalSignals.length > maxSignals) {
+        LoggingUtils.logWarning(
+          `⚠️ [NeuralSignalExtractor] Limiting to top ${maxSignals} signals (intensity threshold: ${MIN_INTENSITY_THRESHOLD}).`
+        );
+        finalSignals = finalSignals.slice(0, maxSignals);
+      }
+
+      LoggingUtils.logInfo(
+        `✅ [NeuralSignalExtractor] Signal filtering summary:
+        - Raw signals from LLM: ${neuralResponse.signals.length}
+        - After validation: ${validSignals.length}
+        - After intensity filter (>=${MIN_INTENSITY_THRESHOLD}): ${finalSignals.length}
+        - Final output: ${finalSignals.length} signals`
+      );
+
+      // Log activated cores for debugging
+      const activatedCores = finalSignals
+        .map((s) => `${s.core}(${s.intensity.toFixed(2)})`)
+        .join(", ");
+      LoggingUtils.logInfo(
+        `🎯 [NeuralSignalExtractor] Activated cores: ${activatedCores}`
+      );
+
+      return { signals: finalSignals };
     } catch (error) {
       // In case of error, log and provide a fallback response
       LoggingUtils.logError(
@@ -186,51 +230,167 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
   /**
    * Generates fallback neural signals when the main extraction fails
    * @param transcription The original transcription text
-   * @returns Fallback neural signal response
+   * @returns Fallback neural signals based on content analysis
    */
   private generateFallbackSignals(transcription: string): NeuralSignalResponse {
     LoggingUtils.logInfo(
       "🧠 [NeuralSignalExtractor] Generating fallback neural signals..."
     );
 
-    return {
-      signals: [
-        {
-          core: "memory",
-          intensity: 0.8,
-          symbolic_query: {
-            query: `memories related to: ${transcription.substring(0, 100)}`,
-          },
-          symbolicInsights: {
-            recall_type: "semantic",
-            temporal: "recent",
-            importance: "high",
-          },
+    // Analyze input to determine activated brain areas
+    const wordCount = transcription.split(/\s+/).length;
+    const hasQuestionMark = transcription.includes("?");
+    const hasEmotionalWords =
+      /feel|love|hate|sad|happy|anxious|lost|confused/i.test(transcription);
+    const hasGreeting = /hi|hello|hey|good morning|good evening/i.test(
+      transcription
+    );
+    const hasPlanning = /will|going to|plan|tomorrow|future|next/i.test(
+      transcription
+    );
+    const hasSelfReference = /i|me|my|myself/i.test(transcription);
+
+    // Generate signals for detected activations
+    const signals: NeuralSignal[] = [];
+
+    // Language activation
+    if (hasQuestionMark || wordCount > 20) {
+      const intensity = 0.6;
+      signals.push({
+        core: "language",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 11
+        symbolic_query: {
+          query: `linguistic expression: ${transcription.substring(0, 100)}`,
         },
-        {
-          core: "metacognitive",
-          intensity: 0.7,
-          symbolic_query: {
-            query: `reflection on: ${transcription.substring(0, 100)}`,
-          },
-          symbolicInsights: {
-            thought: "Processing cognitive stimulus",
-            state: "conscious",
-          },
+        symbolicInsights: {
+          function: "language_production",
+          complexity: wordCount > 20 ? "complex" : "simple",
         },
-        {
-          core: "valence",
-          intensity: 0.6,
-          symbolic_query: {
-            query: `emotions about: ${transcription.substring(0, 100)}`,
-          },
-          symbolicInsights: {
-            emotion: "neutral",
-            intensity: "moderate",
-          },
+      });
+    }
+
+    // Relational activation for greetings
+    if (hasGreeting) {
+      const intensity = 0.8;
+      signals.push({
+        core: "relational",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 13
+        symbolic_query: {
+          query: `social interaction: ${transcription.substring(0, 100)}`,
         },
-      ],
-    };
+        symbolicInsights: {
+          function: "social_engagement",
+          context: "greeting",
+        },
+      });
+    }
+
+    // Emotional processing
+    if (hasEmotionalWords) {
+      const intensity = 0.9;
+      signals.push({
+        core: "valence",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 14
+        symbolic_query: {
+          query: `emotional content: ${transcription.substring(0, 100)}`,
+        },
+        symbolicInsights: {
+          function: "emotion_processing",
+          valence: transcription.match(/happy|joy|love/i)
+            ? "positive"
+            : "negative",
+        },
+      });
+    }
+
+    // Shadow processing
+    if (
+      hasEmotionalWords &&
+      transcription.length > 200 &&
+      /conflict|struggle|dark|unconscious|repress/i.test(transcription)
+    ) {
+      const intensity = 0.5;
+      signals.push({
+        core: "shadow",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 10
+        symbolic_query: {
+          query: `shadow content: ${transcription.substring(0, 100)}`,
+        },
+        symbolicInsights: {
+          function: "unconscious_processing",
+        },
+      });
+    }
+
+    // Future-oriented thinking activates planning
+    if (hasPlanning) {
+      const intensity = 0.7;
+      signals.push({
+        core: "planning",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 12
+        symbolic_query: {
+          query: `planning content: ${transcription.substring(0, 100)}`,
+        },
+        symbolicInsights: {
+          function: "future_planning",
+          temporal_focus: "prospective",
+        },
+      });
+    }
+
+    // Integrity activation
+    if (
+      hasSelfReference &&
+      /values|ethics|who I am|identity|principle|belief/i.test(transcription)
+    ) {
+      const intensity = 0.6;
+      signals.push({
+        core: "integrity",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 11
+        symbolic_query: {
+          query: `self-reference: ${transcription.substring(0, 100)}`,
+        },
+        symbolicInsights: {
+          function: "self_awareness",
+          temporal_focus: "retrospective",
+        },
+      });
+    }
+
+    // Will activation for intention expressions
+    if (transcription.match(/want|need|must|should|will do/i)) {
+      const intensity = 0.65;
+      signals.push({
+        core: "will",
+        intensity: intensity,
+        topK: Math.round(5 + intensity * 10), // topK = 12
+        symbolic_query: {
+          query: `intentional content: ${transcription.substring(0, 100)}`,
+        },
+        symbolicInsights: {
+          function: "volition",
+          agency: "personal",
+        },
+      });
+    }
+
+    // Sort by intensity and keep only top 3
+    signals.sort((a, b) => b.intensity - a.intensity);
+    if (signals.length > 3) {
+      signals.splice(3);
+    }
+
+    LoggingUtils.logInfo(
+      `🧠 [NeuralSignalExtractor] Generated ${signals.length} fallback signals`
+    );
+
+    return { signals };
   }
 
   /**
@@ -246,28 +406,22 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
     const styleGuide =
       "COGNITIVE ACTIVATION FRAMEWORK: Process this input through holographic neural activation.";
 
-    // Holographic analysis framework based on Pribram's theory
-    const analysisFramework = `HOLOGRAPHIC PROCESSING INSTRUCTIONS:
+    // Reverse-engineering framework - analyzing user's brain activation
+    const analysisFramework = `USER BRAIN ANALYSIS:
 
-1. MULTI-DIMENSIONAL ANALYSIS:
-   - Semantic dimensions (meaning layers)
-   - Emotional dimensions (affective resonance)
-   - Temporal dimensions (past/present/future connections)
-   - Archetypal dimensions (universal patterns)
-   - Somatic dimensions (embodied experience)
+1. DETECTION:
+   - Emotional aspects (if any)
+   - Cognitive processes involved
+   - Social elements (if any)
+   - Memory or planning aspects
+   - Language complexity
 
-2. INTERFERENCE PATTERN DETECTION:
-   - Constructive interference (reinforcing themes)
-   - Destructive interference (contradictory elements)
-   - Phase relationships (timing and rhythm)
+2. ACTIVATION:
+   - Identify the main brain areas used
+   - Assign intensity based on prominence
+   - Focus on the most active 2-3 areas
 
-3. NEURAL SIGNAL GENERATION:
-   - Generate 3-8 neural signals based on input complexity
-   - Each signal contains COMPLETE information (holographic)
-   - Specialized processing through different cognitive lenses
-   - Natural language queries for memory retrieval
-
-REMEMBER: This is holographic processing—the whole is contained in each part, viewed through specialized perspectives.`;
+3. Call activateBrainArea for each main activation.`;
 
     // Build the complete prompt
     let enrichedPrompt = `${styleGuide}\n\nHOLOGRAPHIC INPUT: ${originalPrompt}`;

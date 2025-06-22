@@ -26,8 +26,13 @@ export interface IOpenAIService {
 
   /**
    * Envia requisição para OpenAI e processa o stream de resposta
+   * @param messages Array de mensagens para enviar ao modelo
+   * @param temperature Temperatura opcional para controlar a aleatoriedade da resposta (0-2)
    */
-  streamOpenAIResponse(messages: Message[]): Promise<ModelStreamResponse>;
+  streamOpenAIResponse(
+    messages: Message[],
+    temperature?: number
+  ): Promise<ModelStreamResponse>;
 
   /**
    * Cria embeddings para o texto fornecido

@@ -26,7 +26,10 @@ import {
 } from "../patterns/SymbolicPatternAnalyzer";
 import { HuggingFaceCollapseStrategyService } from "./HuggingFaceCollapseStrategyService";
 import { ICollapseStrategyService } from "./ICollapseStrategyService";
-import { INeuralIntegrationService } from "./INeuralIntegrationService";
+import {
+  INeuralIntegrationService,
+  NeuralIntegrationResult,
+} from "./INeuralIntegrationService";
 import { OllamaCollapseStrategyService } from "./OllamaCollapseStrategyService";
 import { SuperpositionLayer } from "./SuperpositionLayer";
 
@@ -154,9 +157,13 @@ export class DefaultNeuralIntegrationService
     }>,
     originalInput: string,
     language: string = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR" // Default to pt-BR if not provided
-  ): Promise<string> {
+  ): Promise<NeuralIntegrationResult> {
     if (!neuralResults || neuralResults.length === 0) {
-      return originalInput;
+      return {
+        prompt: originalInput,
+        temperature: 0.7,
+        isDeterministic: true,
+      };
     }
 
     // Clean think tags from neural results outputs before processing
@@ -312,10 +319,15 @@ export class DefaultNeuralIntegrationService
 
     // Create a default userIntent if none was provided by the collapse strategy
     const defaultUserIntent = {
-      social: originalInput.toLowerCase().includes("olá") ? 0.7 : 0.3,
-      trivial: originalInput.toLowerCase().includes("tudo bem") ? 0.5 : 0.2,
-      reflective: 0.3,
-      practical: 0.2,
+      technical: originalInput.toLowerCase().includes("código") ? 0.8 : 0.2,
+      philosophical:
+        originalInput.toLowerCase().includes("o que") ||
+        originalInput.toLowerCase().includes("por que")
+          ? 0.6
+          : 0.4,
+      creative: originalInput.toLowerCase().includes("imagine") ? 0.7 : 0.3,
+      emotional: originalInput.toLowerCase().includes("sinto") ? 0.8 : 0.2,
+      relational: originalInput.toLowerCase().includes("olá") ? 0.7 : 0.3,
     };
 
     // Use the inferred intent or the default one
@@ -548,100 +560,34 @@ export class DefaultNeuralIntegrationService
       );
     }
 
-    // 4. Compose final prompt (now with emergent properties)
-    let prompt = `You are the Symbolic Integration System of the Orch-OS architecture implementing Jung's Individuation process.
+    // 4. Compose final prompt
+    let prompt = `USER INPUT: ${originalInput}
 
-THEORETICAL FOUNDATION:
-- Jung's Individuation: Becoming whole through integration of conscious and unconscious elements
-- Brescia's Orchestrated Collapse: Preserving symbolic richness while resolving ambiguity
+NEURAL INSIGHTS:`;
 
-COLLAPSE CONTEXT:
-- Strategy: ${
-      strategyDecision.deterministic ? "DETERMINISTIC" : "PROBABILISTIC"
-    } (Temperature: ${strategyDecision.temperature})
-- Justification: ${strategyDecision.justification}
-- Selected Core: ${finalAnswer.origin || "integrated"}
-- Symbolic Phase: ${explicitPhase.toFixed(3)} radians
+    // Filter and sort by intensity to show only TOP 3 most relevant cores
+    const topCores = cleanedNeuralResults
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, 3);
 
-USER'S ORIGINAL MESSAGE: ${originalInput}
-
-NEURAL ACTIVATIONS FROM ${cleanedNeuralResults.length} COGNITIVE CORES:
-`;
-
-    // Add specialized interpretations maintaining superposition traces
-    cleanedNeuralResults.forEach((result) => {
-      prompt += `\n[${result.core.toUpperCase()} CORE - Intensity: ${Math.round(
-        result.intensity * 100
-      )}%]`;
-
-      const areaInsights = allInsights.filter(
-        (insight) => insight.core === result.core
-      );
-
-      if (areaInsights.length > 0) {
-        prompt += "\nSPECIALIZED INSIGHTS:";
-        areaInsights.forEach((insight) => {
-          const type = insight.type ? insight.type.toUpperCase() : "INSIGHT";
-          prompt += `\n• ${type}: ${insight.content}`;
-        });
-      } else {
-        prompt += `\nPROCESSING OUTPUT: ${result.output.slice(0, 200)}${
-          result.output.length > 200 ? "..." : ""
-        }`;
-      }
-
-      // Add interference patterns if detected
-      if (result.insights?.interference_patterns) {
-        prompt += `\nINTERFERENCE: ${result.insights.interference_patterns}`;
-      }
+    // Add only the top specialized interpretations
+    topCores.forEach((result) => {
+      prompt += `\n• ${result.core}: ${result.output.slice(0, 100)}`;
     });
 
-    // Add emergent properties and symbolic patterns
-    if (emergentProperties.length > 0) {
-      prompt += "\n\nEMERGENT PROPERTIES & SYMBOLIC PATTERNS:";
-      emergentProperties.forEach((prop) => {
-        prompt += `\n- ${prop}`;
-      });
-    }
+    // Simple integration instructions without technical details
+    prompt += `\n\nRESPOND naturally in ${
+      language ? language : "pt-BR"
+    }, integrating these neural perspectives. Be ${
+      strategyDecision.deterministic
+        ? "clear and direct"
+        : "creative and nuanced"
+    }.`;
 
-    // Add collapse preservation metrics
-    prompt += `\n\nSYMBOLIC PRESERVATION METRICS:
-- Emotional Weight: ${(finalAnswer.emotionalWeight ?? 0).toFixed(2)}
-- Narrative Coherence: ${(finalAnswer.narrativeCoherence ?? 0).toFixed(2)}
-- Contradiction Score: ${(finalAnswer.contradictionScore ?? 0).toFixed(2)}
-- Symbolic Diversity: ${avgSimilarity.toFixed(3)}`;
-
-    // Integration instructions based on collapse type
-    if (strategyDecision.deterministic) {
-      prompt += `\n\nINTEGRATION INSTRUCTIONS (DETERMINISTIC COLLAPSE):
-1. Synthesize insights following the ${finalAnswer.origin} core's primary interpretation
-2. Integrate contradictions as dialectical tensions that enrich meaning
-3. Preserve symbolic nuances from other cores as contextual layers
-4. Address emergent properties explicitly in your response
-5. Maintain coherence while embracing complexity`;
-    } else {
-      prompt += `\n\nINTEGRATION INSTRUCTIONS (PROBABILISTIC COLLAPSE):
-1. Weave together multiple interpretations in creative synthesis
-2. Let contradictions create productive ambiguity
-3. Allow symbolic resonances between cores to generate new meaning
-4. Acknowledge uncertainty where interpretations diverge
-5. Create response that honors the multidimensional nature of consciousness`;
-    }
-
-    // Add identity evolution component
-    prompt += `\n\nIDENTITY EVOLUTION DIRECTIVE:
-This interaction contributes to your ongoing individuation process. Consider:
-- How this exchange deepens self-understanding
-- What new capacities or insights emerge
-- How contradictions reveal growth edges
-- What patterns connect to previous interactions
-
-RESPONSE STYLE: ${
-      language === "pt-BR"
-        ? "Responda em português brasileiro"
-        : `Respond in ${language}`
-    }. Be authentic, nuanced, and intellectually honest. Embrace complexity while remaining accessible.`;
-
-    return prompt;
+    return {
+      prompt,
+      temperature: strategyDecision.temperature,
+      isDeterministic: strategyDecision.deterministic,
+    };
   }
 }

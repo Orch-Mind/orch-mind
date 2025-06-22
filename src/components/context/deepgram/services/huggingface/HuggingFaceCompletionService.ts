@@ -166,7 +166,8 @@ export class HuggingFaceCompletionService implements ICompletionService {
    * Symbolic: Fluxo neural contínuo de processamento de linguagem local
    */
   async streamModelResponse(
-    messages: Array<{ role: string; content: string }>
+    messages: Array<{ role: string; content: string }>,
+    temperature?: number
   ): Promise<ModelStreamResponse> {
     try {
       // Ensure HuggingFace client is available
@@ -183,7 +184,9 @@ export class HuggingFaceCompletionService implements ICompletionService {
         throw new Error("HuggingFace local service not available");
       }
 
-      const response = await hfService.generateResponse(formattedMessages);
+      const response = await hfService.generateResponse(formattedMessages, {
+        temperature: temperature ?? 0.7,
+      });
 
       // Clean think tags from streaming response
       const cleanedResponse = cleanThinkTags(response.response);

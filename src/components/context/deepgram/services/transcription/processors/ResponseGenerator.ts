@@ -20,9 +20,14 @@ export class ResponseGenerator {
 
   /**
    * Generate response using the selected backend
+   * @param integratedPrompt The integrated prompt from neural processing
+   * @param temperature Temperature for response generation (0.1-1.5)
+   * @param temporaryContext Optional temporary context
+   * @param conversationMessages Optional conversation messages
    */
   async generateResponse(
     integratedPrompt: string,
+    temperature: number,
     temporaryContext?: string,
     conversationMessages?: Message[]
   ): Promise<string> {
@@ -66,7 +71,7 @@ export class ResponseGenerator {
     );
     console.log("🧠 [ResponseGenerator] Messages:", messages);
 
-    return await this._generate(messages);
+    return await this._generate(messages, temperature);
   }
 
   /**
@@ -135,9 +140,19 @@ REMEMBER: These instructions create a temporary lens through which to process in
   /**
    * Generate response using OpenAI backend
    */
-  private async _generate(messages: Message[]): Promise<string> {
+  private async _generate(
+    messages: Message[],
+    temperature: number
+  ): Promise<string> {
     try {
-      const response = await this.llmService.streamOpenAIResponse(messages);
+      const response = await this.llmService.streamOpenAIResponse(
+        messages,
+        temperature
+      );
+
+      LoggingUtils.logInfo(
+        `🌡️ [ResponseGenerator] Generating response with temperature: ${temperature}`
+      );
 
       // Clean think tags from the final response
       const cleanedResponse = cleanThinkTags(response.responseText);

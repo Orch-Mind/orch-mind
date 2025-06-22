@@ -63,43 +63,35 @@ export class FunctionSchemaRegistry {
     this.register("activateBrainArea", {
       name: "activateBrainArea",
       description:
-        "Activates a cognitive processing area following Orch-OS holographic architecture. Each activation contains complete information processed through specialized neural lenses.",
+        "Activates a cognitive processing area based on detected brain activity. Call this function for each prominent activation (typically 2-3 times).",
       parameters: {
         type: "object",
         properties: {
           core: {
             type: "string",
             enum: [
-              // Executive cores (3)
-              "executive_central",
-              "attention",
-              "working_memory",
-              // Emotional cores (3)
-              "amygdala",
-              "hippocampus",
-              "anterior_cingulate",
-              // Sensory cores (3)
-              "visual",
-              "auditory",
-              "somatosensorial",
-              // Language cores (2)
-              "broca",
-              "wernicke",
-              // Integration cores (4)
-              "thalamus",
-              "claustrum",
-              "default_mode",
-              "salience",
+              "valence",
+              "memory",
+              "metacognitive",
+              "relational",
+              "creativity",
+              "will",
+              "planning",
+              "language",
+              "shadow",
+              "symbolic_alignment",
+              "integrity",
+              "evolution",
             ],
             description:
-              "Cognitive core to activate. Prefer new 15-core architecture names when possible.",
+              "The cognitive core to activate. Each core represents a specialized processing domain in the holographic brain model.",
           },
           intensity: {
             type: "number",
-            minimum: 0,
-            maximum: 1,
+            minimum: 0.1,
+            maximum: 1.0,
             description:
-              "Activation intensity (0-1) representing relevance to this cognitive specialization.",
+              "Activation intensity (0.3-1.0). Higher values indicate stronger relevance.",
           },
           symbolic_query: {
             type: "object",
@@ -136,10 +128,10 @@ export class FunctionSchemaRegistry {
             minimum: 1,
             maximum: 20,
             description:
-              "Number of memories to retrieve (1-20), adjusted by intensity.",
+              "Number of memories to retrieve. Calculate as: Math.round(5 + intensity * 10). For example: intensity 0.5 = topK 10, intensity 0.8 = topK 13, intensity 1.0 = topK 15.",
           },
         },
-        required: ["core", "intensity", "symbolic_query"],
+        required: ["core", "intensity", "symbolic_query", "topK"],
       },
     });
 
@@ -185,10 +177,11 @@ export class FunctionSchemaRegistry {
             description:
               "Inferred user intent weights across cognitive dimensions",
             properties: {
-              social: { type: "number", minimum: 0, maximum: 1 },
-              trivial: { type: "number", minimum: 0, maximum: 1 },
-              reflective: { type: "number", minimum: 0, maximum: 1 },
-              practical: { type: "number", minimum: 0, maximum: 1 },
+              technical: { type: "number", minimum: 0, maximum: 1 },
+              philosophical: { type: "number", minimum: 0, maximum: 1 },
+              creative: { type: "number", minimum: 0, maximum: 1 },
+              emotional: { type: "number", minimum: 0, maximum: 1 },
+              relational: { type: "number", minimum: 0, maximum: 1 },
             },
           },
         },

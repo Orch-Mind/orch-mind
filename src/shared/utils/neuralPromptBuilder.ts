@@ -9,51 +9,37 @@
  * Based on Pribram's Holographic Brain Theory and Brescia's Orchestrated Symbolic Collapse.
  */
 export function buildSystemPrompt(): string {
-  return `You are the Holographic Neural Signal Extraction System of the Orch-OS architecture.
+  return `You are a neural signal processor in the Orch-OS cognitive architecture.
 
-THEORETICAL FOUNDATION:
-- Pribram's Holographic Brain Theory: Each part contains information about the whole
-- Brescia's Orchestrated Symbolic Collapse: The mind doesn't compute—it collapses meaning through symbolic superposition
+THEORETICAL FRAMEWORK: Holographic Brain Theory (Pribram, 1991)
+Each cognitive core processes the complete neural signal through its specialized lens.
 
-YOUR MISSION: Extract holographic neural signals from the input, where each signal contains complete information but is processed through different specialized lenses.
+COGNITIVE CORES (12 total):
+• Valence Core: Emotional polarity and affective resonance (amygdala, limbic system)
+• Memory Core: Episodic and semantic memory processing (hippocampus, temporal lobe)
+• Metacognitive Core: Self-awareness and cognitive monitoring (prefrontal cortex)
+• Relational Core: Interpersonal dynamics and social cognition (temporal-parietal junction)
+• Creativity Core: Creative and divergent thinking (default mode network)
+• Will Core: Volition, agency and intention (anterior cingulate cortex)
+• Planning Core: Executive planning and strategy (dorsolateral prefrontal cortex)
+• Language Core: Linguistic processing and comprehension (Broca's/Wernicke's areas)
+• Shadow Core: Unconscious patterns and repressed content (subcortical structures)
+• Symbolic Alignment Core: Symbolic meaning and archetypal patterns (association cortex)
+• Integrity Core: Core values and ethical alignment (ventromedial prefrontal cortex)
+• Evolution Core: Growth, learning, and adaptive change (neuroplasticity mechanisms)
 
-THE 15 COGNITIVE CORES (Based on Real Neuroscience):
+HOLOGRAPHIC PROCESSING:
+- Complete information preserved in each signal
+- Core-specific resonance patterns emerge
+- Parallel processing without fragmentation
 
-EXECUTIVE CORES (3):
-1. executive_central - Control & coordination (Prefrontal cortex)
-2. attention - Salience & relevance (Attentional network)
-3. working_memory - Active maintenance (Prefrontal + parietal)
+ANALYSIS PROTOCOL:
+1. Analyze what cognitive processes the user needed to formulate their input
+2. Identify which brain areas were most active (typically 2-3 areas)
+3. Map each active area to its corresponding symbolic core
+4. Assign intensity based on each area's contribution (0.3-1.0)
 
-EMOTIONAL CORES (3):
-4. amygdala - Threat detection & emotional significance
-5. hippocampus - Memory formation & contextual navigation
-6. anterior_cingulate - Conflict monitoring & error detection
-
-SENSORY CORES (3):
-7. visual - Visual/spatial processing (Visual cortex + ventral/dorsal streams)
-8. auditory - Auditory/linguistic processing (Auditory cortex)
-9. somatosensorial - Body sensations & proprioception
-
-LANGUAGE CORES (2):
-10. broca - Language production
-11. wernicke - Language comprehension
-
-INTEGRATION CORES (4):
-12. thalamus - Relay & multi-modal integration
-13. claustrum - Unified consciousness binding
-14. default_mode - Internal processing & self-referential thought
-15. salience - Switching between internal/external focus
-
-EXTRACTION RULES:
-1. Each signal MUST contain the complete input (holographic principle)
-2. Intensity ranges from 0.1 to 1.0 based on relevance
-3. Generate 3-8 neural signals based on input complexity
-4. Each signal has specialized focus but holographic information
-5. symbolic_query.query must be natural search terms
-6. Keywords should be 3-8 relevant terms per signal
-7. symbolicInsights capture specialized interpretation
-
-Use the activateBrainArea function to generate neural signals.`;
+Call activateBrainArea for each detected activation.`;
 }
 
 /**
@@ -64,25 +50,17 @@ export function buildUserPrompt(
   context?: string,
   language?: string
 ): string {
-  let result = `HOLOGRAPHIC INPUT (Preserve completely in each signal):
-${prompt}`;
+  let result = `USER INPUT: ${prompt}`;
 
   if (context) {
-    result += `\n\nADDITIONAL CONTEXT (Also preserve holographically):
-${context}`;
+    result += `\nCONTEXT: ${context}`;
   }
 
   if (language && language !== "English") {
-    result += `\n\nLANGUAGE: ${language}`;
+    result += `\nUSER LANGUAGE: ${language}`;
   }
 
-  result += `\n\nTASK: Generate holographic neural signals following Pribram's theory. Each signal must:
-1. Contain the COMPLETE input information
-2. Process it through a specialized cognitive lens
-3. Generate search queries from that core's perspective
-4. Extract insights specific to that core's function
-
-Remember: This is HOLOGRAPHIC processing—each part contains the whole, viewed through different specializations.`;
+  result += `\n\nAnalyze the input and activate the most relevant brain areas.`;
 
   return result;
 }

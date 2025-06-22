@@ -357,45 +357,64 @@ export class TranscriptionPromptProcessor {
     const neuralActivation =
       await this._neuralSignalExtractor.extractNeuralSignals(extractionConfig);
 
-    // PHASE 2: Query Enrichment & Memory Retrieval
+    // PHASE 2: Query Enrichment
     const enrichedSignals = await this.signalEnricher.enrichSignals(
       neuralActivation.signals,
       this.currentLanguage
     );
+
+    // PHASE 3: PARALLEL MEMORY RETRIEVAL (Jung + Modern Neuroscience)
+    LoggingUtils.logInfo(
+      "🧠 PHASE 3 - Parallel Specialized Memory Processing..."
+    );
+
     const processingResults = await this.memoryRetriever.processSignals(
       enrichedSignals
     );
 
-    // PHASE 3: Neural Integration
     LoggingUtils.logInfo(
-      "💥 Third phase - Integrating neural processing into final prompt..."
+      `✅ Phase 3 complete: ${processingResults.length} memory retrievals processed`
     );
-    const integratedPrompt = await this.neuralIntegrationService.integrate(
+
+    // PHASE 4: Neural Integration
+    LoggingUtils.logInfo(
+      "💥 PHASE 4 - Integrating neural processing into final prompt..."
+    );
+    const integrationResult = await this.neuralIntegrationService.integrate(
       processingResults,
       transcriptionToSend,
       this.currentLanguage
     );
 
-    // Symbolic context synthesis log (clean think tags before logging)
-    const cleanIntegratedPrompt = cleanThinkTags(integratedPrompt);
+    const cleanIntegratedPrompt = cleanThinkTags(integrationResult.prompt);
+
+    // Log integration decision
+    LoggingUtils.logInfo(
+      `📊 Integration decision: ${
+        integrationResult.isDeterministic ? "Deterministic" : "Probabilistic"
+      }, Temperature: ${integrationResult.temperature}`
+    );
+
+    // Log symbolic context synthesis
     symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
       summary: cleanIntegratedPrompt, // summary is required in SymbolicContext
-      modules: processingResults.map((r) => ({
+      modules: processingResults.map((r: NeuralProcessingResult) => ({
         core: r.core,
         intensity: r.intensity,
       })),
     });
 
-    // PHASE 4: Generate Response
+    // PHASE 5: Generate Response with dynamic temperature
     const fullResponse = await this.responseGenerator.generateResponse(
       cleanIntegratedPrompt,
+      integrationResult.temperature,
       temporaryContext,
       conversationMessages
     );
 
     const response = cleanThinkTags(fullResponse);
 
-    // PHASE 5: Save and Log Results
+    // PHASE 6: Save and Log Results
     await this.resultsSaver.saveResults(
       transcriptionToSend,
       response,

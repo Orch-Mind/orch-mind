@@ -63,9 +63,9 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
   async streamOpenAIResponse(
-    messages: Message[]
+    messages: Message[],
+    temperature?: number
   ): Promise<ModelStreamResponse> {
-
     // Mapear as mensagens para o formato esperado pelo serviço de completion
     const mappedMessages = messages.map((m) => ({
       role: m.role,
@@ -73,7 +73,8 @@ export class HuggingFaceServiceFacade implements IOpenAIService {
     }));
 
     const response = await this.completionService.streamModelResponse(
-      mappedMessages
+      mappedMessages,
+      temperature
     );
 
     // Clean think tags from the response

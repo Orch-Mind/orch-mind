@@ -321,7 +321,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
       isReceivingResponse.current = true;
       console.log(
         "[CHAT] Started processing for conversation:",
-        currentConversation?.id
+        currentConversation?.id,
+        {
+          lastProcessedResponse: lastProcessedResponse.current.substring(0, 50),
+          processingResponseRef: processingResponseRef.current.substring(0, 50),
+        }
       );
       return;
     }
@@ -333,12 +337,6 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
 
     // Debounce the response processing to avoid rapid updates
     responseDebounceTimer.current = setTimeout(() => {
-      // Check if this is truly a new response
-      if (aiResponseText === lastProcessedResponse.current) {
-        console.log("⚠️ [CHAT] Same response already processed, skipping");
-        return;
-      }
-
       // Check if we're already processing this response
       if (aiResponseText === processingResponseRef.current) {
         console.log("⚠️ [CHAT] Already processing this response, skipping");
@@ -362,25 +360,15 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
         console.log(
           "⚠️ [CHAT] Response already in messages, skipping duplicate"
         );
-        console.log("[CHAT_DEBUG] Duplicate detection details:", {
-          aiResponseText: aiResponseText.substring(0, 100),
-          isDuplicateInHook,
-          isDuplicateInConversation,
-          messagesCount: chatMessages.length,
-          conversationMessagesCount: currentConversation?.messages?.length || 0,
-          systemMessagesCount: chatMessages.filter((m) => m.type === "system")
-            .length,
-          lastSystemMessage: chatMessages
-            .filter((m) => m.type === "system")
-            .slice(-1)[0]
-            ?.content?.substring(0, 100),
-          lastConversationSystemMessage: currentConversation?.messages
-            ?.filter((m) => m.type === "system")
-            .slice(-1)[0]
-            ?.content?.substring(0, 100),
-        });
-        // Update last processed to prevent re-processing
-        lastProcessedResponse.current = aiResponseText;
+
+        // Only update lastProcessedResponse if this is truly a duplicate in messages
+        if (isDuplicate && aiResponseText !== lastProcessedResponse.current) {
+          console.log(
+            "[CHAT_DEBUG] Updating lastProcessedResponse for existing message"
+          );
+          lastProcessedResponse.current = aiResponseText;
+        }
+
         // Clear the response since it's already in messages
         setTimeout(() => {
           onClearAiResponse();
@@ -399,7 +387,11 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
       if (looksLikeFinalResponse) {
         console.log(
           "✅ [CHAT] Adding final AI response:",
-          aiResponseText.substring(0, 50)
+          aiResponseText.substring(0, 50),
+          {
+            wasLastProcessed: lastProcessedResponse.current.substring(0, 50),
+            willBeLastProcessed: aiResponseText.substring(0, 50),
+          }
         );
 
         // Mark that we're processing this response
@@ -491,6 +483,10 @@ const ConversationalChatRefactored: React.FC<ConversationalChatProps> = ({
     if (chatState.processingTimeoutRef.current) {
       clearTimeout(chatState.processingTimeoutRef.current);
     }
+
+    // IMPORTANT: Clear last processed response to allow new responses
+    lastProcessedResponse.current = "";
+    processingResponseRef.current = "";
 
     console.log(
       "[CHAT] Sending message for conversation:",

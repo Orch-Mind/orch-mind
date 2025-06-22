@@ -48,7 +48,7 @@ export class HuggingFaceNeuralSignalService
       );
 
       // For HuggingFace models without native function-calling, force JSON output
-      userPromptContent += `\n\nReturn JSON array: [{core, query, intensity, keywords[], symbolicInsights}]`;
+      userPromptContent += `\n\nReturn JSON array with detected activations. Format: [{core, query, intensity, keywords[], symbolicInsights}]`;
 
       const activateBrainAreaSchema =
         FunctionSchemaRegistry.getInstance().get("activateBrainArea");
@@ -239,42 +239,20 @@ Original Query: ${query}`;
 
   private getCoreDescription(core: string): string {
     const coreDescriptions: Record<string, string> = {
-      // Executive cores
-      executive_central: "Control and coordination",
-      attention: "Salience and relevance detection",
-      working_memory: "Active information maintenance",
-      // Emotional cores
-      amygdala: "Threat and emotional significance",
-      hippocampus: "Memory and contextual navigation",
-      anterior_cingulate: "Conflict monitoring",
-      // Sensory cores
-      visual: "Visual and spatial processing",
-      auditory: "Auditory and linguistic processing",
-      somatosensorial: "Body sensations and proprioception",
-      // Language cores
-      broca: "Language production",
-      wernicke: "Language comprehension",
-      // Integration cores
-      thalamus: "Multi-modal relay and integration",
-      claustrum: "Consciousness unification",
-      default_mode: "Internal processing and self-reference",
-      salience: "Internal/external focus switching",
-      // Legacy cores (for backward compatibility)
-      memory: "Memory and recall",
-      valence: "Emotional valence",
-      metacognitive: "Self-reflection and introspection",
-      language: "Language processing",
-      planning: "Planning and strategy",
-      unconscious: "Unconscious processing",
-      archetype: "Archetypal patterns",
-      shadow: "Shadow aspects",
-      body: "Somatic awareness",
-      social: "Social cognition",
-      self: "Self-identity",
-      creativity: "Creative synthesis",
-      intuition: "Intuitive knowing",
-      will: "Volition and agency",
+      valence: "Emotional polarity and affective resonance processing",
+      memory: "Episodic and semantic memory retrieval and consolidation",
+      metacognitive: "Self-awareness and cognitive monitoring processes",
+      relational: "Interpersonal dynamics and social cognition",
+      creativity: "Creative thinking and novel connection generation",
+      will: "Volition, agency and intentional action",
+      planning: "Executive planning and strategic thinking",
+      language: "Linguistic processing and communication",
+      shadow: "Unconscious patterns and repressed content",
+      symbolic_alignment: "Symbolic meaning and archetypal pattern recognition",
+      integrity: "Core values and ethical alignment",
+      evolution: "Growth, learning, and adaptive change processes",
     };
-    return coreDescriptions[core] || "Unknown specialization";
+
+    return coreDescriptions[core] || "Specialized cognitive processing domain";
   }
 }

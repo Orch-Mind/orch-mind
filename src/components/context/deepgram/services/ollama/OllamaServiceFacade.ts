@@ -64,7 +64,8 @@ export class OllamaServiceFacade implements IOpenAIService {
    * Symbolic: Fluxo neural contínuo de processamento de linguagem
    */
   async streamOpenAIResponse(
-    messages: Message[]
+    messages: Message[],
+    temperature?: number
   ): Promise<ModelStreamResponse> {
     // Mapear as mensagens para o formato esperado pelo serviço de completion
     const mappedMessages = messages.map((m) => ({
@@ -72,7 +73,10 @@ export class OllamaServiceFacade implements IOpenAIService {
       content: m.content,
     }));
 
-    return await this.completionService.streamModelResponse(mappedMessages);
+    return await this.completionService.streamModelResponse(
+      mappedMessages,
+      temperature
+    );
   }
 
   /**

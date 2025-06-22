@@ -201,10 +201,34 @@ export class OllamaNeuralSignalService
           model,
           messages,
           tools,
-          temperature: 0.1,
+          temperature: 0.7, // Higher for more natural response
+          max_tokens: 1000, // More space for response
         });
 
+      // Debug logging
+      console.log(
+        "🦙 [OllamaNeuralSignal] Raw response:",
+        JSON.stringify({
+          hasChoices: !!response.choices,
+          choicesLength: response.choices?.length,
+          firstChoice: response.choices?.[0]
+            ? {
+                hasMessage: !!response.choices[0].message,
+                hasToolCalls: !!response.choices[0].message?.tool_calls,
+                toolCallsLength:
+                  response.choices[0].message?.tool_calls?.length,
+                content: response.choices[0].message?.content?.substring(
+                  0,
+                  200
+                ),
+              }
+            : null,
+        })
+      );
+
       const signals = this.extractSignals(response, prompt);
+
+      console.log("🦙 [OllamaNeuralSignal] Extracted signals:", signals.length);
 
       return { signals };
     } catch (error) {
@@ -336,53 +360,57 @@ UNFOLDING PROCESS:
 
 BOHM PRINCIPLE: "What is implicit must become explicit through unfolding."
 
+CURRENT SIGNAL CONTEXT:
+- Symbolic Core: ${core} (${this.getCoreDescription(core)})
+- Base Query: ${query}
+- Signal Intensity: ${(intensity * 100).toFixed(1)}%${
+      context ? `\n- Contextual Frame: ${context}` : ""
+    }
+- Processing Language: ${language || "pt-BR"}
+
 Generate 3-8 keywords that unfold these hidden dimensions.
-IMPORTANT: Never include metadata or intensity percentages in the enriched query.`;
 
-    let userPrompt = `NEURAL SIGNAL TO ENRICH:
-Core: ${core} (Cognitive specialization: ${this.getCoreDescription(core)})
-Intensity: ${(intensity * 100).toFixed(0)}% (Signal strength)
-Original Query: ${query}`;
+Use the enrichSemanticQuery function.`;
 
-    if (context) userPrompt += `\nContext: ${context}`;
-    if (language) userPrompt += `\nLanguage: ${language}`;
+    const userPrompt = `NEURAL SIGNAL TO ENRICH:
+Core: ${core}
+Query: "${query}"
+Intensity: ${intensity}
 
-    userPrompt += `\n\nUNFOLD THE IMPLICATE ORDER: Generate enriched search query and keywords that reveal hidden connections.`;
+Unfold the implicate order of this signal to reveal its hidden semantic connections and associative patterns.`;
 
     return [
-      { role: "system" as const, content: systemPrompt },
-      { role: "user" as const, content: userPrompt },
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
     ];
   }
 
   private getCoreDescription(core: string): string {
     const coreDescriptions: Record<string, string> = {
-      // Executive cores
-      executive_central: "Control and coordination",
-      attention: "Salience and relevance detection",
-      working_memory: "Active information maintenance",
-      // Emotional cores
-      amygdala: "Threat and emotional significance",
-      hippocampus: "Memory and contextual navigation",
-      anterior_cingulate: "Conflict monitoring",
-      // Sensory cores
-      visual: "Visual and spatial processing",
-      auditory: "Auditory and linguistic processing",
-      somatosensorial: "Body sensations and proprioception",
-      // Language cores
-      broca: "Language production",
-      wernicke: "Language comprehension",
-      // Integration cores
-      thalamus: "Multi-modal relay and integration",
-      claustrum: "Consciousness unification",
-      default_mode: "Internal processing and self-reference",
-      salience: "Internal/external focus switching",
+      valence: "Emotional polarity and affective resonance processing",
+      memory: "Episodic and semantic memory retrieval and consolidation",
+      metacognitive: "Self-awareness and cognitive monitoring processes",
+      relational: "Interpersonal dynamics and social cognition",
+      creativity: "Creative thinking and novel connection generation",
+      will: "Volition, agency and intentional action",
+      planning: "Executive planning and strategic thinking",
+      language: "Linguistic processing and communication",
+      shadow: "Unconscious patterns and repressed content",
+      symbolic_alignment: "Symbolic meaning and archetypal pattern recognition",
+      integrity: "Core values and ethical alignment",
+      evolution: "Growth, learning, and adaptive change processes",
     };
-    return coreDescriptions[core] || "Unknown specialization";
+
+    return coreDescriptions[core] || "Specialized cognitive processing domain";
   }
 
   private extractSignals(response: any, originalPrompt?: string): any[] {
     const toolCalls = response.choices?.[0]?.message?.tool_calls;
+
+    console.log("🦙 [OllamaNeuralSignal] extractSignals:", {
+      hasToolCalls: !!toolCalls,
+      toolCallsLength: toolCalls?.length || 0,
+    });
 
     if (toolCalls?.length > 0) {
       return this.extractFromToolCalls(toolCalls, originalPrompt);
@@ -390,16 +418,53 @@ Original Query: ${query}`;
 
     // Fallback: Try to extract from content if no tool calls found
     const content = response.choices?.[0]?.message?.content;
+    console.log("🦙 [OllamaNeuralSignal] Fallback content check:", {
+      hasContent: !!content,
+      contentLength: content?.length || 0,
+      contentPreview: content?.substring(0, 200),
+    });
+
     if (content && typeof content === "string") {
-      // Try to find JSON-like structures in the content
+      // Try to find JSON array or objects
+      const jsonArrayMatch = content.match(/\[[^\[\]]*\]/);
       const jsonMatches = content.match(/\{[^{}]*\}/g);
+
+      if (jsonArrayMatch) {
+        try {
+          const array = JSON.parse(jsonArrayMatch[0]);
+          if (Array.isArray(array)) {
+            const extractedSignals = [];
+            for (const item of array) {
+              if (item.core) {
+                const signal = NeuralSignalBuilder.buildFromArgs(
+                  item,
+                  originalPrompt
+                );
+                if (signal) {
+                  extractedSignals.push(signal);
+                }
+              }
+            }
+            if (extractedSignals.length > 0) {
+              console.log(
+                "🦙 [OllamaNeuralSignal] Extracted from JSON array:",
+                extractedSignals.length
+              );
+              return extractedSignals;
+            }
+          }
+        } catch (e) {
+          console.log("🦙 [OllamaNeuralSignal] JSON array parse error:", e);
+        }
+      }
+
       if (jsonMatches) {
         const extractedSignals = [];
         for (const match of jsonMatches) {
           try {
             const parsed = JSON.parse(match);
             // Check if it looks like a brain activation
-            if (parsed.core && parsed.intensity && parsed.symbolic_query) {
+            if (parsed.core) {
               const signal = NeuralSignalBuilder.buildFromArgs(
                 parsed,
                 originalPrompt
@@ -414,6 +479,10 @@ Original Query: ${query}`;
         }
 
         if (extractedSignals.length > 0) {
+          console.log(
+            "🦙 [OllamaNeuralSignal] Extracted from JSON objects:",
+            extractedSignals.length
+          );
           return extractedSignals;
         }
       }
