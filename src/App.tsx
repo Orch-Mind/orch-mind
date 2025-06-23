@@ -102,9 +102,8 @@ export default function App() {
   };
 
   // Provide heavy task manager to child components via context if needed
-  const contextValue = {
+  const toastContextValue: ToastContextType = {
     showToast,
-    queueHeavyTask, // Make available for HuggingFace service coordination
   };
 
   return (
@@ -116,7 +115,7 @@ export default function App() {
               <DeepgramProvider>
                 <CognitionLogProvider>
                   <ToastProvider>
-                    <ToastContext.Provider value={contextValue}>
+                    <ToastContext.Provider value={toastContextValue}>
                       <TranscriptionModule />
                     </ToastContext.Provider>
                     <Toast

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { CognitionEvent } from "../../../../context/deepgram/types/CognitionEvent";
+import styles from "../../CognitionTimeline.module.css";
 
 /**
  * Pure UI component for rendering a single cognition event in the timeline.
@@ -112,6 +113,8 @@ const formatEventType = (type: string): string => {
 
 export const CognitionEventUI: React.FC<CognitionEventUIProps> = React.memo(
   ({ event, idx, onClick, duration }) => {
+    const progressBarRef = useRef<HTMLDivElement>(null);
+
     // Verificar se é um evento de resposta GPT (geralmente o último)
     const isGptResponse = event.type === "gpt_response";
     const icon = eventTypeIcons[event.type] || (
@@ -130,6 +133,16 @@ export const CognitionEventUI: React.FC<CognitionEventUIProps> = React.memo(
       ? Math.round(event.intensity * 100)
       : 0;
     const neuralValue = isNeuralSignal ? `${intensityValue}%` : null;
+
+    // Set CSS custom property for progress bar width
+    useLayoutEffect(() => {
+      if (progressBarRef.current && isNeuralSignal) {
+        progressBarRef.current.style.setProperty(
+          "--progress-width",
+          `${intensityValue}%`
+        );
+      }
+    }, [intensityValue, isNeuralSignal]);
 
     /**
      * Sistema de cores para todos os cores neurais do Orch-OS
@@ -281,9 +294,11 @@ export const CognitionEventUI: React.FC<CognitionEventUIProps> = React.memo(
 
     return (
       <div
-        className={`relative rounded-xl bg-gray-900/90 p-3 shadow-lg transition-colors cursor-pointer ${
-          onClick ? "hover:bg-gray-800/90" : ""
-        } ${isGptResponse ? "mb-6 pb-4" : ""}`}
+        className={`relative rounded-xl p-3 shadow-lg transition-all cursor-pointer ${
+          styles.eventCardGlass
+        } ${onClick ? "hover:shadow-xl" : ""} ${
+          isGptResponse ? "mb-6 pb-4" : ""
+        }`}
         onClick={() => onClick && onClick(event)}
       >
         {/* Vertical timeline line - visible between consecutive events */}
@@ -343,10 +358,12 @@ export const CognitionEventUI: React.FC<CognitionEventUIProps> = React.memo(
                 </span>
                 {/* Barra de intensidade junto do percentual */}
                 <div className="w-28 h-2 bg-gray-800/60 rounded-full overflow-hidden ml-1">
-                  {/* Aplicando largura dinâmica com classes CSS */}
+                  {/* Aplicando largura dinâmica com CSS custom property */}
                   <div
-                    className={`h-full ${getProgressBarColor(neuralCore)}`}
-                    style={{ width: `${intensityValue}%` }}
+                    className={`h-full ${getProgressBarColor(neuralCore)} ${
+                      styles.progressBar
+                    }`}
+                    ref={progressBarRef}
                   />
                 </div>
               </div>

@@ -24,8 +24,8 @@
     rgba(255, 255, 255, 0.03) 0%,
     rgba(255, 255, 255, 0.01) 100%
   );
-  backdrop-filter: blur(40px) saturate(1.5) brightness(1.05);
   -webkit-backdrop-filter: blur(40px) saturate(1.5) brightness(1.05);
+  backdrop-filter: blur(40px) saturate(1.5) brightness(1.05);
   border: 1px solid rgba(0, 250, 255, 0.15);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1),
     0 0 100px rgba(0, 250, 255, 0.05), inset 0 0 60px rgba(255, 255, 255, 0.01),
@@ -117,11 +117,18 @@
   max-height: 60vh;
   overflow-y: auto;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 250, 255, 0.1);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(0, 250, 255, 0.15);
   border-radius: 0.75rem;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 0 32px rgba(255, 255, 255, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 600px) {
@@ -671,34 +678,47 @@ body.orchos-active {
   font-size: 1rem;
   background: linear-gradient(
     to right,
-    rgba(0, 250, 255, 0.2),
-    rgba(139, 92, 246, 0.2),
-    rgba(236, 72, 153, 0.2)
+    rgba(0, 250, 255, 0.15),
+    rgba(139, 92, 246, 0.15),
+    rgba(236, 72, 153, 0.15)
   );
-  box-shadow: 0 0 20px rgba(0, 250, 255, 0.3);
-  transition: all 0.2s ease;
-  border: 1px solid rgba(0, 250, 255, 0.3);
+  /* Iluminação base mais sutil com múltiplas camadas */
+  box-shadow: 0 0 20px rgba(0, 250, 255, 0.25), 0 0 35px rgba(0, 250, 255, 0.1),
+    inset 0 0 15px rgba(0, 250, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 250, 255, 0.25);
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  /* Adicionar efeito de vidro fosco */
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  backdrop-filter: blur(8px) saturate(1.2);
 }
 
-.orchos-cognition-logs-action-btn:hover {
-  box-shadow: 0 0 30px rgba(0, 250, 255, 0.5);
-  transform: scale(1.05);
-  border-color: rgba(0, 250, 255, 0.6);
+/* Adicionar um efeito de onda após clique */
+.orchos-cognition-logs-action-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 250, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease, opacity 0.6s ease;
+  opacity: 0;
 }
 
-.orchos-cognition-logs-action-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(0, 250, 255, 0.6);
-}
-
-.orchos-cognition-logs-action-btn:focus:not(:focus-visible) {
-  box-shadow: 0 0 20px rgba(0, 250, 255, 0.3);
+.orchos-cognition-logs-action-btn:active::after {
+  width: 300%;
+  height: 300%;
+  opacity: 0;
 }
 
 .orchos-cognition-logs-action-btn:disabled {
@@ -707,7 +727,8 @@ body.orchos-active {
 }
 
 /* Remove persistent focus indicators from all interactive elements in logs modal */
-.orchos-cognition-logs-modal button:focus:not(:focus-visible),
+.orchos-cognition-logs-modal
+  button:not(.orchos-cognition-logs-action-btn):focus:not(:focus-visible),
 .orchos-cognition-logs-modal input:focus:not(:focus-visible),
 .orchos-cognition-logs-modal label:focus:not(:focus-visible) {
   outline: none;
@@ -719,4 +740,42 @@ body.orchos-active {
 .orchos-cognition-logs-modal input,
 .orchos-cognition-logs-modal label {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Focus mantém a iluminação base */
+.orchos-cognition-logs-action-btn:focus {
+  outline: none;
+}
+
+/* Active apenas adiciona feedback visual sem alterar iluminação */
+.orchos-cognition-logs-action-btn:active {
+  transform: scale(1.02);
+}
+
+/* Força a manutenção da iluminação em TODOS os estados */
+.orchos-cognition-logs-action-btn,
+.orchos-cognition-logs-action-btn:focus,
+.orchos-cognition-logs-action-btn:active,
+.orchos-cognition-logs-action-btn:focus:active,
+.orchos-cognition-logs-action-btn:focus-visible,
+.orchos-cognition-logs-action-btn:focus:not(:focus-visible) {
+  box-shadow: 0 0 20px rgba(0, 250, 255, 0.25), 0 0 35px rgba(0, 250, 255, 0.1),
+    inset 0 0 15px rgba(0, 250, 255, 0.05) !important;
+  border-color: rgba(0, 250, 255, 0.25) !important;
+}
+
+/* Garantir que a regra de focus não remova a iluminação */
+.orchos-cognition-logs-modal
+  .orchos-cognition-logs-action-btn:focus:not(:focus-visible) {
+  box-shadow: 0 0 20px rgba(0, 250, 255, 0.25), 0 0 35px rgba(0, 250, 255, 0.1),
+    inset 0 0 15px rgba(0, 250, 255, 0.05) !important;
+  border-color: rgba(0, 250, 255, 0.25) !important;
+}
+
+/* Hover adiciona iluminação sutil */
+.orchos-cognition-logs-action-btn:hover {
+  box-shadow: 0 0 22px rgba(0, 250, 255, 0.3), 0 0 38px rgba(0, 250, 255, 0.12),
+    inset 0 0 18px rgba(0, 250, 255, 0.06) !important;
+  transform: scale(1.02);
+  border-color: rgba(0, 250, 255, 0.3) !important;
 }

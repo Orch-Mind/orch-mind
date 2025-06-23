@@ -377,7 +377,6 @@ async function createWindow(): Promise<void> {
 
       // Memory optimization for large AI models
       spellcheck: false, // Disable spellcheck to save memory
-      enableBlinkFeatures: "SharedArrayBuffer,WebAssembly", // Enable required features
 
       // Additional WebPreferences to suppress errors and optimize memory
       additionalArguments: [

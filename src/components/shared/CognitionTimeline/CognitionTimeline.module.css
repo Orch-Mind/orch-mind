@@ -70,16 +70,23 @@
 .neuralGlow {
   position: relative;
   overflow: hidden;
+  /* Define CSS custom properties */
+  --x: 50%;
+  --y: 50%;
 }
 
 .neuralGlow::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(99, 102, 241, 0.15) 0%, transparent 50%);
+  background: radial-gradient(
+    circle at var(--x, 50%) var(--y, 50%),
+    rgba(99, 102, 241, 0.15) 0%,
+    transparent 50%
+  );
   opacity: 0;
   transition: opacity 0.5s;
   pointer-events: none;
@@ -91,10 +98,11 @@
 
 /* Modal backdrop animation */
 .modalBackdrop {
+  background-color: rgba(0, 0, 0, 0);
   -webkit-backdrop-filter: blur(0px);
   backdrop-filter: blur(0px);
-  background-color: rgba(0, 0, 0, 0);
-  transition: -webkit-backdrop-filter 0.3s ease, backdrop-filter 0.3s ease, background-color 0.3s ease;
+  transition: -webkit-backdrop-filter 0.3s ease, backdrop-filter 0.3s ease,
+    background-color 0.3s ease;
 }
 
 .modalBackdropActive {
@@ -106,16 +114,19 @@
 /* Modal layout styles */
 .modalWrapper {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 50;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 2vh 1rem;
   background-color: rgba(0, 0, 0, 0.7);
+  overflow-y: auto;
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
-  overflow-y: auto;
 }
 
 .modalContent {
@@ -137,7 +148,7 @@
 }
 
 .eventIndicator::before {
-  content: '';
+  content: "";
   position: absolute;
   left: -8px;
   top: 50%;
@@ -160,4 +171,94 @@
   100% {
     box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
+}
+
+/* Glass effect for cognition group button */
+.groupButton {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+}
+
+/* Scrollable content container */
+.scrollableContent {
+  max-height: 420px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Modern browsers that support scrollbar-width */
+@supports (scrollbar-width: thin) {
+  .scrollableContent {
+    scrollbar-width: thin;
+  }
+}
+
+/* WebKit fallback for browsers that don't support scrollbar-width */
+.scrollableContent::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollableContent::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.scrollableContent::-webkit-scrollbar-thumb {
+  background: rgba(0, 250, 255, 0.3);
+  border-radius: 4px;
+}
+
+.scrollableContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 250, 255, 0.5);
+}
+
+/* Collapsible wrapper transitions */
+.collapsibleWrapper[data-expanded="true"] {
+  max-height: none;
+  overflow: hidden;
+  transition: opacity 0.2s;
+  opacity: 1;
+}
+
+.collapsibleWrapper[data-expanded="false"] {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+  opacity: 0;
+}
+
+/* Event card glass effect */
+.eventCardGlass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Empty state container with glassmorphism */
+.emptyStateGlass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: 0 0 20px rgba(0, 250, 255, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.03);
+}
+
+/* Progress bar with dynamic width */
+.progressBar {
+  width: var(--progress-width, 0%);
+  transition: width 0.3s ease;
 }
