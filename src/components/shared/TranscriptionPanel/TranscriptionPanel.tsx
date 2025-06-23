@@ -495,34 +495,33 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
       {/* Modal de Logs de Cognição */}
       {showLogsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
           <div className="orchos-cognition-logs-modal">
-            <div className="orchos-cognition-logs-header">
-              <h2 className="text-xl font-bold text-[#7c4dff] flex items-center gap-2">
-                <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-                  <ellipse
-                    cx="10"
-                    cy="10"
-                    rx="8"
-                    ry="6"
-                    stroke="#7c4dff"
-                    strokeWidth="2"
-                  />
-                  <circle cx="10" cy="10" r="3" fill="#7c4dff" />
-                </svg>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2
+                className="text-2xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]"
+                style={{ fontFamily: "Orbitron, Inter, sans-serif" }}
+              >
                 Cognition Logs
               </h2>
               <button
-                className="ml-2 px-2 py-1 rounded-full hover:bg-[#7c4dff22] transition"
                 onClick={() => setShowLogsModal(false)}
-                aria-label="Close logs modal"
+                className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-full p-1"
+                aria-label="Close modal"
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path
-                    d="M6 6l8 8M14 6l-8 8"
-                    stroke="#7c4dff"
-                    strokeWidth="2"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
               </button>
