@@ -2,6 +2,10 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import {
+  buildCombinedSystemPrompt,
+  buildCombinedUserPrompt,
+} from "../../../../../shared/utils/neuralPromptBuilder";
+import {
   NeuralProcessingResult,
   NeuralSignalResponse,
 } from "../../interfaces/neural/NeuralSignalTypes";
@@ -26,7 +30,6 @@ import { cleanThinkTags } from "../../utils/ThinkTagCleaner";
 import {
   NeuralConfigurationBuilder,
   NeuralMemoryRetriever,
-  NeuralSignalEnricher,
   ProcessingResultsSaver,
   ProcessorMode,
   ResponseGenerator,
@@ -60,7 +63,6 @@ export class TranscriptionPromptProcessor {
   private transcriptionExtractor!: TranscriptionExtractor;
   private configurationBuilder!: NeuralConfigurationBuilder;
   private sessionManager!: SessionManager;
-  private signalEnricher!: NeuralSignalEnricher;
   private memoryRetriever!: NeuralMemoryRetriever;
   private responseGenerator!: ResponseGenerator;
   private resultsSaver!: ProcessingResultsSaver;
@@ -95,8 +97,6 @@ export class TranscriptionPromptProcessor {
       this.speakerService,
       this.sessionManager
     );
-
-    this.signalEnricher = new NeuralSignalEnricher(this.llmService);
 
     this.memoryRetriever = new NeuralMemoryRetriever(this.memoryService);
 
@@ -432,14 +432,14 @@ export class TranscriptionPromptProcessor {
     conversationMessages?: any[]
   ): Promise<TranscriptionProcessingResponse> {
     try {
-      // PHASE 1: Neural Signal Extraction
+      // PHASE 1: Neural Signal Extraction & Enrichment (Combined)
       LoggingUtils.logInfo(
-        "🧠 Starting neural system: Phase 1 - Sensory analysis..."
+        "🧠 Starting neural system: Phase 1 - Combined Sensory Analysis & Enrichment..."
       );
       this.showProcessingPhaseWithProgress(
-        "🧠 Extracting Neural Signals",
+        "🧠 Extracting & Enriching Signals",
         1,
-        5
+        4
       );
 
       const extractionConfig =
@@ -448,40 +448,57 @@ export class TranscriptionPromptProcessor {
           temporaryContext,
           this.currentLanguage
         );
+
+      // HACK: Override prompts with the new combined version for optimization.
+      // This allows using the new single-call approach without modifying NeuralConfigurationBuilder.
+      // We pass the temporaryContext, assuming the builder's main contribution is assembling other history
+      // which the LLM should handle implicitly through conversation history.
+      (extractionConfig as any).systemPrompt = buildCombinedSystemPrompt(
+        this.currentLanguage
+      );
+      (extractionConfig as any).userPrompt = buildCombinedUserPrompt(
+        transcriptionToSend,
+        temporaryContext,
+        this.currentLanguage
+      );
+
       const neuralActivation =
         await this._neuralSignalExtractor.extractNeuralSignals(
           extractionConfig
         );
 
-      // PHASE 2: Query Enrichment
-      this.showProcessingPhaseWithProgress("✨ Enriching Signals", 2, 5);
-      const enrichedSignals = await this.signalEnricher.enrichSignals(
-        neuralActivation.signals,
-        this.currentLanguage
-      );
+      // The new tool call 'activateAndEnrichBrainArea' returns enriched signals directly.
+      // We map them to the structure expected by the rest of the pipeline.
+      const enrichedSignals = neuralActivation.signals.map((signal: any) => ({
+        ...signal,
+        // The new prompt now provides 'enriched_query' from the tool call arguments.
+        enrichedQuery: signal.enriched_query || signal.symbolic_query.query,
+        // The original query is still available if needed:
+        query: signal.symbolic_query.query,
+      }));
 
-      // PHASE 3: PARALLEL MEMORY RETRIEVAL (Jung + Modern Neuroscience)
+      // PHASE 2: PARALLEL MEMORY RETRIEVAL (Jung + Modern Neuroscience)
       LoggingUtils.logInfo(
-        "🧠 PHASE 3 - Parallel Specialized Memory Processing..."
+        "🧠 PHASE 2 - Parallel Specialized Memory Processing..."
       );
-      this.showProcessingPhaseWithProgress("🔍 Retrieving Memories", 3, 5);
+      this.showProcessingPhaseWithProgress("🔍 Retrieving Memories", 2, 4);
 
       const processingResults = await this.memoryRetriever.processSignals(
         enrichedSignals
       );
 
       LoggingUtils.logInfo(
-        `✅ Phase 3 complete: ${processingResults.length} memory retrievals processed`
+        `✅ Phase 2 complete: ${processingResults.length} memory retrievals processed`
       );
 
-      // PHASE 4: Neural Integration
+      // PHASE 3: Neural Integration
       LoggingUtils.logInfo(
-        "💥 PHASE 4 - Integrating neural processing into final prompt..."
+        "💥 PHASE 3 - Integrating neural processing into final prompt..."
       );
       this.showProcessingPhaseWithProgress(
         "🔗 Integrating Neural Patterns",
-        4,
-        5
+        3,
+        4
       );
 
       const integrationResult = await this.neuralIntegrationService.integrate(
@@ -508,8 +525,8 @@ export class TranscriptionPromptProcessor {
         })),
       });
 
-      // PHASE 5: Generate Response with dynamic temperature
-      this.showProcessingPhaseWithProgress("🎯 Finalizing Response", 5, 5);
+      // PHASE 4: Generate Response with dynamic temperature
+      this.showProcessingPhaseWithProgress("🎯 Finalizing Response", 4, 4);
 
       // Track if we've received the first chunk
       let firstChunkReceived = false;
@@ -564,7 +581,7 @@ export class TranscriptionPromptProcessor {
       // NOTE: We don't log the response here anymore.
       // It will be logged with insights in ProcessingResultsSaver
 
-      // PHASE 6: Save and Log Results
+      // PHASE 5: Save and Log Results
       // Note: resultsSaver will also log the response with symbolic insights
       await this.resultsSaver.saveResults(
         transcriptionToSend,
