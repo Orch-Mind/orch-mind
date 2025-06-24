@@ -168,7 +168,7 @@ DECIDE: Provide deterministic/probabilistic, temperature (0.1-0.7), and justific
       // This is expected behavior, not an error
       const fallbackDecision: CollapseStrategyDecision = {
         deterministic: params.averageEmotionalWeight < 0.5,
-        temperature: params.averageEmotionalWeight < 0.5 ? 0.5 : 1.0,
+        temperature: params.averageEmotionalWeight < 0.5 ? 0.5 : 0.7,
         justification: "Using emotion-based strategy for HuggingFace model.",
       };
 
@@ -182,7 +182,7 @@ DECIDE: Provide deterministic/probabilistic, temperature (0.1-0.7), and justific
 
       const errorFallbackDecision: CollapseStrategyDecision = {
         deterministic: params.averageEmotionalWeight < 0.5,
-        temperature: params.averageEmotionalWeight < 0.5 ? 0.5 : 1.0,
+        temperature: params.averageEmotionalWeight < 0.5 ? 0.5 : 0.7,
         justification: `Fallback strategy based on emotional weight due to error: ${errorMessage.substring(
           0,
           100

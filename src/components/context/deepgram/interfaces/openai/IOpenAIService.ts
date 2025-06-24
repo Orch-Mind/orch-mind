@@ -31,7 +31,7 @@ export interface IOpenAIService {
   /**
    * Envia mensagens para o LLM e processa resposta em stream
    * @param messages Array de mensagens da conversa
-   * @param temperature Temperatura para geração (0.0-2.0)
+   * @param temperature Temperatura para geração (0.1-0.7, onde 0.1 é mais determinístico e 0.7 mais criativo)
    * @param onChunk Callback opcional para processar chunks de streaming
    */
   streamOpenAIResponse(

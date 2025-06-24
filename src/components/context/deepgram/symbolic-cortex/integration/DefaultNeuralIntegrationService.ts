@@ -10,7 +10,10 @@ import {
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
-import { buildIntegrationUserPrompt } from "../../../../../shared/utils/neuralPromptBuilder";
+import {
+  buildIntegrationSystemPrompt,
+  buildIntegrationUserPrompt,
+} from "../../../../../shared/utils/neuralPromptBuilder";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { HuggingFaceServiceFacade } from "../../services/huggingface/HuggingFaceServiceFacade";
@@ -45,6 +48,10 @@ export class DefaultNeuralIntegrationService
   private collapseStrategyService: ICollapseStrategyService;
   private patternAnalyzer: SymbolicPatternAnalyzer; // Detector de padrões simbólicos emergentes entre ciclos
   private aiService: IOpenAIService;
+
+  // Constants for temperature validation
+  private readonly MIN_TEMPERATURE = 0.1;
+  private readonly MAX_TEMPERATURE = 0.7;
 
   constructor(
     aiService: IOpenAIService,
@@ -143,6 +150,25 @@ export class DefaultNeuralIntegrationService
     );
 
     return normalizedPhase;
+  }
+
+  /**
+   * Validates and normalizes temperature to acceptable range
+   */
+  private validateTemperature(temperature: number): number {
+    if (temperature < this.MIN_TEMPERATURE) {
+      console.warn(
+        `[NeuralIntegration] Temperature ${temperature} below minimum ${this.MIN_TEMPERATURE}, adjusting to minimum`
+      );
+      return this.MIN_TEMPERATURE;
+    }
+    if (temperature > this.MAX_TEMPERATURE) {
+      console.warn(
+        `[NeuralIntegration] Temperature ${temperature} above maximum ${this.MAX_TEMPERATURE}, adjusting to maximum`
+      );
+      return this.MAX_TEMPERATURE;
+    }
+    return temperature;
   }
 
   /**
@@ -564,15 +590,22 @@ export class DefaultNeuralIntegrationService
     // 4. Compose final prompt
     const userPrompt = buildIntegrationUserPrompt(
       originalInput,
-      cleanedNeuralResults,
+      neuralResults,
       language,
       strategyDecision
     );
 
     // Etapa final: executar o prompt de integração para obter a resposta final
-    const finalResponseStream = await this.aiService.streamOpenAIResponse(
-      [{ role: "user", content: userPrompt }],
+    const validatedTemperature = this.validateTemperature(
       strategyDecision.temperature
+    );
+
+    const finalResponseStream = await this.aiService.streamOpenAIResponse(
+      [
+        { role: "system", content: buildIntegrationSystemPrompt() },
+        { role: "user", content: userPrompt },
+      ],
+      validatedTemperature
     );
 
     // Limpar a resposta final de quaisquer tags de pensamento residuais
@@ -582,7 +615,7 @@ export class DefaultNeuralIntegrationService
 
     return {
       prompt: cleanedFinalResponse, // Retorna a resposta limpa e integrada
-      temperature: strategyDecision.temperature,
+      temperature: validatedTemperature,
       isDeterministic: strategyDecision.deterministic,
     };
   }

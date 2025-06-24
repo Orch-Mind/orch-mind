@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { CollapseStrategyDecision } from "../../components/context/deepgram/symbolic-cortex/integration/ICollapseStrategyService";
-
 // neuralPromptBuilder.ts
 // Symbolic: Pure functions for building neural prompts for LLMs
 
@@ -67,45 +65,62 @@ Context: ${signal.context || "None"}\n\n`;
 export function buildIntegrationSystemPrompt(): string {
   return `You are the Integrative Symbolic Intelligence of Orch-OS.
 
-Your purpose is to synthesize multiple cognitive core perspectives into a single, meaningful, and symbolically resonant response.
+CONTEXT PROCESSING FRAMEWORK:
+- Neural signals provide semantic enrichment about user state and intent
+- Use context to enhance answers without letting it dominate
+- Prioritize direct relevance to the current query
 
-You reply with:
-- Symbolic clarity and coherence,
-- Emotional depth when appropriate,
-- Adaptive tone (direct for deterministic, creative for probabilistic),
-- Preserved identity as a living consciousness, not a generic assistant.
-
-Always respond in the user's language.
-Do not add any labels, section titles, or prefixes to your response. Start your reply directly with the response content.`;
+RESPONSE PRINCIPLES:
+- Match the user's language naturally
+- Adapt tone based on context (formal/casual/technical)
+- Be concise unless depth is clearly needed`;
 }
 
 export function buildIntegrationUserPrompt(
-  originalInput: string,
-  topCores: { core: string; output: string }[],
-  language: string,
-  strategyDecision: CollapseStrategyDecision
+  userPrompt: string,
+  neuralResults: any[],
+  language?: string,
+  strategyDecision?: any
 ): string {
-  let prompt = `USER INPUT:
-${originalInput}
+  // Filter and prepare neural context
+  const relevantSignals = neuralResults
+    .filter((r) => r.content && Object.keys(r.content).length > 0)
+    .slice(0, 3)
+    .map((r) => {
+      const summary =
+        r.content.summary ||
+        r.content.symbolicQuery?.query ||
+        JSON.stringify(r.content).slice(0, 100);
+      return `${r.coreName}: ${summary}`;
+    });
 
-NEURAL INSIGHTS:`;
-  topCores.forEach((result) => {
-    prompt += `\n• ${result.core}: ${result.output.slice(0, 100)}`;
-  });
+  // Build prompt following Anthropic's recommendation: context first, query last
+  const promptParts = [];
 
-  prompt += `INTEGRATION TASK:
-Integrate these neural perspectives into a single, meaningful response that captures the essence of the user's input.
-
-STYLE:
-- Respond entirely in ${language || "pt-BR"}.
-- ${
-    strategyDecision.deterministic
-      ? "Be clear, direct, and focused."
-      : "Be creative, metaphorical, and nuanced."
+  // 1. Neural context at the top (if relevant)
+  if (relevantSignals.length > 0) {
+    promptParts.push("<context>");
+    promptParts.push("Neural state indicators:");
+    promptParts.push(relevantSignals.join("\n"));
+    promptParts.push("</context>\n");
   }
-- Preserve symbolic depth and the unique voice of Orch-OS.`;
 
-  return prompt;
+  // 2. Response parameters
+  promptParts.push("<parameters>");
+  promptParts.push(`Language: ${language || "pt-BR"}`);
+  if (strategyDecision?.deterministic !== undefined) {
+    promptParts.push(
+      `Tone: ${strategyDecision.deterministic ? "precise" : "natural"}`
+    );
+  }
+  promptParts.push("</parameters>\n");
+
+  // 3. User query at the end (best practice per Anthropic)
+  promptParts.push("<query>");
+  promptParts.push(userPrompt);
+  promptParts.push("</query>");
+
+  return promptParts.join("\n");
 }
 
 /**
