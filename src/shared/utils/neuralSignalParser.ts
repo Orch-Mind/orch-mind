@@ -13,10 +13,29 @@ export function buildSignalFromArgs(
   args: any,
   originalPrompt?: string
 ): NeuralSignal | null {
-  // Validate required fields
+  // Debug logging for missing core field
   if (!args.core) {
-    console.warn("🧠 [NeuralSignalParser] Missing core field in args");
-    return null;
+    console.warn("🧠 [NeuralSignalParser] Missing core field in args:", {
+      receivedArgs: JSON.stringify(args, null, 2),
+      argKeys: Object.keys(args || {}),
+    });
+
+    // Try to extract core from other possible field names (Llama 3.1 compatibility)
+    if (args.brain_area) {
+      args.core = args.brain_area;
+      console.log("🧠 [NeuralSignalParser] Found core in 'brain_area' field");
+    } else if (args.cognitive_core) {
+      args.core = args.cognitive_core;
+      console.log(
+        "🧠 [NeuralSignalParser] Found core in 'cognitive_core' field"
+      );
+    } else if (args.area) {
+      args.core = args.area;
+      console.log("🧠 [NeuralSignalParser] Found core in 'area' field");
+    } else {
+      // No core field found
+      return null;
+    }
   }
 
   // Initialize signal with defaults

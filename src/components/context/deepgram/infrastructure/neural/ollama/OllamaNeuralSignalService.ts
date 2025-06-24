@@ -346,6 +346,12 @@ export class OllamaNeuralSignalService
             call.function.arguments
           );
 
+          // Debug logging for Llama 3.1
+          console.log(
+            "🦙 [OllamaNeuralSignal] Tool call arguments:",
+            JSON.stringify(args, null, 2)
+          );
+
           // Se temos enriched_query (do prompt combinado), usa ele como query principal
           if (args.enriched_query && typeof args.symbolic_query === "object") {
             args.symbolic_query.query = args.enriched_query;

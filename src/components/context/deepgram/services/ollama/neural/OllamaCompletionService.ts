@@ -101,8 +101,21 @@ export class OllamaCompletionService implements ICompletionService {
         const modelNameLower = selectedModel.toLowerCase();
         const isGemma = modelNameLower.includes("gemma");
         const isQwen = modelNameLower.includes("qwen");
-        const isLlama3 = modelNameLower.includes("llama3");
+        const isLlama3 =
+          modelNameLower.includes("llama3") ||
+          modelNameLower.includes("llama-3");
         const isMistral = modelNameLower.includes("mistral");
+
+        // Debug logging for model detection
+        console.log(
+          `🦙 [OllamaCompletion] Model detection for ${selectedModel}:`,
+          {
+            isGemma,
+            isQwen,
+            isLlama3,
+            isMistral,
+          }
+        );
 
         // Build request options following Ollama native API documentation
         const requestBody: any = {
@@ -204,6 +217,16 @@ ${Object.entries(params)
               `🦙 [OllamaCompletion] Using native tool calling for ${selectedModel}`
             );
             requestBody.tools = options.tools;
+
+            // Add explicit instructions for Llama 3.1 to ensure correct parameter names
+            if (
+              modelNameLower.includes("3.1") &&
+              formattedMessages.length > 0 &&
+              formattedMessages[0].role === "system"
+            ) {
+              formattedMessages[0].content +=
+                '\n\nIMPORTANT: When calling functions, use the exact parameter names as specified. For activateBrainArea, the first parameter MUST be named "core" (not "brain_area" or "cognitive_core").';
+            }
           } else if (isQwen) {
             // Qwen seems to have issues with native tool calling, use direct format like Gemma
             LoggingUtils.logInfo(
