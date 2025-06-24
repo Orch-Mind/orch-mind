@@ -15,6 +15,7 @@ export class MessageProcessor {
   private processingResponseRef: string = "";
   private responseDebounceTimer: NodeJS.Timeout | null = null;
   private processingTimeout: NodeJS.Timeout | null = null;
+  private streamingCompleted: boolean = false;
 
   constructor(
     private addMessage: (
@@ -25,6 +26,27 @@ export class MessageProcessor {
   ) {}
 
   /**
+   * Reset all internal state
+   */
+  resetState(): void {
+    console.log("[MESSAGE_PROCESSOR] Resetting internal state");
+    this.isReceivingResponse = false;
+    this.lastProcessedResponse = "";
+    this.processingResponseRef = "";
+    this.streamingCompleted = false;
+
+    if (this.responseDebounceTimer) {
+      clearTimeout(this.responseDebounceTimer);
+      this.responseDebounceTimer = null;
+    }
+
+    if (this.processingTimeout) {
+      clearTimeout(this.processingTimeout);
+      this.processingTimeout = null;
+    }
+  }
+
+  /**
    * Processa resposta de IA com debounce
    */
   processAiResponse(
@@ -32,6 +54,19 @@ export class MessageProcessor {
     currentMessages: ChatMessage[],
     conversationMessages?: ChatMessage[]
   ): void {
+    console.log("🔍 [MESSAGE_PROCESSOR] processAiResponse called:", {
+      aiResponseText: aiResponseText
+        ? aiResponseText.substring(0, 50)
+        : "empty",
+      lastProcessedResponse: this.lastProcessedResponse
+        ? this.lastProcessedResponse.substring(0, 50)
+        : "null",
+      processingResponseRef: this.processingResponseRef
+        ? this.processingResponseRef.substring(0, 50)
+        : "null",
+      isReceivingResponse: this.isReceivingResponse,
+    });
+
     // Limpa estado se resposta vazia
     if (!aiResponseText || aiResponseText.trim() === "") {
       this.clearProcessingState();
@@ -43,6 +78,20 @@ export class MessageProcessor {
       this.onProcessingStateChange(true);
       this.isReceivingResponse = true;
       console.log("[MESSAGE_PROCESSOR] Started processing");
+      return;
+    }
+
+    // Se já processamos essa resposta exata via streaming, ignora
+    const cleanedResponse = cleanThinkTags(aiResponseText);
+    const normalizedResponse = this.normalizeForComparison(cleanedResponse);
+    const normalizedLastProcessed = this.lastProcessedResponse
+      ? this.normalizeForComparison(this.lastProcessedResponse)
+      : "";
+
+    if (normalizedResponse === normalizedLastProcessed) {
+      console.log(
+        "⚠️ [MESSAGE_PROCESSOR] Ignoring duplicate aiResponse - already processed via streaming"
+      );
       return;
     }
 
@@ -71,6 +120,9 @@ export class MessageProcessor {
   ): void {
     if (!content.trim()) return;
 
+    // Reset internal state for new user message
+    this.resetState();
+
     // Adiciona mensagem do usuário
     this.addMessage({
       type: "user",
@@ -78,10 +130,6 @@ export class MessageProcessor {
       hasContext: !!context,
       contextContent: context,
     });
-
-    // Limpa estado para permitir novas respostas
-    this.lastProcessedResponse = "";
-    this.processingResponseRef = "";
 
     // Inicia estado de processamento
     this.onProcessingStateChange(true);
@@ -99,6 +147,29 @@ export class MessageProcessor {
   processStreamingComplete(content: string): void {
     if (!content || content.trim() === "") return;
 
+    console.log("📝 [MESSAGE_PROCESSOR] processStreamingComplete called:", {
+      content: content.substring(0, 50),
+      lastProcessedResponse: this.lastProcessedResponse
+        ? this.lastProcessedResponse.substring(0, 50)
+        : "null",
+      processingResponseRef: this.processingResponseRef
+        ? this.processingResponseRef.substring(0, 50)
+        : "null",
+    });
+
+    // Verifica se já foi processada
+    const normalizedContent = this.normalizeForComparison(content);
+    const normalizedLast = this.lastProcessedResponse
+      ? this.normalizeForComparison(this.lastProcessedResponse)
+      : "";
+
+    if (normalizedContent === normalizedLast) {
+      console.warn(
+        "⚠️ [MESSAGE_PROCESSOR] Duplicate streaming content detected, skipping"
+      );
+      return;
+    }
+
     // Adiciona mensagem do assistente (não system!)
     this.addMessage({
       type: "assistant",
@@ -109,11 +180,19 @@ export class MessageProcessor {
     // Armazena o conteúdo original (não normalizado) para comparação precisa
     this.lastProcessedResponse = content;
     this.processingResponseRef = content;
+    this.streamingCompleted = true; // Marca que o streaming foi completado
 
     console.log("✅ [MESSAGE_PROCESSOR] Streaming complete, message added");
 
-    // Limpa resposta de IA
+    // Limpa resposta de IA IMEDIATAMENTE para evitar processamento duplicado
+    // pelo debounce em processAiResponse
     this.onClearAiResponse();
+
+    // Cancela qualquer timer de debounce pendente
+    if (this.responseDebounceTimer) {
+      clearTimeout(this.responseDebounceTimer);
+      this.responseDebounceTimer = null;
+    }
 
     // Finaliza processamento
     this.clearProcessingState();
@@ -126,6 +205,7 @@ export class MessageProcessor {
     this.processingResponseRef = "";
     this.isReceivingResponse = false;
     this.onProcessingStateChange(false);
+    // Nota: NÃO limpa streamingCompleted aqui - apenas no resetState()
 
     if (this.responseDebounceTimer) {
       clearTimeout(this.responseDebounceTimer);
@@ -143,7 +223,14 @@ export class MessageProcessor {
    */
   clearProcessingRef(aiResponseText?: string): void {
     if (!aiResponseText || aiResponseText.trim() === "") {
+      console.log(
+        "[MESSAGE_PROCESSOR] Clearing processing refs due to empty aiResponseText"
+      );
       this.processingResponseRef = "";
+      this.lastProcessedResponse = "";
+      this.isReceivingResponse = false;
+      // Também limpa o flag de streaming quando não há resposta
+      this.streamingCompleted = false;
     }
   }
 
@@ -161,65 +248,95 @@ export class MessageProcessor {
     currentMessages: ChatMessage[],
     conversationMessages?: ChatMessage[]
   ): void {
+    console.log("🔍 [MESSAGE_PROCESSOR] handleAiResponse called:", {
+      aiResponseText: aiResponseText
+        ? aiResponseText.substring(0, 50)
+        : "empty",
+      streamingCompleted: this.streamingCompleted,
+      lastProcessedResponse: this.lastProcessedResponse
+        ? this.lastProcessedResponse.substring(0, 50)
+        : "null",
+    });
+
     // Verifica resposta vazia
     if (!aiResponseText || aiResponseText.trim() === "") {
       this.clearProcessingState();
       return;
     }
 
-    // Filtra mensagens de processamento
-    if (this.shouldFilterProcessingMessage(aiResponseText)) {
+    // Se o streaming já foi completado, ignora processamento regular
+    if (this.streamingCompleted) {
+      console.log(
+        "⚠️ [MESSAGE_PROCESSOR] Streaming already completed, skipping regular processing"
+      );
+      this.clearProcessingState();
+      return;
+    }
+
+    // Limpa a resposta ANTES de qualquer verificação
+    const cleanedResponse = cleanThinkTags(aiResponseText);
+
+    // Filtra mensagens de processamento usando a resposta limpa
+    if (this.shouldFilterProcessingMessage(cleanedResponse)) {
       console.log("[MESSAGE_PROCESSOR] Filtering processing message");
       this.clearProcessingState();
       this.onClearAiResponse();
       return;
     }
 
-    // Verifica duplicação
+    // Verifica duplicação usando a resposta limpa
     if (
-      this.isDuplicate(aiResponseText, currentMessages, conversationMessages)
+      this.isDuplicate(cleanedResponse, currentMessages, conversationMessages)
     ) {
       console.log("⚠️ [MESSAGE_PROCESSOR] Duplicate response detected", {
-        normalized: this.normalizeForComparison(aiResponseText),
+        normalized: this.normalizeForComparison(cleanedResponse),
         lastProcessed: this.lastProcessedResponse
           ? this.normalizeForComparison(this.lastProcessedResponse)
           : null,
       });
-      this.lastProcessedResponse = aiResponseText;
+      // NÃO atualiza lastProcessedResponse aqui - já foi feito no streaming
       this.processingResponseRef = "";
       this.onClearAiResponse();
       return;
     }
 
     // Processa resposta final
-    if (this.isFinalResponse(aiResponseText)) {
-      this.processFinalResponse(aiResponseText);
+    if (this.isFinalResponse(cleanedResponse)) {
+      this.processFinalResponse(cleanedResponse);
     } else {
       console.log("🔄 [MESSAGE_PROCESSOR] Partial response, waiting...");
       this.isReceivingResponse = true;
     }
   }
 
-  private processFinalResponse(aiResponseText: string): void {
-    const cleanedResponse = cleanThinkTags(aiResponseText);
+  private processFinalResponse(cleanedResponse: string): void {
+    console.log("🔍 [MESSAGE_PROCESSOR] processFinalResponse called:", {
+      cleanedResponse: cleanedResponse.substring(0, 50),
+      lastProcessedResponse: this.lastProcessedResponse
+        ? this.lastProcessedResponse.substring(0, 50)
+        : "null",
+      streamingCompleted: this.streamingCompleted,
+    });
 
-    // Verifica se já foi processada via streaming
-    if (this.wasStreamedAndAdded(aiResponseText, cleanedResponse)) {
-      console.log("✅ [MESSAGE_PROCESSOR] Already added via streaming");
+    // Se já foi processado via streaming, não adiciona novamente
+    if (this.streamingCompleted) {
+      console.log(
+        "⚠️ [MESSAGE_PROCESSOR] Already processed via streaming, skipping final response"
+      );
       this.clearProcessingState();
       this.processingResponseRef = "";
       this.onClearAiResponse();
       return;
     }
 
-    // Marca como processada
-    this.processingResponseRef = aiResponseText;
-    this.lastProcessedResponse = cleanedResponse;
-
-    console.log(
-      "✅ [MESSAGE_PROCESSOR] Adding final response:",
-      cleanedResponse.substring(0, 50)
-    );
+    // A resposta já vem limpa, então a verificação de streaming pode usar a mesma
+    if (this.wasStreamedAndAdded(cleanedResponse, cleanedResponse)) {
+      console.log("✅ [MESSAGE_PROCESSOR] Already added via streaming");
+      this.clearProcessingState();
+      this.processingResponseRef = "";
+      this.onClearAiResponse();
+      return;
+    }
 
     // Adiciona resposta do assistente (não system!)
     this.addMessage({
@@ -265,6 +382,7 @@ export class MessageProcessor {
       this.lastProcessedResponse &&
       normalizedText === this.normalizeForComparison(this.lastProcessedResponse)
     ) {
+      console.log("🔍 [isDuplicate] Matched with lastProcessedResponse");
       return true;
     }
 
@@ -275,6 +393,10 @@ export class MessageProcessor {
         this.normalizeForComparison(msg.content) === normalizedText
     );
 
+    if (isDuplicateInCurrent) {
+      console.log("🔍 [isDuplicate] Found duplicate in currentMessages");
+    }
+
     // Verifica duplicação nas mensagens da conversa (procura por assistant agora!)
     const isDuplicateInConversation =
       conversationMessages?.some(
@@ -282,6 +404,10 @@ export class MessageProcessor {
           (msg.type === "system" || msg.type === "assistant") &&
           this.normalizeForComparison(msg.content) === normalizedText
       ) || false;
+
+    if (isDuplicateInConversation) {
+      console.log("🔍 [isDuplicate] Found duplicate in conversationMessages");
+    }
 
     return isDuplicateInCurrent || isDuplicateInConversation;
   }
@@ -339,11 +465,14 @@ export class MessageProcessor {
    * Adiciona espaços após pontuação quando necessário
    */
   private normalizeForComparison(text: string): string {
-    return text
-      .trim()
-      .replace(/([!?.])([A-Z])/g, "$1 $2") // Adiciona espaço após pontuação seguida de maiúscula
-      .replace(/\s+/g, " ") // Substitui múltiplos espaços por um único
-      .replace(/\n+/g, " ") // Substitui quebras de linha por espaços
-      .toLowerCase(); // Converte para minúsculas
+    // Aggressively normalize by removing all non-alphanumeric characters,
+    // making comparisons robust against minor spacing, punctuation, and casing differences.
+    return (
+      text
+        .trim()
+        .toLowerCase()
+        // Replaces all non-alphanumeric characters with an empty string
+        .replace(/[^a-z0-9]/gi, "")
+    );
   }
 }

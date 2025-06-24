@@ -19,7 +19,7 @@ const TypingIndicator: React.FC<{
   // If we have streaming content, render it as a full message
   if (streamingContent) {
     return (
-      <div className="message system-message">
+      <div className="message assistant-message">
         <div className="message-avatar">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <defs>
@@ -56,7 +56,7 @@ const TypingIndicator: React.FC<{
 
   // Otherwise, show processing status or dots
   return (
-    <div className="message system-message typing-indicator">
+    <div className="message assistant-message typing-indicator">
       <div className="message-avatar">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <defs>
@@ -198,17 +198,25 @@ export const ChatMessagesContainer: React.FC<
             <ThinkingMessage thinkingContent={thinkingContent} />
           )}
 
-          {/* Show typing indicator for processing or streaming */}
-          {(isProcessing || isStreaming) &&
-            !isThinking &&
-            (processingStatus ||
-              (streamingContent && streamingContent.trim() !== "")) && (
+          {/* Show typing indicator only when actively streaming */}
+          {isStreaming &&
+            streamingContent &&
+            streamingContent.trim() !== "" && (
               <TypingIndicator
                 processingStatus={processingStatus}
                 streamingContent={streamingContent}
                 isStreaming={isStreaming}
               />
             )}
+
+          {/* Show processing status when not streaming */}
+          {isProcessing && !isStreaming && !isThinking && processingStatus && (
+            <TypingIndicator
+              processingStatus={processingStatus}
+              streamingContent=""
+              isStreaming={false}
+            />
+          )}
 
           {messages.length === 0 && !isProcessing && (
             <WelcomeMessage

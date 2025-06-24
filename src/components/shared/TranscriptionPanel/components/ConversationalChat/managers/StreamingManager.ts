@@ -107,7 +107,15 @@ export class StreamingManager {
    * Finaliza o streaming
    */
   endStreaming(): void {
-    console.log("🏁 [STREAMING] Ended");
+    console.log("🏁 [STREAMING] Ended", {
+      streamingChunks: this.streamingChunks
+        ? this.streamingChunks.substring(0, 50)
+        : "null",
+      currentStateBeforeReset: {
+        isStreaming: this.isStreaming,
+        streamingResponse: this.streamingResponse.substring(0, 50),
+      },
+    });
 
     const finalContent = this.streamingChunks
       ? cleanThinkTags(this.streamingChunks)
@@ -118,16 +126,20 @@ export class StreamingManager {
     // quanto a mensagem final são renderizadas simultaneamente
     this.reset();
 
-    // Agora notifica que a mensagem está completa
-    if (finalContent && finalContent.trim() !== "") {
-      console.log(
-        "✅ [STREAMING] Streaming completed:",
-        finalContent.substring(0, 50)
-      );
-      this.onMessageComplete(finalContent);
-    } else {
-      console.log("⚠️ [STREAMING] No content after cleaning");
-    }
+    // Pequeno delay para garantir que o React processou a mudança de estado
+    // antes de adicionar a nova mensagem
+    setTimeout(() => {
+      // Agora notifica que a mensagem está completa
+      if (finalContent && finalContent.trim() !== "") {
+        console.log(
+          "✅ [STREAMING] Streaming completed, calling onMessageComplete:",
+          finalContent.substring(0, 50)
+        );
+        this.onMessageComplete(finalContent);
+      } else {
+        console.log("⚠️ [STREAMING] No content after cleaning");
+      }
+    }, 50);
   }
 
   /**
@@ -159,15 +171,12 @@ export class StreamingManager {
    * Notifica mudanças de estado
    */
   private notifyStateChange(): void {
-    const state = this.getState();
-    console.log("[StreamingManager] State change:", {
-      isStreaming: state.isStreaming,
-      streamingResponseLength: state.streamingResponse.length,
-      streamingResponsePreview: state.streamingResponse.substring(0, 50),
-      isThinking: state.isThinking,
-      thinkingContentLength: state.thinkingContent.length,
-      thinkingContentPreview: state.thinkingContent.substring(0, 50),
-    });
+    const state: StreamingState = {
+      isStreaming: this.isStreaming,
+      streamingResponse: this.streamingResponse,
+      isThinking: this.isThinking,
+      thinkingContent: this.thinkingContent,
+    };
     this.onStateChange(state);
   }
 }
