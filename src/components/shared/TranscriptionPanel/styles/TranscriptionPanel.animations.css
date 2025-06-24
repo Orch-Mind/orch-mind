@@ -652,11 +652,6 @@
   animation: connectionPulse 2s ease-in-out infinite;
 }
 
-/* Quantum visualization container animation */
-.quantum-visualization-zone {
-  animation: quantumGlow 3s ease-in-out infinite;
-}
-
 /* Text animation for AI responses */
 .ai-response-text {
   background: linear-gradient(
