@@ -292,19 +292,12 @@ ${Object.entries(params)
           tool_calls = nativeToolCalls.map((call: any) => {
             // Ollama returns tool calls in the correct format already
             const functionName = call.function?.name;
-            let functionArgs = call.function?.arguments;
-
-            // Ensure arguments are properly formatted as string
-            if (typeof functionArgs === "object" && functionArgs !== null) {
-              functionArgs = JSON.stringify(functionArgs);
-            } else if (typeof functionArgs !== "string") {
-              functionArgs = JSON.stringify(functionArgs || {});
-            }
+            const functionArgs = call.function?.arguments;
 
             return {
               function: {
                 name: functionName,
-                arguments: functionArgs,
+                arguments: functionArgs, // Keep arguments as-is (can be string or object)
               },
             };
           });

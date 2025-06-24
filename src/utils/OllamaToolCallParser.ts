@@ -372,34 +372,45 @@ export class OllamaToolCallParser {
               value = [];
             }
           } else if (objectValue) {
-            // Parse object
+            // Parse object - this is what gemma3 uses for symbolic_query
             try {
-              // Fix common formatting issues
-              let fixedValue = objectValue;
-
-              // Fix incorrect "object:" to "query:" for symbolic_query
-              if (key === "symbolic_query" && objectValue.includes("object:")) {
-                fixedValue = objectValue.replace(/\bobject\s*:/g, '"query":');
-              }
-
-              // Ensure all keys are quoted
-              fixedValue = fixedValue.replace(/(\w+):/g, '"$1":');
-              fixedValue = fixedValue.replace(/""+/g, '"');
-
-              value = JSON.parse(fixedValue);
+              // First try direct parsing
+              value = JSON.parse(objectValue);
             } catch {
-              // Special handling for symbolic_query
-              if (key === "symbolic_query") {
-                const queryMatch = objectValue.match(
-                  /(?:object|query)\s*:\s*"([^"]+)"/
-                );
-                if (queryMatch) {
-                  value = { query: queryMatch[1] };
+              // If direct parsing fails, try fixing common issues
+              try {
+                // Fix common formatting issues
+                let fixedValue = objectValue;
+
+                // Fix incorrect "object:" to "query:" for symbolic_query
+                if (
+                  key === "symbolic_query" &&
+                  objectValue.includes("object:")
+                ) {
+                  fixedValue = objectValue.replace(/\bobject\s*:/g, '"query":');
+                }
+
+                // Ensure all keys are quoted
+                fixedValue = fixedValue.replace(/(\w+):/g, '"$1":');
+                fixedValue = fixedValue.replace(/""+/g, '"');
+
+                value = JSON.parse(fixedValue);
+              } catch {
+                // Special handling for symbolic_query
+                if (key === "symbolic_query") {
+                  const queryMatch = objectValue.match(
+                    /(?:object|query)\s*:\s*"([^"]+)"/
+                  );
+                  if (queryMatch) {
+                    value = { query: queryMatch[1] };
+                  } else {
+                    // Keep as string if all parsing fails
+                    value = objectValue;
+                  }
                 } else {
+                  // Keep as string if all parsing fails
                   value = objectValue;
                 }
-              } else {
-                value = objectValue;
               }
             }
           } else if (otherValue) {
