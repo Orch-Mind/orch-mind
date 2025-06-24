@@ -97,10 +97,12 @@ export class OllamaCompletionService implements ICompletionService {
         const modelConfig =
           OllamaToolConfigHelper.getModelConfig(selectedModel);
 
-        // Check if this is gemma3 model (which doesn't support native tools)
-        const isGemma3 =
-          selectedModel.toLowerCase().includes("gemma3") ||
-          selectedModel.toLowerCase().includes("gemma2");
+        // Check for specific model families
+        const modelNameLower = selectedModel.toLowerCase();
+        const isGemma = modelNameLower.includes("gemma");
+        const isQwen = modelNameLower.includes("qwen");
+        const isLlama3 = modelNameLower.includes("llama3");
+        const isMistral = modelNameLower.includes("mistral");
 
         // Build request options following Ollama native API documentation
         const requestBody: any = {
@@ -123,10 +125,10 @@ export class OllamaCompletionService implements ICompletionService {
           requestBody.format = "json";
         }
 
-        // Handle tools differently for gemma3
+        // Handle tools based on model capabilities
         if (options.tools && options.tools.length > 0) {
-          if (isGemma3) {
-            // Gemma3 doesn't support native tools, use direct instruction format
+          if (isGemma) {
+            // Gemma doesn't support native tools, use direct instruction format
             LoggingUtils.logInfo(
               `🦙 [OllamaCompletion] Detected ${selectedModel}, using direct instruction format instead of native tools`
             );
@@ -196,25 +198,106 @@ ${Object.entries(params)
               });
             }
             // Don't add tools to request for gemma3
-          } else {
-            // For models that support tools, add them normally
+          } else if (isLlama3) {
+            // Llama3 supports native tools well
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] Using native tool calling for ${selectedModel}`
+            );
             requestBody.tools = options.tools;
+          } else if (isQwen) {
+            // Qwen seems to have issues with native tool calling, use direct format like Gemma
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] Detected ${selectedModel}, using direct instruction format instead of native tools`
+            );
 
-            // Force the model to use a tool when available
-            // According to latest Ollama documentation, tool_choice is now supported
-            // This ensures the model will use the provided tools instead of just text response
-            requestBody.tool_choice = "required";
+            const toolFunction = options.tools[0].function;
 
-            // Additional hint for models that may not respond well to tool_choice alone
+            // Build dynamic parameter list based on actual function schema
+            const params = toolFunction.parameters.properties || {};
+            const requiredParams = Array.isArray(
+              toolFunction.parameters.required
+            )
+              ? toolFunction.parameters.required
+              : [];
+
+            // Create example parameter format based on types
+            const paramExamples = Object.entries(params)
+              .map(([key, prop]: [string, any]) => {
+                const isRequired = requiredParams.includes(key);
+                let example = "";
+
+                if (prop.type === "string") {
+                  example = `${key}:"<${prop.description || "text"}>"`;
+                } else if (prop.type === "number") {
+                  const min = prop.minimum || 0;
+                  const max = prop.maximum || 1;
+                  example = `${key}:<${min}-${max}>`;
+                } else if (prop.type === "boolean") {
+                  example = `${key}:<true/false>`;
+                } else if (prop.type === "array") {
+                  example = `${key}:["item1", "item2"]`;
+                } else if (prop.type === "object") {
+                  example = `${key}:{...}`;
+                }
+
+                return isRequired ? example : `${example} (optional)`;
+              })
+              .filter(Boolean)
+              .join(", ");
+
+            const directInstructionPrompt = `You must respond with a function call in this exact format:
+${toolFunction.name}(${paramExamples})
+
+Available function:
+- ${toolFunction.name}: ${toolFunction.description}
+
+Parameters:
+${Object.entries(params)
+  .map(([key, prop]: [string, any]) => {
+    const isRequired = requiredParams.includes(key);
+    return `- ${key}: ${prop.description || prop.type}${
+      isRequired ? " (required)" : " (optional)"
+    }`;
+  })
+  .join("\n")}
+
+IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the function call.`;
+
+            // Modify the system message to include direct instructions
+            if (
+              formattedMessages.length > 0 &&
+              formattedMessages[0].role === "system"
+            ) {
+              formattedMessages[0].content =
+                directInstructionPrompt + "\n\n" + formattedMessages[0].content;
+            } else {
+              formattedMessages.unshift({
+                role: "system",
+                content: directInstructionPrompt,
+              });
+            }
+            // Don't add tools to request for qwen
+          } else if (isMistral) {
+            // Mistral models work best with explicit instructions
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] Using Mistral-specific tool calling for ${selectedModel}`
+            );
+            requestBody.tools = options.tools;
             // Add a system message that explicitly instructs tool usage
             if (
               formattedMessages.length > 0 &&
               formattedMessages[0].role === "system"
             ) {
-              // More specific instruction about the expected format
               formattedMessages[0].content +=
-                '\n\nIMPORTANT: You MUST use the provided tools to respond. Format your response as a JSON array of tool calls: [{"name":"function_name","arguments":{...}}]';
+                '\\n\\nIMPORTANT: You MUST use the provided tools to respond. Format your response as a valid JSON array of tool calls, like this: [{"name":"function_name","arguments":{...}}]';
             }
+          } else {
+            // Fallback for other models
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] Using generic tool calling with tool_choice for ${selectedModel}`
+            );
+            requestBody.tools = options.tools;
+            requestBody.tool_choice = "required";
           }
         }
 
@@ -230,6 +313,13 @@ ${Object.entries(params)
         LoggingUtils.logInfo(
           `🦙 [OllamaCompletion] Calling Ollama API with model: ${selectedModel}`
         );
+
+        // --- DEBUG LOGGING ---
+        console.log(
+          "🦙 [OllamaCompletion] Full Request Body:",
+          JSON.stringify(requestBody, null, 2)
+        );
+        // --- END DEBUG LOGGING ---
 
         // Perform the Ollama chat completion using the official API endpoint
         const response = await fetch("http://localhost:11434/api/chat", {
@@ -252,9 +342,35 @@ ${Object.entries(params)
 
         const data = await response.json();
 
+        // --- DEBUG LOGGING ---
+        console.log(
+          "🦙 [OllamaCompletion] Raw Response JSON:",
+          JSON.stringify(data, null, 2)
+        );
+        // --- END DEBUG LOGGING ---
+
         // Extract content and tool calls from native Ollama response
         const rawContent = data.message?.content || "";
+
+        // Debug logging for Qwen
+        if (isQwen && rawContent) {
+          console.log(
+            "🦙 [OllamaCompletion] Qwen raw content before cleaning:",
+            rawContent.substring(0, 500) +
+              (rawContent.length > 500 ? "..." : "")
+          );
+        }
+
         const content = cleanThinkTags(rawContent);
+
+        // Debug logging for Qwen after cleaning
+        if (isQwen && content) {
+          console.log(
+            "🦙 [OllamaCompletion] Qwen content after cleaning think tags:",
+            content.substring(0, 500) + (content.length > 500 ? "..." : "")
+          );
+        }
+
         const nativeToolCalls = data.message?.tool_calls || [];
 
         // Process native tool calls from Ollama (already in correct format)
@@ -267,10 +383,15 @@ ${Object.entries(params)
             }>
           | undefined;
 
-        // For gemma3, we expect the tool call in the content
-        if (isGemma3 && options.tools && options.tools.length > 0 && content) {
+        // For gemma3 and qwen, we expect the tool call in the content
+        if (
+          (isGemma || isQwen) &&
+          options.tools &&
+          options.tools.length > 0 &&
+          content
+        ) {
           LoggingUtils.logInfo(
-            `🦙 [OllamaCompletion] Processing gemma3 response for tool calls`
+            `🦙 [OllamaCompletion] Processing ${selectedModel} response for tool calls`
           );
 
           // Parse tool calls from content using OllamaToolCallParser
@@ -285,7 +406,7 @@ ${Object.entries(params)
               },
             }));
             LoggingUtils.logInfo(
-              `🦙 [OllamaCompletion] Parsed ${tool_calls.length} tool call(s) from gemma3 response`
+              `🦙 [OllamaCompletion] Parsed ${tool_calls.length} tool call(s) from ${selectedModel} response`
             );
           }
         } else if (nativeToolCalls && nativeToolCalls.length > 0) {
@@ -306,8 +427,8 @@ ${Object.entries(params)
           if (tool_calls) {
             tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
           }
-        } else if (options.tools && options.tools.length > 0 && content) {
-          // Fallback for models that return tool calls in content (like mistral-nemo)
+        } else if (content) {
+          // Fallback for models that return tools in content
           // Check if the processedData already extracted tool calls from content
           if (!tool_calls || tool_calls.length === 0) {
             LoggingUtils.logInfo(
