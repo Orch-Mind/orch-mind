@@ -22,7 +22,7 @@ export class MessageProcessor {
     ) => void,
     private onProcessingStateChange: (isProcessing: boolean) => void,
     private onClearAiResponse: () => void,
-    private scrollToBottom: (force?: boolean) => void
+    private scrollToBottom: (behavior?: "smooth" | "auto") => void
   ) {}
 
   /**
@@ -88,9 +88,6 @@ export class MessageProcessor {
     this.onProcessingStateChange(true);
     this.startProcessingTimeout();
 
-    // Força scroll para o fim
-    setTimeout(() => this.scrollToBottom(true), 50);
-
     // Chama callback de conclusão
     if (onComplete) {
       setTimeout(onComplete, 0);
@@ -121,9 +118,6 @@ export class MessageProcessor {
 
     // Finaliza processamento
     this.clearProcessingState();
-
-    // Força scroll
-    setTimeout(() => this.scrollToBottom(true), 100);
   }
 
   /**
@@ -237,8 +231,6 @@ export class MessageProcessor {
     // Limpa estado
     this.clearProcessingState();
 
-    // Scroll e limpa resposta
-    setTimeout(() => this.scrollToBottom(true), 150);
     setTimeout(() => {
       this.processingResponseRef = "";
       this.onClearAiResponse();

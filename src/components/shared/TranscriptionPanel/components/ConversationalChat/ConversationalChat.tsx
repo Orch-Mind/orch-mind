@@ -14,7 +14,6 @@ import { useConversationMessages } from "./hooks/useConversationMessages";
 import { useConversationSync } from "./hooks/useConversationSync";
 import { usePersistentMessages } from "./hooks/usePersistentMessages";
 import { useProcessingStatus } from "./hooks/useProcessingStatus";
-import { useStreamingHandlers } from "./hooks/useStreamingHandlers";
 import { MessageProcessor } from "./managers/MessageProcessor";
 import { StreamingManager, StreamingState } from "./managers/StreamingManager";
 import "./styles/ConversationalChat.input.css";
@@ -112,12 +111,6 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       }
     : persistentMessagesHook.recovery;
 
-  // Estado de scroll
-  const scrollState = useChatScroll({
-    messages: chatMessages,
-    messagesContainerRef,
-  });
-
   // Estado de streaming
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
@@ -126,12 +119,82 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
     thinkingContent: "",
   });
 
+  // Debug streaming state changes
+  useEffect(() => {
+    console.log("[ConversationalChat] Streaming state updated:", {
+      isStreaming: streamingState.isStreaming,
+      streamingResponseLength: streamingState.streamingResponse.length,
+      streamingResponsePreview: streamingState.streamingResponse.substring(
+        0,
+        50
+      ),
+      isThinking: streamingState.isThinking,
+    });
+  }, [streamingState]);
+
+  // Estado de scroll - agora simplificado para usar a âncora
+  const scrollState = useChatScroll({
+    messages: chatMessages,
+    streamingContent: streamingState.streamingResponse,
+    processingStatus: processingStatus,
+    thinkingContent: streamingState.thinkingContent,
+    isThinking: streamingState.isThinking,
+  });
+
+  // Força scroll quando processamento começa
+  useEffect(() => {
+    if (chatState.isProcessing) {
+      console.log("[ConversationalChat] Processing started, forcing scroll");
+      // Pequeno delay para garantir que o DOM foi atualizado
+      setTimeout(() => {
+        scrollState.scrollToBottom("auto");
+      }, 100);
+
+      // Scroll adicional após um delay maior para garantir
+      setTimeout(() => {
+        scrollState.scrollToBottom("auto");
+      }, 300);
+    }
+  }, [chatState.isProcessing, scrollState.scrollToBottom]);
+
+  // Força scroll quando processingStatus muda (para capturar "Extraindo sinais neurais...")
+  useEffect(() => {
+    if (processingStatus && processingStatus.trim() !== "") {
+      console.log(
+        "[ConversationalChat] Processing status changed, forcing scroll:",
+        processingStatus
+      );
+      // Delay para garantir que o TypingIndicator foi renderizado
+      setTimeout(() => {
+        scrollState.scrollToBottom("auto");
+      }, 50);
+    }
+  }, [processingStatus, scrollState.scrollToBottom]);
+
+  // Força scroll quando thinking começa
+  useEffect(() => {
+    if (streamingState.isThinking) {
+      console.log("[ConversationalChat] Thinking started, forcing scroll");
+      // Delay para garantir que o ThinkingMessage foi renderizado
+      setTimeout(() => {
+        scrollState.scrollToBottom("auto");
+      }, 50);
+
+      // Scroll adicional após um delay maior
+      setTimeout(() => {
+        scrollState.scrollToBottom("auto");
+      }, 200);
+    }
+  }, [streamingState.isThinking, scrollState.scrollToBottom]);
+
   // Managers
   const streamingManagerRef = useRef<StreamingManager | null>(null);
   const messageProcessorRef = useRef<MessageProcessor | null>(null);
 
-  // Inicializa managers
+  // Inicializa managers e expõe handlers
   useEffect(() => {
+    console.log("[ConversationalChat] Initializing managers");
+
     // Streaming Manager
     streamingManagerRef.current = new StreamingManager(
       setStreamingState,
@@ -157,7 +220,49 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       scrollState.scrollToBottom
     );
 
+    // Expõe handlers de streaming no window APÓS criar o manager
+    const streamingManager = streamingManagerRef.current;
+
+    // Handler para início do streaming
+    const handleStreamingStart = () => {
+      console.log("[ConversationalChat] handleStreamingStart called");
+      streamingManager.startStreaming();
+      chatState.setIsProcessing(true);
+      setProcessingStatus("");
+    };
+
+    // Handler para chunks de streaming
+    const handleStreamingChunk = (chunk: string) => {
+      console.log(
+        "[ConversationalChat] handleStreamingChunk called:",
+        chunk.substring(0, 30)
+      );
+      streamingManager.processChunk(chunk);
+    };
+
+    // Handler para fim do streaming
+    const handleStreamingEnd = () => {
+      console.log("[ConversationalChat] handleStreamingEnd called");
+      streamingManager.endStreaming();
+      chatState.setIsProcessing(false);
+    };
+
+    // Expõe handlers no window
+    if (typeof window !== "undefined") {
+      (window as any).__handleStreamingStart = handleStreamingStart;
+      (window as any).__handleStreamingChunk = handleStreamingChunk;
+      (window as any).__handleStreamingEnd = handleStreamingEnd;
+      console.log("[ConversationalChat] Streaming handlers exposed on window");
+    }
+
     return () => {
+      // Cleanup handlers
+      if (typeof window !== "undefined") {
+        delete (window as any).__handleStreamingStart;
+        delete (window as any).__handleStreamingChunk;
+        delete (window as any).__handleStreamingEnd;
+      }
+
       streamingManagerRef.current = null;
       messageProcessorRef.current?.dispose();
       messageProcessorRef.current = null;
@@ -167,14 +272,8 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
     chatState.setIsProcessing,
     onClearAiResponse,
     scrollState.scrollToBottom,
+    setProcessingStatus,
   ]);
-
-  // Expõe handlers de streaming no window
-  useStreamingHandlers(
-    streamingManagerRef.current!,
-    chatState.setIsProcessing,
-    setProcessingStatus
-  );
 
   // Monitora mudanças de conversa
   useEffect(() => {
@@ -352,18 +451,18 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
       <ChatMessagesContainer
         messages={chatMessages}
         isProcessing={chatState.isProcessing}
-        onScrollChange={() => {}}
         scrollRef={messagesContainerRef}
-        showScrollButton={scrollState.showScrollButton}
+        showScrollButton={false}
         onScrollToBottom={scrollState.scrollToBottom}
-        onAddTestMessage={debugFunctions.addTestMessage}
-        onResetState={debugFunctions.resetChatState}
-        onClearMessages={clearMessages}
         processingStatus={processingStatus}
         streamingContent={streamingState.streamingResponse}
         isStreaming={streamingState.isStreaming}
         isThinking={streamingState.isThinking}
         thinkingContent={streamingState.thinkingContent}
+        scrollAnchorRef={scrollState.scrollAnchorRef}
+        onAddTestMessage={debugFunctions.addTestMessage || (() => {})}
+        onResetState={debugFunctions.resetChatState}
+        onClearMessages={clearMessages}
       />
 
       {/* Área de Input */}

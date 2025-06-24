@@ -52,6 +52,10 @@ export class StreamingManager {
       if (thinkMatch && thinkMatch[1]) {
         this.thinkingContent = thinkMatch[1].trim();
         this.isThinking = true;
+        console.log(
+          "🧠 [STREAMING] Complete thinking tag found:",
+          this.thinkingContent.substring(0, 50)
+        );
       }
 
       // Para streaming, mostra apenas conteúdo após a tag think
@@ -75,13 +79,18 @@ export class StreamingManager {
         this.thinkingContent = partialMatch[1].trim();
         this.isThinking = true;
         console.log(
-          "🤔 [STREAMING] Thinking:",
-          partialMatch[1].substring(0, 50)
+          "🤔 [STREAMING] Thinking (partial):",
+          partialMatch[1].substring(0, 50),
+          "| isThinking:",
+          this.isThinking
         );
       }
       this.streamingResponse = "";
     } else {
       // Sem tags think ou já passamos delas
+      if (this.isThinking) {
+        console.log("🧠 [STREAMING] Exiting thinking mode");
+      }
       this.isThinking = false;
       const cleanedContent = cleanThinkTags(fullContent);
       this.streamingResponse = cleanedContent;
@@ -147,7 +156,16 @@ export class StreamingManager {
    * Notifica mudanças de estado
    */
   private notifyStateChange(): void {
-    this.onStateChange(this.getState());
+    const state = this.getState();
+    console.log("[StreamingManager] State change:", {
+      isStreaming: state.isStreaming,
+      streamingResponseLength: state.streamingResponse.length,
+      streamingResponsePreview: state.streamingResponse.substring(0, 50),
+      isThinking: state.isThinking,
+      thinkingContentLength: state.thinkingContent.length,
+      thinkingContentPreview: state.thinkingContent.substring(0, 50),
+    });
+    this.onStateChange(state);
   }
 }
 

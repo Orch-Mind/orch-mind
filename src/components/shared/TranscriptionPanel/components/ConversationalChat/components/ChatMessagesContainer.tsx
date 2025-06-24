@@ -138,7 +138,11 @@ const WelcomeMessage: React.FC<{
  * Chat messages container component
  * Follows Single Responsibility Principle - only handles message display and scroll
  */
-export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
+export const ChatMessagesContainer: React.FC<
+  Omit<ChatMessagesContainerProps, "onScrollChange"> & {
+    scrollAnchorRef: React.RefObject<HTMLDivElement | null>;
+  }
+> = ({
   messages,
   isProcessing,
   processingStatus,
@@ -146,56 +150,17 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
   isStreaming,
   isThinking,
   thinkingContent,
-  onScrollChange,
   scrollRef,
   showScrollButton,
   onScrollToBottom,
+  scrollAnchorRef,
   onAddTestMessage = () => {},
   onResetState = () => {},
   onClearMessages = () => {},
 }) => {
-  const scrollAnchorRef = React.useRef<HTMLDivElement>(null);
-
-  // Enhanced scroll to bottom that uses the anchor
-  const enhancedScrollToBottom = React.useCallback(() => {
-    // Try the original method first
-    onScrollToBottom();
-
-    // Then try scrolling to the anchor element
-    setTimeout(() => {
-      if (scrollAnchorRef.current) {
-        scrollAnchorRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
-      }
-    }, 50);
-  }, [onScrollToBottom]);
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      // Tolerância mínima de 2 pixels, consistente com useChatScroll
-      const isNearBottom = distanceFromBottom <= 5;
-      onScrollChange(isNearBottom);
-    }
-  };
-
-  // Auto-scroll when messages change or processing state changes
-  React.useEffect(() => {
-    // Small delay to ensure DOM is updated
-    const timer = setTimeout(() => {
-      if (scrollAnchorRef.current) {
-        scrollAnchorRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [messages.length, isProcessing]);
+  // A lógica de scroll foi completamente movida para o hook useChatScroll
+  // para centralizar o controle e evitar conflitos. O hook agora gerencia
+  // a âncora de scroll.
 
   // Debug logging
   useEffect(() => {
@@ -208,6 +173,7 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
       hasThinkingContent: !!thinkingContent,
       processingStatus,
       shouldShowIndicator: (isProcessing || isStreaming) && !isThinking,
+      shouldShowThinking: isThinking && thinkingContent,
     });
   }, [
     messages,
@@ -221,7 +187,7 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
 
   return (
     <div className="chat-messages-container">
-      <div className="chat-messages" ref={scrollRef} onScroll={handleScroll}>
+      <div className="chat-messages" ref={scrollRef}>
         <div className="messages-wrapper">
           {messages.map((message) => (
             <MessageItem key={message.id} message={message} />
@@ -252,23 +218,14 @@ export const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
           )}
 
           {/* Anchor element for scroll to bottom */}
-          <div
-            ref={scrollAnchorRef}
-            className="scroll-anchor"
-            style={{
-              float: "left",
-              clear: "both",
-              height: "1px",
-              width: "100%",
-            }}
-          />
+          <div ref={scrollAnchorRef} />
         </div>
       </div>
 
       {/* Scroll to bottom button */}
       <ScrollToBottomButton
         show={showScrollButton}
-        onClick={enhancedScrollToBottom}
+        onClick={onScrollToBottom}
       />
     </div>
   );

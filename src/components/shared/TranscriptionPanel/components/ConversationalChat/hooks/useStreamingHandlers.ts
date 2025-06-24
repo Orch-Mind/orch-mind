@@ -17,6 +17,13 @@ export function useStreamingHandlers(
   useEffect(() => {
     // Handler para início do streaming
     const handleStreamingStart = () => {
+      console.log("[useStreamingHandlers] handleStreamingStart called", {
+        hasManager: !!streamingManager,
+      });
+      if (!streamingManager) {
+        console.error("[useStreamingHandlers] StreamingManager is null!");
+        return;
+      }
       streamingManager.startStreaming();
       setIsProcessing(true);
       setProcessingStatus("");
@@ -24,11 +31,26 @@ export function useStreamingHandlers(
 
     // Handler para chunks de streaming
     const handleStreamingChunk = (chunk: string) => {
+      console.log("[useStreamingHandlers] handleStreamingChunk called", {
+        hasManager: !!streamingManager,
+        chunkPreview: chunk.substring(0, 30),
+      });
+      if (!streamingManager) {
+        console.error("[useStreamingHandlers] StreamingManager is null!");
+        return;
+      }
       streamingManager.processChunk(chunk);
     };
 
     // Handler para fim do streaming
     const handleStreamingEnd = () => {
+      console.log("[useStreamingHandlers] handleStreamingEnd called", {
+        hasManager: !!streamingManager,
+      });
+      if (!streamingManager) {
+        console.error("[useStreamingHandlers] StreamingManager is null!");
+        return;
+      }
       streamingManager.endStreaming();
       setIsProcessing(false);
     };

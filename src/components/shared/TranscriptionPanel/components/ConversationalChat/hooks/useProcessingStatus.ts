@@ -13,6 +13,7 @@ export function useProcessingStatus() {
   useEffect(() => {
     // Função para atualizar status de processamento
     const updateProcessingStatus = (status: string) => {
+      console.log("[useProcessingStatus] Status updated:", status);
       setProcessingStatus(status);
     };
 
