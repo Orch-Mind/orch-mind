@@ -74,7 +74,12 @@ export class ConversationManager {
     // Converte ChatMessage[] para o formato esperado pelo processador
     const messages = this.syncService.getMessagesForProcessor();
     return messages.map((msg) => ({
-      role: msg.type === "user" ? "user" : "system",
+      role:
+        msg.type === "user"
+          ? "user"
+          : msg.type === "assistant"
+          ? "assistant"
+          : "system",
       content: msg.content,
     }));
   }

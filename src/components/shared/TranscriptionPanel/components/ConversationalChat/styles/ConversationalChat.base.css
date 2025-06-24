@@ -41,21 +41,13 @@
   height: 0; /* TRUQUE: Força o container a respeitar o flex: 1 */
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 60px 0.5rem 0.5rem 0.5rem; /* Reduzido de 90px para 60px devido à altura menor da barra */
+  padding: 1rem 0.5rem 0 0.5rem; /* Padding mais modesto, sem padding-bottom */
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
 }
 
-/* Pseudo-elemento para garantir espaço extra de scroll */
-.chat-messages::after {
-  content: "";
-  display: block;
-  height: 2px;
-  min-height: 2px;
-  visibility: hidden;
-  flex-shrink: 0;
-}
+/* Removido pseudo-elemento ::after que causava espaço extra no final do scroll */
 
 /* Nível 3: O Wrapper das Mensagens */
 .messages-wrapper {
@@ -136,4 +128,4 @@
   .conv-chat-message-list {
     transition: padding-top 0.3s ease-out;
   }
-} 
+}

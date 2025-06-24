@@ -84,13 +84,18 @@ export class ConversationSyncService {
   private convertMessages(messages: any[]): ChatMessage[] {
     return messages.map((msg) => ({
       id: msg.id,
-      type: msg.type as "user" | "system" | "error",
+      type: msg.type as "user" | "system" | "assistant" | "error",
       content: msg.content,
       timestamp: new Date(msg.timestamp),
       hasContext: msg.hasContext,
       contextContent: msg.contextContent,
       // For compatibility with ResponseGenerator, also include role
-      role: msg.type as "user" | "system",
+      role:
+        msg.type === "user"
+          ? "user"
+          : msg.type === "assistant"
+          ? "assistant"
+          : "system",
       // Preserve summary metadata if present
       ...(msg.isSummary && {
         isSummary: msg.isSummary,

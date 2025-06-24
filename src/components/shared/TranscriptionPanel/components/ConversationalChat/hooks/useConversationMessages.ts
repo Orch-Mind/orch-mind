@@ -6,7 +6,7 @@ import { ChatConversation } from "../types/ChatHistoryTypes";
 import { ChatMessage } from "./usePersistentMessages";
 
 interface AddMessageParams {
-  type: "user" | "system" | "error";
+  type: "user" | "system" | "assistant" | "error";
   content: string;
   hasContext?: boolean;
   contextContent?: string;

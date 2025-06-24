@@ -14,8 +14,8 @@ export type { ChatConversation } from "./ChatHistoryTypes";
 export interface ChatMessage {
   /** Unique identifier for the message */
   id: string;
-  /** Type of message - user input, system message, or error */
-  type: "user" | "system" | "error";
+  /** Type of message - user input, system message, assistant response, or error */
+  type: "user" | "system" | "assistant" | "error";
   /** The actual message content */
   content: string;
   /** When the message was created */

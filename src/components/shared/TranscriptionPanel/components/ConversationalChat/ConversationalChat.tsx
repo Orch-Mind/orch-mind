@@ -139,6 +139,7 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
     processingStatus: processingStatus,
     thinkingContent: streamingState.thinkingContent,
     isThinking: streamingState.isThinking,
+    containerRef: messagesContainerRef,
   });
 
   // Força scroll quando processamento começa
@@ -331,18 +332,7 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
     handleScroll();
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [chatMessages.length]);
-
-  // Limpa streaming quando resposta completa chega
-  useEffect(() => {
-    if (
-      aiResponseText &&
-      !aiResponseText.includes("Process") &&
-      streamingState.isStreaming
-    ) {
-      streamingManagerRef.current?.reset();
-    }
-  }, [aiResponseText, streamingState.isStreaming]);
+  }, []); // Dependências removidas para usar a lógica do hook
 
   // Handler para enviar mensagem
   const handleSendMessage = useCallback(() => {
@@ -414,7 +404,7 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
         addMessage({ type: "user", content: "Test message" }),
       addTestAIResponse: () =>
         addMessage({
-          type: "system",
+          type: "assistant",
           content: "This is a test AI response.",
         }),
       resetChatState: () => {
@@ -450,8 +440,8 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
         messages={chatMessages}
         isProcessing={chatState.isProcessing}
         scrollRef={messagesContainerRef}
-        showScrollButton={false}
-        onScrollToBottom={scrollState.scrollToBottom}
+        showScrollButton={scrollState.showScrollButton}
+        onScrollToBottom={() => scrollState.scrollToBottom("auto")}
         processingStatus={processingStatus}
         streamingContent={streamingState.streamingResponse}
         isStreaming={streamingState.isStreaming}

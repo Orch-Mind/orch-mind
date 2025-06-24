@@ -21,7 +21,7 @@ export class MessageProcessor {
       message: Omit<ChatMessage, "id" | "timestamp">
     ) => void,
     private onProcessingStateChange: (isProcessing: boolean) => void,
-    private onClearAiResponse: () => void,
+    private onClearAiResponse: () => void
   ) {}
 
   /**
@@ -99,9 +99,9 @@ export class MessageProcessor {
   processStreamingComplete(content: string): void {
     if (!content || content.trim() === "") return;
 
-    // Adiciona mensagem do sistema
+    // Adiciona mensagem do assistente (não system!)
     this.addMessage({
-      type: "system",
+      type: "assistant",
       content: content,
     });
 
@@ -221,9 +221,9 @@ export class MessageProcessor {
       cleanedResponse.substring(0, 50)
     );
 
-    // Adiciona resposta
+    // Adiciona resposta do assistente (não system!)
     this.addMessage({
-      type: "system",
+      type: "assistant",
       content: cleanedResponse,
     });
 
@@ -268,18 +268,18 @@ export class MessageProcessor {
       return true;
     }
 
-    // Verifica duplicação nas mensagens atuais
+    // Verifica duplicação nas mensagens atuais (procura por assistant agora!)
     const isDuplicateInCurrent = currentMessages.some(
       (msg) =>
-        msg.type === "system" &&
+        (msg.type === "system" || msg.type === "assistant") &&
         this.normalizeForComparison(msg.content) === normalizedText
     );
 
-    // Verifica duplicação nas mensagens da conversa
+    // Verifica duplicação nas mensagens da conversa (procura por assistant agora!)
     const isDuplicateInConversation =
       conversationMessages?.some(
         (msg) =>
-          msg.type === "system" &&
+          (msg.type === "system" || msg.type === "assistant") &&
           this.normalizeForComparison(msg.content) === normalizedText
       ) || false;
 

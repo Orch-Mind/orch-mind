@@ -113,6 +113,12 @@ export class StreamingManager {
       ? cleanThinkTags(this.streamingChunks)
       : "";
 
+    // IMPORTANTE: Limpa o estado ANTES de notificar a conclusão
+    // Isso evita o bug de mensagem duplicada onde tanto o StreamingMessage
+    // quanto a mensagem final são renderizadas simultaneamente
+    this.reset();
+
+    // Agora notifica que a mensagem está completa
     if (finalContent && finalContent.trim() !== "") {
       console.log(
         "✅ [STREAMING] Streaming completed:",
@@ -122,9 +128,6 @@ export class StreamingManager {
     } else {
       console.log("⚠️ [STREAMING] No content after cleaning");
     }
-
-    // Limpa o estado
-    this.reset();
   }
 
   /**

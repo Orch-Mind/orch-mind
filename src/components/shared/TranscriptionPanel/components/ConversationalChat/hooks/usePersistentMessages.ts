@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface ChatMessage {
   id: string;
-  type: "user" | "system" | "error";
+  type: "user" | "system" | "assistant" | "error";
   content: string;
   timestamp: Date;
   hasContext?: boolean;
@@ -14,7 +14,7 @@ export interface ChatMessage {
 }
 
 interface AddMessageParams {
-  type: "user" | "system" | "error";
+  type: "user" | "system" | "assistant" | "error";
   content: string;
   hasContext?: boolean;
   contextContent?: string;
@@ -69,8 +69,14 @@ const loadMessagesFromKey = (key: string, logLabel: string): ChatMessage[] => {
       const parsed = JSON.parse(data);
       const messagesArray = Array.isArray(parsed) ? parsed : parsed.messages;
       if (Array.isArray(messagesArray) && messagesArray.length > 0) {
-        logWithDetails("💾", `Loaded ${messagesArray.length} messages from ${logLabel}`);
-        return messagesArray.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        logWithDetails(
+          "💾",
+          `Loaded ${messagesArray.length} messages from ${logLabel}`
+        );
+        return messagesArray.map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp),
+        }));
       }
     }
   } catch (error) {
@@ -92,11 +98,11 @@ export const usePersistentMessages = (): UsePersistentMessagesReturn => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMessages));
       return initialMessages;
     }
-    
+
     initialMessages = loadMessagesFromKey(REDUNDANT_KEY, "redundant storage");
     if (initialMessages.length > 0) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMessages));
-        return initialMessages;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMessages));
+      return initialMessages;
     }
 
     logWithDetails("ℹ️", "No messages found in any storage for lazy init");
@@ -121,7 +127,7 @@ export const usePersistentMessages = (): UsePersistentMessagesReturn => {
     try {
       const dataToSave = JSON.stringify(currentMessages);
       localStorage.setItem(STORAGE_KEY, dataToSave);
-      
+
       const backupData = JSON.stringify({
         timestamp: Date.now(),
         count: currentMessages.length,
@@ -150,17 +156,14 @@ export const usePersistentMessages = (): UsePersistentMessagesReturn => {
     debouncedSave(messages);
   }, [messages, debouncedSave]);
 
-  const addMessage = useCallback(
-    (params: AddMessageParams) => {
-      const newMessage: ChatMessage = {
-        id: nanoid(),
-        timestamp: new Date(),
-        ...params,
-      };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-    },
-    []
-  );
+  const addMessage = useCallback((params: AddMessageParams) => {
+    const newMessage: ChatMessage = {
+      id: nanoid(),
+      timestamp: new Date(),
+      ...params,
+    };
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  }, []);
 
   const clearMessages = useCallback(() => {
     logWithDetails("🗑️", "Clearing all messages");
@@ -176,7 +179,9 @@ export const usePersistentMessages = (): UsePersistentMessagesReturn => {
 
   const hasBackup = useCallback(() => {
     try {
-      return !!(localStorage.getItem(BACKUP_KEY) || localStorage.getItem(REDUNDANT_KEY));
+      return !!(
+        localStorage.getItem(BACKUP_KEY) || localStorage.getItem(REDUNDANT_KEY)
+      );
     } catch {
       return false;
     }
@@ -184,18 +189,28 @@ export const usePersistentMessages = (): UsePersistentMessagesReturn => {
 
   const restoreFromBackup = useCallback(() => {
     logWithDetails("🔄", "Manual restore requested");
-    const backupMessages = loadMessagesFromKey(BACKUP_KEY, "manual backup restore");
+    const backupMessages = loadMessagesFromKey(
+      BACKUP_KEY,
+      "manual backup restore"
+    );
     if (backupMessages.length > 0) {
       setMessages(backupMessages);
-      logWithDetails("✅", "Manual restore completed", { recoveredCount: backupMessages.length });
+      logWithDetails("✅", "Manual restore completed", {
+        recoveredCount: backupMessages.length,
+      });
       return true;
     }
 
-    const redundantMessages = loadMessagesFromKey(REDUNDANT_KEY, "manual redundant restore");
+    const redundantMessages = loadMessagesFromKey(
+      REDUNDANT_KEY,
+      "manual redundant restore"
+    );
     if (redundantMessages.length > 0) {
-        setMessages(redundantMessages);
-        logWithDetails("✅", "Manual restore completed", { recoveredCount: redundantMessages.length });
-        return true;
+      setMessages(redundantMessages);
+      logWithDetails("✅", "Manual restore completed", {
+        recoveredCount: redundantMessages.length,
+      });
+      return true;
     }
 
     logWithDetails("⚠️", "No backup data found for manual restore");
@@ -211,17 +226,27 @@ export const usePersistentMessages = (): UsePersistentMessagesReturn => {
       logWithDetails("❌", "Error clearing backup", error);
     }
   }, []);
-  
+
   const performIntegrityCheck = useCallback(() => {
-      try {
-        const primaryCount = (loadMessagesFromKey(STORAGE_KEY, "integrity check")).length;
-        const backupCount = (loadMessagesFromKey(BACKUP_KEY, "integrity check")).length;
-        const isHealthy = primaryCount >= backupCount;
-        logWithDetails("🩺", "Performed integrity check", { isHealthy, primaryCount, backupCount });
-        return isHealthy;
-      } catch (e) {
-        return false;
-      }
+    try {
+      const primaryCount = loadMessagesFromKey(
+        STORAGE_KEY,
+        "integrity check"
+      ).length;
+      const backupCount = loadMessagesFromKey(
+        BACKUP_KEY,
+        "integrity check"
+      ).length;
+      const isHealthy = primaryCount >= backupCount;
+      logWithDetails("🩺", "Performed integrity check", {
+        isHealthy,
+        primaryCount,
+        backupCount,
+      });
+      return isHealthy;
+    } catch (e) {
+      return false;
+    }
   }, []);
 
   return {

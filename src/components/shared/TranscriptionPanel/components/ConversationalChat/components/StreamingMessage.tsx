@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import "./StreamingMessage.css";
 
 interface StreamingMessageProps {
@@ -17,58 +17,27 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
   content,
   isComplete = false,
 }) => {
-  const textRef = useRef<HTMLDivElement>(null);
-  const lastContentRef = useRef<string>("");
+  // Preserva espaços e quebras de linha convertendo \n em <br>
+  const formattedContent = React.useMemo(() => {
+    if (!content) return null;
 
-  useEffect(() => {
-    if (textRef.current && content !== lastContentRef.current) {
-      // Find the new characters
-      const newChars = content.slice(lastContentRef.current.length);
+    // Divide o conteúdo por quebras de linha
+    const lines = content.split("\n");
 
-      if (newChars) {
-        // Create spans for new characters with animation
-        const fragment = document.createDocumentFragment();
-
-        for (const char of newChars) {
-          const span = document.createElement("span");
-          span.textContent = char;
-          span.className = "char-fade-in";
-          fragment.appendChild(span);
-        }
-
-        // Remove cursor from previous position if exists
-        const existingCursor =
-          textRef.current.querySelector(".streaming-cursor");
-        if (existingCursor) {
-          existingCursor.remove();
-        }
-
-        // Add new characters
-        textRef.current.appendChild(fragment);
-
-        // Add cursor if not complete
-        if (!isComplete) {
-          const cursor = document.createElement("span");
-          cursor.className = "streaming-cursor";
-          textRef.current.appendChild(cursor);
-        }
-      }
-
-      lastContentRef.current = content;
-    }
-  }, [content, isComplete]);
-
-  // Reset when content is cleared
-  useEffect(() => {
-    if (!content && textRef.current) {
-      textRef.current.innerHTML = "";
-      lastContentRef.current = "";
-    }
+    return lines.map((line, index) => (
+      <React.Fragment key={index}>
+        {line || "\u00A0"} {/* Usa espaço não-quebrável para linhas vazias */}
+        {index < lines.length - 1 && <br />}
+      </React.Fragment>
+    ));
   }, [content]);
 
   return (
     <div className="streaming-message">
-      <div className="streaming-text" ref={textRef}></div>
+      <div className="streaming-text">
+        {formattedContent}
+        {!isComplete && <span className="streaming-cursor" />}
+      </div>
     </div>
   );
 };

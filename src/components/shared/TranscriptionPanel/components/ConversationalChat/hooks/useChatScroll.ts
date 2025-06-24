@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useCallback, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { ChatMessage } from "../types/ChatTypes";
 
 interface UseChatScrollProps {
@@ -10,11 +16,13 @@ interface UseChatScrollProps {
   processingStatus?: string;
   thinkingContent?: string;
   isThinking?: boolean;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
- * Custom hook to manage chat scroll behavior using a reliable anchor element.
- * This approach avoids scroll height calculations and is more resilient.
+ * Custom hook to manage chat scroll behavior.
+ * Determines if the user is near the bottom to allow auto-scrolling.
+ * Shows a button to scroll down if the user has scrolled up.
  */
 export const useChatScroll = ({
   messages,
@@ -22,53 +30,94 @@ export const useChatScroll = ({
   processingStatus,
   thinkingContent,
   isThinking,
+  containerRef,
 }: UseChatScrollProps) => {
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const userInteractedRef = useRef(false);
+  const lastScrollTop = useRef(0);
+  const autoScrollTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const isAtBottom = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return true;
+    const { scrollHeight, scrollTop, clientHeight } = container;
+    // Consider at bottom if within a small threshold (e.g., 10px)
+    // This helps account for sub-pixel rendering differences.
+    return scrollHeight - scrollTop - clientHeight < 10;
+  }, [containerRef]);
 
   const scrollToBottom = useCallback(
     (behavior: "smooth" | "auto" = "smooth") => {
-      console.log("[useChatScroll] scrollToBottom called:", {
-        behavior,
-        anchorExists: !!scrollAnchorRef.current,
-        anchorElement: scrollAnchorRef.current,
-      });
+      // An explicit call to scroll to bottom means user interaction is reset.
+      userInteractedRef.current = false;
+      setShowScrollButton(false);
 
       if (scrollAnchorRef.current) {
         scrollAnchorRef.current.scrollIntoView({ behavior, block: "end" });
-        console.log("[useChatScroll] scrollIntoView called successfully");
-      } else {
-        console.warn("[useChatScroll] scrollAnchorRef.current is null!");
+
+        // For instant scrolls, add a follow-up check to ensure we've reached the absolute bottom.
+        // This combats timing issues where scrollHeight hasn't updated yet.
+        if (behavior === "auto") {
+          setTimeout(() => {
+            if (scrollAnchorRef.current && !isAtBottom()) {
+              scrollAnchorRef.current.scrollIntoView({
+                behavior: "auto",
+                block: "end",
+              });
+            }
+          }, 50);
+        }
       }
     },
-    []
+    [isAtBottom]
   );
 
-  // Auto-scroll when messages or streaming content changes
-  // useLayoutEffect is used to ensure the scroll happens after the DOM is updated
-  // but before the browser paints, preventing visual inconsistencies.
+  // Effect to handle user scroll interaction and button visibility
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const atBottom = isAtBottom();
+      const currentScrollTop = container.scrollTop;
+
+      // User scrolls up
+      if (currentScrollTop < lastScrollTop.current && !atBottom) {
+        userInteractedRef.current = true;
+      }
+      // User scrolls back to bottom
+      else if (atBottom) {
+        userInteractedRef.current = false;
+      }
+
+      lastScrollTop.current = currentScrollTop <= 0 ? 0 : currentScrollTop;
+      setShowScrollButton(!atBottom);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      if (autoScrollTimeout.current) {
+        clearTimeout(autoScrollTimeout.current);
+      }
+    };
+  }, [containerRef, isAtBottom]);
+
+  // Effect for auto-scrolling on new content
   useLayoutEffect(() => {
-    console.log("[useChatScroll] Effect triggered:", {
-      messagesLength: messages.length,
-      lastMessage: messages[messages.length - 1],
-      streamingContent: streamingContent?.substring(0, 50),
-      hasStreamingContent: !!streamingContent,
-      processingStatus: processingStatus?.substring(0, 50),
-      hasProcessingStatus: !!processingStatus,
-      thinkingContent: thinkingContent?.substring(0, 50),
-      hasThinkingContent: !!thinkingContent,
-      isThinking: isThinking,
-      scrollAnchorExists: !!scrollAnchorRef.current,
-    });
-
-    // A setTimeout with a delay of 0 pushes the execution to the end of the
-    // event loop, after the browser has finished its rendering and layout
-    // calculations. This is a robust way to handle tricky scroll timing issues.
-    const timer = setTimeout(() => {
-      console.log("[useChatScroll] Attempting scroll to bottom");
-      scrollToBottom("auto");
-    }, 0);
-
-    return () => clearTimeout(timer);
+    if (autoScrollTimeout.current) {
+      clearTimeout(autoScrollTimeout.current);
+    }
+    autoScrollTimeout.current = setTimeout(() => {
+      if (!userInteractedRef.current) {
+        // The robust retry logic is now inside scrollToBottom
+        scrollToBottom("auto");
+      } else {
+        setShowScrollButton(true);
+      }
+    }, 100);
   }, [
     messages,
     streamingContent,
@@ -78,11 +127,9 @@ export const useChatScroll = ({
     scrollToBottom,
   ]);
 
-  // For the button, we can still use the container logic, but it's less critical.
-  // This part can be added back if the button logic is needed. For now, we simplify.
-
   return {
     scrollToBottom,
-    scrollAnchorRef, // Return the ref to be placed in the DOM
+    scrollAnchorRef,
+    showScrollButton,
   };
 };

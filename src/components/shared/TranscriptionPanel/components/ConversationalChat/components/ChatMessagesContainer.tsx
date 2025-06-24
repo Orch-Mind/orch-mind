@@ -201,7 +201,8 @@ export const ChatMessagesContainer: React.FC<
           {/* Show typing indicator for processing or streaming */}
           {(isProcessing || isStreaming) &&
             !isThinking &&
-            (processingStatus || streamingContent) && (
+            (processingStatus ||
+              (streamingContent && streamingContent.trim() !== "")) && (
               <TypingIndicator
                 processingStatus={processingStatus}
                 streamingContent={streamingContent}
@@ -218,7 +219,7 @@ export const ChatMessagesContainer: React.FC<
           )}
 
           {/* Anchor element for scroll to bottom */}
-          <div ref={scrollAnchorRef} />
+          <div ref={scrollAnchorRef} className="scroll-anchor" />
         </div>
       </div>
 

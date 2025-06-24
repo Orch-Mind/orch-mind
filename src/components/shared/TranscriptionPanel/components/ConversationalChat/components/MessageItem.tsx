@@ -158,7 +158,14 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
               </div>
             )}
 
-            <div className="message-text">{message.content}</div>
+            <div className="message-text">
+              {message.content.split("\n").map((line, index, array) => (
+                <React.Fragment key={index}>
+                  {line || "\u00A0"}
+                  {index < array.length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </div>
 
             {isSummary && (message as any).tokenCount && (
               <div className="summary-metadata">
