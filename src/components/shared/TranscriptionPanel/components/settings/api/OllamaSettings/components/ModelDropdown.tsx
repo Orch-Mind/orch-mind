@@ -81,7 +81,7 @@ export const ModelDropdown: React.FC<ModelDropdownProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-black/90 border border-cyan-500/30 rounded shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-[1100] w-full mt-1 bg-black/90 border border-cyan-500/30 rounded shadow-lg max-h-40 overflow-y-auto">
           {models.map((model) => (
             <button
               key={model.id}

@@ -28,7 +28,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
   const userName = getOption(STORAGE_KEYS.USER_NAME) || "User";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10">
       <div
         className="rounded-2xl p-6 w-full max-w-md relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300"
         style={{

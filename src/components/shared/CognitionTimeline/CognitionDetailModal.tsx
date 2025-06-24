@@ -538,7 +538,7 @@ const CognitionDetailModal: React.FC<CognitionDetailModalProps> = ({
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 pt-[2vh] pb-[2vh]"
+          className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 pt-[2vh] pb-[2vh]"
           onClick={handleBackdropClick}
         >
           <div

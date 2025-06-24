@@ -495,7 +495,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
       {/* Modal de Logs de Cognição */}
       {showLogsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10">
           <div className="orchos-cognition-logs-modal">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">

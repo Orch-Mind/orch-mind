@@ -29,7 +29,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10">
       <div
         className="rounded-2xl p-6 w-full max-w-2xl relative overflow-hidden"
         style={{
