@@ -10,10 +10,6 @@ import {
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
-import {
-  buildIntegrationSystemPrompt,
-  buildIntegrationUserPrompt,
-} from "../../../../../shared/utils/neuralPromptBuilder";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { HuggingFaceServiceFacade } from "../../services/huggingface/HuggingFaceServiceFacade";
@@ -187,7 +183,8 @@ export class DefaultNeuralIntegrationService
   ): Promise<NeuralIntegrationResult> {
     if (!neuralResults || neuralResults.length === 0) {
       return {
-        prompt: originalInput,
+        neuralResults: [],
+        strategyDecision: { deterministic: true, temperature: 0.5 },
         temperature: 0.5,
         isDeterministic: true,
       };
@@ -587,34 +584,14 @@ export class DefaultNeuralIntegrationService
       );
     }
 
-    // 4. Compose final prompt
-    const userPrompt = buildIntegrationUserPrompt(
-      originalInput,
-      neuralResults,
-      language,
-      strategyDecision
-    );
-
-    // Etapa final: executar o prompt de integração para obter a resposta final
+    // 4. Return the raw integration data for the final processor to use
     const validatedTemperature = this.validateTemperature(
       strategyDecision.temperature
     );
 
-    const finalResponseStream = await this.aiService.streamOpenAIResponse(
-      [
-        { role: "system", content: buildIntegrationSystemPrompt() },
-        { role: "user", content: userPrompt },
-      ],
-      validatedTemperature
-    );
-
-    // Limpar a resposta final de quaisquer tags de pensamento residuais
-    const cleanedFinalResponse = cleanThinkTags(
-      finalResponseStream.responseText || ""
-    );
-
     return {
-      prompt: cleanedFinalResponse, // Retorna a resposta limpa e integrada
+      neuralResults: cleanedNeuralResults,
+      strategyDecision: strategyDecision,
       temperature: validatedTemperature,
       isDeterministic: strategyDecision.deterministic,
     };

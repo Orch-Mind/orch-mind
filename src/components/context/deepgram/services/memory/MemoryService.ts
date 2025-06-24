@@ -48,18 +48,6 @@ export class MemoryService implements IMemoryService {
   constructor(aiService: IOpenAIService) {
     this.aiService = aiService;
 
-    // Initial system message
-    const systemMessage: Message = {
-      role: "system",
-      content: `You are a helpful AI assistant with memory capabilities.
-You can adapt your communication style based on context:
-- Technical and precise for work-related discussions
-- Friendly and conversational for casual chats
-- Supportive and understanding during difficult moments
-
-Respond naturally without forced greetings. Focus on being helpful and relevant to the user's needs.`,
-    };
-
     // Initialize core components
     const formatter = new TranscriptionFormatter();
     const processor = new BatchTranscriptionProcessor(formatter);
@@ -70,7 +58,7 @@ Respond naturally without forced greetings. Focus on being helpful and relevant 
     // Always use DuckDB for vector storage (local, fast, compatible)
     const persistenceService = new DuckDBMemoryService(embeddingService);
 
-    this.historyManager = new ConversationHistoryManager(systemMessage);
+    this.historyManager = new ConversationHistoryManager();
     this.embeddingService = embeddingService;
     this.persistenceService = persistenceService;
     this.contextBuilder = new MemoryContextBuilder(

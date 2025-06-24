@@ -507,8 +507,6 @@ export class TranscriptionPromptProcessor {
         this.currentLanguage
       );
 
-      const integratedUserPrompt = integrationResult.prompt;
-
       // Log integration decision
       LoggingUtils.logInfo(
         `📊 Integration decision: ${
@@ -518,7 +516,7 @@ export class TranscriptionPromptProcessor {
 
       // Log symbolic context synthesis
       symbolicCognitionTimelineLogger.logSymbolicContextSynthesized({
-        summary: integratedUserPrompt, // summary is required in SymbolicContext
+        summary: "Neural context integrated for final response generation.",
         modules: processingResults.map((r: NeuralProcessingResult) => ({
           core: r.core,
           intensity: r.intensity,
@@ -564,8 +562,8 @@ export class TranscriptionPromptProcessor {
       };
 
       const fullResponse = await this.responseGenerator.generateResponse(
-        integratedUserPrompt,
-        integrationResult.temperature,
+        transcriptionToSend,
+        integrationResult,
         temporaryContext,
         conversationMessages,
         onStreamingChunk

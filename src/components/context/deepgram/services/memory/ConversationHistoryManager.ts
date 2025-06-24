@@ -9,13 +9,13 @@ import { Message } from "../../interfaces/transcription/TranscriptionTypes";
 import { LoggingUtils } from "../../utils/LoggingUtils";
 
 export class ConversationHistoryManager implements IConversationHistoryManager {
-  private conversationHistory: Message[];
+  private conversationHistory: Message[] = [];
   private maxInteractions: number = 10;
-  
-  constructor(systemMessage: Message) {
-    this.conversationHistory = [systemMessage];
+
+  constructor() {
+    // No longer initializes with a system message.
   }
-  
+
   /**
    * Adds a message to the conversation history and prunes if necessary (cognitive history management)
    */
@@ -23,41 +23,39 @@ export class ConversationHistoryManager implements IConversationHistoryManager {
     this.conversationHistory.push(message);
     this.pruneHistory();
   }
-  
+
   /**
    * Gets the current conversation history (cognitive memory trace)
    */
   getHistory(): Message[] {
     return [...this.conversationHistory];
   }
-  
+
   /**
-   * Clears the conversation history but keeps the system message (orchestrator memory reset, preserve identity)
+   * Clears the conversation history (orchestrator memory reset)
    */
   clearHistory(): void {
-    const systemMessage = this.conversationHistory[0];
-    this.conversationHistory = [systemMessage];
+    this.conversationHistory = [];
   }
-  
+
   /**
    * Sets the maximum number of interactions to keep (cognitive memory span)
    */
   setMaxInteractions(max: number): void {
     this.maxInteractions = max;
   }
-  
+
   /**
    * Prunes conversation history to maintain the maximum allowed interactions (cognitive pruning)
    */
   private pruneHistory(): void {
-    const systemMessage = this.conversationHistory[0];
-    
-    if (this.conversationHistory.length > (this.maxInteractions * 2) + 1) {
-      this.conversationHistory = [
-        systemMessage,
-        ...this.conversationHistory.slice(-(this.maxInteractions * 2))
-      ];
-      LoggingUtils.logInfo(`[COGNITIVE-HISTORY] History pruned to ${this.conversationHistory.length} messages (cognitive pruning)`);
+    if (this.conversationHistory.length > this.maxInteractions * 2) {
+      this.conversationHistory = this.conversationHistory.slice(
+        -(this.maxInteractions * 2)
+      );
+      LoggingUtils.logInfo(
+        `[COGNITIVE-HISTORY] History pruned to ${this.conversationHistory.length} messages (cognitive pruning)`
+      );
     }
   }
-} 
+}

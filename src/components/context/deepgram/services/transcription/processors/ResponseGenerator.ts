@@ -5,6 +5,7 @@ import { buildIntegrationSystemPrompt } from "../../../../../../shared/utils/neu
 import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
 import { IOpenAIService } from "../../../interfaces/openai/IOpenAIService";
 import { Message } from "../../../interfaces/transcription/TranscriptionTypes";
+import { NeuralIntegrationResult } from "../../../symbolic-cortex/integration/INeuralIntegrationService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import { cleanThinkTags } from "../../../utils/ThinkTagCleaner";
 import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimelineLoggerSingleton";
@@ -25,15 +26,15 @@ export class ResponseGenerator {
 
   /**
    * Generate response using the selected backend
-   * @param integratedPrompt The integrated prompt from neural processing
-   * @param temperature Temperature for response generation (0.1-0.7)
-   * @param temporaryContext Optional temporary context
-   * @param conversationMessages Optional conversation messages
-   * @param onStreamingChunk Optional callback for streaming chunks
+   * @param prompt The user's direct input message.
+   * @param integrationResult The result from the neural integration service.
+   * @param temporaryContext Optional temporary context for persona modulation.
+   * @param conversationMessages Optional conversation history from the chat UI.
+   * @param onStreamingChunk Optional callback for streaming chunks.
    */
   async generateResponse(
-    integratedPrompt: string,
-    temperature: number,
+    prompt: string,
+    integrationResult: NeuralIntegrationResult,
     temporaryContext?: string,
     conversationMessages?: Message[],
     onStreamingChunk?: (chunk: string) => void
@@ -41,22 +42,32 @@ export class ResponseGenerator {
     // Validate temperature parameter
     const validatedTemperature = Math.max(
       this.MIN_TEMPERATURE,
-      Math.min(this.MAX_TEMPERATURE, temperature)
+      Math.min(this.MAX_TEMPERATURE, integrationResult.temperature)
     );
 
-    if (temperature !== validatedTemperature) {
+    if (integrationResult.temperature !== validatedTemperature) {
       LoggingUtils.logWarning(
-        `[ResponseGenerator] Temperature ${temperature} was clamped to ${validatedTemperature}`
+        `[ResponseGenerator] Temperature ${integrationResult.temperature} was clamped to ${validatedTemperature}`
       );
     }
 
     symbolicCognitionTimelineLogger.logFusionInitiated();
 
-    // Get the current conversation history
+    // Get the current conversation history (which is clean, without system prompts)
     const conversationHistory = this.memoryService.getConversationHistory();
 
-    // Prepare the appropriate system message based on context
-    const systemMessage = this._prepareSystemMessage(temporaryContext);
+    // Build the dynamic system prompt using all available context
+    const systemPromptContent = buildIntegrationSystemPrompt(
+      integrationResult.neuralResults,
+      undefined, // Language can be added here if needed
+      integrationResult.strategyDecision,
+      temporaryContext
+    );
+
+    const systemMessage: Message = {
+      role: "system",
+      content: systemPromptContent,
+    };
 
     // Build the final messages array
     let messages: Message[];
@@ -64,14 +75,14 @@ export class ResponseGenerator {
     if (conversationMessages && conversationMessages.length > 0) {
       // Build messages with chat conversation history
       messages = this._buildMessagesWithChatHistory(
-        integratedPrompt,
+        prompt,
         conversationMessages,
         systemMessage
       );
     } else {
       // Build messages with standard conversation history
       messages = this._buildMessagesWithConversationHistory(
-        integratedPrompt,
+        prompt,
         conversationHistory,
         systemMessage
       );
@@ -95,34 +106,6 @@ export class ResponseGenerator {
       validatedTemperature,
       onStreamingChunk
     );
-  }
-
-  /**
-   * Prepare the appropriate system message based on context
-   */
-  private _prepareSystemMessage(temporaryContext?: string): Message {
-    if (temporaryContext?.trim()) {
-      return {
-        role: "system",
-        content: `TEMPORARY COGNITIVE MODULATION
-    
-    THEORETICAL BASIS: Jung's directed thinking vs. passive association.
-    Your cognitive processing should be modulated by the instructions below for this interaction cycle only.
-    
-    MODULATION TYPE: Directed symbolic processing with focused intention.
-    INTEGRATION: Adapt these instructions while preserving your core Orch-OS symbolic identity.
-    
-    SPECIFIC INSTRUCTIONS:
-    ${temporaryContext.trim()}
-    
-    REMEMBER: This is a temporary lens, not a replacement of your core symbolic architecture.`,
-      };
-    } else {
-      return {
-        role: "system",
-        content: buildIntegrationSystemPrompt(),
-      };
-    }
   }
 
   /**

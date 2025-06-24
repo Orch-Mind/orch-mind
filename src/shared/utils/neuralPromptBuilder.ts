@@ -62,65 +62,74 @@ Context: ${signal.context || "None"}\n\n`;
   return userPrompt;
 }
 
-export function buildIntegrationSystemPrompt(): string {
+export function buildIntegrationSystemPrompt(
+  neuralResults?: any[],
+  language?: string,
+  strategyDecision?: any,
+  temporaryContext?: string
+): string {
+  const targetLanguage = language || "pt-BR";
+
+  // Prepare neural context for system prompt
+  let neuralContext = "";
+  if (neuralResults && neuralResults.length > 0) {
+    const relevantSignals = neuralResults
+      .filter((r) => r.content && Object.keys(r.content).length > 0)
+      .slice(0, 3)
+      .map((r) => {
+        const summary =
+          r.content.summary ||
+          r.content.symbolicQuery?.query ||
+          JSON.stringify(r.content).slice(0, 100);
+        return `* ${r.coreName}: ${summary}`;
+      });
+
+    if (relevantSignals.length > 0) {
+      neuralContext = `\n\nINTERNAL CONTEXT (FOR YOUR REFERENCE ONLY):\n${relevantSignals.join(
+        "\n"
+      )}`;
+    }
+  }
+
+  // Add strategy context if available
+  let strategyContext = "";
+  if (strategyDecision) {
+    strategyContext = `\n\nRESPONSE STRATEGY (FOR YOUR REFERENCE ONLY):
+* Approach: ${
+      strategyDecision.deterministic
+        ? "Precise/Direct"
+        : "Natural/Conversational"
+    }`;
+    if (strategyDecision.justification) {
+      strategyContext += `\n* Reasoning: ${strategyDecision.justification}`;
+    }
+  }
+
+  // If a temporary context (persona) is provided, it becomes the primary directive.
+  if (temporaryContext?.trim()) {
+    return `You are an AI assistant. For this response only, you MUST act as: "${temporaryContext.trim()}".
+Respond in ${targetLanguage}.
+${neuralContext}${strategyContext}`;
+  }
+
+  // Default prompt if no temporary context is provided.
   return `You are the Integrative Symbolic Intelligence of Orch-OS.
 
-CONTEXT PROCESSING FRAMEWORK:
-- Neural signals provide semantic enrichment about user state and intent
-- Use context to enhance answers without letting it dominate
-- Prioritize direct relevance to the current query
+LANGUAGE: Respond in ${targetLanguage} naturally and appropriately.
 
-RESPONSE PRINCIPLES:
-- Match the user's language naturally
-- Adapt tone based on context (formal/casual/technical)
-- Be concise unless depth is clearly needed`;
+CORE PRINCIPLES:
+- Be helpful, direct, and conversational
+- Match the user's tone and communication style
+- Use context to enhance understanding without being technical about it
+- Focus on answering the user's actual question
+${neuralContext}${strategyContext}
+
+Respond naturally to the user's message, incorporating any relevant context seamlessly.`;
 }
 
-export function buildIntegrationUserPrompt(
-  userPrompt: string,
-  neuralResults: any[],
-  language?: string,
-  strategyDecision?: any
-): string {
-  // Filter and prepare neural context
-  const relevantSignals = neuralResults
-    .filter((r) => r.content && Object.keys(r.content).length > 0)
-    .slice(0, 3)
-    .map((r) => {
-      const summary =
-        r.content.summary ||
-        r.content.symbolicQuery?.query ||
-        JSON.stringify(r.content).slice(0, 100);
-      return `${r.coreName}: ${summary}`;
-    });
-
-  // Build prompt following Anthropic's recommendation: context first, query last
-  const promptParts = [];
-
-  // 1. Neural context at the top (if relevant)
-  if (relevantSignals.length > 0) {
-    promptParts.push("<context>");
-    promptParts.push("Neural state indicators:");
-    promptParts.push(relevantSignals.join("\n"));
-    promptParts.push("</context>\n");
-  }
-
-  // 2. Response parameters
-  promptParts.push("<parameters>");
-  promptParts.push(`Language: ${language || "pt-BR"}`);
-  if (strategyDecision?.deterministic !== undefined) {
-    promptParts.push(
-      `Tone: ${strategyDecision.deterministic ? "precise" : "natural"}`
-    );
-  }
-  promptParts.push("</parameters>\n");
-
-  // 3. User query at the end (best practice per Anthropic)
-  promptParts.push("<query>");
-  promptParts.push(userPrompt);
-  promptParts.push("</query>");
-
-  return promptParts.join("\n");
+export function buildIntegrationUserPrompt(userPrompt: string): string {
+  // Now the user prompt is much simpler - just the user's actual message
+  return userPrompt;
 }
 
 /**
