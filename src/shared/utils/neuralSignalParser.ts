@@ -61,8 +61,21 @@ export function buildSignalFromArgs(
         parsed = JSON.parse(trimmed);
         isValidJson = true;
       } catch {
-        // Not valid JSON as-is
-        isValidJson = false;
+        // Not valid JSON as-is, might have escaped quotes
+        // Try to unescape if it looks like escaped JSON
+        if (trimmed.includes('\\"')) {
+          try {
+            // Remove escape characters from quotes
+            const unescaped = trimmed.replace(/\\"/g, '"');
+            parsed = JSON.parse(unescaped);
+            isValidJson = true;
+          } catch {
+            // Still not valid JSON
+            isValidJson = false;
+          }
+        } else {
+          isValidJson = false;
+        }
       }
     }
 
