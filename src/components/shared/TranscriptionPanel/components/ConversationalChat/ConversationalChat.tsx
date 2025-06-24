@@ -216,8 +216,7 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
         });
       },
       chatState.setIsProcessing,
-      onClearAiResponse,
-      scrollState.scrollToBottom
+      onClearAiResponse
     );
 
     // Expõe handlers de streaming no window APÓS criar o manager
@@ -271,7 +270,6 @@ const ConversationalChatComponent: React.FC<ConversationalChatProps> = ({
     addMessage,
     chatState.setIsProcessing,
     onClearAiResponse,
-    scrollState.scrollToBottom,
     setProcessingStatus,
   ]);
 

@@ -7,74 +7,6 @@ import { CollapseStrategyDecision } from "../../components/context/deepgram/symb
 // Symbolic: Pure functions for building neural prompts for LLMs
 
 /**
- * Builds a system prompt for holographic neural signal extraction following Orch-OS architecture.
- * Based on Pribram's Holographic Brain Theory and Brescia's Orchestrated Symbolic Collapse.
- */
-/**
- * @deprecated Use buildCombinedSystemPrompt instead for optimized performance.
- */
-export function buildSystemPrompt(language?: string): string {
-  const targetLanguage = language || "English";
-
-  return `You are the Neural Signal Activator for Orch-OS.
-
-Task: For each prominent cognitive activation detected, call activateBrainArea.
-
-LANGUAGE DIRECTIVE: All text content must be generated in ${targetLanguage}.
-
-Arguments for each call:
-• core             – (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
-• intensity        – (number, 0.1–1.0, higher = stronger)
-• symbolic_query   – (object with REQUIRED "query" field: {"query": "semantic meaning in ${targetLanguage}"})
-                     CRITICAL: Must always include "query" field with a string value
-                     Example: {"query": "greeting and social interaction"}
-                     DO NOT use: {"type": "..."} or {} or just a string
-• keywords         – (array of 3–8 strings in ${targetLanguage}, semantic expansion of the signal)
-• symbolicInsights – (object, optional, any structure)
-• topK             – (number, 1–20, Math.round(5 + intensity * 10))
-
-CRITICAL: Maintain semantic coherence and cultural nuances in ${targetLanguage}.
-
-Call activateBrainArea for each detected activation. Respond only via the tool call.`;
-}
-
-/**
- * Builds a user prompt for neural signal extraction with holographic preservation.
- */
-/**
- * @deprecated Use buildCombinedUserPrompt instead for optimized performance.
- */
-export function buildUserPrompt(
-  prompt: string,
-  context?: string,
-  language?: string
-): string {
-  const targetLanguage = language || "English";
-
-  let result = `COGNITIVE INPUT\n`;
-  result += `User message: "${prompt}"\n`;
-  if (context) result += `CONTEXT: ${context}\n`;
-  result += `PROCESSING LANGUAGE: ${targetLanguage}\n`;
-
-  result += `
-ANALYZE in ${targetLanguage}:
-Identify up to 2–3 most relevant cognitive core activations.
-
-For each, call activateBrainArea with:
-- core                  (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
-- intensity             (0.1–1.0, higher = stronger)
-- symbolic_query        (object with REQUIRED "query" field: {"query": "string in ${targetLanguage}"})
-- keywords              (3–8 semantic keywords in ${targetLanguage} for this core)
-- symbolicInsights      (object, optional)
-- topK                  (number, 1–20; calculate as Math.round(5 + intensity × 10))
-
-Respond only via the tool call.
-`;
-
-  return result;
-}
-
-/**
  * Builds a system prompt for batch semantic enrichment following Bohm's implicate order
  */
 export function buildBatchEnrichSystemPrompt(
@@ -251,7 +183,7 @@ export function buildCombinedSystemPrompt(language?: string): string {
 
   return `You are the Neural Signal Activator & Enricher for Orch-OS.
 
-Task: For each prominent cognitive activation detected, call activateAndEnrichBrainArea. This single call must both identify the core signal and unfold its deeper semantic meaning.
+Task: For each prominent cognitive activation detected, call activateBrainArea. This single call must both identify the core signal and unfold its deeper semantic meaning.
 
 LANGUAGE DIRECTIVE: All text content must be generated in ${targetLanguage}.
 
@@ -266,7 +198,7 @@ Arguments for each call:
 
 CRITICAL: Maintain semantic coherence and cultural nuances in ${targetLanguage}. The enriched_query MUST provide deeper context than the symbolic_query.
 
-Call activateAndEnrichBrainArea for each detected activation. Respond only via the tool call.`;
+Call activateBrainArea for each detected activation. Respond only via the tool call.`;
 }
 
 /**
@@ -289,7 +221,7 @@ export function buildCombinedUserPrompt(
 ANALYZE in ${targetLanguage}:
 Identify up to 2–3 most relevant cognitive core activations.
 
-For each, call activateAndEnrichBrainArea with:
+For each, call activateBrainArea with:
 - core                  (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 - intensity             (0.1–1.0, higher = stronger)
 - symbolic_query        (object with REQUIRED "query" field: {"query": "string in ${targetLanguage}"})

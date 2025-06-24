@@ -11,8 +11,8 @@ import {
 import {
   buildBatchEnrichSystemPrompt,
   buildBatchEnrichUserPrompt,
-  buildSystemPrompt,
-  buildUserPrompt,
+  buildCombinedSystemPrompt,
+  buildCombinedUserPrompt,
 } from "../../../../../../shared/utils/neuralPromptBuilder";
 import {
   buildSignalFromArgs,
@@ -279,8 +279,12 @@ export class OllamaNeuralSignalService
     temporaryContext?: string,
     language?: string
   ): Array<{ role: string; content: string }> {
-    const systemPrompt = buildSystemPrompt(language);
-    const userPrompt = buildUserPrompt(prompt, temporaryContext, language);
+    const systemPrompt = buildCombinedSystemPrompt(language);
+    const userPrompt = buildCombinedUserPrompt(
+      prompt,
+      temporaryContext,
+      language
+    );
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -338,11 +342,15 @@ export class OllamaNeuralSignalService
       )
       .map((call) => {
         try {
-          // Ollama já retorna arguments como objeto quando suporta tools nativamente
           const args = ArgumentParser.parseToolCallArguments(
             call.function.arguments
           );
-          // Use centralized buildSignalFromArgs from neuralSignalParser
+
+          // Se temos enriched_query (do prompt combinado), usa ele como query principal
+          if (args.enriched_query && typeof args.symbolic_query === "object") {
+            args.symbolic_query.query = args.enriched_query;
+          }
+
           const signal = buildSignalFromArgs(args, originalPrompt);
           return signal && isValidNeuralSignal(signal) ? signal : null;
         } catch (error) {

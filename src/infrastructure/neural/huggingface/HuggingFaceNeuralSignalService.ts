@@ -12,8 +12,8 @@ import { getOption, STORAGE_KEYS } from "../../../services/StorageService";
 import {
   buildBatchEnrichSystemPrompt,
   buildBatchEnrichUserPrompt,
-  buildSystemPrompt,
-  buildUserPrompt,
+  buildCombinedSystemPrompt,
+  buildCombinedUserPrompt,
 } from "../../../shared/utils/neuralPromptBuilder";
 import {
   buildSignalFromArgs,
@@ -44,8 +44,8 @@ export class HuggingFaceNeuralSignalService
     language?: string
   ): Promise<NeuralSignalResponse> {
     try {
-      const systemPromptContent = buildSystemPrompt(language);
-      let userPromptContent = buildUserPrompt(
+      const systemPromptContent = buildCombinedSystemPrompt(language);
+      let userPromptContent = buildCombinedUserPrompt(
         prompt,
         temporaryContext,
         language
