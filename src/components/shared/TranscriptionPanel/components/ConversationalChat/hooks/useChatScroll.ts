@@ -53,24 +53,13 @@ export const useChatScroll = ({
       userInteractedRef.current = false;
       setShowScrollButton(false);
 
+      // Using a reference to an anchor at the end of the list is the most reliable way
+      // to scroll to the bottom, especially with dynamic content.
       if (scrollAnchorRef.current) {
         scrollAnchorRef.current.scrollIntoView({ behavior, block: "end" });
-
-        // For instant scrolls, add a follow-up check to ensure we've reached the absolute bottom.
-        // This combats timing issues where scrollHeight hasn't updated yet.
-        if (behavior === "auto") {
-          setTimeout(() => {
-            if (scrollAnchorRef.current && !isAtBottom()) {
-              scrollAnchorRef.current.scrollIntoView({
-                behavior: "auto",
-                block: "end",
-              });
-            }
-          }, 50);
-        }
       }
     },
-    [isAtBottom]
+    [] // containerRef and isAtBottom removed as they are not direct dependencies here.
   );
 
   // Effect to handle user scroll interaction and button visibility
@@ -106,18 +95,18 @@ export const useChatScroll = ({
   }, [containerRef, isAtBottom]);
 
   // Effect for auto-scrolling on new content
+  // useLayoutEffect is crucial here to ensure the scroll happens after the DOM is updated
+  // but before the browser paints, preventing flickering.
   useLayoutEffect(() => {
-    if (autoScrollTimeout.current) {
-      clearTimeout(autoScrollTimeout.current);
+    // If the user hasn't scrolled up manually, we auto-scroll to the bottom.
+    if (!userInteractedRef.current) {
+      // We call scrollToBottom directly without a timeout. useLayoutEffect ensures
+      // that the DOM has been updated with the new messages at this point.
+      scrollToBottom("auto");
+    } else {
+      // If the user has scrolled up, we show the button so they can get back to the bottom easily.
+      setShowScrollButton(true);
     }
-    autoScrollTimeout.current = setTimeout(() => {
-      if (!userInteractedRef.current) {
-        // The robust retry logic is now inside scrollToBottom
-        scrollToBottom("auto");
-      } else {
-        setShowScrollButton(true);
-      }
-    }, 100);
   }, [
     messages,
     streamingContent,
