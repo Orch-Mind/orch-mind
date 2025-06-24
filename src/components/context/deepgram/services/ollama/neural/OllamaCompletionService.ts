@@ -211,24 +211,8 @@ ${Object.entries(params)
               });
             }
             // Don't add tools to request for gemma3
-          } else if (isLlama3) {
-            // Llama3 supports native tools well
-            LoggingUtils.logInfo(
-              `🦙 [OllamaCompletion] Using native tool calling for ${selectedModel}`
-            );
-            requestBody.tools = options.tools;
-
-            // Add explicit instructions for Llama 3.1 to ensure correct parameter names
-            if (
-              modelNameLower.includes("3.1") &&
-              formattedMessages.length > 0 &&
-              formattedMessages[0].role === "system"
-            ) {
-              formattedMessages[0].content +=
-                '\n\nIMPORTANT: When calling functions, use the exact parameter names as specified. For activateBrainArea, the first parameter MUST be named "core" (not "brain_area" or "cognitive_core").';
-            }
-          } else if (isQwen) {
-            // Qwen seems to have issues with native tool calling, use direct format like Gemma
+          } else if (isLlama3 || isQwen) {
+            // Llama3 and Qwen seem to have issues with native tool calling, use direct format like Gemma
             LoggingUtils.logInfo(
               `🦙 [OllamaCompletion] Detected ${selectedModel}, using direct instruction format instead of native tools`
             );
@@ -408,7 +392,7 @@ IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the 
 
         // For gemma3 and qwen, we expect the tool call in the content
         if (
-          (isGemma || isQwen) &&
+          (isGemma || isQwen || isLlama3) &&
           options.tools &&
           options.tools.length > 0 &&
           content
