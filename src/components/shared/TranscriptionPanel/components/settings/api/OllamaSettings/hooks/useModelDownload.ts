@@ -38,7 +38,7 @@ export const useModelDownload = ({
   // Handle download completion
   const handleDownloadComplete = useCallback(
     (modelId: string) => {
-      // Add to installed models
+      // Add to installed models for optimistic UI update
       setInstalledModels((prev) => {
         if (!prev.includes(modelId)) {
           return [...prev, modelId];
@@ -46,16 +46,17 @@ export const useModelDownload = ({
         return prev;
       });
 
-      // Don't emit event here to avoid duplicate refresh
-      // The setTimeout below will handle the refresh
+      // Emit an event to signal completion without forcing a premature refresh
+      modelEvents.emit(MODEL_EVENTS.DOWNLOAD_COMPLETED);
 
-      // Small delay to ensure Ollama has finished internal processes
+      // Refresh the model list after a slightly longer delay to ensure the API has updated.
+      // This prevents the UI from reverting to a "not downloaded" state.
       setTimeout(() => {
         console.log(
           `[useModelDownload] Scheduling post-download refresh for ${modelId}`
         );
         fetchInstalledModels(false);
-      }, 1000); // Reduced from 5000ms to 1000ms
+      }, 2500); // Increased delay to 2.5s for stability
     },
     [setInstalledModels, fetchInstalledModels, setDownloadingModels]
   );
@@ -118,32 +119,11 @@ export const useModelDownload = ({
           setDownloadingModels((prev) => {
             const newMap = new Map(prev);
 
-            // Don't immediately complete if progress jumps to 100% from < 99%
-            // This prevents race conditions during the critical final phase
-            const currentProgress = prev.get(modelId)?.progress || 0;
-
+            // Se o progresso for 100% ou mais, considere concluído
             if (roundedProgress >= 100) {
-              // Only complete if we were already at 99% or if speed indicates completion
-              if (
-                currentProgress >= 99 ||
-                speed.includes("completed") ||
-                speed.includes("success")
-              ) {
-                newMap.delete(modelId);
-                handleDownloadComplete(modelId);
-                return newMap;
-              } else {
-                // Keep at 99% if jumping directly to 100%
-                console.log(
-                  `[useModelDownload] Progress jumped to 100% from ${currentProgress}%, holding at 99% to avoid race condition`
-                );
-                newMap.set(modelId, {
-                  progress: 99,
-                  speed,
-                  eta,
-                });
-                return newMap;
-              }
+              newMap.delete(modelId);
+              handleDownloadComplete(modelId);
+              return newMap;
             }
 
             // Update with real progress

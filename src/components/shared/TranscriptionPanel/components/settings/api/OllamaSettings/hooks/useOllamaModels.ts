@@ -37,8 +37,14 @@ export const useOllamaModels = () => {
 
       // Note: Ollama lists models as "installed" as soon as download starts
       // This is by design to support resuming interrupted downloads
-      const models = await OllamaService.fetchInstalledModels();
-      setInstalledModels(models);
+      const modelsFromApi = await OllamaService.fetchInstalledModels();
+
+      // Merge API results with existing state to prevent UI flicker
+      // This handles the race condition where the API hasn't yet registered the new model
+      setInstalledModels((prevModels) => {
+        const merged = new Set([...prevModels, ...modelsFromApi]);
+        return Array.from(merged);
+      });
     } catch (error) {
       console.error("Error loading installed models:", error);
       setError(
