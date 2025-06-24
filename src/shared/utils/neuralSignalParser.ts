@@ -47,20 +47,35 @@ export function buildSignalFromArgs(
     }
   } else if (typeof signal.symbolic_query === "string") {
     // Handle case where symbolic_query is a string (common with some models)
-    // Try to parse it as JSON first
-    try {
-      // Try direct parse first
-      const parsed = JSON.parse(signal.symbolic_query);
+    const trimmed = signal.symbolic_query.trim();
 
-      // Check if parsed result is valid
+    // First, try to parse as valid JSON without any modifications
+    let parsed = null;
+    let isValidJson = false;
+
+    if (
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    ) {
+      try {
+        parsed = JSON.parse(trimmed);
+        isValidJson = true;
+      } catch {
+        // Not valid JSON as-is
+        isValidJson = false;
+      }
+    }
+
+    if (isValidJson && parsed) {
+      // Successfully parsed valid JSON
       if (typeof parsed === "object" && parsed.query) {
         signal.symbolic_query = parsed;
-        // Success - no need to log, this is expected behavior
+        // No logging needed - this is the expected path for gemma3
       } else if (
         typeof parsed === "object" &&
-        (!parsed.query || Object.keys(parsed).length === 0)
+        Object.keys(parsed).length === 0
       ) {
-        // Empty object or missing query
+        // Empty object
         signal.symbolic_query = {
           query: originalPrompt || `${signal.core} cognitive processing`,
         };
@@ -70,35 +85,47 @@ export function buildSignalFromArgs(
       } else {
         signal.symbolic_query = parsed;
       }
-    } catch {
-      // Only log if we need to do special parsing
-      console.warn(
-        `🧠 [NeuralSignalParser] symbolic_query needs special parsing: ${signal.symbolic_query}`
-      );
-
-      // Try to fix common formatting issues
-      let fixedValue = signal.symbolic_query;
+    } else {
+      // Not valid JSON - now we need special parsing
+      let fixedValue = trimmed;
+      let needsSpecialParsing = false;
 
       // Fix incorrect "object:" to "query:"
       if (fixedValue.includes("object:")) {
         fixedValue = fixedValue.replace(/\bobject\s*:/g, '"query":');
+        needsSpecialParsing = true;
       }
 
       // Try parsing again with fixes
       try {
         // Ensure all keys are quoted
+        const originalFixed = fixedValue;
         fixedValue = fixedValue.replace(/(\w+):/g, '"$1":');
         fixedValue = fixedValue.replace(/""+/g, '"');
+
+        if (fixedValue !== originalFixed) {
+          needsSpecialParsing = true;
+        }
 
         const parsed = JSON.parse(fixedValue);
 
         if (typeof parsed === "object" && parsed.query) {
           signal.symbolic_query = parsed;
+          // Only log if we actually needed to fix something
+          if (needsSpecialParsing) {
+            console.warn(
+              `🧠 [NeuralSignalParser] Applied formatting fixes to symbolic_query`
+            );
+          }
         } else {
           throw new Error("Invalid format after fixes");
         }
       } catch {
         // If parsing still fails, extract query manually
+        console.warn(
+          `🧠 [NeuralSignalParser] symbolic_query needs special parsing: ${signal.symbolic_query}`
+        );
+
         const queryMatch = signal.symbolic_query.match(
           /(?:object|query)\s*:\s*"([^"]+)"/
         );
