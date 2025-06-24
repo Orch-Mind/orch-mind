@@ -17,9 +17,8 @@ export class JSONArrayParser implements IToolCallParser {
     if (!content || typeof content !== "string") {
       return false;
     }
-    const trimmed = content.trim();
-    // Apenas para arrays de JSON
-    return trimmed.startsWith("[") && trimmed.endsWith("]");
+    // It should handle raw JSON arrays, which may have leading/trailing whitespace.
+    return content.trim().startsWith("[");
   }
 
   parse(content: string): ToolCall[] {
@@ -27,8 +26,11 @@ export class JSONArrayParser implements IToolCallParser {
       return [];
     }
 
+    // Trim whitespace and, most importantly, un-escape the quotes from the model.
+    const cleanContent = content.trim().replace(/\\"/g, '"');
+
     try {
-      const parsed = JSON.parse(content.trim());
+      const parsed = JSON.parse(cleanContent);
 
       if (Array.isArray(parsed)) {
         return parsed

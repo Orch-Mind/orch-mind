@@ -17,34 +17,17 @@ export class StringJSONParser implements IToolCallParser {
     if (!content || typeof content !== "string") {
       return false;
     }
-
     const trimmed = content.trim();
-    if (!(trimmed.startsWith("{") && trimmed.endsWith("}"))) {
-      return false;
+
+    // Garante que é uma string contendo um objeto JSON, e não um array
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      const innerContent = trimmed.substring(1, trimmed.length - 1).trim();
+      return innerContent.startsWith("{") && innerContent.endsWith("}");
     }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (typeof parsed !== "object" || parsed === null) {
-        return false;
-      }
-
-      const name = parsed.name || (parsed.function && parsed.function.name);
-      if (
-        typeof name !== "string" ||
-        !["decideCollapseStrategy", "activateBrainArea"].includes(name)
-      ) {
-        return false;
-      }
-
-      return (
-        "arguments" in parsed ||
-        "parameters" in parsed ||
-        (parsed.function && "arguments" in parsed.function)
-      );
-    } catch (e) {
-      return false;
-    }
+    return false;
   }
 
   parse(content: string): ToolCall[] {

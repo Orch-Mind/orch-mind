@@ -18,9 +18,17 @@ export class ArgumentParser {
 
     if (!argsString) return args;
 
-    // Regex para capturar pares chave-valor
+    // Regex aprimorado para capturar pares chave-valor de forma mais robusta.
+    // 1. Chave: (\w+)
+    // 2. Separador: \s*[=:]\s*
+    // 3. Valor (com prioridade):
+    //    a. Objeto JSON: (\{.*?\}) - Não guloso para evitar consumir além do objeto
+    //    b. Array JSON: (\[.*?\]) - Não guloso
+    //    c. String com aspas: ("(?:[^"\\]|\\.)*")
+    //    d. Valor sem aspas: ([^,)]+)
     const argPattern =
-      /(\w+)\s*[=:]\s*("(?:[^"\\]|\\.)*"|\[[^\]]*\]|\{(?:[^{}]|\{[^}]*\})*\}|[^,()]+)/g;
+      /(\w+)\s*[=:]\s*((?:\{[\s\S]*?\}|\[[\s\S]*?\]|"(?:[^"\\]|\\.)*"|'[^']*'|[^,)]+))/g;
+
     let match;
 
     while ((match = argPattern.exec(argsString)) !== null) {
