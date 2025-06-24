@@ -129,8 +129,7 @@ export class OllamaNeuralSignalService
           model,
           messages,
           tools,
-          temperature: 0.7, // Higher for more natural response
-          max_tokens: 2048, // Increased for complete JSON responses
+          temperature: 0.1,
         });
 
       // Debug logging
@@ -212,7 +211,7 @@ export class OllamaNeuralSignalService
           model: model,
           messages,
           tools,
-          temperature: 0.2,
+          temperature: 0.1,
         });
 
       // Extract batch results

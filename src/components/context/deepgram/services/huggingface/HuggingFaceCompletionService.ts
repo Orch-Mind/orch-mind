@@ -89,7 +89,7 @@ export class HuggingFaceCompletionService implements ICompletionService {
         const payload: any = {
           model: selectedModel,
           messages: formattedMessages,
-          temperature: options.temperature ?? 0.7,
+          temperature: options.temperature ?? 0.5,
           max_tokens: options.max_tokens ?? 500,
         };
         if (options.tools && options.tools.length)
@@ -189,7 +189,7 @@ export class HuggingFaceCompletionService implements ICompletionService {
       // Note: HuggingFace local doesn't support true streaming yet
       // We'll generate the full response and simulate streaming
       const response = await hfService.generateResponse(formattedMessages, {
-        temperature: temperature ?? 0.7,
+        temperature: temperature ?? 0.5,
       });
 
       // Clean think tags from response

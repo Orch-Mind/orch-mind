@@ -112,7 +112,7 @@ export const useSettingsState = (show: boolean): SettingsState => {
       setChatgptApiKey: () => {},
       chatgptModel: "",
       setChatgptModel: () => {},
-      chatgptTemperature: 0.7,
+      chatgptTemperature: 0.5,
       setChatgptTemperature: () => {},
       chatgptMaxTokens: 2048,
       setChatgptMaxTokens: () => {},

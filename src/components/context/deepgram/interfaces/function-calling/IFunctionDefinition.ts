@@ -14,11 +14,3 @@ export interface IFunctionDefinition {
     required: string[];
   };
 }
-
-/**
- * Standard function definition format for AI providers
- */
-export interface AIFunctionDefinition {
-  type: string;
-  function: IFunctionDefinition;
-}

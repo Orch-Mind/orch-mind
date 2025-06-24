@@ -151,9 +151,9 @@ export class FunctionSchemaRegistry {
           temperature: {
             type: "number",
             minimum: 0.1,
-            maximum: 1.5,
+            maximum: 0.7,
             description:
-              "Temperature for response variation. Lower (0.1-0.5) for dominance/context, higher (0.8-1.5) for synthesis/dialectic.",
+              "Temperature for response variation. Lower (0.1-0.5) for dominance/context, higher (0.5-0.7) for synthesis/dialectic.",
           },
           justification: {
             type: "string",

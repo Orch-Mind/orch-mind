@@ -8,7 +8,7 @@ export interface NeuralIntegrationResult {
   prompt: string;
 
   /**
-   * The temperature decided by the collapse strategy (0.1-1.5)
+   * The temperature decided by the collapse strategy (0.1-0.7)
    */
   temperature: number;
 

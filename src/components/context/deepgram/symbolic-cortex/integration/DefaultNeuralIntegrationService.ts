@@ -162,7 +162,7 @@ export class DefaultNeuralIntegrationService
     if (!neuralResults || neuralResults.length === 0) {
       return {
         prompt: originalInput,
-        temperature: 0.7,
+        temperature: 0.5,
         isDeterministic: true,
       };
     }

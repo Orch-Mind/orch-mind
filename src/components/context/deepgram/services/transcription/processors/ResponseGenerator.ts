@@ -16,7 +16,7 @@ import symbolicCognitionTimelineLogger from "../../utils/SymbolicCognitionTimeli
 export class ResponseGenerator {
   // Configuration constants
   private readonly MIN_TEMPERATURE = 0.1;
-  private readonly MAX_TEMPERATURE = 1.5;
+  private readonly MAX_TEMPERATURE = 0.7;
 
   constructor(
     private memoryService: IMemoryService,
@@ -26,7 +26,7 @@ export class ResponseGenerator {
   /**
    * Generate response using the selected backend
    * @param integratedPrompt The integrated prompt from neural processing
-   * @param temperature Temperature for response generation (0.1-1.5)
+   * @param temperature Temperature for response generation (0.1-0.7)
    * @param temporaryContext Optional temporary context
    * @param conversationMessages Optional conversation messages
    * @param onStreamingChunk Optional callback for streaming chunks

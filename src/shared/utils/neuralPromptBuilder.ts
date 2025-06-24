@@ -190,7 +190,7 @@ Choose the best symbolic collapse approach:
 
 Call decideCollapseStrategy with:
 • deterministic          (true/false)
-• temperature            (0.1–1.5)
+• temperature            (0.1–0.7)
 • justification          (in LANGUAGE specified in the user prompt, mention the approach)
 • emotionalIntensity     (0–1, optional)
 • emergentProperties     (string[], optional)
@@ -231,7 +231,7 @@ export function buildCollapseStrategyUserPrompt(
       DECIDE:
       Call decideCollapseStrategy with:
       - deterministic          (true or false)
-      - temperature           (0.1–1.5)
+      - temperature           (0.1–0.7)
       - justification         (short, in ${targetLanguage}, referencing the chosen approach)
       - emotionalIntensity    (optional, 0–1)
       - emergentProperties    (optional, string array)

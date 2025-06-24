@@ -22,7 +22,6 @@ export class MessageProcessor {
     ) => void,
     private onProcessingStateChange: (isProcessing: boolean) => void,
     private onClearAiResponse: () => void,
-    private scrollToBottom: (behavior?: "smooth" | "auto") => void
   ) {}
 
   /**

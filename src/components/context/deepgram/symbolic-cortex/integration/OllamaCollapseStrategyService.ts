@@ -125,7 +125,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         );
         return {
           deterministic: false,
-          temperature: 0.7,
+          temperature: 0.5,
           justification: "Schema not found - using conservative fallback",
         };
       }
@@ -469,7 +469,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
                 return {
                   deterministic: args.deterministic,
-                  temperature: args.temperature ?? 0.7,
+                  temperature: args.temperature ?? 0.5,
                   justification: args.justification,
                 };
               }
@@ -489,7 +489,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
       );
       return {
         deterministic: false,
-        temperature: 0.7,
+        temperature: 0.5,
         justification:
           "No valid tool call response - using conservative fallback",
       };
@@ -500,7 +500,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
       );
       return {
         deterministic: false,
-        temperature: 0.7,
+        temperature: 0.5,
         justification: `Error in strategy decision: ${error}`,
       };
     }

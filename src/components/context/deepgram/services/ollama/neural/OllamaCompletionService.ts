@@ -108,7 +108,7 @@ export class OllamaCompletionService implements ICompletionService {
           messages: formattedMessages,
           stream: !!options.stream,
           options: {
-            temperature: modelConfig.temperature ?? options.temperature ?? 0.7,
+            temperature: modelConfig.temperature ?? options.temperature ?? 0.5,
             // num_predict controls the maximum tokens in the response
             num_predict: modelConfig.num_predict ?? options.max_tokens ?? 2048,
             // num_ctx is the context window size (should be larger)
@@ -408,7 +408,7 @@ ${Object.entries(params)
           messages: formattedMessages,
           stream: true, // Enable streaming
           options: {
-            temperature: temperature ?? 0.7,
+            temperature: temperature ?? 0.5,
           },
         }),
       });

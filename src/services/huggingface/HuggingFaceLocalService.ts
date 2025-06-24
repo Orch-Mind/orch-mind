@@ -311,7 +311,7 @@ export class HuggingFaceLocalService {
 
       const generationOptions = {
         max_new_tokens: opts.maxTokens || 512,
-        temperature: opts.temperature ?? 0.7,
+        temperature: opts.temperature ?? 0.5,
         do_sample: (opts.temperature ?? 0.7) > 0,
       } as any;
 
@@ -553,7 +553,7 @@ export class HuggingFaceLocalService {
 
       const generationOptions = {
         max_new_tokens: opts.maxTokens || 512,
-        temperature: opts.temperature ?? 0.7,
+        temperature: opts.temperature ?? 0.5,
         // For better function calling compliance we disable sampling penalties
         do_sample: (opts.temperature ?? 0.7) > 0,
         stop: opts.maxTokens ? undefined : undefined,
