@@ -237,7 +237,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-transparent">
+            <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-transparent">
               {mainModels.map((model) =>
                 renderModelOption(
                   model,
@@ -277,7 +277,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-transparent">
+            <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-transparent">
               {embeddingModels.map((model) =>
                 renderModelOption(
                   model,
