@@ -96,4 +96,60 @@ export class ParserUtils {
     "enrichSemanticQueryBatch",
     "activateAndEnrichBrainArea",
   ];
+
+  /**
+   * Extrai o primeiro bloco JSON completo e válido (objeto ou array) de uma string.
+   * Isso é robusto contra streams incompletos ou texto extra ao redor do JSON.
+   * @param text A string que pode conter um bloco JSON.
+   * @returns A string do bloco JSON ou null se não for encontrado um JSON completo e válido.
+   */
+  static extractJson(text: string): string | null {
+    let startIndex = -1;
+    // Encontra o primeiro caractere de início de JSON
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === "{" || text[i] === "[") {
+        startIndex = i;
+        break;
+      }
+    }
+
+    if (startIndex === -1) {
+      return null;
+    }
+
+    const opener = text[startIndex];
+    const closer = opener === "{" ? "}" : "]";
+    let balance = 0;
+    let inString = false;
+
+    for (let i = startIndex; i < text.length; i++) {
+      const char = text[i];
+
+      // Lógica simples para detectar se estamos dentro de uma string
+      if (char === '"' && (i === 0 || text[i - 1] !== "\\")) {
+        inString = !inString;
+      }
+
+      if (!inString) {
+        if (char === opener) {
+          balance++;
+        } else if (char === closer) {
+          balance--;
+        }
+      }
+
+      // Se o balanço for zero, encontramos um potencial JSON completo
+      if (balance === 0) {
+        const potentialJson = text.substring(startIndex, i + 1);
+        try {
+          JSON.parse(potentialJson);
+          return potentialJson; // É um JSON válido e completo
+        } catch (e) {
+          // Se o parse falhar, pode ser um falso positivo. Continuamos procurando.
+        }
+      }
+    }
+
+    return null; // Nenhum bloco JSON completo e válido foi encontrado
+  }
 }

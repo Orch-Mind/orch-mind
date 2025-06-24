@@ -11,6 +11,7 @@ import { MarkdownJSONParser } from "./ollama-parsers/parsers/MarkdownJSONParser"
 import { StringJSONParser } from "./ollama-parsers/parsers/StringJSONParser";
 import { ToolCallsFormatParser } from "./ollama-parsers/parsers/ToolCallsFormatParser";
 import { XMLParser } from "./ollama-parsers/parsers/XMLParser";
+import { ParserUtils } from "./ollama-parsers/utils/ParserUtils";
 
 /**
  * Parser principal para extrair tool calls de diferentes formatos
@@ -52,29 +53,38 @@ export class OllamaToolCallParser {
       return [];
     }
 
-    // Log para debugging (mantido para compatibilidade)
-    if (content.includes("activateBrainArea")) {
-      console.log(
-        "[OllamaToolCallParser] Content contains activateBrainArea, attempting to parse..."
-      );
+    // Tenta extrair um bloco JSON para resiliência contra streams incompletos.
+    const jsonContent = ParserUtils.extractJson(content);
+
+    // Tenta os parsers com o JSON extraído primeiro, se existir.
+    if (jsonContent) {
+      for (const parser of this.parsers) {
+        if (parser.canParse(jsonContent)) {
+          const toolCalls = parser.parse(jsonContent);
+          if (toolCalls.length > 0) {
+            console.log(
+              `[OllamaToolCallParser] Parsed ${toolCalls.length} calls using ${parser.formatName} on extracted JSON`
+            );
+            return toolCalls;
+          }
+        }
+      }
     }
 
-    // Tenta cada parser em ordem
-    // KISS: Loop simples e claro
+    // Fallback: Tenta os parsers com o conteúdo original para formatos não-JSON.
     for (const parser of this.parsers) {
       if (parser.canParse(content)) {
         const toolCalls = parser.parse(content);
-
         if (toolCalls.length > 0) {
           console.log(
-            `[OllamaToolCallParser] Parsed ${toolCalls.length} calls using ${parser.formatName} format`
+            `[OllamaToolCallParser] Parsed ${toolCalls.length} calls using ${parser.formatName} on original content`
           );
           return toolCalls;
         }
       }
     }
 
-    // Nenhum parser conseguiu extrair tool calls
+    // Nenhum parser conseguiu extrair tool calls.
     console.log("[OllamaToolCallParser] No tool calls detected in any format");
     console.log(
       "[OllamaToolCallParser] Content preview:",
