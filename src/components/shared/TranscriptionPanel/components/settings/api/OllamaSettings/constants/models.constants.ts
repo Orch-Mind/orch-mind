@@ -6,22 +6,47 @@ import { OllamaModel } from "../types/ollama.types";
 export const AVAILABLE_MODELS: OllamaModel[] = [
   // Main models that support tools/function calling
   {
-    id: "qwen3:4b",
-    name: "Qwen3 4B",
+    id: "qwen3:latest",
+    name: "Qwen3 Latest (Thinking)",
     description: "Advanced reasoning model with tools support",
-    size: "2.6GB",
+    size: "5.2GB",
     category: "main",
     isDownloaded: false,
     isDownloading: false,
   },
   {
-    id: "granite3.3:latest",
-    name: "Granite 3.3 Latest",
-    description: "Granite's latest model with excellent tools integration",
+    id: "llama3.1:latest",
+    name: "Llama 3.1 Latest",
+    description: "Llama's latest model with excellent tools integration",
     size: "4.9GB",
     category: "main",
     isDownloaded: false,
     isDownloading: false,
+  },
+  {
+    id: "mistral-nemo:latest",
+    name: "Mistral Nemo Latest",
+    description: "Mistral's latest model with excellent tools integration",
+    size: "7.1GB",
+    category: "main",
+    isDownloaded: false,
+    isDownloading: false,
+  },
+  {
+    id: "mistral:latest",
+    name: "Mistral Latest",
+    description: "Mistral's latest model with excellent tools integration",
+    size: "4.1GB",
+    category: "main",
+    isDownloaded: false,
+    isDownloading: false,
+  },
+  {
+    id: "gemma3:latest",
+    name: "Gemma3 Latest",
+    description: "Gemma3's latest model with excellent tools integration",
+    size: "3.3GB",
+    category: "main",
   },
   // Embedding models
   {

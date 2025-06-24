@@ -3,10 +3,12 @@
 
 // OllamaCompletionService.ts
 // Symbolic: Processamento de completions e function calling com Ollama local
+import { OllamaToolConfigHelper } from "../../../../../../config/OllamaToolConfig";
 import {
   STORAGE_KEYS,
   getOption,
 } from "../../../../../../services/StorageService";
+import { OllamaToolCallParser } from "../../../../../../utils/OllamaToolCallParser";
 import { IClientManagementService } from "../../../interfaces/openai/IClientManagementService";
 import {
   ICompletionService,
@@ -87,38 +89,18 @@ export class OllamaCompletionService implements ICompletionService {
           };
         });
 
-        // Get model with fallback logic
-        let selectedModel = getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:4b";
+        // Get model directly - no verification needed as all models are compatible
+        const selectedModel =
+          getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:latest";
 
-        // Verify model is available before making the request
-        try {
-          const modelsResponse = await fetch("http://localhost:11434/api/tags");
-          if (modelsResponse.ok) {
-            const modelsData = await modelsResponse.json();
-            const availableModels =
-              modelsData.models?.map((m: any) => m.name) || [];
+        // Get model-specific configuration
+        const modelConfig =
+          OllamaToolConfigHelper.getModelConfig(selectedModel);
 
-            if (!availableModels.includes(selectedModel)) {
-              // Try to use the first available model that supports tools
-              const toolSupportModels = [
-                "qwen3:4b",
-                "qwen3:latest",
-                "qwen2.5:latest",
-                "llama3.1:latest",
-                "granite3.3:latest",
-                "mistral-nemo:latest",
-              ];
-              const availableFallback = toolSupportModels.find((model) =>
-                availableModels.includes(model)
-              );
-              if (availableFallback) {
-                selectedModel = availableFallback;
-              }
-            }
-          }
-        } catch (modelCheckError) {
-          // Ignore model check errors
-        }
+        // Check if this is gemma3 model (which doesn't support native tools)
+        const isGemma3 =
+          selectedModel.toLowerCase().includes("gemma3") ||
+          selectedModel.toLowerCase().includes("gemma2");
 
         // Build request options following Ollama native API documentation
         const requestBody: any = {
@@ -126,36 +108,114 @@ export class OllamaCompletionService implements ICompletionService {
           messages: formattedMessages,
           stream: !!options.stream,
           options: {
-            temperature: options.temperature ?? 0.7,
+            temperature: modelConfig.temperature ?? options.temperature ?? 0.7,
             // num_predict controls the maximum tokens in the response
-            num_predict: options.max_tokens ?? 2048,
+            num_predict: modelConfig.num_predict ?? options.max_tokens ?? 2048,
             // num_ctx is the context window size (should be larger)
-            num_ctx: 8192,
-            // Remove format: "json" for Command R7B as it causes empty responses
-            // See: https://github.com/ollama/ollama/issues/6771
+            num_ctx: modelConfig.num_ctx ?? 8192,
           },
         };
 
-        // Add format: "json" only for models that handle it well
-        // Command R7B has issues with JSON format causing empty responses
-        const modelsWithGoodJsonSupport = ["qwen3", "llama3.1", "llama3.2"];
-        const modelBase = selectedModel.split(":")[0].toLowerCase();
-
-        if (modelsWithGoodJsonSupport.includes(modelBase)) {
-          // Don't force JSON format when using tools - let the model decide
-          if (!options.tools || options.tools.length === 0) {
-            requestBody.format = "json";
-          }
+        // Important: Do NOT use format: "json" when using tools
+        // This can interfere with the model's ability to generate proper tool calls
+        // Only use JSON format for non-tool requests
+        if (!options.tools || options.tools.length === 0) {
+          requestBody.format = "json";
         }
 
-        // Add tools in native Ollama format if provided
+        // Handle tools differently for gemma3
         if (options.tools && options.tools.length > 0) {
-          requestBody.tools = options.tools;
+          if (isGemma3) {
+            // Gemma3 doesn't support native tools, use direct instruction format
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] Detected ${selectedModel}, using direct instruction format instead of native tools`
+            );
 
-          // Force the model to use a tool (supported in newer Ollama versions)
-          // This helps ensure the model understands it should use tools
-          // Commented out for compatibility with older Ollama versions
-          // requestBody.tool_choice = "required";
+            const toolFunction = options.tools[0].function;
+
+            // Build dynamic parameter list based on actual function schema
+            const params = toolFunction.parameters.properties || {};
+            const requiredParams = Array.isArray(
+              toolFunction.parameters.required
+            )
+              ? toolFunction.parameters.required
+              : [];
+
+            // Create example parameter format based on types
+            const paramExamples = Object.entries(params)
+              .map(([key, prop]: [string, any]) => {
+                const isRequired = requiredParams.includes(key);
+                let example = "";
+
+                if (prop.type === "string") {
+                  example = `${key}:"<${prop.description || "text"}>"`;
+                } else if (prop.type === "number") {
+                  const min = prop.minimum || 0;
+                  const max = prop.maximum || 1;
+                  example = `${key}:<${min}-${max}>`;
+                } else if (prop.type === "boolean") {
+                  example = `${key}:<true/false>`;
+                } else if (prop.type === "array") {
+                  example = `${key}:["item1", "item2"]`;
+                } else if (prop.type === "object") {
+                  example = `${key}:{...}`;
+                }
+
+                return isRequired ? example : `${example} (optional)`;
+              })
+              .filter(Boolean)
+              .join(", ");
+
+            const directInstructionPrompt = `You must respond with a function call in this exact format:
+${toolFunction.name}(${paramExamples})
+
+Available function:
+- ${toolFunction.name}: ${toolFunction.description}
+
+Parameters:
+${Object.entries(params)
+  .map(([key, prop]: [string, any]) => {
+    const isRequired = requiredParams.includes(key);
+    return `- ${key}: ${prop.description || prop.type}${
+      isRequired ? " (required)" : " (optional)"
+    }`;
+  })
+  .join("\n")}`;
+
+            // Modify the system message to include direct instructions
+            if (
+              formattedMessages.length > 0 &&
+              formattedMessages[0].role === "system"
+            ) {
+              formattedMessages[0].content =
+                directInstructionPrompt + "\n\n" + formattedMessages[0].content;
+            } else {
+              formattedMessages.unshift({
+                role: "system",
+                content: directInstructionPrompt,
+              });
+            }
+            // Don't add tools to request for gemma3
+          } else {
+            // For models that support tools, add them normally
+            requestBody.tools = options.tools;
+
+            // Force the model to use a tool when available
+            // According to latest Ollama documentation, tool_choice is now supported
+            // This ensures the model will use the provided tools instead of just text response
+            requestBody.tool_choice = "required";
+
+            // Additional hint for models that may not respond well to tool_choice alone
+            // Add a system message that explicitly instructs tool usage
+            if (
+              formattedMessages.length > 0 &&
+              formattedMessages[0].role === "system"
+            ) {
+              // More specific instruction about the expected format
+              formattedMessages[0].content +=
+                '\n\nIMPORTANT: You MUST use the provided tools to respond. Format your response as a JSON array of tool calls: [{"name":"function_name","arguments":{...}}]';
+            }
+          }
         }
 
         // Add GPU control for Metal acceleration issues (macOS)
@@ -172,87 +232,122 @@ export class OllamaCompletionService implements ICompletionService {
         );
 
         // Perform the Ollama chat completion using the official API endpoint
-        try {
-          const response = await fetch("http://localhost:11434/api/chat", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestBody),
+        const response = await fetch("http://localhost:11434/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `🦙 [OllamaCompletion] API Error - Status: ${response.status}, Text: ${errorText}`
+          );
+          throw new Error(
+            `Ollama API error: ${response.statusText} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+
+        // Extract content and tool calls from native Ollama response
+        const rawContent = data.message?.content || "";
+        const content = cleanThinkTags(rawContent);
+        const nativeToolCalls = data.message?.tool_calls || [];
+
+        // Process native tool calls from Ollama (already in correct format)
+        let tool_calls:
+          | Array<{
+              function: {
+                name: string;
+                arguments: string | Record<string, any>;
+              };
+            }>
+          | undefined;
+
+        // For gemma3, we expect the tool call in the content
+        if (isGemma3 && options.tools && options.tools.length > 0 && content) {
+          LoggingUtils.logInfo(
+            `🦙 [OllamaCompletion] Processing gemma3 response for tool calls`
+          );
+
+          // Parse tool calls from content using OllamaToolCallParser
+          const parser = new OllamaToolCallParser();
+          const parsedToolCalls = parser.parse(content);
+
+          if (parsedToolCalls.length > 0) {
+            tool_calls = parsedToolCalls.map((call) => ({
+              function: {
+                name: call.function.name,
+                arguments: call.function.arguments,
+              },
+            }));
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] Parsed ${tool_calls.length} tool call(s) from gemma3 response`
+            );
+          }
+        } else if (nativeToolCalls && nativeToolCalls.length > 0) {
+          tool_calls = nativeToolCalls.map((call: any) => {
+            // Ollama returns tool calls in the correct format already
+            const functionName = call.function?.name;
+            let functionArgs = call.function?.arguments;
+
+            // Ensure arguments are properly formatted as string
+            if (typeof functionArgs === "object" && functionArgs !== null) {
+              functionArgs = JSON.stringify(functionArgs);
+            } else if (typeof functionArgs !== "string") {
+              functionArgs = JSON.stringify(functionArgs || {});
+            }
+
+            return {
+              function: {
+                name: functionName,
+                arguments: functionArgs,
+              },
+            };
           });
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(
-              `🦙 [OllamaCompletion] API Error - Status: ${response.status}, Text: ${errorText}`
-            );
-            throw new Error(
-              `Ollama API error: ${response.statusText} - ${errorText}`
-            );
-          }
-
-          const data = await response.json();
-
-          // Extract content and tool calls from native Ollama response
-          const rawContent = data.message?.content || "";
-          const content = cleanThinkTags(rawContent);
-          const nativeToolCalls = data.message?.tool_calls || [];
-
-          // Process native tool calls from Ollama (already in correct format)
-          let tool_calls:
-            | Array<{
-                function: {
-                  name: string;
-                  arguments: string | Record<string, any>;
-                };
-              }>
-            | undefined;
-
-          if (
-            nativeToolCalls &&
-            Array.isArray(nativeToolCalls) &&
-            nativeToolCalls.length > 0
-          ) {
-            tool_calls = nativeToolCalls.map((call: any) => {
-              // Ollama returns tool calls in the correct format already
-              const functionName = call.function?.name;
-              let functionArgs = call.function?.arguments;
-
-              // Ensure arguments are properly formatted as string
-              if (typeof functionArgs === "object" && functionArgs !== null) {
-                functionArgs = JSON.stringify(functionArgs);
-              } else if (typeof functionArgs !== "string") {
-                functionArgs = JSON.stringify(functionArgs || {});
-              }
-
-              return {
-                function: {
-                  name: functionName,
-                  arguments: functionArgs,
-                },
-              };
-            });
-
-            // Clean think tags from tool calls if present
+          // Clean think tags from tool calls if present
+          if (tool_calls) {
             tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
           }
+        } else if (options.tools && options.tools.length > 0 && content) {
+          // Fallback for models that return tool calls in content (like mistral-nemo)
+          // Check if the processedData already extracted tool calls from content
+          if (!tool_calls || tool_calls.length === 0) {
+            LoggingUtils.logInfo(
+              `🦙 [OllamaCompletion] No native tool calls found, checking content for model ${selectedModel}`
+            );
 
-          // Return the response in expected format
-          // When there are tool calls, content should be undefined (as per OpenAI spec)
-          return {
-            choices: [
-              {
-                message: {
-                  content:
-                    tool_calls && tool_calls.length > 0 ? undefined : content,
-                  tool_calls,
-                },
-              },
-            ],
-          };
-        } catch (error) {
-          throw error; // Re-throw to be handled by outer try-catch
+            // Try to parse tool calls from content
+            if (OllamaToolCallParser.looksLikeToolCall(content)) {
+              const parsedCalls =
+                OllamaToolCallParser.parseAlternativeFormats(content);
+              if (parsedCalls && parsedCalls.length > 0) {
+                tool_calls = parsedCalls;
+                LoggingUtils.logInfo(
+                  `🦙 [OllamaCompletion] Parsed ${parsedCalls.length} tool call(s) from content for model ${selectedModel}`
+                );
+              }
+            }
+          }
         }
+
+        // Return the response in expected format
+        // When there are tool calls, content should be undefined (as per OpenAI spec)
+        return {
+          choices: [
+            {
+              message: {
+                content:
+                  tool_calls && tool_calls.length > 0 ? undefined : content,
+                tool_calls,
+              },
+            },
+          ],
+        };
       } catch (error) {
         retryCount++;
 

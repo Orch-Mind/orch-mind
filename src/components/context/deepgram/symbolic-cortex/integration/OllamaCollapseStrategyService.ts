@@ -8,6 +8,11 @@ import {
   getOption,
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
+import {
+  buildCollapseStrategySystemPrompt,
+  buildCollapseStrategyUserPrompt,
+} from "../../../../../shared/utils/neuralPromptBuilder";
+import { OllamaToolCallParser } from "../../../../../utils/OllamaToolCallParser";
 import { FunctionSchemaRegistry } from "../../services/function-calling/FunctionSchemaRegistry";
 import { OllamaCompletionService } from "../../services/ollama/neural/OllamaCompletionService";
 import {
@@ -134,53 +139,15 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
 
       const systemPrompt = {
         role: "system" as const,
-        content: `You are the Collapse-Strategy Orchestrator in Orch-OS.
-
-Choose the best symbolic collapse approach:
-- Dominance      (clear hierarchy)
-- Synthesis      (complementary cores)
-- Dialectic      (productive contradictions)
-- Context        (user intent focus)
-
-Call decideCollapseStrategy with:
-• deterministic          (true/false)
-• temperature            (0.1–1.5)
-• justification          (in LANGUAGE specified in the user prompt, mention the approach)
-• emotionalIntensity     (0–1, optional)
-• emergentProperties     (string[], optional)
-• userIntent             (object: technical, philosophical, creative, emotional, relational, all 0–1, optional)
-
-Respond only via the tool call.`,
+        content: buildCollapseStrategySystemPrompt(),
       };
 
       const userPrompt = {
         role: "user" as const,
-        content: `
-      COGNITIVE METRICS:
-      Activated Cores: ${params.activatedCores.join(", ")}
-      Emotional Weight: ${params.averageEmotionalWeight.toFixed(2)}
-      Contradiction Score: ${params.averageContradictionScore.toFixed(2)}
-      
-      USER INPUT:
-      "${params.originalText || "Not provided"}"
-      
-      LANGUAGE:
-      ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"}
-      
-      ANALYZE:
-      Select the most suitable collapse approach: dominance, synthesis, dialectic, or context.
-      
-      DECIDE:
-      Call decideCollapseStrategy with:
-      - deterministic          (true or false)
-      - temperature           (0.1–1.5)
-      - justification         (short, in ${getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"}, referencing the chosen approach)
-      - emotionalIntensity    (optional, 0–1)
-      - emergentProperties    (optional, string array)
-      - userIntent            (optional, object: technical, philosophical, creative, emotional, relational — all 0–1)
-      
-      Respond only via the tool call.
-      `
+        content: buildCollapseStrategyUserPrompt(
+          params,
+          getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR"
+        ),
       };
 
       console.log(
@@ -250,6 +217,26 @@ Respond only via the tool call.`,
             rawArguments !== null
           ) {
             args = this.cleanObjectValues(rawArguments);
+          }
+
+          // Fix emergentProperties if it's a string (llama3.1 issue)
+          if (typeof args.emergentProperties === "string") {
+            try {
+              args.emergentProperties = JSON.parse(args.emergentProperties);
+            } catch {
+              // If parsing fails, try to extract array elements
+              const match = args.emergentProperties.match(/\[(.*)\]/);
+              if (match) {
+                args.emergentProperties = match[1]
+                  .split(",")
+                  .map((s: string) => s.trim().replace(/["']/g, ""));
+              } else {
+                // Fallback: split by comma
+                args.emergentProperties = args.emergentProperties
+                  .split(",")
+                  .map((s: string) => s.trim());
+              }
+            }
           }
 
           // Validate the parsed arguments for new format
@@ -326,6 +313,174 @@ Respond only via the tool call.`,
         console.log(
           `🦙 [OllamaCollapseStrategy] No tool calls found in response`
         );
+      }
+
+      // Fallback: Try to parse alternative formats using OllamaToolCallParser
+      const content = response.choices?.[0]?.message?.content;
+      if (content) {
+        console.log(
+          `🦙 [OllamaCollapseStrategy] Attempting to parse alternative tool call format from content`
+        );
+
+        // Check if this might be gemma3 format or other alternative formats
+        const parser = new OllamaToolCallParser();
+        const parsedCalls = parser.parse(content);
+
+        if (parsedCalls && parsedCalls.length > 0) {
+          const call = parsedCalls[0];
+          console.log(
+            `🦙 [OllamaCollapseStrategy] Parsed tool call:`,
+            JSON.stringify(call, null, 2)
+          );
+
+          if (call.function.name === "decideCollapseStrategy") {
+            try {
+              let args: any = {};
+              if (typeof call.function.arguments === "string") {
+                args = JSON.parse(call.function.arguments);
+              } else {
+                args = call.function.arguments;
+              }
+
+              console.log(
+                `🦙 [OllamaCollapseStrategy] Parsed arguments:`,
+                args
+              );
+
+              // Try to extract decision from parsed args
+              if (
+                typeof args.deterministic === "boolean" &&
+                typeof args.justification === "string"
+              ) {
+                console.log(
+                  `🦙 [OllamaCollapseStrategy] Successfully parsed collapse decision from alternative format`
+                );
+
+                return {
+                  deterministic: args.deterministic,
+                  temperature:
+                    typeof args.temperature === "number"
+                      ? args.temperature
+                      : 0.7,
+                  justification: args.justification,
+                  userIntent: args.userIntent,
+                  emergentProperties: args.emergentProperties,
+                };
+              } else {
+                // Try to be more flexible with field names
+                // Sometimes models might use slightly different field names
+                const deterministic =
+                  args.deterministic ?? args.shouldCollapse ?? false;
+                const justification =
+                  args.justification ??
+                  args.reason ??
+                  args.explanation ??
+                  "No justification provided";
+                const temperature = args.temperature ?? 0.7;
+
+                if (typeof deterministic === "boolean" && justification) {
+                  console.log(
+                    `🦙 [OllamaCollapseStrategy] Successfully parsed collapse decision with flexible field mapping`
+                  );
+
+                  return {
+                    deterministic,
+                    temperature,
+                    justification: String(justification),
+                    userIntent: args.userIntent,
+                    emergentProperties: args.emergentProperties,
+                  };
+                }
+              }
+            } catch (error) {
+              console.warn(
+                `🦙 [OllamaCollapseStrategy] Failed to parse alternative format arguments:`,
+                error
+              );
+            }
+          }
+        } else if (content.includes("decideCollapseStrategy(")) {
+          // Direct function call format - try manual parsing
+          console.log(
+            `🦙 [OllamaCollapseStrategy] Detected direct function call format, attempting manual parsing`
+          );
+
+          // Look for pattern like: decideCollapseStrategy(deterministic:true, temperature:0.3, justification:"...")
+          // Use a more robust regex that handles nested parentheses in strings
+          const match = content.match(
+            /decideCollapseStrategy\s*\(((?:[^()"]|"[^"]*")*)\)/s
+          );
+          if (match) {
+            try {
+              const argsString = match[1];
+              const args: any = {};
+
+              console.log(
+                `🦙 [OllamaCollapseStrategy] Parsing direct call arguments:`,
+                argsString.substring(0, 100) + "..."
+              );
+
+              // Parse deterministic
+              const deterministicMatch = argsString.match(
+                /deterministic\s*:\s*(true|false)/i
+              );
+              if (deterministicMatch) {
+                args.deterministic =
+                  deterministicMatch[1].toLowerCase() === "true";
+                console.log(
+                  `🦙 [OllamaCollapseStrategy] Found deterministic: ${args.deterministic}`
+                );
+              }
+
+              // Parse temperature
+              const tempMatch = argsString.match(/temperature\s*:\s*([\d.]+)/);
+              if (tempMatch) {
+                args.temperature = parseFloat(tempMatch[1]);
+                console.log(
+                  `🦙 [OllamaCollapseStrategy] Found temperature: ${args.temperature}`
+                );
+              }
+
+              // Parse justification (handle multi-line strings)
+              const justMatch = argsString.match(
+                /justification\s*:\s*"((?:[^"\\]|\\.)*)"/s
+              );
+              if (justMatch) {
+                args.justification = justMatch[1];
+                console.log(
+                  `🦙 [OllamaCollapseStrategy] Found justification: ${args.justification.substring(
+                    0,
+                    50
+                  )}...`
+                );
+              } else {
+                console.log(
+                  `🦙 [OllamaCollapseStrategy] No justification match found`
+                );
+              }
+
+              if (
+                typeof args.deterministic === "boolean" &&
+                args.justification
+              ) {
+                console.log(
+                  `🦙 [OllamaCollapseStrategy] Successfully parsed from direct function call format`
+                );
+
+                return {
+                  deterministic: args.deterministic,
+                  temperature: args.temperature ?? 0.7,
+                  justification: args.justification,
+                };
+              }
+            } catch (error) {
+              console.warn(
+                `🦙 [OllamaCollapseStrategy] Failed to manually parse direct function call:`,
+                error
+              );
+            }
+          }
+        }
       }
 
       // Fallback: use conservative strategy if no tool calls found

@@ -16,7 +16,9 @@ import {
   buildUserPrompt,
 } from "../../../shared/utils/neuralPromptBuilder";
 import {
+  buildSignalFromArgs,
   extractNeuralSignalJsons,
+  isValidNeuralSignal,
   parseNeuralSignal,
 } from "../../../shared/utils/neuralSignalParser";
 
@@ -83,29 +85,14 @@ export class HuggingFaceNeuralSignalService
               const args = call.function?.arguments
                 ? JSON.parse(call.function.arguments)
                 : {};
-              const baseSignal: Partial<any> = {
-                core: args.core,
-                intensity: Math.max(0, Math.min(1, args.intensity ?? 0.5)),
-                symbolic_query: { query: args.query ?? "" },
-              };
-              if (Array.isArray(args.keywords))
-                baseSignal.keywords = args.keywords;
-              if (args.filters) baseSignal.filters = args.filters;
-              if (typeof args.expand === "boolean")
-                baseSignal.expand = args.expand;
-              if (args.symbolicInsights)
-                baseSignal.symbolicInsights = args.symbolicInsights;
-              if (typeof args.topK !== "undefined") baseSignal.topK = args.topK;
-              if (typeof baseSignal.core !== "undefined") return baseSignal;
-              return undefined;
+              // Use centralized buildSignalFromArgs
+              const signal = buildSignalFromArgs(args, prompt);
+              return signal && isValidNeuralSignal(signal) ? signal : null;
             } catch {
-              return undefined;
+              return null;
             }
           })
-          .filter(
-            (signal: any): signal is any =>
-              !!signal && typeof signal.core !== "undefined"
-          );
+          .filter((signal: any): signal is any => signal !== null);
       }
 
       // If unable to extract function calls, try to extract text-based signals

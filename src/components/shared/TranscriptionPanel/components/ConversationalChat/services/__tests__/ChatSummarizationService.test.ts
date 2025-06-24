@@ -32,7 +32,7 @@ jest.mock(
 );
 
 jest.mock("../../../../../../../services/StorageService", () => ({
-  getOption: jest.fn().mockReturnValue("qwen3:4b"),
+  getOption: jest.fn().mockReturnValue("qwen3:latest"),
   STORAGE_KEYS: {
     OLLAMA_MODEL: "OLLAMA_MODEL",
   },

@@ -27,7 +27,7 @@ jest.mock(
 );
 
 jest.mock("../../../../../../../services/StorageService", () => ({
-  getOption: jest.fn(() => "qwen3:4b"),
+  getOption: jest.fn(() => "qwen3:latest"),
   STORAGE_KEYS: { OLLAMA_MODEL: "OLLAMA_MODEL" },
 }));
 

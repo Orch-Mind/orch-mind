@@ -14,6 +14,7 @@ import {
 import { detectHardware, HardwareInfo } from "./HardwareDetector";
 import { DockerRunner } from "./services/DockerRunner";
 import { OllamaClient } from "./services/OllamaClient";
+import { getOption, STORAGE_KEYS } from "../src/services/StorageService";
 
 // Configuration interface for better maintainability
 export interface VllmConfig {
@@ -352,7 +353,7 @@ export class VllmManager extends EventEmitter {
       ) {
         enhancedMessage =
           `Model '${modelId}' not found in Ollama registry. ` +
-          `Try one of these working models instead: qwen3:4b, granite3.3:latest`;
+          `Try one of these working models instead: qwen3, llama3.1, mistral-nemo, mistral`;
       } else if (
         errorMessage.includes("Cannot connect") ||
         errorMessage.includes("ECONNREFUSED")
@@ -519,7 +520,7 @@ export class VllmManager extends EventEmitter {
       }
 
       if (remote.length === 0) {
-        remote = this.getBasicPopularModels();
+        remote = getOption(STORAGE_KEYS.OLLAMA_MODEL) || [];
       }
 
       // 2. Annotate with installation status
@@ -757,16 +758,37 @@ export class VllmManager extends EventEmitter {
   private getBasicPopularModels(): LibraryModel[] {
     return [
       {
-        name: "qwen3:4b",
-        label: "Qwen3 4B",
-        size: "2.6GB",
+        name: "qwen3:latest",
+        label: "Qwen3 Latest (Thinking)",
+        size: "5.2GB",
         tags: ["tools", "reasoning"],
         isRecommended: true,
       },
       {
-        name: "granite3.3:latest",
-        label: "Granite 3.3 Latest",
+        name: "llama3.1:latest",
+        label: "Llama 3.1 Latest",
         size: "4.9GB",
+        tags: ["tools", "chat"],
+        isRecommended: true,
+      },
+      {
+        name: "mistral-nemo:latest",
+        label: "Mistral Nemo Latest",
+        size: "7.1GB",
+        tags: ["tools", "chat"],
+        isRecommended: true,
+      },
+      {
+        name: "mistral:latest",
+        label: "Mistral Latest",
+        size: "4.1GB",
+        tags: ["tools", "chat"],
+        isRecommended: true,
+      },
+      {
+        name: "gemma3:latest",
+        label: "Gemma3 Latest",
+        size: "3.3GB",
         tags: ["tools", "chat"],
         isRecommended: true,
       },

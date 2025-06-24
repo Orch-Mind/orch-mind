@@ -14,6 +14,11 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
 } from "../../../../../../shared/utils/neuralPromptBuilder";
+import {
+  buildSignalFromArgs,
+  isValidNeuralSignal,
+} from "../../../../../../shared/utils/neuralSignalParser";
+import { OllamaToolCallParser } from "../../../../../../utils/OllamaToolCallParser";
 import { NeuralSignalResponse } from "../../../interfaces/neural/NeuralSignalTypes";
 import { FunctionSchemaRegistry } from "../../../services/function-calling/FunctionSchemaRegistry";
 import { OllamaCompletionService } from "../../../services/ollama/neural/OllamaCompletionService";
@@ -299,6 +304,24 @@ export class OllamaNeuralSignalService
       return this.extractFromToolCalls(toolCalls, originalPrompt);
     }
 
+    // Try to parse non-standard formats with OllamaToolCallParser
+    const content = response.choices?.[0]?.message?.content;
+    if (content) {
+      console.log(
+        "🦙 [OllamaNeuralSignal] Trying OllamaToolCallParser for non-standard format"
+      );
+
+      const parser = new OllamaToolCallParser();
+      const parsedToolCalls = parser.parse(content);
+
+      if (parsedToolCalls.length > 0) {
+        console.log(
+          `🦙 [OllamaNeuralSignal] Successfully parsed ${parsedToolCalls.length} tool calls from non-standard format`
+        );
+        return this.extractFromToolCalls(parsedToolCalls, originalPrompt);
+      }
+    }
+
     // Se não houver tool_calls, modelo não suporta ou não identificou necessidade de tools
     console.log("🦙 [OllamaNeuralSignal] No tool calls found in response");
     return [];
@@ -320,41 +343,14 @@ export class OllamaNeuralSignalService
           const args = ArgumentParser.parseToolCallArguments(
             call.function.arguments
           );
-
-          // Validate and build signal
-          return this.buildSignalFromArgs(args, originalPrompt);
+          // Use centralized buildSignalFromArgs from neuralSignalParser
+          const signal = buildSignalFromArgs(args, originalPrompt);
+          return signal && isValidNeuralSignal(signal) ? signal : null;
         } catch (error) {
           ServiceLogger.logError("parsing tool call", error);
           return null;
         }
       })
       .filter((signal) => signal !== null);
-  }
-
-  private buildSignalFromArgs(args: any, originalPrompt?: string): any {
-    // Validate required fields
-    if (!args.core) {
-      console.warn("🦙 [OllamaNeuralSignal] Missing core field in args");
-      return null;
-    }
-
-    // Initialize signal with defaults
-    const signal = {
-      core: args.core,
-      intensity: Math.max(0.3, Math.min(1, args.intensity ?? 0.5)),
-      symbolic_query: args.symbolic_query || {
-        query: originalPrompt || "analyze user input",
-      },
-      keywords: Array.isArray(args.keywords) ? args.keywords : [],
-      topK: args.topK,
-      symbolicInsights: args.symbolicInsights,
-    };
-
-    // Ensure symbolic_query has a query field
-    if (!signal.symbolic_query.query && signal.keywords.length > 0) {
-      signal.symbolic_query.query = signal.keywords.join(" ");
-    }
-
-    return signal;
   }
 }

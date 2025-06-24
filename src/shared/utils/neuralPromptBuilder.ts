@@ -25,7 +25,10 @@ LANGUAGE DIRECTIVE: All text content must be generated in ${targetLanguage}.
 Arguments for each call:
 • core             – (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 • intensity        – (number, 0.1–1.0, higher = stronger)
-• symbolic_query   – (object: query [string in ${targetLanguage}], filters [object, optional])
+• symbolic_query   – (object with REQUIRED "query" field: {"query": "semantic meaning in ${targetLanguage}"})
+                     CRITICAL: Must always include "query" field with a string value
+                     Example: {"query": "greeting and social interaction"}
+                     DO NOT use: {"type": "..."} or {} or just a string
 • keywords         – (array of 3–8 strings in ${targetLanguage}, semantic expansion of the signal)
 • symbolicInsights – (object, optional, any structure)
 • topK             – (number, 1–20, Math.round(5 + intensity * 10))
@@ -60,7 +63,7 @@ Identify up to 2–3 most relevant cognitive core activations.
 For each, call activateBrainArea with:
 - core                  (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 - intensity             (0.1–1.0, higher = stronger)
-- symbolic_query        (object: query [string in ${targetLanguage}], filters [object, optional])
+- symbolic_query        (object with REQUIRED "query" field: {"query": "string in ${targetLanguage}"})
 - keywords              (3–8 semantic keywords in ${targetLanguage} for this core)
 - symbolicInsights      (object, optional)
 - topK                  (number, 1–20; calculate as Math.round(5 + intensity × 10))
@@ -174,6 +177,71 @@ STYLE:
 }
 
 /**
+ * Builds a system prompt for collapse strategy decision
+ */
+export function buildCollapseStrategySystemPrompt(): string {
+  return `You are the Collapse-Strategy Orchestrator in Orch-OS.
+
+Choose the best symbolic collapse approach:
+- Dominance      (clear hierarchy)
+- Synthesis      (complementary cores)
+- Dialectic      (productive contradictions)
+- Context        (user intent focus)
+
+Call decideCollapseStrategy with:
+• deterministic          (true/false)
+• temperature            (0.1–1.5)
+• justification          (in LANGUAGE specified in the user prompt, mention the approach)
+• emotionalIntensity     (0–1, optional)
+• emergentProperties     (string[], optional)
+• userIntent             (object: technical, philosophical, creative, emotional, relational, all 0–1, optional)
+
+Respond only via the tool call.`;
+}
+
+/**
+ * Builds a user prompt for collapse strategy decision
+ */
+export function buildCollapseStrategyUserPrompt(
+  params: {
+    activatedCores: string[];
+    averageEmotionalWeight: number;
+    averageContradictionScore: number;
+    originalText?: string;
+  },
+  language?: string
+): string {
+  const targetLanguage = language || "pt-BR";
+
+  return `
+      COGNITIVE METRICS:
+      Activated Cores: ${params.activatedCores.join(", ")}
+      Emotional Weight: ${params.averageEmotionalWeight.toFixed(2)}
+      Contradiction Score: ${params.averageContradictionScore.toFixed(2)}
+      
+      USER INPUT:
+      "${params.originalText || "Not provided"}"
+      
+      LANGUAGE:
+      ${targetLanguage}
+      
+      ANALYZE:
+      Select the most suitable collapse approach: dominance, synthesis, dialectic, or context.
+      
+      DECIDE:
+      Call decideCollapseStrategy with:
+      - deterministic          (true or false)
+      - temperature           (0.1–1.5)
+      - justification         (short, in ${targetLanguage}, referencing the chosen approach)
+      - emotionalIntensity    (optional, 0–1)
+      - emergentProperties    (optional, string array)
+      - userIntent            (optional, object: technical, philosophical, creative, emotional, relational — all 0–1)
+      
+      Respond only via the tool call.
+      `;
+}
+
+/**
  * BUILDS A COMBINED SYSTEM PROMPT FOR EFFICIENT, SINGLE-CALL NEURAL SIGNAL EXTRACTION AND ENRICHMENT.
  * This optimized prompt instructs the LLM to perform both cognitive activation detection and semantic unfolding in one step,
  * reducing latency by minimizing API calls.
@@ -190,7 +258,7 @@ LANGUAGE DIRECTIVE: All text content must be generated in ${targetLanguage}.
 Arguments for each call:
 • core             – (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 • intensity        – (number, 0.1–1.0, higher = stronger)
-• symbolic_query   – (object: query [string in ${targetLanguage}], this is the initial, surface-level user query for this signal)
+• symbolic_query   – (object with REQUIRED "query" field: {"query": "string in ${targetLanguage}"} - the initial surface-level user query)
 • enriched_query   – (string in ${targetLanguage}, an expanded, semantically richer version of the query for deep memory retrieval)
 • keywords         – (array of 3–8 strings in ${targetLanguage}, semantic expansion of the signal)
 • symbolicInsights – (object, optional, any structure)
@@ -224,7 +292,7 @@ Identify up to 2–3 most relevant cognitive core activations.
 For each, call activateAndEnrichBrainArea with:
 - core                  (one of: valence, memory, metacognitive, relational, creativity, will, planning, language, shadow, symbolic_alignment, integrity, evolution)
 - intensity             (0.1–1.0, higher = stronger)
-- symbolic_query        (object: query [string in ${targetLanguage}], original user query)
+- symbolic_query        (object with REQUIRED "query" field: {"query": "string in ${targetLanguage}"})
 - enriched_query        (string in ${targetLanguage}, expanded query for deep search)
 - keywords              (3–8 semantic keywords in ${targetLanguage} for this core)
 - symbolicInsights      (object, optional)

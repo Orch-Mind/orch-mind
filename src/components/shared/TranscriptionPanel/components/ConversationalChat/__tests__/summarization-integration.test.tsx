@@ -71,7 +71,7 @@ jest.mock(
 );
 
 jest.mock("../../../../../../services/StorageService", () => ({
-  getOption: jest.fn().mockReturnValue("qwen3:4b"),
+  getOption: jest.fn().mockReturnValue("qwen3:latest"),
   getUserName: jest.fn().mockReturnValue("Test User"),
   subscribeToStorageChanges: jest.fn(() => () => {}), // Return unsubscribe function
   STORAGE_KEYS: {

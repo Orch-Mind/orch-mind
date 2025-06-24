@@ -218,7 +218,7 @@ ${conversationText}`;
 
       // Call Ollama to generate summary
       const response = await this.ollamaCompletion.callModelWithFunctions({
-        model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:4b",
+        model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:latest",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
