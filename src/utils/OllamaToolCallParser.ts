@@ -628,7 +628,8 @@ export class OllamaToolCallParser {
 
   /**
    * Parse direct JSON array format: [{"name":"function", "arguments":{...}}]
-   * Used by mistral:latest and some other models
+   * Also handles single JSON object format: {"name":"function", "parameters":{...}}
+   * Used by mistral:latest, llama3.1:latest and some other models
    */
   private parseJSONArrayFormat(content: string): ToolCall[] {
     const toolCalls: ToolCall[] = [];
@@ -636,6 +637,64 @@ export class OllamaToolCallParser {
     // First try to parse the entire content as JSON
     try {
       const trimmed = content.trim();
+
+      // Handle single JSON object (llama3.1 format)
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.name && (parsed.arguments || parsed.parameters)) {
+          const args = parsed.arguments || parsed.parameters;
+
+          // Fix escaped JSON strings in parameters (llama3.1 issue)
+          const fixedArgs: any = {};
+          for (const [key, value] of Object.entries(args)) {
+            if (typeof value === "string") {
+              // Check if it's an escaped JSON string
+              try {
+                // Remove extra escaping if present and try to parse
+                const trimmed = value.trim();
+                if (
+                  (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+                  (trimmed.startsWith("[") && trimmed.endsWith("]"))
+                ) {
+                  // Try to parse directly first
+                  try {
+                    fixedArgs[key] = JSON.parse(trimmed);
+                  } catch {
+                    // If that fails, it might be escaped, remove escaping
+                    const unescaped = trimmed
+                      .replace(/\\"/g, '"')
+                      .replace(/\\\\/g, "\\");
+                    fixedArgs[key] = JSON.parse(unescaped);
+                  }
+                } else {
+                  fixedArgs[key] = value;
+                }
+              } catch {
+                // If all parsing attempts fail, keep as string
+                fixedArgs[key] = value;
+              }
+            } else {
+              fixedArgs[key] = value;
+            }
+          }
+
+          console.log(
+            `[OllamaToolCallParser] Parsed single JSON object format for ${parsed.name}`
+          );
+
+          return [
+            {
+              type: "function" as const,
+              function: {
+                name: parsed.name,
+                arguments: fixedArgs,
+              },
+            },
+          ];
+        }
+      }
+
+      // Handle JSON array format
       if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
@@ -669,7 +728,7 @@ export class OllamaToolCallParser {
         }
       }
     } catch (e) {
-      // Not a pure JSON array
+      // Not a pure JSON array or object
     }
 
     // Try to find JSON arrays in the content using a more robust approach
