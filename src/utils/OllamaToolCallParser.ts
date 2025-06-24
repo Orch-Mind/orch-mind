@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { IToolCallParser, ToolCall } from "./ollama-parsers/interfaces/IToolCallParser";
+import {
+  IToolCallParser,
+  ToolCall,
+} from "./ollama-parsers/interfaces/IToolCallParser";
 import { DirectCallParser } from "./ollama-parsers/parsers/DirectCallParser";
 import { JSONArrayParser } from "./ollama-parsers/parsers/JSONArrayParser";
 import { MarkdownJSONParser } from "./ollama-parsers/parsers/MarkdownJSONParser";
+import { StringJSONParser } from "./ollama-parsers/parsers/StringJSONParser";
 import { ToolCallsFormatParser } from "./ollama-parsers/parsers/ToolCallsFormatParser";
 import { XMLParser } from "./ollama-parsers/parsers/XMLParser";
 
@@ -31,6 +35,7 @@ export class OllamaToolCallParser {
     // SOLID: Facilmente extensível com novos parsers
     this.parsers = [
       new MarkdownJSONParser(),
+      new StringJSONParser(),
       new JSONArrayParser(),
       new ToolCallsFormatParser(),
       new DirectCallParser(),

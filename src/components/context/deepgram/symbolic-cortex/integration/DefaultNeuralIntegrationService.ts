@@ -10,9 +10,7 @@ import {
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
-import {
-  buildIntegrationUserPrompt
-} from "../../../../../shared/utils/neuralPromptBuilder";
+import { buildIntegrationUserPrompt } from "../../../../../shared/utils/neuralPromptBuilder";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
 import { HuggingFaceServiceFacade } from "../../services/huggingface/HuggingFaceServiceFacade";
@@ -571,8 +569,19 @@ export class DefaultNeuralIntegrationService
       strategyDecision
     );
 
+    // Etapa final: executar o prompt de integração para obter a resposta final
+    const finalResponseStream = await this.aiService.streamOpenAIResponse(
+      [{ role: "user", content: userPrompt }],
+      strategyDecision.temperature
+    );
+
+    // Limpar a resposta final de quaisquer tags de pensamento residuais
+    const cleanedFinalResponse = cleanThinkTags(
+      finalResponseStream.responseText || ""
+    );
+
     return {
-      prompt: userPrompt,
+      prompt: cleanedFinalResponse, // Retorna a resposta limpa e integrada
       temperature: strategyDecision.temperature,
       isDeterministic: strategyDecision.deterministic,
     };

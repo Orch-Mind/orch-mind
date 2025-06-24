@@ -47,7 +47,10 @@ export function buildSignalFromArgs(
     }
   } else if (typeof signal.symbolic_query === "string") {
     // Handle case where symbolic_query is a string (common with some models)
-    const trimmed = signal.symbolic_query.trim();
+    let trimmed = signal.symbolic_query.trim();
+
+    // HOTFIX: Replace smart quotes with standard quotes to prevent JSON.parse errors
+    trimmed = trimmed.replace(/[“”]/g, '"');
 
     // First, try to parse as valid JSON without any modifications
     let parsed = null;
