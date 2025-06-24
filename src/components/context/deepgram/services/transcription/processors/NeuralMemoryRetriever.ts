@@ -445,10 +445,14 @@ export class NeuralMemoryRetriever {
   private _transformToNeuralProcessingResults(
     processedSignals: any[]
   ): NeuralProcessingResult[] {
+    // A cada sinal processado, criamos um resultado de processamento neural.
     return processedSignals.map((signal) => ({
       core: signal.core,
       intensity: signal.intensity,
-      output: signal.pineconeResults.join("\n"),
+      // O 'output' agora é o conteúdo do primeiro resultado de memória,
+      // ou uma string vazia se não houver resultados. Isso mantém a estrutura.
+      output: signal.pineconeResults[0] || "",
+      // Os 'insights' continuam sendo um objeto combinado.
       insights: Array.isArray(signal.symbolicInsights)
         ? signal.symbolicInsights.reduce(
             (acc: Record<string, unknown>, ins: SymbolicInsight) => {
@@ -463,6 +467,12 @@ export class NeuralMemoryRetriever {
           signal.symbolicInsights !== null
         ? signal.symbolicInsights
         : {},
+      // Adicionamos um novo campo 'content' que o integration service espera.
+      // Ele contém todos os resultados da memória como um array de objetos.
+      content: signal.pineconeResults.map((resultText: string) => ({
+        summary: resultText.substring(0, 150) + "...", // Um resumo para o prompt
+        fullContent: resultText, // O conteúdo completo
+      })),
     }));
   }
 }

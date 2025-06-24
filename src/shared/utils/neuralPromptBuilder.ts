@@ -74,14 +74,13 @@ export function buildIntegrationSystemPrompt(
   let neuralContext = "";
   if (neuralResults && neuralResults.length > 0) {
     const relevantSignals = neuralResults
-      .filter((r) => r.content && Object.keys(r.content).length > 0)
+      .filter((r) => r.output && r.output.trim().length > 0)
       .slice(0, 3)
       .map((r) => {
+        // Create a concise summary from the memory output
         const summary =
-          r.content.summary ||
-          r.content.symbolicQuery?.query ||
-          JSON.stringify(r.content).slice(0, 100);
-        return `* ${r.coreName}: ${summary}`;
+          r.output.length > 100 ? r.output.substring(0, 100) + "..." : r.output;
+        return `* ${r.core}: ${summary}`;
       });
 
     if (relevantSignals.length > 0) {

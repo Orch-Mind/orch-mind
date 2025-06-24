@@ -129,4 +129,9 @@ export interface NeuralProcessingResult {
    * Symbolic insights extracted and structured
    */
   insights: Record<string, unknown>;
+
+  /**
+   * Additional content for the result
+   */
+  content?: Array<{ summary: string; fullContent: string }>;
 }
