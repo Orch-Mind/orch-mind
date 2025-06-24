@@ -31,17 +31,31 @@ export function buildSignalFromArgs(
     symbolicInsights: args.symbolicInsights,
   };
 
-  // Handle case where symbolic_query is a string (common with gemma3 and other models)
-  if (typeof signal.symbolic_query === "string") {
+  // Handle symbolic_query - check if it's already a valid object first
+  if (signal.symbolic_query && typeof signal.symbolic_query === "object") {
+    // If it's already an object with a query field, we're good
+    if (signal.symbolic_query.query) {
+      // Valid object, no parsing needed
+    } else if (Object.keys(signal.symbolic_query).length === 0) {
+      // Empty object, use default
+      signal.symbolic_query = {
+        query: originalPrompt || `${signal.core} cognitive processing`,
+      };
+      console.log(
+        `🧠 [NeuralSignalParser] Empty object, using default query: "${signal.symbolic_query.query}"`
+      );
+    }
+  } else if (typeof signal.symbolic_query === "string") {
+    // Handle case where symbolic_query is a string (common with some models)
     // Try to parse it as JSON first
     try {
-      // Try direct parse first (for clean JSON strings like gemma3)
+      // Try direct parse first
       const parsed = JSON.parse(signal.symbolic_query);
 
       // Check if parsed result is valid
       if (typeof parsed === "object" && parsed.query) {
         signal.symbolic_query = parsed;
-        // Success - no need to log, this is expected behavior for gemma3
+        // Success - no need to log, this is expected behavior
       } else if (
         typeof parsed === "object" &&
         (!parsed.query || Object.keys(parsed).length === 0)
