@@ -24,8 +24,12 @@ export class CommandExecutor implements ICommandExecutor {
    */
   async execute(command: string): Promise<{ stdout: string; stderr: string }> {
     try {
-      const result = await execAsync(command);
-      return { stdout: result.stdout || "", stderr: result.stderr || "" };
+      const shellOptions = this.getShellOptions();
+      const result = await execAsync(command, shellOptions);
+      return {
+        stdout: result.stdout?.toString() || "",
+        stderr: result.stderr?.toString() || "",
+      };
     } catch (error: any) {
       throw new Error(`Command failed: ${command}\n${error.message}`);
     }
@@ -85,6 +89,11 @@ export class CommandExecutor implements ICommandExecutor {
    */
   async checkCommand(command: string): Promise<boolean> {
     try {
+      // Special handling for Homebrew on macOS
+      if (command === "brew" && this.platform === "darwin") {
+        return await this.checkHomebrew();
+      }
+
       const checkCmd = this.platform === "win32" ? "where" : "which";
       await this.execute(`${checkCmd} ${command}`);
       return true;
@@ -94,12 +103,81 @@ export class CommandExecutor implements ICommandExecutor {
   }
 
   /**
+   * Check if Homebrew is installed on macOS
+   * Tries common installation paths
+   */
+  private async checkHomebrew(): Promise<boolean> {
+    const brewPaths = [
+      "/opt/homebrew/bin/brew", // Apple Silicon default
+      "/usr/local/bin/brew", // Intel Mac default
+      "/home/linuxbrew/.linuxbrew/bin/brew", // Linux brew
+    ];
+
+    // First try which command
+    try {
+      await this.execute("which brew");
+      return true;
+    } catch {
+      // If which fails, try direct paths
+    }
+
+    // Try common installation paths
+    for (const brewPath of brewPaths) {
+      try {
+        await this.execute(`test -f ${brewPath}`);
+        console.log(`🍺 [CommandExecutor] Found Homebrew at: ${brewPath}`);
+        return true;
+      } catch {
+        // Continue to next path
+      }
+    }
+
+    // Try using the shell's PATH expansion
+    try {
+      await this.execute("brew --version");
+      return true;
+    } catch {
+      // Last resort failed
+    }
+
+    console.log(
+      "🍺 [CommandExecutor] Homebrew not found in any common location"
+    );
+    return false;
+  }
+
+  /**
    * Get platform-specific shell options
    */
   private getShellOptions(): any {
     if (this.platform === "win32") {
       return { shell: "powershell.exe" };
     }
-    return {};
+
+    // For macOS/Linux, ensure we have the full PATH including Homebrew
+    const env = { ...process.env };
+    if (this.platform === "darwin") {
+      // Add common Homebrew paths to PATH
+      const brewPaths = [
+        "/opt/homebrew/bin", // Apple Silicon
+        "/opt/homebrew/sbin",
+        "/usr/local/bin", // Intel Mac
+        "/usr/local/sbin",
+      ];
+
+      const currentPath = env.PATH || "";
+      const additionalPaths = brewPaths.filter(
+        (path) => !currentPath.includes(path)
+      );
+
+      if (additionalPaths.length > 0) {
+        env.PATH = `${additionalPaths.join(":")}:${currentPath}`;
+        console.log(
+          `🍺 [CommandExecutor] Enhanced PATH with Homebrew directories: ${env.PATH}`
+        );
+      }
+    }
+
+    return { env };
   }
 }

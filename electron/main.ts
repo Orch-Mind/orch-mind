@@ -373,7 +373,7 @@ async function createWindow(): Promise<void> {
       offscreen: false,
 
       // DevTools error suppression
-      devTools: true, // Enable DevTools for debugging
+      devTools: isDev, // Enable DevTools for debugging
 
       // Memory optimization for large AI models
       spellcheck: false, // Disable spellcheck to save memory

@@ -1110,8 +1110,17 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   ipcMain.handle("detect-hardware", async () => {
     try {
       const hardware = await detectHardware();
-      const isAppleSilicon =
-        hardware.gpu?.vendor === "Apple" && !hardware.gpu?.cuda;
+
+      // More robust Apple Silicon detection
+      const isAppleSilicon = detectAppleSilicon(hardware);
+
+      console.log("🔧 [IPC] Hardware detection:", {
+        cpuCores: hardware.cpuCores,
+        ramGB: hardware.ramGB,
+        gpu: hardware.gpu,
+        isAppleSilicon,
+        dockerRequired: !isAppleSilicon,
+      });
 
       return {
         success: true,
@@ -1128,4 +1137,32 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       };
     }
   });
+
+  /**
+   * Detect if running on Apple Silicon (M1/M2/M3)
+   */
+  function detectAppleSilicon(hardware: any): boolean {
+    // Method 1: Check process.arch
+    if (process.arch === "arm64" && process.platform === "darwin") {
+      console.log("🍎 [Hardware] Apple Silicon detected via process.arch");
+      return true;
+    }
+
+    // Method 2: Check GPU vendor for Apple
+    if (hardware.gpu?.vendor?.toLowerCase().includes("apple")) {
+      console.log("🍎 [Hardware] Apple Silicon detected via GPU vendor");
+      return true;
+    }
+
+    // Method 3: Check for absence of CUDA on macOS
+    if (process.platform === "darwin" && !hardware.gpu?.cuda) {
+      console.log(
+        "🍎 [Hardware] Apple Silicon detected via macOS without CUDA"
+      );
+      return true;
+    }
+
+    console.log("🖥️ [Hardware] Intel/AMD architecture detected");
+    return false;
+  }
 }
