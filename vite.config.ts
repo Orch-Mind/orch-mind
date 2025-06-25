@@ -4,11 +4,11 @@
 
 import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfill";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import react from "@vitejs/plugin-react";
 import path from "node:path";
 import serveStatic from "serve-static";
 import { defineConfig } from "vite";
 import electron from "vite-plugin-electron/simple";
-import commonjs from "@rollup/plugin-commonjs";
 
 // Plugin para remover meta-CSP do index.html gerado pela Vite
 function cleanHtmlPlugin() {
@@ -41,6 +41,15 @@ export default defineConfig(({ mode }) => {
     ],
 
     plugins: [
+      // React plugin with explicit JSX configuration
+      react({
+        jsxRuntime: "automatic",
+        jsxImportSource: "react",
+        babel: {
+          plugins: [],
+          presets: [],
+        },
+      }),
       // Custom plugin to clean default CSP tags (managed elsewhere)
       cleanHtmlPlugin(),
       // Custom plugin to add proper CSP for ONNX models
@@ -351,6 +360,8 @@ export default defineConfig(({ mode }) => {
       include: [
         "react",
         "react-dom",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
         "@huggingface/transformers",
         "onnxruntime-web",
         "onnxruntime-common",
@@ -382,6 +393,15 @@ export default defineConfig(({ mode }) => {
         mode === "development" ? "development" : "production"
       ),
       "process.versions.node": "undefined",
+      // Ensure React is properly defined
+      __DEV__: mode === "development",
+    },
+
+    // Ensure proper JSX handling in build
+    esbuild: {
+      jsx: "automatic",
+      jsxImportSource: "react",
+      jsxDev: mode === "development",
     },
   };
 });

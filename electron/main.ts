@@ -373,7 +373,7 @@ async function createWindow(): Promise<void> {
       offscreen: false,
 
       // DevTools error suppression
-      devTools: isDev,
+      devTools: true, // Enable DevTools for debugging
 
       // Memory optimization for large AI models
       spellcheck: false, // Disable spellcheck to save memory
@@ -411,6 +411,12 @@ async function createWindow(): Promise<void> {
   };
 
   state.mainWindow = new BrowserWindow(windowSettings);
+
+  // Force open DevTools for debugging
+  state.mainWindow.webContents.once("dom-ready", () => {
+    console.log("🔧 Opening DevTools for debugging...");
+    state.mainWindow?.webContents.openDevTools();
+  });
 
   // Enhanced DevTools error suppression
   if (isDev) {
@@ -466,9 +472,7 @@ async function createWindow(): Promise<void> {
         "Cross-Origin-Embedder-Policy": ["credentialless"],
         "Cross-Origin-Resource-Policy": ["cross-origin"],
         "Content-Security-Policy": [
-          isDev
-            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://unpkg.com; script-src-elem 'self' 'unsafe-inline' blob: data: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://hf.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net https://unpkg.com; child-src 'self' blob:; object-src 'self' blob:; media-src 'self' data: blob:; manifest-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; frame-src 'none';"
-            : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://unpkg.com; script-src-elem 'self' blob: data: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://hf.co https://hub-ci.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co https://cdn-lfs-eu-1.hf.co https://cdn-lfs.hf.co https://cas-bridge.xethub.hf.co https://cas-server.xethub.hf.co https://transfer.xethub.hf.co https://api.openai.com https://*.pinecone.io; worker-src 'self' blob: data: https://cdn.jsdelivr.net https://unpkg.com; child-src 'self' blob:; object-src 'self' blob:; media-src 'self' data: blob:; manifest-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; frame-src 'none';",
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: *; style-src 'self' 'unsafe-inline' *; img-src 'self' data: blob: *; font-src 'self' data: *; connect-src 'self' *; worker-src 'self' blob: data: *; child-src 'self' blob: *; object-src 'self' blob: *; media-src 'self' data: blob: *; manifest-src 'self' *; frame-src 'self' *;",
         ],
       };
 
@@ -479,7 +483,26 @@ async function createWindow(): Promise<void> {
   // Enhanced error handling and recovery for dev server connection
   state.mainWindow.webContents.on("did-finish-load", () => {
     console.log("✅ Window finished loading successfully");
+    console.log("🔧 Current URL:", state.mainWindow?.webContents.getURL());
   });
+
+  // Add more debugging events
+  state.mainWindow.webContents.on("did-start-loading", () => {
+    console.log("🔄 Started loading...");
+  });
+
+  state.mainWindow.webContents.on("did-stop-loading", () => {
+    console.log("⏹️ Stopped loading");
+  });
+
+  state.mainWindow.webContents.on(
+    "console-message",
+    (event, level, message, line, sourceId) => {
+      console.log(
+        `🖥️ Renderer Console [${level}]: ${message} (${sourceId}:${line})`
+      );
+    }
+  );
 
   state.mainWindow.webContents.on(
     "did-fail-load",
