@@ -4,8 +4,7 @@
 import React from "react";
 import {
   AudioSettings,
-  GeneralSettings,
-  RequirementsSettings,
+  GeneralSettings
 } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
 import SettingsFooter from "./settings/SettingsFooter";
@@ -53,7 +52,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
         <SettingsNavigation
           activeTab={settings.activeTab}
           setActiveTab={settings.setActiveTab}
-          dependenciesReady={settings.dependenciesReady}
         />
 
         {/* Conteúdo das abas */}
@@ -90,15 +88,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
             />
           )}
 
-          {/* Requirements Tab */}
-          {settings.activeTab === "requirements" && (
-            <RequirementsSettings
-              onDependenciesReady={settings.setDependenciesReady}
-            />
-          )}
+
 
           {/* Advanced Tab */}
-          {settings.activeTab === "advanced" && settings.dependenciesReady && (
+          {settings.activeTab === "advanced" && (
             <ApiSettings
               applicationMode={settings.applicationMode}
               setApplicationMode={settings.setApplicationMode}
@@ -111,40 +104,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
             />
           )}
 
-          {/* Message when Advanced is blocked */}
-          {settings.activeTab === "advanced" && !settings.dependenciesReady && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="text-center max-w-md">
-                <div className="mb-4">
-                  <svg
-                    className="w-16 h-16 mx-auto text-yellow-400 opacity-60"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-yellow-400 mb-2">
-                  Requirements Needed
-                </h3>
-                <p className="text-yellow-300/70 text-sm mb-4">
-                  Advanced features require Ollama and Docker to be installed.
-                </p>
-                <button
-                  onClick={() => settings.setActiveTab("requirements")}
-                  className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 px-4 py-2 rounded transition-colors text-sm"
-                >
-                  Go to Requirements →
-                </button>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Footer com botões de ação */}

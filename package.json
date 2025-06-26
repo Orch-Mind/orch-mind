@@ -54,7 +54,7 @@
     "mac": {
       "target": [
         {
-          "target": "dmg",
+          "target": "pkg",
           "arch": [
             "arm64"
           ]
@@ -79,6 +79,9 @@
       "asarUnpack": [
         "**/*.node"
       ]
+    },
+    "pkg": {
+      "scripts": "build/postinstall.sh"
     },
     "dmg": {
       "contents": [
@@ -107,6 +110,9 @@
         ]
       }
     },
+    "nsis": {
+      "include": "build/install-dependencies.nsh"
+    },
     "linux": {
       "target": [
         "AppImage"
@@ -118,7 +124,10 @@
         "schemes": [
           "orch-os"
         ]
-      }
+      },
+      "scripts": [
+        "build/postinstall-linux.sh"
+      ]
     },
     "publish": [
       {

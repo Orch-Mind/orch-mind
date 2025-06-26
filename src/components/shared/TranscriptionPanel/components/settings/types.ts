@@ -24,7 +24,7 @@ export interface SettingsFooterProps {
   saveSettings: () => void;
 }
 
-export type TabType = "general" | "audio" | "requirements" | "advanced";
+export type TabType = "general" | "audio" | "advanced";
 
 export type OpenSectionType =
   | "pinecone"
@@ -123,9 +123,7 @@ export interface SettingsState {
   applicationMode: OrchOSMode;
   setApplicationMode: (mode: OrchOSMode) => void;
 
-  // Dependencies
-  dependenciesReady: boolean;
-  setDependenciesReady: (ready: boolean) => void;
+
 
   // Métodos
   saveSettings: () => void;

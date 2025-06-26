@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ModeService, OrchOSMode } from "../../../../../services/ModeService";
 import { useApiSettings } from "./hooks/useApiSettings";
 import { useAudioSettings } from "./hooks/useAudioSettings";
@@ -28,46 +28,7 @@ export const useSettingsState = (show: boolean): SettingsState => {
     ModeService.getMode()
   );
 
-  // Estado das dependências do sistema
-  const [dependenciesReady, setDependenciesReady] = useState<boolean>(false);
-  const [dockerRequired, setDockerRequired] = useState<boolean>(true);
-
-  // Detecta hardware e verifica dependências quando o modal abre
-  useEffect(() => {
-    if (show) {
-      // Detecta hardware para saber se Docker é necessário
-      const detectAndCheckDependencies = async () => {
-        try {
-          // Primeiro detecta o hardware
-          const hardwareResult = await window.electronAPI.detectHardware();
-          if (hardwareResult.success) {
-            setDockerRequired(hardwareResult.dockerRequired);
-            console.log(
-              `[Settings] Hardware detected - Docker required: ${hardwareResult.dockerRequired}`
-            );
-          }
-
-          // Depois verifica as dependências
-          const depStatus = await window.electronAPI.checkDependencies();
-
-          // Valida dependências baseado no que é realmente necessário
-          const isReady = hardwareResult.dockerRequired
-            ? depStatus.ollama.installed && depStatus.docker.installed
-            : depStatus.ollama.installed; // Apenas Ollama para Apple Silicon
-
-          setDependenciesReady(isReady);
-        } catch (error) {
-          console.error(
-            "[Settings] Failed to detect hardware or check dependencies:",
-            error
-          );
-          setDependenciesReady(false);
-        }
-      };
-
-      detectAndCheckDependencies();
-    }
-  }, [show]);
+  // As dependências são agora tratadas na instalação automática
 
   // Handler para alteração do modo com persistência
   const setApplicationMode = (mode: OrchOSMode) => {
@@ -101,10 +62,7 @@ export const useSettingsState = (show: boolean): SettingsState => {
       // Modo da aplicação
       applicationMode,
       setApplicationMode,
-      // Dependencies
-      dependenciesReady,
-      setDependenciesReady,
-      dockerRequired,
+
       // Ação unificada
       saveSettings,
       // Propriedades legado (mantidas para compatibilidade com tipos)
@@ -146,9 +104,7 @@ export const useSettingsState = (show: boolean): SettingsState => {
       debug,
       applicationMode,
       setApplicationMode,
-      dependenciesReady,
-      setDependenciesReady,
-      dockerRequired,
+
       saveSettings,
     ]
   );
