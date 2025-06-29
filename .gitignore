@@ -10,7 +10,8 @@ dist
 **/package-lock.json.env
 scripts/python/lora_training/training_venv
 scripts/python/lora_training/data
-scripts/python/lora_training/training_modules/__pycache__
+scripts/python/lora_training/__pycache__/*
+scripts/python/lora_training/training_modules/__pycache__/*
 scripts/python/lora_training/adapters
 scripts/python/lora_training/lora_adapter
 scripts/python/lora_training/Modelfile*

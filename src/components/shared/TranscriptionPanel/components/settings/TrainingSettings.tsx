@@ -88,6 +88,28 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     0
   );
 
+  // === UTILITY FUNCTIONS (Following DRY) ===
+  const extractBaseModel = (modelName: string): string => {
+    // Extract the original base model, removing any "-custom" suffix
+    // Examples:
+    // "gemma3:latest" → "gemma3:latest"
+    // "gemma3-custom:latest" → "gemma3:latest"
+    // "llama3.1-custom:latest" → "llama3.1:latest"
+
+    // Remove -custom suffix first
+    let result = modelName.replace(/-custom(:latest)?$/, "");
+
+    // Ensure :latest suffix
+    if (!result.endsWith(":latest")) {
+      result += ":latest";
+    }
+
+    // Clean up any double :latest
+    result = result.replace(/:latest:latest$/, ":latest");
+
+    return result;
+  };
+
   // === EVENT HANDLERS (Following SRP) ===
   const handleTraining = async () => {
     // Debug conversation format to help diagnose issues
@@ -152,15 +174,21 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     );
     setTimeout(() => setTrainingStatus(""), 2000);
 
-    // Always incremental training - generate master model name
-    const baseModelClean = selectedBaseModel
+    // INCREMENTAL TRAINING: Always use original base model for consistency
+    const originalBaseModel = extractBaseModel(selectedBaseModel);
+    const baseModelClean = originalBaseModel
       .replace(":latest", "")
       .replace(/[:.]/g, "_");
     const masterModelName = `${baseModelClean}-custom:latest`;
 
+    console.log("[Training] Incremental training logic:");
+    console.log(`  - Selected model: ${selectedBaseModel}`);
+    console.log(`  - Extracted base: ${originalBaseModel}`);
+    console.log(`  - Target custom model: ${masterModelName}`);
+
     const request: TrainingRequest = {
       conversations: trainingConversations,
-      baseModel: selectedBaseModel,
+      baseModel: originalBaseModel, // Always use original base model
       outputName: "master", // Always master
     };
 
@@ -173,15 +201,23 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     await startTraining(
       request,
       (result) => {
-        // Success callback - Use the master model name
-        const modelName = result.details?.modelName || masterModelName;
-        console.log("[Training] Master model created/updated:", modelName);
-        saveTrainedModel(modelName);
+        // Success callback - Always use the consistent master model name
+        console.log(
+          "[Training] Master model created/updated:",
+          masterModelName
+        );
+        console.log(
+          "[Training] Backend returned model name:",
+          result.details?.modelName
+        );
+
+        // Always use the consistent masterModelName to avoid duplicates
+        saveTrainedModel(masterModelName);
         markConversationsAsProcessed(
           selectedConversationsList.map((c) => c.id),
-          modelName
+          masterModelName
         );
-        showSuccessModal(modelName);
+        showSuccessModal(masterModelName);
       },
       (error) => {
         // Error callback

@@ -54,10 +54,20 @@ def deploy_to_ollama(model_name, modelfile_path, base_model):
     try:
         print(f"🚀 Creating Ollama model: {model_name}")
         
-        # Pull base model if not available
+        # Check if model already exists and remove it
         result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
+        if model_name in result.stdout:
+            print(f"🔄 Removing existing model: {model_name}")
+            try:
+                subprocess.run(["ollama", "rm", model_name], capture_output=True, text=True, check=True)
+                print(f"✅ Existing model removed: {model_name}")
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Could not remove existing model: {e.stderr}")
+                # Continue anyway - Ollama might overwrite
+        
+        # Pull base model if not available
         if base_model not in result.stdout:
-            print(f"Pulling base model {base_model}...")
+            print(f"📥 Pulling base model {base_model}...")
             subprocess.run(["ollama", "pull", base_model], check=True)
         
         # Create model

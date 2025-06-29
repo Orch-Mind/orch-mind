@@ -43,6 +43,27 @@ export class LoRATrainingService {
     this.tempDir = path.join(app.getPath("userData"), "temp");
   }
 
+  private extractBaseModel(modelName: string): string {
+    // Extract the original base model, removing any "-custom" suffix
+    // Examples:
+    // "gemma3:latest" → "gemma3:latest"
+    // "gemma3-custom:latest" → "gemma3:latest"
+    // "llama3.1-custom:latest" → "llama3.1:latest"
+
+    // Remove -custom suffix first
+    let result = modelName.replace(/-custom(:latest)?$/, "");
+
+    // Ensure :latest suffix
+    if (!result.endsWith(":latest")) {
+      result += ":latest";
+    }
+
+    // Clean up any double :latest
+    result = result.replace(/:latest:latest$/, ":latest");
+
+    return result;
+  }
+
   async trainAdapter(params: TrainingParams): Promise<TrainingResult> {
     const startTime = Date.now();
 
@@ -82,11 +103,17 @@ export class LoRATrainingService {
       // Check if base model exists in Ollama
       await this.validateBaseModel(params.baseModel);
 
-      // Always use simple naming convention: base_model-custom:latest
-      const baseModelClean = params.baseModel
+      // INCREMENTAL TRAINING: Extract original base model to ensure consistency
+      const originalBaseModel = this.extractBaseModel(params.baseModel);
+      const baseModelClean = originalBaseModel
         .replace(":latest", "")
         .replace(/[:.]/g, "_");
       const modelName = `${baseModelClean}-custom:latest`;
+
+      console.log(`[LoRA] Incremental training logic:
+        - Input base model: ${params.baseModel}
+        - Extracted base model: ${originalBaseModel}
+        - Target custom model: ${modelName}`);
 
       console.log(`[LoRA] Starting incremental training with:
         - Base model: ${params.baseModel}

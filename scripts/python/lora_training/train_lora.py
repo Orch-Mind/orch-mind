@@ -84,6 +84,26 @@ def save_training_history(base_model, master_name, session_data):
     except Exception as e:
         print(f"⚠️ Could not save training history: {e}")
 
+def extract_base_model(model_name):
+    """Extract the original base model, removing any '-custom' suffix."""
+    # Examples:
+    # "gemma3:latest" → "gemma3:latest"
+    # "gemma3-custom:latest" → "gemma3:latest"
+    # "llama3.1-custom:latest" → "llama3.1:latest"
+    import re
+    
+    # Remove -custom suffix first
+    model_name = re.sub(r'-custom(:latest)?$', '', model_name)
+    
+    # Ensure :latest suffix
+    if not model_name.endswith(':latest'):
+        model_name += ':latest'
+    
+    # Clean up any double :latest
+    model_name = re.sub(r':latest:latest$', ':latest', model_name)
+    
+    return model_name
+
 def check_ollama_model_exists(model_name):
     """Check if model exists in Ollama."""
     try:
@@ -217,23 +237,28 @@ def main():
     else:
         print(f"📈 Using specified steps: {args.max_steps}")
     
-    # Always use incremental approach - check if master adapter exists in Ollama
-    # Use simple naming: base_model-custom:latest (e.g., llama3.1-custom:latest)
-    base_model_clean = args.base_model.replace(":latest", "").replace(":", "_").replace("/", "_")
+    # INCREMENTAL TRAINING: Always extract original base model for consistency
+    original_base_model = extract_base_model(args.base_model)
+    base_model_clean = original_base_model.replace(":latest", "").replace(":", "_").replace("/", "_")
     master_model_name = f"{base_model_clean}-custom:latest"
+    
+    print(f"🔄 Incremental training logic:")
+    print(f"   - Input base model: {args.base_model}")
+    print(f"   - Extracted base model: {original_base_model}")
+    print(f"   - Target custom model: {master_model_name}")
     
     print(f"\n🔄 === INCREMENTAL TRAINING (Always) ===")
     print(f"Master model name: {master_model_name}")
     
     # Check if master model exists in Ollama
     master_exists = check_ollama_model_exists(master_model_name)
-    adapter_path = get_master_adapter_path(args.base_model, "master")
+    adapter_path = get_master_adapter_path(original_base_model, "master")
     
     if master_exists:
         print(f"✅ Found existing master model in Ollama: {master_model_name}")
         
         # Load training history
-        history = load_training_history(args.base_model, "master")
+        history = load_training_history(original_base_model, "master")
         print(f"📊 Training History:")
         print(f"   - Total sessions: {len(history['sessions'])}")
         print(f"   - Total examples: {history['total_examples']}")
@@ -263,7 +288,7 @@ def main():
         if setup_dependencies(python_exe):
             print("🔄 Running incremental training on existing adapter...")
             script_content = create_incremental_training_script(
-                args.data, args.base_model, adapter_path, incremental_steps
+                args.data, original_base_model, adapter_path, incremental_steps
             )
             
             if execute_training_strategy("incremental", script_content, python_exe, 600):
@@ -282,13 +307,13 @@ def main():
                     "data_file": args.data,
                     "backup_path": backup_path
                 }
-                save_training_history(args.base_model, "master", session_data)
+                save_training_history(original_base_model, "master", session_data)
                 
                 # Deploy updated model (same name, updated weights)
                 modelfile_path = create_modelfile_with_adapter(
-                    args.base_model, adapter_path, f"master-{safe_model_name}", use_gguf=args.convert_gguf
+                    original_base_model, adapter_path, f"master-{base_model_clean}", use_gguf=args.convert_gguf
                 )
-                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, args.base_model):
+                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model):
                     print("🎉 Incremental training completed successfully")
                     print(f"📈 Master model updated: {master_model_name}")
                     return 0
@@ -306,7 +331,7 @@ def main():
             # Always use master adapter path structure
             os.makedirs(os.path.dirname(adapter_path), exist_ok=True)
             
-            script_content = create_peft_training_script(args.data, args.base_model, args.output, args.max_steps, adapter_path)
+            script_content = create_peft_training_script(args.data, original_base_model, args.output, args.max_steps, adapter_path)
             if execute_training_strategy(1, script_content, python_exe, 600):
                 print("✅ Training completed with Strategy 1")
                 
@@ -318,9 +343,9 @@ def main():
                 
                 # Create and deploy model with master name
                 modelfile_path = create_modelfile_with_adapter(
-                    args.base_model, adapter_path, args.output, use_gguf=args.convert_gguf
+                    original_base_model, adapter_path, args.output, use_gguf=args.convert_gguf
                 )
-                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, args.base_model):
+                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model):
                     # Initialize training history for new master adapter
                     duration = time.time() - start_time
                     with open(args.data, 'r') as f:
@@ -334,7 +359,7 @@ def main():
                         "data_file": args.data,
                         "initial_training": True
                     }
-                    save_training_history(args.base_model, "master", session_data)
+                    save_training_history(original_base_model, "master", session_data)
                     print("📊 Training history initialized for master adapter")
                     
                     print("🎉 First master adapter created successfully")
@@ -343,13 +368,13 @@ def main():
         
         # Strategy 2: Instant Adapter Creation
         print("\n=== Strategy 2: Instant Adapter Creation ===")
-        script_content = create_instant_adapter_script(args.data, args.base_model, args.output)
+        script_content = create_instant_adapter_script(args.data, original_base_model, args.output)
         if execute_training_strategy(2, script_content, python_exe, 30):
             print("✅ Training completed with Strategy 2")
             
             # Deploy instant adapter with master name
-            modelfile_path = create_ollama_modelfile_for_instant(args.base_model, args.output)
-            if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, args.base_model):
+            modelfile_path = create_ollama_modelfile_for_instant(original_base_model, args.output)
+            if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model):
                 # Initialize training history for instant adapter
                 duration = time.time() - start_time
                 with open(args.data, 'r') as f:
@@ -364,7 +389,7 @@ def main():
                     "initial_training": True,
                     "method": "instant"
                 }
-                save_training_history(args.base_model, "master", session_data)
+                save_training_history(original_base_model, "master", session_data)
                 print("📊 Training history initialized for instant master adapter")
                 
                 print("🎉 First master adapter created successfully (instant method)")
