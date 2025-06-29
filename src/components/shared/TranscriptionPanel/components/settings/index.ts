@@ -3,6 +3,6 @@
 
 export { default as AudioSettings } from "./AudioSettings";
 export { default as GeneralSettings } from "./GeneralSettings";
-
+export { default as TrainingSettings } from "./TrainingSettings";
 
 export { default as ModeToggle } from "./ModeToggle";

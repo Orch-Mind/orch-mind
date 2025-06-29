@@ -4,6 +4,15 @@
 import type { VllmStatus } from "../../electron/preload/interfaces/IElectronAPI";
 import { DuckDBMatch } from "../../electron/vector-database/interfaces/IVectorDatabase";
 
+// Import training types
+interface TrainingConversation {
+  id: string;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
 export interface ElectronAPI {
   // Core window methods
 
@@ -106,6 +115,28 @@ export interface ElectronAPI {
     success: boolean;
     error?: string;
   }>;
+
+  // LoRA Training
+  trainLoRAAdapter?: (params: {
+    conversations: TrainingConversation[];
+    baseModel: string;
+    outputName: string;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+    adapterPath?: string;
+    details?: {
+      trainingExamples: number;
+      modelName: string;
+      trainingDuration: number;
+    };
+  }>;
+
+  deleteOllamaModel?: (modelName: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
   importChatHistory: (params: {
     fileBuffer: Buffer | ArrayBuffer | Uint8Array;
     mode: string;

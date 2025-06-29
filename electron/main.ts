@@ -21,6 +21,7 @@ import { OllamaServiceFacade } from "../src/components/context/deepgram/services
 import { getOption, STORAGE_KEYS } from "../src/services/StorageService";
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
+import { setupLoRATrainingHandlers } from "./handlers/loraTrainingHandler";
 import { initializeIpcHandlers } from "./ipcHandlers";
 
 import { ShortcutsHelper } from "./shortcuts";
@@ -771,6 +772,9 @@ async function initializeApp() {
       vllmManager: state.vllmManager,
     });
     console.log("✅ IPC handlers initialized");
+
+    setupLoRATrainingHandlers();
+    console.log("✅ LoRA training handlers initialized");
 
     await createWindow();
     console.log("✅ Window created");

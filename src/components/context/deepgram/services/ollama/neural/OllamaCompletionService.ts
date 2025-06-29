@@ -339,6 +339,138 @@ IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the 
 
         if (!response.ok) {
           const errorText = await response.text();
+
+          // Check if this is a "does not support tools" error
+          if (
+            errorText.includes("does not support tools") &&
+            selectedModel.includes("orch-lora")
+          ) {
+            // Extract base model from LoRA model name
+            const baseModel = this.extractBaseModelFromLoRA(selectedModel);
+            if (baseModel) {
+              LoggingUtils.logWarning(
+                `🦙 [OllamaCompletion] LoRA model ${selectedModel} doesn't support tools. Falling back to base model: ${baseModel}`
+              );
+
+              // Retry with base model
+              const baseRequestBody = {
+                ...requestBody,
+                model: baseModel,
+              };
+
+              const baseResponse = await fetch(
+                "http://localhost:11434/api/chat",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(baseRequestBody),
+                }
+              );
+
+              if (baseResponse.ok) {
+                const baseData = await baseResponse.json();
+                LoggingUtils.logInfo(
+                  `🦙 [OllamaCompletion] Successfully used base model ${baseModel} for function calling`
+                );
+
+                // Process the response normally
+                const data = baseData;
+
+                // --- DEBUG LOGGING ---
+                console.log(
+                  "🦙 [OllamaCompletion] Base Model Response JSON:",
+                  JSON.stringify(data, null, 2)
+                );
+                // --- END DEBUG LOGGING ---
+
+                // Extract content and tool calls from native Ollama response
+                const rawContent = data.message?.content || "";
+
+                // Debug logging for Qwen
+                if (isQwen && rawContent) {
+                  console.log(
+                    "🦙 [OllamaCompletion] Qwen raw content before cleaning:",
+                    rawContent.substring(0, 500) +
+                      (rawContent.length > 500 ? "..." : "")
+                  );
+                }
+
+                const content = cleanThinkTags(rawContent);
+
+                // Debug logging for Qwen after cleaning
+                if (isQwen && content) {
+                  console.log(
+                    "🦙 [OllamaCompletion] Qwen content after cleaning think tags:",
+                    content.substring(0, 500) +
+                      (content.length > 500 ? "..." : "")
+                  );
+                }
+
+                const nativeToolCalls = data.message?.tool_calls || [];
+
+                // Process native tool calls from Ollama (already in correct format)
+                let tool_calls:
+                  | Array<{
+                      function: {
+                        name: string;
+                        arguments: string | Record<string, any>;
+                      };
+                    }>
+                  | undefined;
+
+                // Handle base model response (same logic as main flow)
+                if (nativeToolCalls && nativeToolCalls.length > 0) {
+                  tool_calls = nativeToolCalls.map((call: any) => {
+                    // Ollama returns tool calls in the correct format already
+                    const functionName = call.function?.name;
+                    const functionArgs = call.function?.arguments;
+
+                    return {
+                      function: {
+                        name: functionName,
+                        arguments: functionArgs, // Keep arguments as-is (can be string or object)
+                      },
+                    };
+                  });
+
+                  // Clean think tags from tool calls if present
+                  if (tool_calls) {
+                    tool_calls = cleanThinkTagsFromToolCalls(tool_calls);
+                  }
+                } else if (content) {
+                  // Fallback for models that return tools in content
+                  if (OllamaToolCallParser.looksLikeToolCall(content)) {
+                    const parsedCalls =
+                      OllamaToolCallParser.parseAlternativeFormats(content);
+                    if (parsedCalls && parsedCalls.length > 0) {
+                      tool_calls = parsedCalls;
+                      LoggingUtils.logInfo(
+                        `🦙 [OllamaCompletion] Parsed ${parsedCalls.length} tool call(s) from base model ${baseModel} content`
+                      );
+                    }
+                  }
+                }
+
+                // Return the response in expected format
+                return {
+                  choices: [
+                    {
+                      message: {
+                        content:
+                          tool_calls && tool_calls.length > 0
+                            ? undefined
+                            : content,
+                        tool_calls,
+                      },
+                    },
+                  ],
+                };
+              }
+            }
+          }
+
           console.error(
             `🦙 [OllamaCompletion] API Error - Status: ${response.status}, Text: ${errorText}`
           );
@@ -633,6 +765,47 @@ IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the 
         onChunk("Error during streaming.");
       }
       throw error;
+    }
+  }
+
+  private extractBaseModelFromLoRA(loraModel: string): string | null {
+    try {
+      // Pattern: orch-lora-{outputName}:latest
+      // We need to get the base model from storage or use a default
+
+      // First, try to get the original base model from storage
+      // This is the model that was used to train the LoRA
+      const currentBaseModel = getOption(STORAGE_KEYS.OLLAMA_MODEL);
+
+      // Check if the current model in storage is not a LoRA model
+      if (currentBaseModel && !currentBaseModel.includes("orch-lora")) {
+        LoggingUtils.logInfo(
+          `🦙 [OllamaCompletion] Using stored base model: ${currentBaseModel}`
+        );
+        return currentBaseModel;
+      }
+
+      // Fallback: try to determine from common base models
+      const commonBaseModels = [
+        "llama3.1:latest",
+        "llama3.1:8b",
+        "mistral:latest",
+        "mistral:7b",
+        "qwen3:latest",
+        "qwen3:7b",
+      ];
+
+      // Check which base models are available in Ollama
+      // For now, return the most common one as fallback
+      LoggingUtils.logWarning(
+        `🦙 [OllamaCompletion] Could not determine base model, using llama3.1:latest as fallback`
+      );
+      return "llama3.1:latest";
+    } catch (error) {
+      LoggingUtils.logError(
+        `🦙 [OllamaCompletion] Error extracting base model: ${error}`
+      );
+      return "llama3.1:latest"; // Safe fallback
     }
   }
 }

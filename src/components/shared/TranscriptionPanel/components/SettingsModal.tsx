@@ -2,14 +2,12 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import {
-  AudioSettings,
-  GeneralSettings
-} from "./settings";
+import { AudioSettings, GeneralSettings } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
 import SettingsFooter from "./settings/SettingsFooter";
 import SettingsHeader from "./settings/SettingsHeader";
 import SettingsNavigation from "./settings/SettingsNavigation";
+import TrainingSettings from "./settings/TrainingSettings";
 import { SettingsModalProps } from "./settings/types";
 import { useSettingsState } from "./settings/useSettingsState";
 
@@ -88,8 +86,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
             />
           )}
 
-
-
           {/* Advanced Tab */}
           {settings.activeTab === "advanced" && (
             <ApiSettings
@@ -104,7 +100,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
             />
           )}
 
-
+          {/* Training Tab */}
+          {settings.activeTab === "training" && <TrainingSettings />}
         </div>
 
         {/* Footer com botões de ação */}

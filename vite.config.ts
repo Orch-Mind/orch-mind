@@ -156,6 +156,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
+        "@components": path.resolve(__dirname, "src/components"),
+        "@services": path.resolve(__dirname, "src/services"),
+        "@utils": path.resolve(__dirname, "src/utils"),
+        "@types": path.resolve(__dirname, "src/types"),
+        "@shared": path.resolve(__dirname, "src/shared"),
         worker_threads: path.resolve(
           __dirname,
           "src/polyfills/worker_threads.js"

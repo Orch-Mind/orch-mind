@@ -19,7 +19,16 @@
     "esModuleInterop": true,
     "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"],
+      "@shared/*": ["src/shared/*"]
+    }
   },
   "include": ["electron/**/*", "src/**/*"]
 }

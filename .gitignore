@@ -8,7 +8,14 @@ dist
 **/.vscode
 **/.idea
 **/package-lock.json.env
-
+scripts/python/lora_training/training_venv
+scripts/python/lora_training/data
+scripts/python/lora_training/training_modules/__pycache__
+scripts/python/lora_training/adapters
+scripts/python/lora_training/lora_adapter
+scripts/python/lora_training/Modelfile*
+adapters
+lora_adapter
 out/
 
 # Debug and log files

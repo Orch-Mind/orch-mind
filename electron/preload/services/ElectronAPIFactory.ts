@@ -103,6 +103,9 @@ export class ElectronAPIFactory {
 
       // Dependency Management
       ...this.createDependencyManager(),
+
+      // Training Management
+      ...this.createTrainingManager(),
     };
 
     this.logger.success("Neural Electron API composition completed");
@@ -868,6 +871,57 @@ export class ElectronAPIFactory {
           });
           return { success: false, error: String(error) };
         }
+      },
+    };
+  }
+
+  /**
+   * Create Training Manager service methods
+   */
+  private createTrainingManager() {
+    return {
+      trainLoRAAdapter: async (params: {
+        conversations: Array<{
+          id: string;
+          messages: Array<{
+            role: string;
+            content: string;
+          }>;
+        }>;
+        baseModel: string;
+        outputName: string;
+      }) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            const result = await ipcRenderer.invoke(
+              "train-lora-adapter",
+              params
+            );
+            return result;
+          },
+          {
+            component: "TrainingManager",
+            operation: "trainLoRAAdapter",
+            severity: "high",
+          }
+        );
+      },
+
+      deleteOllamaModel: async (modelName: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            const result = await ipcRenderer.invoke(
+              "delete-ollama-model",
+              modelName
+            );
+            return result;
+          },
+          {
+            component: "TrainingManager",
+            operation: "deleteOllamaModel",
+            severity: "medium",
+          }
+        );
       },
     };
   }
