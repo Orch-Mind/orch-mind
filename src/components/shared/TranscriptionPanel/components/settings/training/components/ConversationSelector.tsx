@@ -2,8 +2,8 @@
 // Conversation Selector Component - Following SRP and KISS
 // Single responsibility: Handle conversation selection UI
 
-import React from 'react';
-import type { ConversationStatus } from '../types';
+import React from "react";
+import type { ConversationStatus } from "../types";
 
 interface ConversationSelectorProps {
   conversations: ConversationStatus[];
@@ -108,10 +108,31 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   isTraining,
   onSelect,
 }) => {
-  const handleClick = () => {
+  const handleSelect = () => {
     if (!conversation.isProcessed && !isTraining) {
       onSelect(conversation.id);
     }
+  };
+
+  const handleCheckboxChange = () => {
+    // Debug para verificar se está sendo chamado
+    console.log(
+      "[Checkbox] Clicked:",
+      conversation.id,
+      "Current state:",
+      conversation.isSelected
+    );
+
+    // Sem e.stopPropagation() - permite comportamento natural do checkbox
+    handleSelect();
+  };
+
+  const handleDivClick = (e: React.MouseEvent) => {
+    // Evita duplo clique quando clica no checkbox
+    if ((e.target as HTMLElement).tagName === "INPUT") {
+      return;
+    }
+    handleSelect();
   };
 
   return (
@@ -123,16 +144,17 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           ? "bg-cyan-900/30 border-cyan-400/50 shadow-sm shadow-cyan-400/10"
           : "bg-gray-900/30 border-gray-600/30 hover:border-cyan-400/40 hover:bg-gray-900/50"
       }`}
-      onClick={handleClick}
+      onClick={handleDivClick}
     >
       <div className="flex items-start space-x-2">
         <input
           type="checkbox"
           checked={conversation.isSelected}
-          onChange={() => {}}
+          onChange={handleCheckboxChange}
           disabled={conversation.isProcessed || isTraining}
-          className="w-3 h-3 text-cyan-400 bg-gray-800 border-gray-600 rounded focus:ring-cyan-400 focus:ring-1 mt-0.5"
-          onClick={(e) => e.stopPropagation()}
+          className={`w-4 h-4 mt-0.5 rounded border focus:outline-none focus:ring-0 cursor-pointer disabled:cursor-not-allowed transition-all duration-200 accent-cyan-500 ${
+            conversation.isProcessed || isTraining ? "opacity-50" : ""
+          }`}
           aria-label={`Select ${conversation.title} for training`}
         />
 

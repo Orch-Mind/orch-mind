@@ -235,10 +235,6 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
         <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
           LoRA Training Center
         </h2>
-        <p className="text-gray-400 text-[10px]">
-          ⚡ SOLID Architecture • Multi-strategy training • PEFT → Virtual Env →
-          Simplified • Optimized for speed
-        </p>
       </div>
 
       {/* Stats + Current Model */}
@@ -299,7 +295,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       {/* Main Training Section */}
       <div className="grid grid-cols-12 gap-3">
         {/* Conversation Selection */}
-        <div className="col-span-7">
+        <div className="col-span-6">
           <ConversationSelector
             conversations={conversations}
             selectedCount={selectedConversations.size}
@@ -340,7 +336,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
         </div>
 
         {/* Trained Models */}
-        <div className="col-span-2">
+        <div className="col-span-3">
           <TrainedModelsList
             models={trainedModels}
             isDeleting={isDeleting}
@@ -431,6 +427,10 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
           }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(34, 197, 94, 0.5);
+          }
+          @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
           }
         `,
         }}

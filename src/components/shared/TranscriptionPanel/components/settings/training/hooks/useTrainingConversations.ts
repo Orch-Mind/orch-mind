@@ -2,9 +2,9 @@
 // Hook for managing training conversations - Following SRP
 // Single responsibility: Handle conversation loading, selection, and state
 
-import { useState, useEffect } from 'react';
-import type { ConversationStatus, TrainingStats } from '../types';
-import { formatConversationSummary, loadFromStorage, saveToStorage } from '../utils';
+import { useEffect, useState } from "react";
+import type { ConversationStatus, TrainingStats } from "../types";
+import { formatConversationSummary } from "../utils";
 
 interface ChatConversationData {
   id: string;
@@ -20,7 +20,9 @@ interface ChatConversationData {
 
 export const useTrainingConversations = () => {
   const [conversations, setConversations] = useState<ConversationStatus[]>([]);
-  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
+  const [selectedConversations, setSelectedConversations] = useState<
+    Set<string>
+  >(new Set());
   const [trainingStats, setTrainingStats] = useState<TrainingStats>({
     totalConversations: 0,
     processedConversations: 0,
@@ -36,14 +38,14 @@ export const useTrainingConversations = () => {
 
         // Try main data source
         const data = localStorage.getItem("orch-chat-history");
-        
+
         if (!data) {
           // Try legacy format
           const oldMessages = localStorage.getItem("orch-chat-messages");
           if (oldMessages) {
             console.log("[Training Debug] Converting legacy messages...");
             const oldParsed = JSON.parse(oldMessages);
-            
+
             if (Array.isArray(oldParsed) && oldParsed.length > 0) {
               const convertedConversation = {
                 id: "converted_conversation",
@@ -54,7 +56,12 @@ export const useTrainingConversations = () => {
                 isActive: true,
                 messages: oldParsed.map((msg: any) => ({
                   id: msg.id,
-                  role: msg.type === "user" ? "user" : msg.type === "assistant" ? "assistant" : "system",
+                  role:
+                    msg.type === "user"
+                      ? "user"
+                      : msg.type === "assistant"
+                      ? "assistant"
+                      : "system",
                   content: msg.content,
                   timestamp: msg.timestamp,
                 })),
@@ -65,7 +72,10 @@ export const useTrainingConversations = () => {
                 currentId: convertedConversation.id,
               };
 
-              localStorage.setItem("orch-chat-history", JSON.stringify(newFormat));
+              localStorage.setItem(
+                "orch-chat-history",
+                JSON.stringify(newFormat)
+              );
               return loadConversations(); // Reload with new data
             }
           }
@@ -77,7 +87,7 @@ export const useTrainingConversations = () => {
         }
 
         const parsed = JSON.parse(data);
-        
+
         if (!parsed.conversations || !Array.isArray(parsed.conversations)) {
           console.error("[Training Debug] Invalid conversation structure");
           setConversations([]);
@@ -89,7 +99,7 @@ export const useTrainingConversations = () => {
         const convs: ConversationStatus[] = parsed.conversations
           .map((conv: ChatConversationData, index: number) => {
             const summary = formatConversationSummary(conv);
-            
+
             return {
               id: conv.id || `conv_${index}`,
               title: summary.title || `Conversation ${index + 1}`,
@@ -133,26 +143,36 @@ export const useTrainingConversations = () => {
   };
 
   const handleSelectConversation = (id: string) => {
-    setConversations((prev) =>
-      prev.map((conv) =>
+    console.log("[Training Hook] Selecting conversation:", id);
+
+    setConversations((prev) => {
+      const updated = prev.map((conv) =>
         conv.id === id ? { ...conv, isSelected: !conv.isSelected } : conv
-      )
-    );
+      );
+      console.log(
+        "[Training Hook] Updated conversations:",
+        updated.map((c) => ({ id: c.id, selected: c.isSelected }))
+      );
+      return updated;
+    });
 
     setSelectedConversations((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
+        console.log("[Training Hook] Removed from selection:", id);
       } else {
         newSet.add(id);
+        console.log("[Training Hook] Added to selection:", id);
       }
+      console.log("[Training Hook] New selection set:", Array.from(newSet));
       return newSet;
     });
   };
 
   const handleSelectAll = () => {
     const unprocessed = conversations.filter((c) => !c.isProcessed);
-    
+
     if (selectedConversations.size === unprocessed.length) {
       // Deselect all
       setConversations((prev) =>
@@ -171,7 +191,10 @@ export const useTrainingConversations = () => {
     }
   };
 
-  const markConversationsAsProcessed = (conversationIds: string[], modelName: string) => {
+  const markConversationsAsProcessed = (
+    conversationIds: string[],
+    modelName: string
+  ) => {
     setConversations((prev) =>
       prev.map((conv) =>
         conversationIds.includes(conv.id)
@@ -187,9 +210,7 @@ export const useTrainingConversations = () => {
 
     // Update stats
     const updatedConvs = conversations.map((conv) =>
-      conversationIds.includes(conv.id)
-        ? { ...conv, isProcessed: true }
-        : conv
+      conversationIds.includes(conv.id) ? { ...conv, isProcessed: true } : conv
     );
     updateStats(updatedConvs);
   };

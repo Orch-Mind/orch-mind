@@ -188,16 +188,28 @@ export const validateTrainingData = (
 
 // === PROGRESS MESSAGES ===
 export const getProgressMessage = (progress: number): string => {
-  if (progress < 20) {
-    return "⚡ Fast training: Preparing data...";
-  } else if (progress < 40) {
-    return "🚀 Fast training: Loading model (optimized)...";
-  } else if (progress < 60) {
-    return "🔄 Fast training: Quick LoRA setup...";
-  } else if (progress < 80) {
-    return "⚡ Fast training: Training with 10 steps...";
+  if (progress < 5) {
+    return "🔄 Initializing LoRA training environment...";
+  } else if (progress < 15) {
+    return "📊 Analyzing training data quality...";
+  } else if (progress < 25) {
+    return "🚀 Loading base model (optimized)...";
+  } else if (progress < 35) {
+    return "⚙️ Configuring LoRA adapters (r=32, α=64)...";
+  } else if (progress < 45) {
+    return "🧠 Setting up PEFT neural pathways...";
+  } else if (progress < 55) {
+    return "📈 Training step 1-5 (warmup phase)...";
+  } else if (progress < 65) {
+    return "⚡ Training step 6-15 (main training)...";
+  } else if (progress < 75) {
+    return "🔥 Training step 16-25 (fine-tuning)...";
+  } else if (progress < 85) {
+    return "💾 Saving adapter weights...";
+  } else if (progress < 95) {
+    return "🔗 Creating Ollama model file...";
   } else {
-    return "💾 Fast training: Saving adapter...";
+    return "✅ Finalizing model deployment...";
   }
 };
 

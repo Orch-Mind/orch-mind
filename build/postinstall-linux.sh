@@ -1,53 +1,191 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# Post-installation script for Orch-OS on Linux
+# Installs Docker, Ollama, Python, and LoRA training dependencies
 
 # --- Funções de Logging ---
 log() {
-    echo "[Orch-OS Linux Post-Install] $1"
+    echo "[Orch-OS Post-Install] $1"
 }
 
-# --- Detectar distribuição Linux ---
-detect_distribution() {
-    log "Detectando distribuição Linux..."
-    
-    # Checando arquivo os-release (padrão moderno)
+# --- Detecção de Distribuição ---
+detect_distro() {
     if [ -f /etc/os-release ]; then
-        # Pegando ID da distribuição
         . /etc/os-release
         DISTRO=$ID
-        log "Distribuição detectada: $DISTRO"
-        return 0
-    fi
-    
-    # Métodos alternativos de detecção
-    if [ -f /etc/lsb-release ]; then
-        . /etc/lsb-release
-        DISTRO=$DISTRIB_ID
-        DISTRO=${DISTRO,,} # Converte para minúsculo
-        log "Distribuição detectada via lsb-release: $DISTRO"
-        return 0
-    fi
-    
-    # Verificação por arquivos específicos
-    if [ -f /etc/debian_version ]; then
-        DISTRO="debian"
-        log "Distribuição detectada via debian_version: $DISTRO"
-        return 0
-    elif [ -f /etc/fedora-release ]; then
-        DISTRO="fedora"
-        log "Distribuição detectada via fedora-release: $DISTRO"
-        return 0
+        VERSION=$VERSION_ID
     elif [ -f /etc/redhat-release ]; then
         DISTRO="rhel"
-        log "Distribuição detectada via redhat-release: $DISTRO"
-        return 0
-    elif [ -f /etc/arch-release ]; then
-        DISTRO="arch"
-        log "Distribuição detectada via arch-release: $DISTRO"
-        return 0
+    elif [ -f /etc/debian_version ]; then
+        DISTRO="debian"
     else
         DISTRO="unknown"
-        log "Não foi possível detectar a distribuição"
+    fi
+    
+    log "Distribuição detectada: $DISTRO $VERSION"
+}
+
+# --- Instalação do Python e pip ---
+install_python() {
+    log "Instalando Python 3.11 e dependências..."
+    
+    case $DISTRO in
+        ubuntu|debian|pop|elementary|mint|linuxmint|zorin)
+            log "Instalando Python para distribuição baseada em Debian/Ubuntu..."
+            
+            # Atualiza repositórios
+            sudo apt-get update
+            
+            # Instala Python 3.11 e ferramentas
+            sudo apt-get install -y software-properties-common
+            sudo add-apt-repository -y ppa:deadsnakes/ppa
+            sudo apt-get update
+            sudo apt-get install -y \
+                python3.11 \
+                python3.11-pip \
+                python3.11-dev \
+                python3.11-venv \
+                python3-pip \
+                build-essential \
+                curl \
+                wget \
+                git
+            
+            # Configura alternativas
+            sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+            ;;
+            
+        fedora|centos|rhel|rocky|almalinux)
+            log "Instalando Python para distribuição baseada em RHEL/Fedora..."
+            
+            if command -v dnf &> /dev/null; then
+                PKG_MANAGER="dnf"
+            else
+                PKG_MANAGER="yum"
+            fi
+            
+            sudo $PKG_MANAGER update -y
+            sudo $PKG_MANAGER install -y \
+                python3.11 \
+                python3.11-pip \
+                python3.11-devel \
+                python3-pip \
+                gcc \
+                gcc-c++ \
+                make \
+                curl \
+                wget \
+                git
+            ;;
+            
+        arch|manjaro)
+            log "Instalando Python para Arch Linux..."
+            
+            sudo pacman -Syu --noconfirm
+            sudo pacman -S --noconfirm \
+                python \
+                python-pip \
+                base-devel \
+                curl \
+                wget \
+                git
+            ;;
+            
+        opensuse|sles)
+            log "Instalando Python para openSUSE..."
+            
+            sudo zypper refresh
+            sudo zypper install -y \
+                python311 \
+                python311-pip \
+                python311-devel \
+                python3-pip \
+                gcc \
+                gcc-c++ \
+                make \
+                curl \
+                wget \
+                git
+            ;;
+            
+        *)
+            log "Distribuição não suportada diretamente. Tentando instalação genérica..."
+            # Tenta usar pip para instalar dependências mesmo sem Python 3.11
+            ;;
+    esac
+    
+    # Verifica se Python está disponível
+    for py_cmd in python3.11 python3.10 python3.9 python3; do
+        if command -v $py_cmd &> /dev/null; then
+            log "Python encontrado: $py_cmd ($($py_cmd --version))"
+            PYTHON_CMD=$py_cmd
+            break
+        fi
+    done
+    
+    if [ -z "$PYTHON_CMD" ]; then
+        log "Erro: Python compatível não encontrado após instalação."
         return 1
+    fi
+}
+
+# --- Instalação das Dependências Python para LoRA Training ---
+install_python_dependencies() {
+    log "Instalando dependências Python para treinamento LoRA..."
+    
+    if [ -z "$PYTHON_CMD" ]; then
+        log "Erro: Python não está disponível."
+        return 1
+    fi
+    
+    log "Usando Python: $PYTHON_CMD"
+    
+    # Verifica se CUDA está disponível
+    log "Verificando suporte CUDA..."
+    if command -v nvidia-smi &> /dev/null; then
+        log "NVIDIA GPU detectada - instalando pacotes CUDA"
+        CUDA_AVAILABLE=true
+    else
+        log "NVIDIA GPU não detectada - instalando pacotes CPU-only"
+        CUDA_AVAILABLE=false
+    fi
+    
+    # Instala dependências essenciais
+    log "Instalando dependências Python essenciais..."
+    
+    # Atualiza pip primeiro
+    $PYTHON_CMD -m pip install --upgrade pip --user
+    
+    # Pacotes básicos para todos os casos
+    BASIC_PACKAGES=(
+        "torch"
+        "transformers>=4.36.0" 
+        "datasets"
+        "accelerate"
+        "peft>=0.7.0"
+        "trl"
+    )
+    
+    # Adiciona bitsandbytes se CUDA estiver disponível
+    if [ "$CUDA_AVAILABLE" = true ]; then
+        BASIC_PACKAGES+=("bitsandbytes")
+    fi
+    
+    for package in "${BASIC_PACKAGES[@]}"; do
+        log "Instalando $package..."
+        $PYTHON_CMD -m pip install "$package" --user --upgrade --quiet
+        if [ $? -ne 0 ]; then
+            log "Aviso: Falha ao instalar $package"
+        fi
+    done
+    
+    # Testa a instalação
+    log "Testando instalação das dependências..."
+    $PYTHON_CMD -c "import torch; import transformers; import datasets; import peft; print('✅ Dependências Python instaladas com sucesso!')" 2>/dev/null
+    if [ $? -eq 0 ]; then
+        log "✅ Todas as dependências Python foram instaladas com sucesso!"
+    else
+        log "⚠️ Algumas dependências podem não ter sido instaladas corretamente."
     fi
 }
 
@@ -92,133 +230,124 @@ install_docker() {
             sudo usermod -aG docker $USER
             ;;
             
-        fedora)
-            log "Instalando Docker para Fedora..."
+        fedora|centos|rhel|rocky|almalinux)
+            log "Instalando Docker para distribuição baseada em RHEL/Fedora..."
             
-            # Instala utilitários necessários
-            sudo dnf -y install dnf-plugins-core
+            if command -v dnf &> /dev/null; then
+                PKG_MANAGER="dnf"
+            else
+                PKG_MANAGER="yum"
+            fi
+            
+            # Remove versões antigas
+            sudo $PKG_MANAGER remove -y docker docker-client docker-client-latest docker-common \
+                docker-latest docker-latest-logrotate docker-logrotate docker-engine
+                
+            # Instala dependências
+            sudo $PKG_MANAGER install -y yum-utils
             
             # Adiciona repositório Docker
-            sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+            sudo yum-config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
             
             # Instala Docker
-            sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+            sudo $PKG_MANAGER install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
             
-            # Inicia Docker
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            
-            # Configura o usuário atual para usar Docker sem sudo
+            # Configura o usuário atual
             sudo usermod -aG docker $USER
             ;;
             
-        rhel|centos|alma|rocky)
-            log "Instalando Docker para RHEL/CentOS..."
-            
-            # Instala utilitários necessários
-            sudo yum install -y yum-utils
-            
-            # Configura repositório Docker
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-            
-            # Instala Docker
-            sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            
-            # Inicia e habilita Docker
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            
-            # Configura o usuário atual para usar Docker sem sudo
-            sudo usermod -aG docker $USER
-            ;;
-            
-        arch|manjaro|endeavouros)
+        arch|manjaro)
             log "Instalando Docker para Arch Linux..."
             
-            # Instala Docker do repositório oficial
-            sudo pacman -S --noconfirm docker
-            
-            # Inicia e habilita Docker
-            sudo systemctl start docker.service
-            sudo systemctl enable docker.service
-            
-            # Configura o usuário atual para usar Docker sem sudo
+            sudo pacman -S --noconfirm docker docker-compose
             sudo usermod -aG docker $USER
             ;;
             
-        opensuse*|suse)
+        opensuse|sles)
             log "Instalando Docker para openSUSE..."
             
-            # Instala Docker
-            sudo zypper in -y docker
-            
-            # Inicia e habilita Docker
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            
-            # Configura o usuário atual para usar Docker sem sudo
+            sudo zypper install -y docker docker-compose
             sudo usermod -aG docker $USER
             ;;
             
         *)
-            log "Distribuição não suportada para instalação automatizada do Docker."
-            log "Por favor, instale o Docker manualmente seguindo as instruções em: https://docs.docker.com/engine/install/"
+            log "Erro: Distribuição não suportada para instalação automática do Docker."
+            log "Por favor, instale o Docker manualmente: https://docs.docker.com/engine/install/"
             return 1
             ;;
     esac
     
-    log "Docker instalado com sucesso!"
-    return 0
+    # Inicia e habilita o serviço Docker
+    log "Iniciando o serviço Docker..."
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    
+    # Testa a instalação
+    if docker --version &> /dev/null; then
+        log "✅ Docker instalado com sucesso!"
+        docker --version
+    else
+        log "⚠️ Docker pode não ter sido instalado corretamente."
+    fi
 }
 
 # --- Instalação do Ollama ---
 install_ollama() {
     log "Iniciando a instalação do Ollama..."
     
-    # O Ollama oferece um script de instalação universal para Linux
+    # Baixa e executa o script oficial de instalação
+    log "Baixando script de instalação oficial do Ollama..."
     curl -fsSL https://ollama.com/install.sh | sh
     
-    if [ $? -ne 0 ]; then
-        log "Falha na instalação do Ollama usando o script oficial."
-        log "Tentando método alternativo..."
+    if [ $? -eq 0 ]; then
+        log "✅ Ollama instalado com sucesso!"
         
-        # Baixar o binário direto
-        TEMP_DIR=$(mktemp -d)
-        cd $TEMP_DIR
+        # Inicia o serviço Ollama se systemd estiver disponível
+        if command -v systemctl &> /dev/null; then
+            log "Iniciando serviço Ollama..."
+            sudo systemctl start ollama
+            sudo systemctl enable ollama
+        fi
         
-        curl -L https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64 -o ollama
-        chmod +x ollama
-        
-        # Move para o local correto
-        sudo mv ollama /usr/local/bin/
-        
-        # Limpeza
-        cd -
-        rm -rf $TEMP_DIR
-        
-        if [ -f /usr/local/bin/ollama ]; then
-            log "Ollama instalado manualmente em /usr/local/bin/"
-        else
-            log "Falha na instalação manual do Ollama."
-            return 1
+        # Testa a instalação
+        if command -v ollama &> /dev/null; then
+            ollama --version
         fi
     else
-        log "Ollama instalado com sucesso!"
+        log "Erro: Falha na instalação do Ollama."
+        return 1
     fi
-    
-    return 0
 }
 
 # --- Execução Principal ---
-log "Executando script de pós-instalação Linux..."
+log "=== Iniciando pós-instalação do Orch-OS para Linux ==="
 
-# Detecta a distribuição
-detect_distribution
+# Detecta a distribuição Linux
+detect_distro
 
-# Instala Docker e Ollama
+# Instala componentes na ordem correta
+log "1/4 Instalando Python..."
+install_python
+
+log "2/4 Instalando dependências Python para LoRA..."
+install_python_dependencies
+
+log "3/4 Instalando Docker..."
 install_docker
+
+log "4/4 Instalando Ollama..."
 install_ollama
 
-log "Script de pós-instalação concluído."
+log ""
+log "✅ Instalação concluída com sucesso!"
+log "🎉 Orch-OS está pronto para uso, incluindo treinamento LoRA!"
+log ""
+log "📋 Próximos passos:"
+log "1. Faça logout e login novamente para aplicar as permissões do Docker"
+log "2. Execute 'docker run hello-world' para testar o Docker"
+log "3. Execute 'ollama --version' para verificar o Ollama"
+log "4. Execute o Orch-OS"
+log ""
+log "⚠️ IMPORTANTE: Você precisa fazer logout/login para que as alterações de grupo do Docker tenham efeito!"
 
 exit 0

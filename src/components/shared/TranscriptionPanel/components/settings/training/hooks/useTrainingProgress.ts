@@ -41,7 +41,19 @@ export const useTrainingProgress = () => {
         // Start progress simulation
         progressInterval = setInterval(() => {
           setTrainingProgress((prev) => {
-            const increment = Math.random() * 15 + 5; // 5-20% increments
+            // More realistic progress simulation with smaller, smoother increments
+            let increment: number;
+
+            if (prev < 20) {
+              increment = Math.random() * 8 + 2; // 2-10% increments for early stages
+            } else if (prev < 60) {
+              increment = Math.random() * 6 + 1; // 1-7% increments for middle stages
+            } else if (prev < 85) {
+              increment = Math.random() * 4 + 0.5; // 0.5-4.5% increments for later stages
+            } else {
+              increment = Math.random() * 2 + 0.2; // 0.2-2.2% increments for final stages
+            }
+
             const newProgress = Math.min(prev + increment, 90);
 
             // Update status based on progress
@@ -58,7 +70,7 @@ export const useTrainingProgress = () => {
 
             return newProgress;
           });
-        }, 2000); // Update every 2 seconds
+        }, 1500); // Update every 1.5 seconds for smoother animation
 
         // Training conversations already loaded with messages from TrainingSettings
         const trainingConversations = request.conversations;

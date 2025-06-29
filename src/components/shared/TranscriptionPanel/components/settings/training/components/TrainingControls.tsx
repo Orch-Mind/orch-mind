@@ -2,8 +2,8 @@
 // Training Controls Component - Following SRP and KISS
 // Single responsibility: Handle training controls and progress display
 
-import React from 'react';
-import type { TrainingDetails } from '../types';
+import React from "react";
+import type { TrainingDetails } from "../types";
 
 interface TrainingControlsProps {
   isTraining: boolean;
@@ -70,20 +70,19 @@ const TrainingProgressDisplay: React.FC<TrainingProgressDisplayProps> = ({
 }) => (
   <div className="space-y-2">
     <div className="flex items-center justify-between">
-      <span className="text-cyan-400 text-[10px] font-medium">
-        Progress
-      </span>
+      <span className="text-cyan-400 text-[10px] font-medium">Progress</span>
       <span className="text-cyan-400 font-mono text-[9px]">
-        {progress}%
+        {Math.round(progress)}%
       </span>
     </div>
 
-    <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden shadow-inner">
       <div
-        className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full transition-all duration-500 relative"
-        style={{ width: `${progress}%` }}
+        className="bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-600 h-2 rounded-full transition-all duration-1000 ease-out relative shadow-sm"
+        style={{ width: `${Math.round(progress)}%` }}
       >
-        <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent animate-pulse rounded-full"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full animate-[shimmer_2s_infinite]"></div>
       </div>
     </div>
 
@@ -96,7 +95,8 @@ const TrainingProgressDisplay: React.FC<TrainingProgressDisplayProps> = ({
 
     {trainingDetails && trainingDetails.trainingExamples > 0 && (
       <div className="text-[8px] text-gray-400 bg-gray-800/50 p-1.5 rounded text-center">
-        {trainingDetails.trainingExamples} examples from {selectedCount} conversations
+        {trainingDetails.trainingExamples} examples from {selectedCount}{" "}
+        conversations
       </div>
     )}
   </div>
@@ -137,7 +137,9 @@ const TrainingReadyDisplay: React.FC<TrainingReadyDisplayProps> = ({
           : "bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700 transform hover:scale-[1.02] shadow-lg hover:shadow-cyan-400/20"
       }`}
     >
-      {selectedCount === 0 ? "Select Conversations" : `Train (${selectedCount})`}
+      {selectedCount === 0
+        ? "Select Conversations"
+        : `Train (${selectedCount})`}
     </button>
   </div>
 );
