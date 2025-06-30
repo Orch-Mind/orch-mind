@@ -4,16 +4,14 @@
 
 import sys
 import argparse
-from pathlib import Path
 import json
 import subprocess
 import os
 import time
 
-from training_modules.environment import find_compatible_python, setup_dependencies, setup_virtual_environment
+from training_modules.environment import find_compatible_python, setup_dependencies
 from training_modules.script_factory import create_instant_adapter_script
 from training_modules.deployment import deploy_to_ollama
-from training_modules.conversion import convert_adapter_to_gguf
 
 def get_master_adapter_path(base_model, master_name="master"):
     """Get path for master adapter based on base model."""
@@ -204,7 +202,7 @@ def main():
     parser.add_argument("--output", required=True, help="Output name for the adapter")
     parser.add_argument("--max-steps", type=int, default=None, help="Maximum training steps (auto-calculated if not specified)")
     parser.add_argument("--complexity", choices=["simple", "medium", "complex"], default="medium", help="Task complexity for step calculation")
-    parser.add_argument("--convert-gguf", action="store_true", help="Convert adapter to GGUF format")
+
 
     args = parser.parse_args()
     
