@@ -106,6 +106,9 @@ export class ElectronAPIFactory {
 
       // Training Management
       ...this.createTrainingManager(),
+
+      // P2P Management
+      ...this.createP2PManager(),
     };
 
     this.logger.success("Neural Electron API composition completed");
@@ -1003,6 +1006,114 @@ export class ElectronAPIFactory {
         // Return cleanup function
         return () => {
           ipcRenderer.removeListener("install-progress", progressListener);
+        };
+      },
+    };
+  }
+
+  /**
+   * Create P2P Share Manager service methods
+   */
+  private createP2PManager() {
+    return {
+      p2pInitialize: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:initialize"),
+          {
+            component: "P2PManager",
+            operation: "initialize",
+            severity: "medium",
+          }
+        );
+      },
+
+      p2pCreateRoom: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:createRoom"),
+          {
+            component: "P2PManager",
+            operation: "createRoom",
+            severity: "medium",
+          }
+        );
+      },
+
+      p2pJoinRoom: async (topic: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:joinRoom", topic),
+          {
+            component: "P2PManager",
+            operation: "joinRoom",
+            severity: "medium",
+          }
+        );
+      },
+
+      p2pLeaveRoom: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:leaveRoom"),
+          {
+            component: "P2PManager",
+            operation: "leaveRoom",
+            severity: "low",
+          }
+        );
+      },
+
+      p2pShareAdapter: async (modelName: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:shareAdapter", modelName),
+          {
+            component: "P2PManager",
+            operation: "shareAdapter",
+            severity: "medium",
+          }
+        );
+      },
+
+      p2pUnshareAdapter: async (topic: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:unshareAdapter", topic),
+          {
+            component: "P2PManager",
+            operation: "unshareAdapter",
+            severity: "low",
+          }
+        );
+      },
+
+      onP2PPeersUpdated: (callback: (count: number) => void) => {
+        const subscription = (_: Electron.IpcRendererEvent, count: number) => {
+          try {
+            callback(count);
+          } catch (error) {
+            this.logger.error("Error in P2P peers updated callback", error);
+          }
+        };
+
+        ipcRenderer.on("p2p:peers-updated", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("p2p:peers-updated", subscription);
+        };
+      },
+
+      onP2PAdaptersAvailable: (callback: (data: any) => void) => {
+        const subscription = (_: Electron.IpcRendererEvent, data: any) => {
+          try {
+            callback(data);
+          } catch (error) {
+            this.logger.error(
+              "Error in P2P adapters available callback",
+              error
+            );
+          }
+        };
+
+        ipcRenderer.on("p2p:adapters-available", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("p2p:adapters-available", subscription);
         };
       },
     };

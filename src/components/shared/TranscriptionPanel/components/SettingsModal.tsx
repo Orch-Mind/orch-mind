@@ -7,6 +7,7 @@ import ApiSettings from "./settings/ApiSettings";
 import SettingsFooter from "./settings/SettingsFooter";
 import SettingsHeader from "./settings/SettingsHeader";
 import SettingsNavigation from "./settings/SettingsNavigation";
+import ShareSettings from "./settings/ShareSettings";
 import TrainingSettings from "./settings/TrainingSettings";
 import { SettingsModalProps } from "./settings/types";
 import { useSettingsState } from "./settings/useSettingsState";
@@ -102,6 +103,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
 
           {/* Training Tab */}
           {settings.activeTab === "training" && <TrainingSettings />}
+
+          {/* Share Tab */}
+          {settings.activeTab === "share" && <ShareSettings />}
         </div>
 
         {/* Footer com botões de ação */}

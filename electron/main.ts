@@ -22,6 +22,7 @@ import { getOption, STORAGE_KEYS } from "../src/services/StorageService";
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { setupLoRATrainingHandlers } from "./handlers/loraTrainingHandler";
+import setupP2PHandlers from "./handlers/p2pShareHandler";
 import { initializeIpcHandlers } from "./ipcHandlers";
 
 import { ShortcutsHelper } from "./shortcuts";
@@ -775,6 +776,9 @@ async function initializeApp() {
 
     setupLoRATrainingHandlers();
     console.log("✅ LoRA training handlers initialized");
+
+    setupP2PHandlers();
+    console.log("✅ P2P handlers initialized");
 
     await createWindow();
     console.log("✅ Window created");

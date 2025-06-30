@@ -242,6 +242,39 @@ export interface HardwareDetectionResult {
   error?: string;
 }
 
+// P2P Share Types & Interface
+export interface P2PAdapterInfo {
+  name: string;
+  topic: string;
+  size: string;
+  from?: string;
+}
+
+export interface IP2PShareManager {
+  p2pInitialize(): Promise<{ success: boolean; error?: string }>;
+  p2pCreateRoom(): Promise<{
+    success: boolean;
+    topic?: string;
+    error?: string;
+  }>;
+  p2pJoinRoom(topic: string): Promise<{ success: boolean; error?: string }>;
+  p2pLeaveRoom(): Promise<{ success: boolean; error?: string }>;
+  p2pShareAdapter(
+    modelName: string
+  ): Promise<{
+    success: boolean;
+    adapterInfo?: P2PAdapterInfo;
+    error?: string;
+  }>;
+  p2pUnshareAdapter(
+    topic: string
+  ): Promise<{ success: boolean; error?: string }>;
+  onP2PPeersUpdated(callback: (count: number) => void): () => void;
+  onP2PAdaptersAvailable(
+    callback: (data: { from: string; adapters: P2PAdapterInfo[] }) => void
+  ): () => void;
+}
+
 // Complete Electron API Interface
 export interface IElectronAPI
   extends IWindowManager,
@@ -252,7 +285,8 @@ export interface IElectronAPI
     IImportManager,
     IDuckDBCommander,
     IVllmManager,
-    IOllamaManager {
+    IOllamaManager,
+    IP2PShareManager {
   // Legacy support for existing vector databases
   queryPinecone(
     embedding: number[],

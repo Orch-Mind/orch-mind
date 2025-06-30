@@ -168,6 +168,44 @@ const SettingsNavigation: React.FC<ExtendedSettingsNavigationProps> = ({
       >
         Training
       </button>
+
+      {/* Share Settings */}
+      <button
+        className="px-4 py-2 rounded-t-lg transition-all duration-200"
+        style={{
+          backgroundColor:
+            activeTab === "share"
+              ? "rgba(0, 250, 255, 0.15)"
+              : "rgba(0, 0, 0, 0.2)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: `1px solid ${
+            activeTab === "share"
+              ? "rgba(0, 250, 255, 0.4)"
+              : "rgba(0, 250, 255, 0.1)"
+          }`,
+          color: activeTab === "share" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
+          boxShadow:
+            activeTab === "share" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
+        }}
+        onMouseEnter={(e) => {
+          if (activeTab !== "share") {
+            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
+            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
+            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (activeTab !== "share") {
+            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
+            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
+            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
+          }
+        }}
+        onClick={() => setActiveTab("share")}
+      >
+        Share
+      </button>
     </div>
   );
 };
