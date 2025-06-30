@@ -20,23 +20,6 @@ Alternative: Run 'brew install ollama' in Terminal`
   install: jest.fn(),
 };
 
-const mockDockerDep = {
-  name: "docker",
-  displayName: "Docker",
-  check: jest.fn(),
-  getManualInstructions: jest.fn().mockReturnValue(
-    `Manual installation for macOS:
-1. Download Docker Desktop from https://docker.com/products/docker-desktop
-2. Open the downloaded .dmg file
-3. Drag Docker to Applications
-4. Launch Docker Desktop
-Alternative: Run 'brew install --cask docker' in Terminal`
-  ),
-  install: jest.fn(),
-  start: jest.fn(),
-  stop: jest.fn(),
-};
-
 // Mock all dependencies
 jest.mock(
   "../../../electron/services/dependency-installer/services/CommandExecutor"
@@ -47,12 +30,7 @@ jest.mock(
     OllamaDependency: jest.fn().mockImplementation(() => mockOllamaDep),
   })
 );
-jest.mock(
-  "../../../electron/services/dependency-installer/services/DockerDependency",
-  () => ({
-    DockerDependency: jest.fn().mockImplementation(() => mockDockerDep),
-  })
-);
+
 jest.mock(
   "../../../electron/services/dependency-installer/services/ProgressReporter"
 );
@@ -70,10 +48,6 @@ describe("DependencyInstaller", () => {
     // Reset mock implementations
     mockOllamaDep.check.mockReset();
     mockOllamaDep.install.mockReset();
-    mockDockerDep.check.mockReset();
-    mockDockerDep.install.mockReset();
-    mockDockerDep.start.mockReset();
-    mockDockerDep.stop.mockReset();
 
     installer = new DependencyInstaller();
     mockProgressCallback = jest.fn();
@@ -91,30 +65,22 @@ describe("DependencyInstaller", () => {
   });
 
   describe("checkDependencies", () => {
-    it("should check all dependencies and return combined status", async () => {
+    it("should check Ollama dependency and return status", async () => {
       mockOllamaDep.check.mockResolvedValueOnce({
         installed: true,
         version: "0.1.24",
-      });
-      mockDockerDep.check.mockResolvedValueOnce({
-        installed: true,
-        version: "24.0.5",
-        running: true,
       });
 
       const status = await installer.checkDependencies();
 
       expect(status).toEqual({
         ollama: { installed: true, version: "0.1.24" },
-        docker: { installed: true, version: "24.0.5", running: true },
       });
       expect(mockOllamaDep.check).toHaveBeenCalled();
-      expect(mockDockerDep.check).toHaveBeenCalled();
     });
 
     it("should handle check failures gracefully", async () => {
-      mockOllamaDep.check.mockResolvedValueOnce({ installed: false });
-      mockDockerDep.check.mockRejectedValueOnce(new Error("Check failed"));
+      mockOllamaDep.check.mockRejectedValueOnce(new Error("Check failed"));
 
       await expect(installer.checkDependencies()).rejects.toThrow(
         "Check failed"
@@ -158,18 +124,6 @@ describe("DependencyInstaller", () => {
     });
   });
 
-  describe("installDocker", () => {
-    it("should install Docker dependency", async () => {
-      mockDockerDep.check
-        .mockResolvedValueOnce({ installed: false })
-        .mockResolvedValueOnce({ installed: true, version: "24.0.5" });
-
-      await installer.installDocker();
-
-      expect(mockDockerDep.install).toHaveBeenCalled();
-    });
-  });
-
   describe("getManualInstructions", () => {
     it("should return manual instructions for valid dependency", () => {
       const instructions = installer.getManualInstructions("ollama");
@@ -181,30 +135,6 @@ describe("DependencyInstaller", () => {
     it("should return error message for unknown dependency", () => {
       const instructions = installer.getManualInstructions("unknown" as any);
       expect(instructions).toBe("Unknown dependency");
-    });
-  });
-
-  describe("tryStartDockerDaemon", () => {
-    it("should attempt to start Docker daemon", async () => {
-      mockDockerDep.start.mockResolvedValueOnce(true);
-
-      const result = await installer.tryStartDockerDaemon();
-
-      expect(result).toBe(true);
-      expect(mockDockerDep.start).toHaveBeenCalled();
-    });
-
-    it("should return false if docker is not a service dependency", async () => {
-      // Temporarily remove start method
-      const originalStart = mockDockerDep.start;
-      delete (mockDockerDep as any).start;
-
-      const result = await installer.tryStartDockerDaemon();
-
-      expect(result).toBe(false);
-
-      // Restore start method
-      mockDockerDep.start = originalStart;
     });
   });
 

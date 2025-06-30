@@ -89,9 +89,6 @@ export class ElectronAPIFactory {
       // Import Management
       ...this.createImportManager(),
 
-      // vLLM Manager
-      ...this.createVllmManager(),
-
       // Ollama Manager
       ...this.createOllamaManager(),
 
@@ -294,99 +291,6 @@ export class ElectronAPIFactory {
   /**
    * Create Environment Management service methods
    */
-  /**
-   * Create vLLM Manager service methods
-   */
-  private createVllmManager() {
-    return {
-      vllmStartModel: async (modelId: string) => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-start-model", modelId),
-          {
-            component: "VllmManager",
-            operation: "startModel",
-            severity: "medium",
-          }
-        );
-      },
-      vllmModelStatus: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-model-status"),
-          {
-            component: "VllmManager",
-            operation: "modelStatus",
-            severity: "low",
-          }
-        );
-      },
-      vllmGenerate: async (payload: any) => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-generate", payload),
-          {
-            component: "VllmManager",
-            operation: "generate",
-            severity: "medium",
-          }
-        );
-      },
-      vllmHardwareInfo: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-hardware-info"),
-          {
-            component: "VllmManager",
-            operation: "hardwareInfo",
-            severity: "low",
-          }
-        );
-      },
-      vllmListLibrary: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-list-library"),
-          {
-            component: "VllmManager",
-            operation: "listLibrary",
-            severity: "low",
-          }
-        );
-      },
-      vllmRefreshLibrary: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-refresh-library"),
-          {
-            component: "VllmManager",
-            operation: "refreshLibrary",
-            severity: "low",
-          }
-        );
-      },
-      vllmDownloadModel: async (modelId: string) => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-download-model", modelId),
-          {
-            component: "VllmManager",
-            operation: "downloadModel",
-            severity: "medium",
-          }
-        );
-      },
-      vllmStopModel: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-stop-model"),
-          { component: "VllmManager", operation: "stopModel", severity: "low" }
-        );
-      },
-      vllmTestConnection: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("vllm-test-connection"),
-          {
-            component: "VllmManager",
-            operation: "testConnection",
-            severity: "low",
-          }
-        );
-      },
-    };
-  }
 
   /**
    * Create Ollama Manager service methods
@@ -603,7 +507,6 @@ export class ElectronAPIFactory {
       }) => {
         return this.errorHandler.wrapAsync(
           async () => {
-
             if (onProgress) {
               const progressListener = (
                 _event: Electron.IpcRendererEvent,
@@ -954,18 +857,7 @@ export class ElectronAPIFactory {
         );
       },
 
-      installDocker: async () => {
-        return this.errorHandler.wrapAsync(
-          () => ipcRenderer.invoke("install-docker"),
-          {
-            component: "DependencyManager",
-            operation: "installDocker",
-            severity: "high",
-          }
-        );
-      },
-
-      getInstallInstructions: async (dependency: "ollama" | "docker") => {
+      getInstallInstructions: async (dependency: "ollama") => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("get-install-instructions", dependency),
           {

@@ -126,7 +126,7 @@ export interface IDuckDBCommander {
   duckdbCommand(command: string, data: any): Promise<any>;
 }
 
-// vLLM Support Types & Interface
+// Hardware detection interface (without vLLM)
 export interface HardwareInfo {
   cpuCores: number;
   ramGB: number;
@@ -136,55 +136,6 @@ export interface HardwareInfo {
     vramGB: number;
     cuda: boolean;
   };
-}
-
-// vLLM Support Types & Interface
-export interface VllmStatus {
-  state:
-    | "idle"
-    | "downloading"
-    | "pulling_image"
-    | "starting"
-    | "ready"
-    | "error";
-  progress?: number;
-  message?: string;
-  modelId?: string;
-}
-
-export interface IVllmManager {
-  vllmStartModel(modelId: string): Promise<NeuralResponse>;
-  vllmModelStatus(): Promise<{
-    success: boolean;
-    status?: VllmStatus;
-    error?: string;
-  }>;
-  vllmGenerate(
-    payload: any
-  ): Promise<{ success: boolean; data?: any; error?: string }>;
-  vllmStopModel(): Promise<NeuralResponse>;
-  vllmHardwareInfo(): Promise<{
-    success: boolean;
-    info?: HardwareInfo;
-    error?: string;
-  }>;
-  vllmListLibrary(): Promise<{
-    success: boolean;
-    models?: any[];
-    error?: string;
-  }>;
-  vllmDownloadModel(modelId: string): Promise<NeuralResponse>;
-  vllmRefreshLibrary(): Promise<{
-    success: boolean;
-    models?: any[];
-    error?: string;
-  }>;
-  vllmTestConnection(): Promise<{
-    success: boolean;
-    message?: string;
-    latency?: number;
-    error?: string;
-  }>;
 }
 
 // Ollama Support Types & Interface
@@ -212,22 +163,17 @@ export interface IOllamaManager {
   }>;
 }
 
-// Dependency Management Types
+// Dependency Management Types (Ollama only)
 export interface DependencyStatus {
   ollama: {
     installed: boolean;
     version?: string;
     path?: string;
   };
-  docker: {
-    installed: boolean;
-    version?: string;
-    running?: boolean;
-  };
 }
 
 export interface InstallProgress {
-  dependency: "ollama" | "docker";
+  dependency: "ollama";
   status: "checking" | "downloading" | "installing" | "completed" | "error";
   progress?: number;
   message: string;
@@ -237,7 +183,6 @@ export interface InstallProgress {
 export interface HardwareDetectionResult {
   success: boolean;
   hardware?: HardwareInfo;
-  dockerRequired: boolean;
   error?: string;
 }
 
@@ -374,7 +319,6 @@ export interface IElectronAPI
     IEnvironmentManager,
     IImportManager,
     IDuckDBCommander,
-    IVllmManager,
     IOllamaManager,
     IP2PShareManager,
     ILoRAMergeManager {
@@ -446,11 +390,10 @@ export interface IElectronAPI
     vectors: VectorData[]
   ): Promise<{ success: boolean; error?: string }>;
 
-  // Dependency Management
+  // Dependency Management (Ollama only)
   checkDependencies: () => Promise<DependencyStatus>;
   installOllama: () => Promise<void>;
-  installDocker: () => Promise<void>;
-  getInstallInstructions: (dependency: "ollama" | "docker") => Promise<string>;
+  getInstallInstructions: (dependency: "ollama") => Promise<string>;
   onInstallProgress: (
     callback: (progress: InstallProgress) => void
   ) => () => void;

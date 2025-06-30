@@ -189,107 +189,7 @@ install_python_dependencies() {
     fi
 }
 
-# --- Instalação do Docker ---
-install_docker() {
-    log "Iniciando a instalação do Docker..."
-    
-    case $DISTRO in
-        ubuntu|debian|pop|elementary|mint|linuxmint|zorin)
-            log "Instalando Docker para distribuição baseada em Debian/Ubuntu..."
-            
-            # Remova versões antigas
-            log "Removendo versões antigas do Docker (se existirem)..."
-            sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
-            
-            # Instala dependências
-            log "Instalando dependências..."
-            sudo apt-get update
-            sudo apt-get install -y \
-                ca-certificates \
-                curl \
-                gnupg \
-                lsb-release
-            
-            # Adiciona chaves GPG oficiais do Docker
-            log "Adicionando chaves GPG do Docker..."
-            sudo mkdir -p /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/$DISTRO/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-            
-            # Configura repositório Docker
-            log "Configurando repositório do Docker..."
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$DISTRO \
-            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-            
-            # Instala Docker Engine
-            log "Instalando Docker Engine..."
-            sudo apt-get update
-            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            
-            # Configura o usuário atual para usar Docker sem sudo
-            log "Configurando permissões para Docker..."
-            sudo usermod -aG docker $USER
-            ;;
-            
-        fedora|centos|rhel|rocky|almalinux)
-            log "Instalando Docker para distribuição baseada em RHEL/Fedora..."
-            
-            if command -v dnf &> /dev/null; then
-                PKG_MANAGER="dnf"
-            else
-                PKG_MANAGER="yum"
-            fi
-            
-            # Remove versões antigas
-            sudo $PKG_MANAGER remove -y docker docker-client docker-client-latest docker-common \
-                docker-latest docker-latest-logrotate docker-logrotate docker-engine
-                
-            # Instala dependências
-            sudo $PKG_MANAGER install -y yum-utils
-            
-            # Adiciona repositório Docker
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-            
-            # Instala Docker
-            sudo $PKG_MANAGER install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            
-            # Configura o usuário atual
-            sudo usermod -aG docker $USER
-            ;;
-            
-        arch|manjaro)
-            log "Instalando Docker para Arch Linux..."
-            
-            sudo pacman -S --noconfirm docker docker-compose
-            sudo usermod -aG docker $USER
-            ;;
-            
-        opensuse|sles)
-            log "Instalando Docker para openSUSE..."
-            
-            sudo zypper install -y docker docker-compose
-            sudo usermod -aG docker $USER
-            ;;
-            
-        *)
-            log "Erro: Distribuição não suportada para instalação automática do Docker."
-            log "Por favor, instale o Docker manualmente: https://docs.docker.com/engine/install/"
-            return 1
-            ;;
-    esac
-    
-    # Inicia e habilita o serviço Docker
-    log "Iniciando o serviço Docker..."
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    
-    # Testa a instalação
-    if docker --version &> /dev/null; then
-        log "✅ Docker instalado com sucesso!"
-        docker --version
-    else
-        log "⚠️ Docker pode não ter sido instalado corretamente."
-    fi
-}
+
 
 # --- Instalação do Ollama ---
 install_ollama() {
@@ -326,16 +226,13 @@ log "=== Iniciando pós-instalação do Orch-OS para Linux ==="
 detect_distro
 
 # Instala componentes na ordem correta
-log "1/4 Instalando Python..."
+log "1/3 Instalando Python..."
 install_python
 
-log "2/4 Instalando dependências Python para LoRA..."
+log "2/3 Instalando dependências Python para LoRA..."
 install_python_dependencies
 
-log "3/4 Instalando Docker..."
-install_docker
-
-log "4/4 Instalando Ollama..."
+log "3/3 Instalando Ollama..."
 install_ollama
 
 log ""
@@ -343,11 +240,7 @@ log "✅ Instalação concluída com sucesso!"
 log "🎉 Orch-OS está pronto para uso, incluindo treinamento LoRA!"
 log ""
 log "📋 Próximos passos:"
-log "1. Faça logout e login novamente para aplicar as permissões do Docker"
-log "2. Execute 'docker run hello-world' para testar o Docker"
-log "3. Execute 'ollama --version' para verificar o Ollama"
-log "4. Execute o Orch-OS"
-log ""
-log "⚠️ IMPORTANTE: Você precisa fazer logout/login para que as alterações de grupo do Docker tenham efeito!"
+log "1. Execute 'ollama --version' para verificar o Ollama"
+log "2. Execute o Orch-OS"
 
 exit 0

@@ -5,9 +5,6 @@ import { DuckDBMatch } from "../electron/vector-database/interfaces/IVectorDatab
 
 // <reference types="vite/client" />
 
-type VllmStatus =
-  import("../electron/preload/interfaces/IElectronAPI").VllmStatus;
-
 interface ElectronAPI {
   openExternal: (url: string) => void;
   toggleMainWindow: () => Promise<{ success: boolean; error?: string }>;
@@ -94,18 +91,7 @@ interface ElectronAPI {
     imported?: number;
     skipped?: number;
   }>;
-  vllmModelStatus: () => Promise<{
-    success: boolean;
-    status?: VllmStatus;
-    error?: string;
-  }>;
-  vllmStartModel: (
-    modelId: string
-  ) => Promise<{ success: boolean; error?: string }>;
-  vllmGenerate: (
-    payload: any
-  ) => Promise<{ success: boolean; data?: any; error?: string }>;
-  vllmStopModel: () => Promise<{ success: boolean; error?: string }>;
+
   listModels(): Promise<OllamaModel[]>;
   getAvailableModels(): Promise<OllamaModel[]>;
   downloadModel(
@@ -119,11 +105,10 @@ interface ElectronAPI {
     message?: string;
     error?: string;
   }>;
-  // Dependency Management
+  // Dependency Management (Ollama only)
   checkDependencies: () => Promise<DependencyStatus>;
   installOllama: () => Promise<void>;
-  installDocker: () => Promise<void>;
-  getInstallInstructions: (dependency: "ollama" | "docker") => Promise<string>;
+  getInstallInstructions: (dependency: "ollama") => Promise<string>;
   onInstallProgress: (
     callback: (progress: InstallProgress) => void
   ) => () => void;

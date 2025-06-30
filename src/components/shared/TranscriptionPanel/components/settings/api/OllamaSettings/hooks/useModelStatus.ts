@@ -3,51 +3,44 @@
 
 import { useEffect, useState } from "react";
 import { OllamaService } from "../services/ollamaService";
-import { VllmStatus } from "../types/ollama.types";
 
 /**
- * Custom hook to monitor vLLM model status
- * Single Responsibility: Poll and manage model loading status
+ * Custom hook to monitor Ollama connection status
+ * Single Responsibility: Poll and manage connection status
  */
 export const useModelStatus = () => {
-  const [modelStatus, setModelStatus] = useState<VllmStatus | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    const fetchStatus = async () => {
+    const checkConnection = async () => {
       try {
-        const status = await OllamaService.getVllmStatus();
-        if (status) {
-          setModelStatus(status);
-        }
+        setIsLoading(true);
+        // Use fetchInstalledModels to test connectivity
+        await OllamaService.fetchInstalledModels();
+        setIsConnected(true);
       } catch (error) {
         // Silent fail - status polling should not disrupt UI
-        console.debug("Failed to fetch model status:", error);
+        console.debug("Failed to check Ollama connection:", error);
+        setIsConnected(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Initial fetch
-    fetchStatus();
+    // Initial check
+    checkConnection();
 
-    // Poll every 2 seconds
-    interval = setInterval(fetchStatus, 2000);
+    // Poll every 10 seconds (less frequent than before)
+    interval = setInterval(checkConnection, 10000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const isModelLoading = (modelId: string): boolean => {
-    return !!(
-      modelStatus &&
-      modelStatus.modelId === modelId &&
-      modelStatus.state !== "ready" &&
-      modelStatus.state !== "idle" &&
-      modelStatus.state !== "error"
-    );
-  };
-
   return {
-    modelStatus,
-    isModelLoading,
+    isConnected,
+    isLoading,
   };
 };

@@ -95,24 +95,7 @@
       DetailPrint "Possíveis problemas na instalação das dependências Python. Código: $R1"
     ${endIf}
 
-    # --- Instalação do Docker ---
-    DetailPrint "Baixando o instalador do Docker Desktop..."
-    # URL de download do Docker Desktop para Windows
-    inetc::get "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe" "$PLUGINSDIR\DockerInstaller.exe" /END
-    Pop $R0 # Captura o status do download
 
-    ${if} $R0 == "OK"
-      DetailPrint "Instalando o Docker Desktop silenciosamente..."
-      # Executa o instalador do Docker em modo silencioso
-      ExecWait '"$PLUGINSDIR\DockerInstaller.exe" install --quiet' $R1
-      ${if} $R1 == 0
-        DetailPrint "Docker Desktop instalado com sucesso."
-      ${else}
-        DetailPrint "Falha na instalação do Docker Desktop. Código de saída: $R1"
-      ${endIf}
-    ${else}
-      DetailPrint "Falha no download do instalador do Docker."
-    ${endIf}
 
     # --- Instalação do Ollama ---
     DetailPrint "Baixando o instalador do Ollama..."
@@ -138,13 +121,11 @@
     # --- Mensagem Final ---
     DetailPrint "=== Instalação do Orch-OS Concluída ==="
     DetailPrint "✅ Python 3.11 e dependências LoRA instaladas"
-    DetailPrint "✅ Docker Desktop instalado"
     DetailPrint "✅ Ollama instalado"
     DetailPrint ""
     DetailPrint "📋 Próximos passos após a instalação:"
-    DetailPrint "1. Abra o Docker Desktop e aceite os termos"
-    DetailPrint "2. Execute o Orch-OS"
-    DetailPrint "3. O sistema está pronto para treinamento LoRA!"
+    DetailPrint "1. Execute o Orch-OS"
+    DetailPrint "2. O sistema está pronto para treinamento LoRA!"
 
   ${endIf}
 !macroend

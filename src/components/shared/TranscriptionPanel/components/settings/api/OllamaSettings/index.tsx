@@ -65,8 +65,6 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
     setError,
   });
 
-  const { isModelLoading } = useModelStatus();
-
   // Model lists by category
   const mainModels = filterModelsByCategory(availableModels, "main");
   const embeddingModels = filterModelsByCategory(availableModels, "embedding");
@@ -163,8 +161,6 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
         onCancelDownload={cancelDownload}
         onRemove={removeModel}
         disabled={isLoadingModels}
-        isMainLoading={isModelLoading(ollamaModel)}
-        isEmbeddingLoading={isModelLoading(ollamaEmbeddingModel)}
       />
     </div>
   );

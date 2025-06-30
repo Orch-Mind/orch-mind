@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import type { VllmStatus } from "../../electron/preload/interfaces/IElectronAPI";
 import { DuckDBMatch } from "../../electron/vector-database/interfaces/IVectorDatabase";
 
 // Import training types
@@ -154,25 +153,6 @@ export interface ElectronAPI {
     skipped?: number;
   }>;
 
-  // VLLM APIs
-  vllm?: {
-    modelStatus: () => Promise<{
-      success: boolean;
-      status?: VllmStatus;
-      error?: string;
-    }>;
-    startModel: (
-      modelId: string
-    ) => Promise<{ success: boolean; error?: string }>;
-    generate: (
-      payload: any
-    ) => Promise<{ success: boolean; data?: any; error?: string }>;
-    stopModel: () => Promise<{ success: boolean; error?: string }>;
-    downloadModelOnly: (
-      modelId: string
-    ) => Promise<{ success: boolean; error?: string }>;
-  };
-
   // Ollama APIs
   ollama?: {
     listModels: () => Promise<
@@ -209,19 +189,6 @@ export interface ElectronAPI {
     }>;
   };
 
-  // Legacy VLLM methods (deprecated, use vllm.* instead)
-  vllmModelStatus: () => Promise<{
-    success: boolean;
-    status?: VllmStatus;
-    error?: string;
-  }>;
-  vllmStartModel: (
-    modelId: string
-  ) => Promise<{ success: boolean; error?: string }>;
-  vllmGenerate: (
-    payload: any
-  ) => Promise<{ success: boolean; data?: any; error?: string }>;
-  vllmStopModel: () => Promise<{ success: boolean; error?: string }>;
   listModels(): Promise<OllamaModel[]>;
   getAvailableModels(): Promise<OllamaModel[]>;
   downloadModel(
@@ -235,11 +202,10 @@ export interface ElectronAPI {
     message?: string;
     error?: string;
   }>;
-  // Dependency Management
+  // Dependency Management (Ollama only)
   checkDependencies: () => Promise<DependencyStatus>;
   installOllama: () => Promise<void>;
-  installDocker: () => Promise<void>;
-  getInstallInstructions: (dependency: "ollama" | "docker") => Promise<string>;
+  getInstallInstructions: (dependency: "ollama") => Promise<string>;
   onInstallProgress: (
     callback: (progress: InstallProgress) => void
   ) => () => void;
@@ -252,15 +218,10 @@ export interface DependencyStatus {
     version?: string;
     path?: string;
   };
-  docker: {
-    installed: boolean;
-    version?: string;
-    running?: boolean;
-  };
 }
 
 export interface InstallProgress {
-  dependency: "ollama" | "docker";
+  dependency: "ollama";
   status: "checking" | "downloading" | "installing" | "completed" | "error";
   progress?: number;
   message: string;
@@ -279,7 +240,6 @@ export interface HardwareDetectionResult {
       cuda: boolean;
     };
   };
-  dockerRequired: boolean;
   error?: string;
 }
 

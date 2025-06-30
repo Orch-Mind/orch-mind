@@ -107,41 +107,7 @@ install_python_dependencies() {
     fi
 }
 
-# --- Instalação do Docker ---
-install_docker() {
-    log "Iniciando a instalação do Docker Desktop..."
-    DOCKER_DMG_URL="https://desktop.docker.com/mac/main/arm64/Docker.dmg"
-    TEMP_DMG_PATH="/tmp/Docker.dmg"
 
-    log "Baixando o Docker de $DOCKER_DMG_URL..."
-    curl -L -o "$TEMP_DMG_PATH" "$DOCKER_DMG_URL"
-    if [ $? -ne 0 ]; then
-        log "Erro: Falha no download do Docker."
-        return 1
-    fi
-
-    log "Montando a imagem do Docker..."
-    hdiutil attach "$TEMP_DMG_PATH" -nobrowse -quiet
-    if [ $? -ne 0 ]; then
-        log "Erro: Falha ao montar o DMG do Docker."
-        rm "$TEMP_DMG_PATH"
-        return 1
-    fi
-
-    log "Copiando o Docker para a pasta de Aplicativos..."
-    cp -R "/Volumes/Docker/Docker.app" "/Applications/"
-    if [ $? -ne 0 ]; then
-        log "Erro: Falha ao copiar o Docker.app."
-    else
-        log "Docker instalado com sucesso."
-    fi
-
-    log "Desmontando a imagem do Docker..."
-    hdiutil detach "/Volumes/Docker" -quiet
-
-    log "Limpando o arquivo DMG..."
-    rm "$TEMP_DMG_PATH"
-}
 
 # --- Instalação do Ollama ---
 install_ollama() {
@@ -179,15 +145,13 @@ log "Executando script de pós-instalação do Orch-OS..."
 # Instala componentes na ordem correta
 install_python
 install_python_dependencies
-install_docker
 install_ollama
 
 log "✅ Script de pós-instalação concluído com sucesso!"
 log "🎉 Orch-OS está pronto para uso, incluindo treinamento LoRA!"
 log ""
 log "📋 Próximos passos:"
-log "1. Abra o Docker Desktop e aceite os termos"
-log "2. Abra o Ollama para instalar a CLI"
-log "3. Execute o Orch-OS"
+log "1. Abra o Ollama para instalar a CLI"
+log "2. Execute o Orch-OS"
 
 exit 0

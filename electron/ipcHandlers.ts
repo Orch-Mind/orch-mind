@@ -15,7 +15,6 @@ import {
   InstallProgress,
 } from "./services/DependencyInstaller";
 import { OllamaClient } from "./services/OllamaClient";
-import VllmManager from "./VllmManager";
 
 export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   console.log("Initializing IPC handlers");
@@ -422,112 +421,6 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       }
     }
   );
-  // vLLM IPC handlers
-  ipcMain.handle("vllm-start-model", async (_event, modelId: string) => {
-    try {
-      await VllmManager.getInstance().startModel(modelId);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("vllm-model-status", () => {
-    try {
-      const status = VllmManager.getInstance().getStatus();
-      return { success: true, status };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("vllm-generate", async (_event, payload: any) => {
-    try {
-      const data = await VllmManager.getInstance().generate(payload);
-      return { success: true, data };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("vllm-stop-model", async () => {
-    try {
-      await VllmManager.getInstance().stopModel();
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  // vLLM hardware info IPC
-  ipcMain.handle("vllm-hardware-info", async () => {
-    try {
-      const info = await VllmManager.getInstance().getHardwareInfo();
-      return { success: true, info };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  // vLLM public library list IPC
-  ipcMain.handle("vllm-list-library", async () => {
-    try {
-      const models = await VllmManager.getInstance().getOllamaLibrary();
-      return { success: true, models };
-    } catch (error) {
-      console.error("Error fetching vLLM library:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
-
-  // Refresh model library (forces fresh fetch from Ollama)
-  ipcMain.handle("vllm-refresh-library", async () => {
-    try {
-      const models = await VllmManager.getInstance().getOllamaLibrary(true); // true = force refresh
-      return { success: true, models };
-    } catch (error) {
-      console.error("Error refreshing vLLM library:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
-
-  // Download model without starting it
-  ipcMain.handle("vllm-download-model", async (_event, modelId: string) => {
-    try {
-      await VllmManager.getInstance().downloadModelOnly(modelId);
-      return { success: true };
-    } catch (error) {
-      console.error("Error downloading vLLM model:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
-
-  // Test connection to vLLM server
-  ipcMain.handle("vllm-test-connection", async () => {
-    try {
-      const result = await VllmManager.getInstance().testConnection();
-      return {
-        success: result.success,
-        message: result.message,
-        latency: result.latency,
-      };
-    } catch (error) {
-      console.error("Error testing vLLM connection:", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
 
   // ========================================
   // 🦙 OLLAMA IPC HANDLERS
@@ -1061,34 +954,10 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   });
 
-  // Install Docker
-  ipcMain.handle("install-docker", async (event) => {
-    try {
-      console.log("🐳 [IPC] Starting Docker installation...");
-
-      // Listen for progress updates
-      const progressHandler = (progress: InstallProgress) => {
-        event.sender.send("install-progress", progress);
-      };
-
-      dependencyInstaller.on("progress", progressHandler);
-
-      try {
-        await dependencyInstaller.installDocker();
-        console.log("🐳 [IPC] Docker installation completed");
-      } finally {
-        dependencyInstaller.removeListener("progress", progressHandler);
-      }
-    } catch (error) {
-      console.error("🐳 [IPC] Error installing Docker:", error);
-      throw error;
-    }
-  });
-
   // Get manual installation instructions
   ipcMain.handle(
     "get-install-instructions",
-    async (event, dependency: "ollama" | "docker") => {
+    async (event, dependency: "ollama") => {
       try {
         console.log(
           `📝 [IPC] Getting ${dependency} installation instructions...`
@@ -1125,7 +994,6 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       return {
         success: true,
         hardware,
-        dockerRequired: !isAppleSilicon, // Docker only needed for non-Apple Silicon
       };
     } catch (error) {
       console.error("Error detecting hardware:", error);
@@ -1133,7 +1001,6 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         success: false,
         error:
           error instanceof Error ? error.message : "Failed to detect hardware",
-        dockerRequired: true, // Default to requiring Docker if detection fails
       };
     }
   });

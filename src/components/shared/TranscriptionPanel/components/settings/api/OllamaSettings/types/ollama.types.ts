@@ -12,19 +12,6 @@ export interface OllamaModel {
   category?: "main" | "embedding";
 }
 
-export interface VllmStatus {
-  state:
-    | "idle"
-    | "downloading"
-    | "pulling_image"
-    | "starting"
-    | "ready"
-    | "error";
-  progress?: number;
-  message?: string;
-  modelId?: string;
-}
-
 export interface DownloadInfo {
   progress: number;
   speed: string;
@@ -46,6 +33,6 @@ export interface OllamaSettingsProps {
 export interface OllamaApiResponse {
   models?: Array<{ name: string; id?: string }>;
   success?: boolean;
-  status?: VllmStatus;
+
   path?: string;
 }

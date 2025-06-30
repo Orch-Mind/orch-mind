@@ -219,34 +219,7 @@ def check_ollama():
         log("⏰ Timeout ao verificar Ollama", Colors.YELLOW)
         return False
 
-def check_docker():
-    """Check if Docker is installed and accessible"""
-    log("Verificando Docker...", Colors.BLUE)
-    
-    try:
-        result = subprocess.run(['docker', '--version'], capture_output=True, text=True, timeout=10)
-        if result.returncode == 0:
-            version = result.stdout.strip()
-            log(f"✅ Docker instalado: {version}", Colors.GREEN)
-            
-            # Check if Docker daemon is running
-            try:
-                result = subprocess.run(['docker', 'info'], capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
-                    log("✅ Docker daemon está executando", Colors.GREEN)
-                    return True
-                else:
-                    log("⚠️ Docker instalado mas daemon não está executando", Colors.YELLOW)
-                    return False
-            except subprocess.TimeoutExpired:
-                log("⏰ Timeout ao verificar Docker daemon", Colors.YELLOW)
-                return False
-        else:
-            log("❌ Docker não responde corretamente", Colors.RED)
-            return False
-    except FileNotFoundError:
-        log("❌ Docker não encontrado no PATH", Colors.RED)
-        return False
+
 
 def create_test_script():
     """Create a test script to verify LoRA training setup"""
@@ -362,7 +335,6 @@ def main():
     # Check external dependencies
     print(f"\n{Colors.BOLD}=== Dependências Externas ==={Colors.END}")
     ollama_ok = check_ollama()
-    docker_ok = check_docker()
     
     # Create test script
     print(f"\n{Colors.BOLD}=== Criando Script de Teste ==={Colors.END}")
@@ -377,8 +349,6 @@ def main():
         
         if not ollama_ok:
             log("⚠️ Ollama não está disponível - instale manualmente se necessário", Colors.YELLOW)
-        if not docker_ok:
-            log("⚠️ Docker não está funcionando - pode ser necessário para alguns recursos", Colors.YELLOW)
         
         return 0
     else:

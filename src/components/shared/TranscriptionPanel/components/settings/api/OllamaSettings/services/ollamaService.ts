@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { OLLAMA_API_URLS } from "../constants/models.constants";
-import { VllmStatus } from "../types/ollama.types";
 
 // Interface for real download progress
 export interface OllamaDownloadProgress {
@@ -208,24 +207,6 @@ export class OllamaService {
     } catch (error) {
       console.error("Error removing model:", error);
       throw error;
-    }
-  }
-
-  /**
-   * Get vLLM model status
-   */
-  static async getVllmStatus(): Promise<VllmStatus | null> {
-    try {
-      if (window.electronAPI?.vllmModelStatus) {
-        const res = await window.electronAPI.vllmModelStatus();
-        if (res?.success && res.status) {
-          return res.status as VllmStatus;
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching vLLM status:", error);
-      return null;
     }
   }
 

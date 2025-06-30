@@ -22,7 +22,6 @@ import setupP2PHandlers from "./handlers/p2pShareHandler";
 import { initializeIpcHandlers } from "./ipcHandlers";
 
 import { ShortcutsHelper } from "./shortcuts";
-import VllmManager from "./VllmManager";
 
 dotenv.config();
 
@@ -62,7 +61,6 @@ const state = {
   shortcutsHelper: null as ShortcutsHelper | null,
   duckDBHelper: null as DuckDBHelper | null,
   openAIService: null as IOpenAIService | null,
-  vllmManager: null as VllmManager | null,
 
   // Processing events
   PROCESSING_EVENTS: {
@@ -99,13 +97,10 @@ export interface IIpcHandlerDeps {
   PROCESSING_EVENTS: typeof state.PROCESSING_EVENTS;
   toggleMainWindow: () => void;
   openAIService: IOpenAIService | null;
-  vllmManager: VllmManager | null;
 }
 
 // Initialize helpers
 function initializeHelpers() {
-  // Initialize vLLM manager (using singleton pattern)
-  state.vllmManager = VllmManager.getInstance();
   state.shortcutsHelper = new ShortcutsHelper({
     getMainWindow,
     isVisible: () => state.isWindowVisible,
@@ -750,7 +745,6 @@ async function initializeApp() {
       PROCESSING_EVENTS: state.PROCESSING_EVENTS,
       toggleMainWindow,
       openAIService: state.openAIService,
-      vllmManager: state.vllmManager,
     });
     console.log("✅ IPC handlers initialized");
 

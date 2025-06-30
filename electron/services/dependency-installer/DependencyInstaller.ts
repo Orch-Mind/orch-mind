@@ -11,7 +11,7 @@ import {
 } from "./interfaces/IDependency";
 import { InstallProgress } from "./interfaces/IProgressReporter";
 import { CommandExecutor } from "./services/CommandExecutor";
-import { DockerDependency } from "./services/DockerDependency";
+
 import { OllamaDependency } from "./services/OllamaDependency";
 import { ProgressReporter } from "./services/ProgressReporter";
 import { PlatformInstallerFactory } from "./strategies/PlatformInstallerFactory";
@@ -21,7 +21,6 @@ import { PlatformInstallerFactory } from "./strategies/PlatformInstallerFactory"
  */
 export interface AllDependenciesStatus {
   ollama: DependencyStatus;
-  docker: DependencyStatus;
 }
 
 /**
@@ -58,24 +57,15 @@ export class DependencyInstaller extends EventEmitter {
         installerFactory.create(platform)
       )
     );
-    this.dependencies.set(
-      "docker",
-      new DockerDependency(this.commandExecutor, (platform) =>
-        installerFactory.create(platform)
-      )
-    );
   }
 
   /**
    * Check if all dependencies are installed
    */
   async checkDependencies(): Promise<AllDependenciesStatus> {
-    const [ollama, docker] = await Promise.all([
-      this.checkDependency("ollama"),
-      this.checkDependency("docker"),
-    ]);
+    const ollama = await this.checkDependency("ollama");
 
-    return { ollama, docker };
+    return { ollama };
   }
 
   /**
@@ -97,32 +87,14 @@ export class DependencyInstaller extends EventEmitter {
   }
 
   /**
-   * Install Docker
-   */
-  async installDocker(): Promise<void> {
-    await this.installDependency("docker");
-  }
-
-  /**
    * Get manual installation instructions
    */
-  getManualInstructions(dependency: "ollama" | "docker"): string {
+  getManualInstructions(dependency: "ollama"): string {
     const dep = this.dependencies.get(dependency);
     if (!dep) {
       return "Unknown dependency";
     }
     return dep.getManualInstructions(this.platform);
-  }
-
-  /**
-   * Try to start Docker daemon
-   */
-  async tryStartDockerDaemon(): Promise<boolean> {
-    const docker = this.dependencies.get("docker");
-    if (!docker || !this.isServiceDependency(docker)) {
-      return false;
-    }
-    return docker.start();
   }
 
   /**

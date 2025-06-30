@@ -5,7 +5,6 @@
 import axios, { AxiosError } from "axios";
 import type { LocalModelMeta } from "../../src/shared/constants/modelRegistry";
 import { getDisplayName } from "../../src/shared/constants/modelRegistry";
-import type { ModelStatus } from "../VllmManager";
 
 interface OllamaModel {
   name: string;
@@ -45,7 +44,7 @@ export class OllamaClient {
 
   constructor(
     private readonly cacheDir: string,
-    private readonly updateStatus: (partial: Partial<ModelStatus>) => void
+    private readonly updateStatus: (partial: any) => void
   ) {}
 
   /** Enhanced service health check */
