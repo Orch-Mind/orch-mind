@@ -87,13 +87,6 @@ export function useP2PPersistence() {
       roomCode?: string,
       isSharing?: boolean
     ) => {
-      console.log("💾 [PERSISTENCE] updateConnectionState called:", {
-        type,
-        roomCode,
-        isSharing,
-        callerStack: new Error().stack?.split("\n").slice(1, 3),
-      });
-
       setPersistedState((prev) => {
         const newState = {
           ...prev,
@@ -109,15 +102,6 @@ export function useP2PPersistence() {
                 ]
               : prev.roomHistory,
         };
-
-        console.log("💾 [PERSISTENCE] Updating connection state:", {
-          previousState: {
-            lastConnectionType: prev.lastConnectionType,
-            isSharing: prev.isSharing,
-            lastRoomCode: prev.lastRoomCode,
-          },
-          newState,
-        });
 
         return newState;
       });
@@ -136,23 +120,11 @@ export function useP2PPersistence() {
   );
 
   const updateSharedAdapters = useCallback((adapterIds: string[]) => {
-    console.log("💾 [PERSISTENCE] updateSharedAdapters called:", {
-      adapterIds,
-      adapterCount: adapterIds.length,
-      callerStack: new Error().stack?.split("\n").slice(1, 3),
-    });
-
     setPersistedState((prev) => {
       const newState = {
         ...prev,
         sharedAdapterIds: adapterIds,
       };
-
-      console.log("💾 [PERSISTENCE] Updating shared adapters state:", {
-        previousAdapterIds: prev.sharedAdapterIds,
-        newAdapterIds: adapterIds,
-        fullNewState: newState,
-      });
 
       return newState;
     });

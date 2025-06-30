@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ConnectionState, MicrophoneState } from '../../../context';
-import styles from './WifiStatusConnection.module.css';
-import DiagnosticsPanel from './DiagnosticsPanel';
+import React, { useEffect, useRef, useState } from "react";
+import { ConnectionState, MicrophoneState } from "../../../context";
+import { useP2PContext } from "../context/P2PContext";
+import styles from "./WifiStatusConnection.module.css";
 
 interface WifiStatusConnectionProps {
-  connectionState: ConnectionState;
-  microphoneState: MicrophoneState;
-  signalStrength?: 'strong' | 'medium' | 'weak' | 'none';
+  connectionState?: ConnectionState;
+  microphoneState?: MicrophoneState;
+  signalStrength?: "strong" | "medium" | "weak" | "none";
   onStatusClick?: () => void;
   showDetailedText?: boolean;
   className?: string;
@@ -18,136 +18,93 @@ interface WifiStatusConnectionProps {
 }
 
 /**
- * Neural signal visualization component for connection state
- * Symbolic intent: Interface neuron for connectivity visualization
+ * Neural signal visualization component for P2P connection state
+ * Symbolic intent: Interface neuron for P2P connectivity visualization
  */
-const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({ 
-  connectionState, 
-  microphoneState, 
-  signalStrength = 'medium',
-  onStatusClick,
+const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
   showDetailedText = false,
-  className = '',
-  onDisconnect,
-  onReconnect
+  className = "",
+  onStatusClick,
 }) => {
-  // Estado para controlar a visibilidade do painel de diagnósticos
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const diagnosticsPanelRef = useRef<HTMLDivElement>(null);
+  // Use global P2P context instead of local hook
+  const { status: p2pStatus } = useP2PContext();
+
+  // Estado para controlar a visibilidade do popup de status P2P
+  const [showStatusPopup, setShowStatusPopup] = useState(false);
+  const statusPopupRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
-  
-  // Gerencia cliques fora do painel para fechá-lo
+
+  // Gerencia cliques fora do popup para fechá-lo
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        showDiagnostics && 
-        diagnosticsPanelRef.current && 
-        !diagnosticsPanelRef.current.contains(event.target as Node) &&
+        showStatusPopup &&
+        statusPopupRef.current &&
+        !statusPopupRef.current.contains(event.target as Node) &&
         iconRef.current &&
         !iconRef.current.contains(event.target as Node)
       ) {
-        setShowDiagnostics(false);
+        setShowStatusPopup(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showDiagnostics]);
-  
-  // Alterna a visibilidade do painel de diagnósticos
-  const toggleDiagnosticsPanel = () => {
-    setShowDiagnostics(prev => !prev);
-  };
+  }, [showStatusPopup]);
 
-  // Determinar se o sistema está completamente conectado (Deepgram + microfone)
-  const isFullyConnected = () => {
-    return (
-      connectionState === ConnectionState.OPEN && 
-      (microphoneState === MicrophoneState.Open || microphoneState === MicrophoneState.Ready)
-    );
-  };
-
-  // Determinar se há erros em qualquer subsistema
-  const hasErrors = () => {
-    return (
-      connectionState === ConnectionState.ERROR || 
-      microphoneState === MicrophoneState.Error
-    );
-  };
-
-  // Determinar se está em processo de conexão
-  const isConnecting = () => {
-    return (
-      connectionState === ConnectionState.CONNECTING ||
-      microphoneState === MicrophoneState.Opening ||
-      microphoneState === MicrophoneState.SettingUp
-    );
-  };
-
-  // Convert connection state to user-friendly message
-  const getConnectionStatusText = () => {
-    if (isFullyConnected()) {
-      return 'Fully Connected';
-    } else if (hasErrors()) {
-      return 'Connection Error';
-    } else if (isConnecting()) {
-      return 'Connecting...';
-    } else if (connectionState === ConnectionState.OPEN) {
-      return 'Deepgram Connected';
-    } else if (microphoneState === MicrophoneState.Ready || microphoneState === MicrophoneState.Open) {
-      return 'Microphone Ready';
-    } else if (connectionState === ConnectionState.CLOSED || connectionState === ConnectionState.STOPPED) {
-      return 'Disconnected';
-    } else {
-      return 'Unknown State';
+  // Alterna a visibilidade do popup de status
+  const toggleStatusPopup = () => {
+    setShowStatusPopup((prev) => !prev);
+    if (onStatusClick) {
+      onStatusClick();
     }
   };
 
-  // Determine colors based on combined connection state
+  // Convert P2P status to user-friendly message
+  const getConnectionStatusText = () => {
+    if (p2pStatus.isLoading) {
+      return "Connecting to P2P...";
+    } else if (p2pStatus.isConnected && p2pStatus.currentRoom) {
+      const roomName =
+        p2pStatus.currentRoom.type === "general"
+          ? "Community"
+          : p2pStatus.currentRoom.type === "local"
+          ? "Local Network"
+          : `Room ${p2pStatus.currentRoom.code}`;
+      return `Connected to ${roomName}`;
+    } else {
+      return "P2P Disconnected";
+    }
+  };
+
+  // Determine colors based on P2P connection state
   const getConnectionColors = () => {
-    if (isFullyConnected()) {
-      // Ambos conectados - verde ciano
+    if (p2pStatus.isConnected && !p2pStatus.isLoading) {
+      // Connected - green cyan with peer-based intensity
+      const intensity = p2pStatus.currentRoom?.peersCount || 0 > 0 ? 1 : 0.7;
       return {
-        primary: '#00faff',
-        secondary: 'rgba(0, 250, 255, 0.8)',
-        glow: 'rgba(0, 250, 255, 0.5)',
-        textColor: 'text-green-400'
+        primary: "#00faff",
+        secondary: `rgba(0, 250, 255, ${intensity * 0.8})`,
+        glow: `rgba(0, 250, 255, ${intensity * 0.5})`,
+        textColor: "text-green-400",
       };
-    } else if (hasErrors()) {
-      // Erros - vermelho
+    } else if (p2pStatus.isLoading) {
+      // Connecting - yellow
       return {
-        primary: '#ff4455',
-        secondary: 'rgba(255, 68, 85, 0.8)',
-        glow: 'rgba(255, 68, 85, 0.5)',
-        textColor: 'text-red-400'
-      };
-    } else if (isConnecting()) {
-      // Conectando - amarelo
-      return {
-        primary: '#ffe066',
-        secondary: 'rgba(255, 224, 102, 0.8)',
-        glow: 'rgba(255, 224, 102, 0.5)',
-        textColor: 'text-yellow-400'
-      };
-    } else if (connectionState === ConnectionState.OPEN || 
-               microphoneState === MicrophoneState.Ready || 
-               microphoneState === MicrophoneState.Open) {
-      // Parcialmente conectado - ciano mais fraco
-      return {
-        primary: '#00c8d4',
-        secondary: 'rgba(0, 200, 212, 0.8)',
-        glow: 'rgba(0, 200, 212, 0.5)',
-        textColor: 'text-cyan-400'
+        primary: "#ffe066",
+        secondary: "rgba(255, 224, 102, 0.8)",
+        glow: "rgba(255, 224, 102, 0.5)",
+        textColor: "text-yellow-400",
       };
     } else {
-      // Desconectado ou estado desconhecido - cinza
+      // Disconnected - gray
       return {
-        primary: '#888888',
-        secondary: 'rgba(136, 136, 136, 0.8)',
-        glow: 'rgba(136, 136, 136, 0.5)',
-        textColor: 'text-gray-400'
+        primary: "#888888",
+        secondary: "rgba(136, 136, 136, 0.8)",
+        glow: "rgba(136, 136, 136, 0.5)",
+        textColor: "text-gray-400",
       };
     }
   };
@@ -156,146 +113,226 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
   const colors = getConnectionColors();
   const statusText = getConnectionStatusText();
 
-  // Determine which bars should be active based on connection status and signal strength
+  // Determine which bars should be active based on P2P status
   const getSignalBars = () => {
-    // Se ambos estiverem conectados, use a força do sinal fornecida
-    if (isFullyConnected()) {
-      switch (signalStrength) {
-        case 'strong':
+    if (p2pStatus.isConnected && !p2pStatus.isLoading) {
+      switch (p2pStatus.signalStrength) {
+        case "strong":
           return [true, true, true];
-        case 'medium':
+        case "medium":
           return [true, true, false];
-        case 'weak':
+        case "weak":
           return [true, false, false];
         default:
-          return [true, true, true]; // Por padrão, mostra sinal forte quando conectado
+          return [true, false, false];
       }
-    } 
-    // Se estiver conectando, mostra sinal médio
-    else if (isConnecting()) {
-      return [true, true, false];
-    }
-    // Se apenas um dos sistemas estiver conectado, mostra sinal fraco
-    else if (connectionState === ConnectionState.OPEN || 
-             microphoneState === MicrophoneState.Ready || 
-             microphoneState === MicrophoneState.Open) {
-      return [true, false, false];
-    }
-    // Se estiver desconectado ou com erro, não mostra sinal
-    else {
-      return [false, false, false];
+    } else if (p2pStatus.isLoading) {
+      return [true, true, false]; // Show medium signal while connecting
+    } else {
+      return [false, false, false]; // No signal when disconnected
     }
   };
 
   const signalBars = getSignalBars();
 
-  // Generate dynamic classNames based on combined connection state
+  // Generate dynamic classNames based on P2P connection state
   const getConnectionStateClass = () => {
-    if (isFullyConnected()) {
-      return 'wifi-status-fully-connected';
-    } else if (hasErrors()) {
-      return 'wifi-status-error';
-    } else if (isConnecting()) {
-      return 'wifi-status-connecting';
-    } else if (connectionState === ConnectionState.OPEN || 
-               microphoneState === MicrophoneState.Ready || 
-               microphoneState === MicrophoneState.Open) {
-      return 'wifi-status-partially-connected';
-    } else if (connectionState === ConnectionState.CLOSED || connectionState === ConnectionState.STOPPED) {
-      return 'wifi-status-disconnected';
+    if (p2pStatus.isConnected && !p2pStatus.isLoading) {
+      return "wifi-status-fully-connected";
+    } else if (p2pStatus.isLoading) {
+      return "wifi-status-connecting";
     } else {
-      return 'wifi-status-unknown';
+      return "wifi-status-disconnected";
     }
   };
 
   // Add dynamic classes based on connection state
   const connectionStateClass = getConnectionStateClass();
-  
+
   // Determine CSS classes for status text
   const getStatusTextClass = () => {
-    switch (connectionState) {
-      case ConnectionState.OPEN:
-        return styles.statusConnected;
-      case ConnectionState.CONNECTING:
-        return styles.statusConnecting;
-      case ConnectionState.CLOSED:
-      case ConnectionState.ERROR:
-      case ConnectionState.STOPPED:
-        return styles.statusDisconnected;
-      default:
-        return styles.statusUnknown;
+    if (p2pStatus.isConnected && !p2pStatus.isLoading) {
+      return styles.statusConnected;
+    } else if (p2pStatus.isLoading) {
+      return styles.statusConnecting;
+    } else {
+      return styles.statusDisconnected;
     }
   };
 
   return (
-    <div 
+    <div
       className={`${styles.wifiStatusConnection} ${connectionStateClass} ${className}`}
       title={statusText}
       ref={iconRef}
-      onClick={toggleDiagnosticsPanel}
+      onClick={toggleStatusPopup}
     >
-      {/* Painel de diagnósticos flutuante */}
-      {showDiagnostics && (
-        <div 
-          className={styles.diagnosticsPanelContainer} 
-          ref={diagnosticsPanelRef}
+      {/* P2P Status popup flutuante */}
+      {showStatusPopup && (
+        <div
+          className={styles.statusPopupContainer}
+          ref={statusPopupRef}
           onClick={(e) => e.stopPropagation()}
         >
-          <DiagnosticsPanel 
-            connectionState={connectionState} 
-            microphoneState={microphoneState}
-            onDisconnect={onDisconnect}
-            onReconnect={onReconnect}
-          />
+          <div className={styles.statusPopup}>
+            <div className="p-3 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-cyan-400/20">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: p2pStatus.isConnected
+                      ? "#00faff"
+                      : "#888888",
+                    boxShadow: p2pStatus.isConnected
+                      ? "0 0 8px rgba(0, 250, 255, 0.6)"
+                      : "none",
+                  }}
+                ></div>
+                <h3 className="text-sm font-semibold text-cyan-400">
+                  P2P Status
+                </h3>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Status:</span>
+                  <span
+                    className={`font-mono ${
+                      p2pStatus.isConnected
+                        ? "text-green-400"
+                        : p2pStatus.isLoading
+                        ? "text-yellow-400"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {p2pStatus.isLoading
+                      ? "Connecting..."
+                      : p2pStatus.isConnected
+                      ? "Connected"
+                      : "Disconnected"}
+                  </span>
+                </div>
+
+                {p2pStatus.isConnected && p2pStatus.currentRoom && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Room:</span>
+                      <span className="text-cyan-400 font-mono">
+                        {p2pStatus.currentRoom.type === "general"
+                          ? "Community"
+                          : p2pStatus.currentRoom.type === "local"
+                          ? "Local Network"
+                          : p2pStatus.currentRoom.code || "Private"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Peers:</span>
+                      <span className="text-cyan-400 font-mono">
+                        {p2pStatus.currentRoom.peersCount}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Signal:</span>
+                      <span
+                        className={`font-mono ${
+                          p2pStatus.signalStrength === "strong"
+                            ? "text-green-400"
+                            : p2pStatus.signalStrength === "medium"
+                            ? "text-yellow-400"
+                            : "text-orange-400"
+                        }`}
+                      >
+                        {p2pStatus.signalStrength.toUpperCase()}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {p2pStatus.lastError && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Error:</span>
+                    <span className="text-red-400 font-mono text-[10px]">
+                      {p2pStatus.lastError}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-cyan-400/20">
+                <p className="text-[10px] text-gray-500">
+                  Click to manage P2P connections in settings
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
       <div className={styles.wifiIconContainer}>
-        {/* WiFi icon with neural aesthetic for Orch-OS */}
-        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" className={styles.neuralSignalIcon}>
+        {/* WiFi icon with neural aesthetic for P2P status */}
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 26 26"
+          fill="none"
+          className={styles.neuralSignalIcon}
+        >
           {/* Outer ring with neural aesthetic */}
-          <circle 
-            cx="13" 
-            cy="13" 
-            r="11" 
-            className={`${styles.neuralRing} ${isFullyConnected() ? styles.neuralRingActive : ''}`} 
-            stroke="currentColor" 
-            strokeWidth="1.5" 
-            strokeOpacity={isFullyConnected() ? "1" : isConnecting() ? "0.8" : "0.6"}
+          <circle
+            cx="13"
+            cy="13"
+            r="11"
+            className={`${styles.neuralRing} ${
+              p2pStatus.isConnected && !p2pStatus.isLoading
+                ? styles.neuralRingActive
+                : ""
+            }`}
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeOpacity={
+              p2pStatus.isConnected ? "1" : p2pStatus.isLoading ? "0.8" : "0.6"
+            }
             fill="transparent"
           />
-          
-          {/* WiFi signal wave - upper arc - always visible but with varied opacity */}
-          <path 
-            d="M6.5 13 A9 9 0 0 1 19.5 13" 
-            className={styles.neuralWave} 
-            stroke="currentColor" 
-            strokeWidth="1.5" 
+
+          {/* WiFi signal wave - upper arc */}
+          <path
+            d="M6.5 13 A9 9 0 0 1 19.5 13"
+            className={styles.neuralWave}
+            stroke="currentColor"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeOpacity={signalBars[0] ? "1" : "0.25"}
           />
-          
-          {/* WiFi signal wave - lower arc - always visible but with varied opacity */}
-          <path 
-            d="M9 16.5 A6 6 0 0 1 17 16.5" 
-            className={styles.neuralWave} 
-            stroke="currentColor" 
-            strokeWidth="1.5" 
+
+          {/* WiFi signal wave - lower arc */}
+          <path
+            d="M9 16.5 A6 6 0 0 1 17 16.5"
+            className={styles.neuralWave}
+            stroke="currentColor"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeOpacity={signalBars[1] ? "1" : "0.25"}
           />
-          
-          {/* Central signal point - always visible but with varied opacity */}
-          <circle 
-            cx="13" 
-            cy="19.5" 
-            r="1.8" 
-            className={`${styles.neuralCore} ${isFullyConnected() ? styles.neuralCoreActive : ''}`} 
-            fill="currentColor" 
+
+          {/* Central signal point */}
+          <circle
+            cx="13"
+            cy="19.5"
+            r="1.8"
+            className={`${styles.neuralCore} ${
+              p2pStatus.isConnected && !p2pStatus.isLoading
+                ? styles.neuralCoreActive
+                : ""
+            }`}
+            fill="currentColor"
             fillOpacity={signalBars[2] ? "1" : "0.25"}
           />
         </svg>
       </div>
-      
+
       {showDetailedText && (
         <span className={`${styles.statusText} ${getStatusTextClass()}`}>
           {statusText}

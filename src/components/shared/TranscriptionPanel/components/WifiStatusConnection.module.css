@@ -3,44 +3,22 @@
 
 /* Base Styles - Neural Signal Connectivity Interface */
 .wifiStatusConnection {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
   cursor: pointer;
-  position: relative;
+  transition: all 0.3s ease;
 }
 
 /* Neural Icon Container */
 .wifiIconContainer {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  width: 28px;
-  margin-right: 0.5rem;
-  margin-left: 0.25rem;
-}
-
-/* Container para o painel de diagnósticos */
-.diagnosticsPanelContainer {
-  position: absolute;
-  top: 100%;
-  right: -40px;
-  margin-top: 0.5rem;
-  z-index: 50;
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
-  animation: fadeInPanel 0.2s ease-out;
-}
-
-@keyframes fadeInPanel {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Neural Signal Icon Base */
 .neuralSignalIcon {
-  overflow: visible; /* Allow glow effects to extend beyond SVG boundaries */
-  transform: scale(1.05); /* Slightly larger to enhance visibility */
+  filter: drop-shadow(0 0 8px rgba(0, 250, 255, 0.3));
+  transition: all 0.3s ease;
 }
 
 /* Neural Field Animation */
@@ -111,12 +89,22 @@
 }
 
 .neuralRing {
-  transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease;
   transform-origin: center center;
 }
 
 .neuralRingActive {
-  animation: neuralRingPulse 3s infinite ease-in-out;
+  stroke-dasharray: 4;
+  animation: neuralPulse 2s ease-in-out infinite;
+}
+
+@keyframes neuralPulse {
+  0%, 100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.6;
+  }
 }
 
 /* Neural Wave Animation */
@@ -136,8 +124,7 @@
 }
 
 .neuralWave {
-  stroke-opacity: 0.7;
-  transform-origin: center;
+  transition: all 0.3s ease;
 }
 
 :global(.wifi-status-fully-connected) .neuralWave {
@@ -161,11 +148,20 @@
 }
 
 .neuralCore {
-  transform-origin: center;
+  transition: all 0.3s ease;
 }
 
 .neuralCoreActive {
-  animation: neuralCorePulse 2s infinite ease-in-out;
+  animation: coreGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes coreGlow {
+  0%, 100% {
+    fill-opacity: 1;
+  }
+  50% {
+    fill-opacity: 0.7;
+  }
 }
 
 /* Inner Core Animation */
@@ -191,30 +187,153 @@
 
 /* Status Text Styling */
 .statusText {
-  margin-left: 0.25rem;
+  margin-left: 0.5rem;
   font-size: 0.75rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  letter-spacing: 0.02em;
+  font-weight: 500;
   transition: color 0.3s ease;
 }
 
-/* Status text styling */
-.statusText {
-  font-size: 0.75rem;
-}
-
 .statusConnected {
-  color: var(--color-green-400);
+  color: #10b981;
 }
 
 .statusConnecting {
-  color: var(--color-yellow-400);
+  color: #f59e0b;
 }
 
 .statusDisconnected {
-  color: var(--color-red-400);
+  color: #6b7280;
 }
 
 .statusUnknown {
-  color: var(--color-gray-400);
+  color: #8b5cf6;
+}
+
+/* P2P Status Popup Container */
+.statusPopupContainer {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 1000;
+  animation: popupFadeIn 0.2s ease-out;
+}
+
+.statusPopup {
+  min-width: 200px;
+  background: rgba(17, 24, 39, 0.95);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 250, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(0, 250, 255, 0.1),
+    inset 0 0 20px rgba(0, 250, 255, 0.05);
+  color: white;
+  font-size: 12px;
+  position: relative;
+}
+
+/* Arrow pointing up to the icon */
+.statusPopup::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 20px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid rgba(0, 250, 255, 0.3);
+}
+
+.statusPopup::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 21px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid rgba(17, 24, 39, 0.95);
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover effects for different connection states */
+.wifi-status-fully-connected {
+  color: #00faff;
+}
+
+.wifi-status-fully-connected:hover .neuralSignalIcon {
+  filter: drop-shadow(0 0 12px rgba(0, 250, 255, 0.6));
+  transform: scale(1.05);
+}
+
+.wifi-status-connecting {
+  color: #ffe066;
+}
+
+.wifi-status-connecting:hover .neuralSignalIcon {
+  filter: drop-shadow(0 0 12px rgba(255, 224, 102, 0.6));
+  transform: scale(1.05);
+}
+
+.wifi-status-connecting .neuralCore {
+  animation: connectingPulse 1s ease-in-out infinite;
+}
+
+@keyframes connectingPulse {
+  0%, 100% {
+    fill-opacity: 0.3;
+  }
+  50% {
+    fill-opacity: 0.8;
+  }
+}
+
+.wifi-status-disconnected {
+  color: #888888;
+}
+
+.wifi-status-disconnected:hover .neuralSignalIcon {
+  filter: drop-shadow(0 0 8px rgba(136, 136, 136, 0.4));
+  transform: scale(1.02);
+}
+
+.wifi-status-error {
+  color: #ff4455;
+}
+
+.wifi-status-error:hover .neuralSignalIcon {
+  filter: drop-shadow(0 0 12px rgba(255, 68, 85, 0.6));
+  transform: scale(1.05);
+}
+
+.wifi-status-partially-connected {
+  color: #00c8d4;
+}
+
+.wifi-status-partially-connected:hover .neuralSignalIcon {
+  filter: drop-shadow(0 0 10px rgba(0, 200, 212, 0.5));
+  transform: scale(1.03);
+}
+
+.wifi-status-unknown {
+  color: #8b5cf6;
+}
+
+.wifi-status-unknown:hover .neuralSignalIcon {
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
+  transform: scale(1.03);
 }

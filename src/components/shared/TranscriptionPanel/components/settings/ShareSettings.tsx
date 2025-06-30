@@ -2,10 +2,10 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useEffect, useState } from "react";
-import { p2pShareService } from "../../../../../services/p2p/P2PShareService";
 import "./ShareSettings/styles.css";
 
 // SRP: Imports segregados por responsabilidade
+import { useP2PContext } from "../../context/P2PContext";
 import {
   AdapterListComponent,
   AvailableAdaptersComponent,
@@ -13,30 +13,24 @@ import {
   SmartConnectComponent,
 } from "./ShareSettings/components";
 import { useAdapters } from "./ShareSettings/hooks/useAdapters";
-import { useP2PConnection } from "./ShareSettings/hooks/useP2PConnection";
-import { StorageDebugUtils } from "./ShareSettings/utils";
 
 // KISS: Componente principal focado APENAS em orquestração
 const ShareSettings: React.FC = () => {
   const [roomCode, setRoomCode] = useState("");
 
-  // SRP: Hooks especializados para diferentes responsabilidades
+  // Use global P2P context - single source of truth
   const {
-    currentRoom,
-    isLoading,
-    isSharing,
+    status,
     connect,
     disconnect,
-    updatePeerCount,
-    setCurrentRoom,
-    persistedState,
     reconnectToLastSession,
-    resetP2PState,
-    getRecentRoomCodes,
-    updateSharedAdapters,
+    persistedState,
     shouldShowReconnectPanel,
-  } = useP2PConnection();
+    onAdaptersAvailable,
+    offAdaptersAvailable,
+  } = useP2PContext();
 
+  // SRP: Hook especializado para adapters
   const {
     sharedAdapters,
     incomingAdapters,
@@ -45,125 +39,59 @@ const ShareSettings: React.FC = () => {
     downloadAdapter,
     addAvailableAdapters,
     clearIncomingAdapters,
-  } = useAdapters(updateSharedAdapters);
+  } = useAdapters(persistedState.updateSharedAdapters); // Use correct function from context
 
-  // DEBUGGING: Log component mount and key state changes
+  // SRP: Effect focado APENAS em carregar adapters locais
+  // P2P initialization is handled by the global context
   useEffect(() => {
-    console.log("🚀 [SHARESETS] ShareSettings component mounted");
-    console.log("🚀 [SHARESETS] Initial persistence state:", persistedState);
+    console.log("🔧 [SHARESETS] Loading local adapters only");
+    loadLocalAdapters();
 
-    // Test localStorage functionality
-    console.log("🧪 [SHARESETS] Testing localStorage functionality...");
-    const isLocalStorageWorking = StorageDebugUtils.testLocalStorage();
-
-    if (isLocalStorageWorking) {
-      // Inspect current P2P state
-      StorageDebugUtils.inspectP2PState();
-      StorageDebugUtils.getAllOrchKeys();
-    } else {
-      console.error(
-        "❌ [SHARESETS] localStorage is not working - persistence will fail!"
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    console.log("🔍 [SHARESETS] State changed:", {
-      isSharing,
-      currentRoom,
-      sharedAdaptersCount: sharedAdapters.length,
-      persistedStateSharing: persistedState.isSharing,
-    });
-  }, [isSharing, currentRoom, sharedAdapters.length, persistedState.isSharing]);
-
-  // SRP: Effect focado APENAS na inicialização com melhor ordem
-  useEffect(() => {
-    const initializeShareSettings = async () => {
-      console.log("🔄 [SHARESETS] Starting ShareSettings initialization...");
-
-      // Step 1: Load local adapters FIRST
-      console.log("📂 [SHARESETS] Step 1: Loading local adapters...");
-      loadLocalAdapters();
-
-      // Step 2: Initialize P2P service
-      console.log("🌐 [SHARESETS] Step 2: Initializing P2P service...");
-      await initializeP2P();
-
-      console.log("✅ [SHARESETS] ShareSettings initialization completed");
-    };
-
-    initializeShareSettings();
-    return cleanupP2P;
-  }, []);
-
-  // KISS: Funções simples e focadas
-  const initializeP2P = async () => {
-    try {
-      console.log("🔄 [SHARESETS] Initializing P2P share service...");
-      await p2pShareService.initialize();
-      console.log("✅ [SHARESETS] P2P service initialized");
-
-      console.log("🔄 [SHARESETS] Setting up P2P event listeners...");
-      setupEventListeners();
-      console.log("✅ [SHARESETS] P2P event listeners set up");
-    } catch (error) {
-      console.error("❌ [SHARESETS] Failed to initialize P2P:", error);
-    }
-  };
-
-  const setupEventListeners = () => {
-    // SRP: Event handlers focados em suas responsabilidades específicas
-    console.log("🔧 [SHARESETS] Registering event listeners...");
-
-    p2pShareService.on("room-joined", handleRoomJoined);
-    p2pShareService.on("peers-updated", updatePeerCount);
-    p2pShareService.on("adapters-available", addAvailableAdapters);
-
-    console.log("✅ [SHARESETS] Event listeners registered");
-  };
-
-  const cleanupP2P = () => {
-    console.log("🧹 [SHARESETS] Cleaning up P2P connections...");
-    p2pShareService.removeAllListeners();
-    p2pShareService.leaveRoom().catch(console.error);
-    console.log("✅ [SHARESETS] P2P cleanup completed");
-  };
-
-  // KISS: Handler simples para room joined
-  const handleRoomJoined = (data: any) => {
-    const roomType = data.type || "local";
-    console.log("🏠 [SHARESETS] Room joined:", { roomType, data });
-
-    setCurrentRoom({
-      type: roomType,
-      code: data.code,
-      peersCount: 0,
-      isActive: true,
-    });
-  };
+    // No cleanup needed - context handles P2P lifecycle
+  }, [loadLocalAdapters]); // Depend on loadLocalAdapters function
 
   // SRP: Handler focado apenas em desconexão
   const handleDisconnect = async () => {
-    console.log("🔌 [SHARESETS] Handling disconnect...");
+    console.log("🔄 [SHARESETS] Disconnecting from P2P...");
     await disconnect();
     clearIncomingAdapters();
-    console.log("✅ [SHARESETS] Disconnect completed");
   };
+
+  // SRP: Effect para escutar adapters disponíveis do contexto global
+  useEffect(() => {
+    console.log("🔧 [SHARESETS] Registering for adapters-available events");
+
+    // Register callback with the global P2P context
+    onAdaptersAvailable(addAvailableAdapters);
+
+    // Cleanup callback on unmount
+    return () => {
+      console.log("🔧 [SHARESETS] Unregistering adapters-available events");
+      offAdaptersAvailable(addAvailableAdapters);
+    };
+  }, [onAdaptersAvailable, offAdaptersAvailable, addAvailableAdapters]);
+
+  console.log("🔄 [SHARESETS] Render with status:", {
+    isConnected: status.isConnected,
+    isLoading: status.isLoading,
+    roomType: status.currentRoom?.type,
+    roomCode: status.currentRoom?.code,
+  });
 
   // YAGNI: Render simples sem over-engineering
   return (
     <div className="space-y-3 max-w-7xl mx-auto">
       <ShareHeader />
       <ConnectionStats
-        currentRoom={currentRoom}
-        isSharing={isSharing}
+        currentRoom={status.currentRoom}
+        isSharing={status.isConnected}
         sharedAdapters={sharedAdapters}
         incomingAdapters={incomingAdapters}
       />
       <MainSharingSection
-        currentRoom={currentRoom}
-        isSharing={isSharing}
-        isLoading={isLoading}
+        currentRoom={status.currentRoom}
+        isSharing={status.isConnected}
+        isLoading={status.isLoading}
         roomCode={roomCode}
         setRoomCode={setRoomCode}
         onConnect={connect}
@@ -173,12 +101,16 @@ const ShareSettings: React.FC = () => {
         onToggleSharing={toggleAdapterSharing}
         onDownload={downloadAdapter}
         persistedState={persistedState}
-        getRecentRoomCodes={getRecentRoomCodes}
+        getRecentRoomCodes={() =>
+          persistedState.roomHistory
+            ?.map((entry) => entry.code || "")
+            .filter(Boolean) || []
+        }
         reconnectToLastSession={reconnectToLastSession}
-        resetP2PState={resetP2PState}
+        resetP2PState={() => {}}
         shouldShowReconnectPanel={shouldShowReconnectPanel}
       />
-      <InfoFooter currentRoom={currentRoom} />
+      <InfoFooter currentRoom={status.currentRoom} />
     </div>
   );
 };
@@ -194,7 +126,7 @@ const ShareHeader: React.FC = () => (
 
 // SRP: Componente focado apenas nas estatísticas
 const ConnectionStats: React.FC<{
-  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
   isSharing: boolean;
   sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
   incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
@@ -210,7 +142,7 @@ const ConnectionStats: React.FC<{
 
 // SRP: Card focado apenas no status de conexão
 const ConnectionStatusCard: React.FC<{
-  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
   isSharing: boolean;
 }> = ({ currentRoom, isSharing }) => (
   <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20">
@@ -308,25 +240,25 @@ const SharingStatsCard: React.FC<{
 
 // SRP: Seção principal focada no layout
 const MainSharingSection: React.FC<{
-  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
   isSharing: boolean;
   isLoading: boolean;
   roomCode: string;
   setRoomCode: (code: string) => void;
-  onConnect: ReturnType<typeof useP2PConnection>["connect"];
+  onConnect: ReturnType<typeof useP2PContext>["connect"];
   onDisconnect: () => void;
   sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
   incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
   onToggleSharing: ReturnType<typeof useAdapters>["toggleAdapterSharing"];
   onDownload: ReturnType<typeof useAdapters>["downloadAdapter"];
-  persistedState: ReturnType<typeof useP2PConnection>["persistedState"];
-  getRecentRoomCodes: ReturnType<typeof useP2PConnection>["getRecentRoomCodes"];
+  persistedState: ReturnType<typeof useP2PContext>["persistedState"];
+  getRecentRoomCodes: () => string[];
   reconnectToLastSession: ReturnType<
-    typeof useP2PConnection
+    typeof useP2PContext
   >["reconnectToLastSession"];
-  resetP2PState: ReturnType<typeof useP2PConnection>["resetP2PState"];
+  resetP2PState: () => void;
   shouldShowReconnectPanel: ReturnType<
-    typeof useP2PConnection
+    typeof useP2PContext
   >["shouldShowReconnectPanel"];
 }> = ({
   currentRoom,
@@ -397,7 +329,7 @@ const MainSharingSection: React.FC<{
 
 // SRP: Footer focado apenas em informações
 const InfoFooter: React.FC<{
-  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
 }> = ({ currentRoom }) => (
   <div className="p-2 bg-amber-500/10 rounded border border-amber-400/30">
     <p className="text-[10px] text-amber-400">

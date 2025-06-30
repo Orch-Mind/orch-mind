@@ -14,14 +14,13 @@ import WifiStatusConnection from "./WifiStatusConnection";
  */
 interface PanelHeaderProps {
   onClose: () => void;
-  onToggleDiagnostics: () => void;
   onShowImportModal: () => void;
   onShowLogsModal: () => void; // Abre o modal de logs de cognição
   onShowSettings?: () => void; // Abre as configurações gerais do sistema
   onShowDebugModal?: () => void; // Abre o modal de debug DuckDB
   onMinimize?: () => void;
-  connectionState: ConnectionState;
-  microphoneState: MicrophoneState;
+  connectionState?: ConnectionState;
+  microphoneState?: MicrophoneState;
   hasActiveConnection?: () => boolean;
   onDisconnect?: () => void;
   onReconnect?: () => void;
@@ -29,17 +28,11 @@ interface PanelHeaderProps {
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   onClose,
-  onToggleDiagnostics,
   onShowImportModal,
   onShowLogsModal,
   onShowSettings,
   onShowDebugModal,
   onMinimize,
-  connectionState,
-  microphoneState,
-  hasActiveConnection = () => false,
-  onDisconnect,
-  onReconnect,
 }) => {
   return (
     <div className="orchos-header-glass flex justify-between items-center mb-4 h-14 px-4">
@@ -158,16 +151,8 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           </button>
         )}
 
-        {/* Indicador WiFi */}
-        <WifiStatusConnection
-          connectionState={connectionState}
-          microphoneState={microphoneState}
-          signalStrength={hasActiveConnection() ? "strong" : "none"}
-          onStatusClick={onToggleDiagnostics}
-          showDetailedText={false}
-          onDisconnect={onDisconnect}
-          onReconnect={onReconnect}
-        />
+        {/* Indicador P2P Status - agora usa useP2PStatus internamente */}
+        <WifiStatusConnection showDetailedText={false} />
 
         {/* Área dos botões de controle de janela com flexbox para alinhamento perfeito */}
         <div className="flex items-center gap-2 ml-4">

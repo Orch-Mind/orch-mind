@@ -29,6 +29,7 @@ export class P2PShareService extends EventEmitter {
   private downloadQueue: Map<string, { chunks: Buffer[]; totalSize: number }> =
     new Map();
   private isElectron: boolean = false;
+  private initialized: boolean = false;
 
   // Constants for well-known rooms
   private static readonly GENERAL_ROOM_TOPIC =
@@ -41,11 +42,22 @@ export class P2PShareService extends EventEmitter {
   }
 
   /**
+   * Verifica se o serviço P2P foi inicializado
+   */
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  /**
    * Inicializa o serviço P2P
    * No Electron, usará o Hyperswarm nativo
    * No browser, usará uma implementação alternativa ou WebRTC
    */
   async initialize(): Promise<void> {
+    if (this.initialized) {
+      return; // Already initialized
+    }
+
     if (this.isElectron && (window.electronAPI as any)?.p2pInitialize) {
       try {
         const result = await (window.electronAPI as any).p2pInitialize();
@@ -54,14 +66,58 @@ export class P2PShareService extends EventEmitter {
         }
         console.log("P2P Service initialized in Electron mode");
 
-        // Setup event listeners
+        // Setup event listeners for IPC events from Electron
         (window.electronAPI as any).onP2PPeersUpdated?.((count: number) => {
+          console.log(
+            "[P2P-SERVICE] Received peers-updated from Electron:",
+            count
+          );
           this.emit("peers-updated", count);
         });
 
         (window.electronAPI as any).onP2PAdaptersAvailable?.((data: any) => {
+          console.log(
+            "[P2P-SERVICE] Received adapters-available from Electron:",
+            data
+          );
           this.emit("adapters-available", data);
         });
+
+        // Listen for IPC events from Electron main process
+        if ((window.electronAPI as any).ipcRenderer) {
+          const ipcRenderer = (window.electronAPI as any).ipcRenderer;
+
+          ipcRenderer.on("p2p:room-joined", (_event: any, topicHex: string) => {
+            console.log(
+              "[P2P-SERVICE] Received room-joined from Electron:",
+              topicHex
+            );
+            this.emit("room-joined", { topic: topicHex });
+          });
+
+          ipcRenderer.on("p2p:room-left", () => {
+            console.log("[P2P-SERVICE] Received room-left from Electron");
+            this.emit("room-left");
+          });
+
+          ipcRenderer.on("p2p:peers-updated", (_event: any, count: number) => {
+            console.log(
+              "[P2P-SERVICE] Received peers-updated IPC from Electron:",
+              count
+            );
+            this.emit("peers-updated", count);
+          });
+
+          ipcRenderer.on("p2p:adapters-available", (_event: any, data: any) => {
+            console.log(
+              "[P2P-SERVICE] Received adapters-available IPC from Electron:",
+              data
+            );
+            this.emit("adapters-available", data);
+          });
+        }
+
+        this.initialized = true;
       } catch (error) {
         console.error("Failed to initialize Hyperswarm:", error);
         throw error;
@@ -71,6 +127,7 @@ export class P2PShareService extends EventEmitter {
       console.log(
         "P2P Service initialized in browser mode (limited functionality)"
       );
+      this.initialized = true;
     }
   }
 
@@ -104,9 +161,12 @@ export class P2PShareService extends EventEmitter {
       if (!result.success) {
         throw new Error(result.error || "Failed to join room");
       }
+      // Emit room-joined event with proper data structure
+      // Note: We'll need to track room type externally since the service doesn't know it
+      this.emit("room-joined", { topic });
     } else {
       // Implementação alternativa para browser
-      this.emit("room-joined", topic);
+      this.emit("room-joined", { topic });
       this.emit("peers-updated", 0);
     }
   }
@@ -334,7 +394,8 @@ export class P2PShareService extends EventEmitter {
     try {
       const topic = await this.hashTopic(P2PShareService.GENERAL_ROOM_TOPIC);
       await this.joinRoom(topic);
-      this.emit("room-joined", { type: "general" });
+      // Emit with type information for general room
+      this.emit("room-joined", { type: "general", topic });
     } catch (error) {
       console.error("Error joining general room:", error);
       throw error;

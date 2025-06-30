@@ -282,6 +282,36 @@ export function setupP2PHandlers(): void {
       if (!p2pManager) {
         p2pManager = new P2PShareManager();
         await p2pManager.initialize();
+
+        // Setup event forwarding to renderer after initialization
+        p2pManager.on("peers-updated", (count: number) => {
+          console.log("[P2P] Forwarding peers-updated event:", count);
+          // Forward to all renderer windows
+          BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
+            window.webContents.send("p2p:peers-updated", count);
+          });
+        });
+
+        p2pManager.on("adapters-available", (data: any) => {
+          console.log("[P2P] Forwarding adapters-available event:", data);
+          BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
+            window.webContents.send("p2p:adapters-available", data);
+          });
+        });
+
+        p2pManager.on("room-joined", (topicHex: string) => {
+          console.log("[P2P] Forwarding room-joined event:", topicHex);
+          BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
+            window.webContents.send("p2p:room-joined", topicHex);
+          });
+        });
+
+        p2pManager.on("room-left", () => {
+          console.log("[P2P] Forwarding room-left event");
+          BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
+            window.webContents.send("p2p:room-left");
+          });
+        });
       }
       return { success: true };
     } catch (error) {
@@ -344,22 +374,6 @@ export function setupP2PHandlers(): void {
       return { success: false, error: (error as Error).message };
     }
   });
-
-  // Setup event forwarding to renderer
-  if (p2pManager) {
-    p2pManager.on("peers-updated", (count: number) => {
-      // Forward to all renderer windows
-      BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
-        window.webContents.send("p2p:peers-updated", count);
-      });
-    });
-
-    p2pManager.on("adapters-available", (data: any) => {
-      BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
-        window.webContents.send("p2p:adapters-available", data);
-      });
-    });
-  }
 }
 
 // Export for main process

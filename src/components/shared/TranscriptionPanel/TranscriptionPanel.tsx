@@ -33,6 +33,7 @@ import { ConversationalChat } from "./components/ConversationalChat";
 import { ChatHistorySidebar } from "./components/ConversationalChat/components/ChatHistorySidebar";
 import { useChatHistory } from "./components/ConversationalChat/hooks/useChatHistory";
 // Brain visualization is now handled in a separate module
+import { P2PProvider } from "./context/P2PContext";
 
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   onClose,
@@ -46,6 +47,9 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
   // Chat History Hook
   const chatHistory = useChatHistory();
+
+  // P2P is now managed globally via P2PProvider context
+  // Auto-initialization and status synchronization handled automatically
 
   // Track processing state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -306,260 +310,254 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
   // --- Render ---
   return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        maxHeight: "100vh",
-        maxWidth: "100vw",
-      }}
-    >
-      {/* Panel Header - Now positioned absolutely */}
-      <PanelHeader
-        onClose={() => {
-          if (window?.electronAPI?.closeWindow) {
-            window.electronAPI.closeWindow();
-          } else if (onClose) {
-            onClose();
-          }
-        }}
-        onMinimize={() => {
-          if (window?.electronAPI?.minimizeWindow) {
-            window.electronAPI.minimizeWindow();
-          }
-        }}
-        onShowSettings={() => setShowSettingsModal(true)}
-        onShowLogsModal={() => setShowLogsModal(true)}
-        onShowImportModal={() => setShowImportModal(true)}
-        onToggleDiagnostics={() =>
-          setShowDetailedDiagnostics(!showDetailedDiagnostics)
-        }
-        connectionState={connectionState}
-        microphoneState={microphoneState}
-        hasActiveConnection={hasActiveConnection}
-        onDisconnect={disconnectFromDeepgram}
-        onReconnect={connectToDeepgram}
-      />
-
-      {/* Main Chat Dashboard Layout */}
+    <P2PProvider>
       <div
-        className={`orchos-quantum-dashboard with-sidebar ${
-          !enableMatrix ? "single-column" : ""
-        } ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}
         style={{
-          flex: "1 1 auto",
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          maxHeight: "100vh",
+          maxWidth: "100vw",
         }}
       >
-        {/* Chat History Sidebar */}
+        {/* Panel Header - Now positioned absolutely */}
+        <PanelHeader
+          onClose={() => {
+            if (window?.electronAPI?.closeWindow) {
+              window.electronAPI.closeWindow();
+            } else if (onClose) {
+              onClose();
+            }
+          }}
+          onMinimize={() => {
+            if (window?.electronAPI?.minimizeWindow) {
+              window.electronAPI.minimizeWindow();
+            }
+          }}
+          onShowSettings={() => setShowSettingsModal(true)}
+          onShowLogsModal={() => setShowLogsModal(true)}
+          onShowImportModal={() => setShowImportModal(true)}
+        />
+
+        {/* Main Chat Dashboard Layout */}
         <div
-          className={`chat-history-sidebar ${
-            mobileSidebarOpen ? "mobile-open" : ""
-          } ${!isSidebarOpen ? "desktop-collapsed" : ""}`}
+          className={`orchos-quantum-dashboard with-sidebar ${
+            !enableMatrix ? "single-column" : ""
+          } ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}
+          style={{
+            flex: "1 1 auto",
+          }}
         >
-          <ChatHistorySidebar
-            conversations={chatHistory.conversations}
-            currentConversationId={chatHistory.currentConversationId}
-            onSelectConversation={(id: string) => {
-              // Clear any pending AI responses when switching conversations
-              clearAiResponse();
-              clearTranscription();
-              chatHistory.selectConversation(id);
+          {/* Chat History Sidebar */}
+          <div
+            className={`chat-history-sidebar ${
+              mobileSidebarOpen ? "mobile-open" : ""
+            } ${!isSidebarOpen ? "desktop-collapsed" : ""}`}
+          >
+            <ChatHistorySidebar
+              conversations={chatHistory.conversations}
+              currentConversationId={chatHistory.currentConversationId}
+              onSelectConversation={(id: string) => {
+                // Clear any pending AI responses when switching conversations
+                clearAiResponse();
+                clearTranscription();
+                chatHistory.selectConversation(id);
+              }}
+              onCreateNewConversation={() => {
+                // Clear any pending AI responses when creating new conversation
+                clearAiResponse();
+                clearTranscription();
+                return chatHistory.createNewConversation();
+              }}
+              onDeleteConversation={chatHistory.deleteConversation}
+              onSearchConversations={chatHistory.searchConversations}
+              isProcessing={isProcessing}
+            />
+          </div>
+
+          {/* Desktop Sidebar Toggle Button - Outside sidebar as sibling */}
+          <button
+            className="desktop-sidebar-toggle"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={`${isSidebarOpen ? "Hide" : "Show"} sidebar (${
+              navigator.platform.includes("Mac") ? "⌘" : "Ctrl"
+            }+B)`}
+            aria-label={`${isSidebarOpen ? "Hide" : "Show"} sidebar`}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              {isSidebarOpen ? (
+                // Chevron left icon when sidebar is open
+                <path
+                  d="M15 18l-6-6 6-6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ) : (
+                // Chevron right icon when sidebar is closed
+                <path
+                  d="M9 18l6-6-6-6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+          </button>
+
+          {/* Quantum Visualization Zone - Left Panel with Golden Ratio */}
+          {/* Lógica corrigida: enableMatrix = true mostra, false esconde */}
+          {enableMatrix && (
+            <div
+              key="quantum-visualization-zone"
+              className="quantum-visualization-zone"
+            >
+              <QuantumVisualizationContainer
+                cognitionEvents={cognitionEvents}
+                height="100%"
+                width="100%"
+                lowPerformanceMode={false}
+                showLegend={true}
+              />
+            </div>
+          )}
+
+          {/* Conversational Chat Zone - Main Panel */}
+          <div
+            key="neural-chat-zone"
+            className="neural-chat-zone"
+            style={{
+              height: "100%",
+              width: "100%",
+              padding: "0.5rem",
+              overflow: "hidden" /* Força o chat a usar scroll interno */,
+              display: "flex",
+              flexDirection: "column",
             }}
-            onCreateNewConversation={() => {
-              // Clear any pending AI responses when creating new conversation
-              clearAiResponse();
-              clearTranscription();
-              return chatHistory.createNewConversation();
-            }}
-            onDeleteConversation={chatHistory.deleteConversation}
-            onSearchConversations={chatHistory.searchConversations}
-            isProcessing={isProcessing}
-          />
+          >
+            <ConversationalChat
+              key={chatKey}
+              transcriptionText={texts.transcription}
+              onTranscriptionChange={handleTranscriptionChange}
+              onClearTranscription={clearTranscription}
+              aiResponseText={texts.aiResponse}
+              onAiResponseChange={handleAiResponseChange}
+              onClearAiResponse={clearAiResponse}
+              temporaryContext={temporaryContext}
+              onTemporaryContextChange={handleTemporaryContextChange}
+              microphoneState={microphoneState}
+              onToggleRecording={toggleRecording}
+              onSendPrompt={handleSendPrompt}
+              // Audio settings props
+              language={language}
+              setLanguage={setLanguage}
+              isMicrophoneOn={isMicrophoneOn}
+              setIsMicrophoneOn={setIsMicrophoneOn}
+              isSystemAudioOn={isSystemAudioOn}
+              setIsSystemAudioOn={setIsSystemAudioOn}
+              audioDevices={audioDevices}
+              selectedDevices={selectedDevices}
+              handleDeviceChange={handleDeviceChange}
+              // Chat History props
+              currentConversation={chatHistory.currentConversation}
+              onAddMessageToConversation={chatHistory.addMessageToConversation}
+              onProcessingChange={setIsProcessing}
+              chatHistory={chatHistory}
+            />
+          </div>
         </div>
 
-        {/* Desktop Sidebar Toggle Button - Outside sidebar as sibling */}
-        <button
-          className="desktop-sidebar-toggle"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          title={`${isSidebarOpen ? "Hide" : "Show"} sidebar (${
-            navigator.platform.includes("Mac") ? "⌘" : "Ctrl"
-          }+B)`}
-          aria-label={`${isSidebarOpen ? "Hide" : "Show"} sidebar`}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            {isSidebarOpen ? (
-              // Chevron left icon when sidebar is open
-              <path
-                d="M15 18l-6-6 6-6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ) : (
-              // Chevron right icon when sidebar is closed
-              <path
-                d="M9 18l6-6-6-6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-          </svg>
-        </button>
+        {/* Import Modal - Always on top */}
+        {showImportModal && (
+          <ImportModal
+            show={showImportModal}
+            onClose={handleCloseImportModal}
+            importFile={importFile}
+            setImportFile={setImportFile}
+            importMode={importMode}
+            setImportMode={setImportMode}
+            importProgress={importProgress}
+            importStage={importStage}
+            importSummary={importSummary}
+            isImporting={isImporting}
+            handleFileChange={handleFileChange}
+            handleStartImport={handleStartImport}
+            handleCloseImportModal={handleCloseImportModal}
+          />
+        )}
 
-        {/* Quantum Visualization Zone - Left Panel with Golden Ratio */}
-        {/* Lógica corrigida: enableMatrix = true mostra, false esconde */}
-        {enableMatrix && (
-          <div
-            key="quantum-visualization-zone"
-            className="quantum-visualization-zone"
-          >
-            <QuantumVisualizationContainer
-              cognitionEvents={cognitionEvents}
-              height="100%"
-              width="100%"
-              lowPerformanceMode={false}
-              showLegend={true}
-            />
+        {/* Modal de Logs de Cognição */}
+        {showLogsModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10">
+            <div className="orchos-cognition-logs-modal">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="text-2xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]"
+                  style={{ fontFamily: "Orbitron, Inter, sans-serif" }}
+                >
+                  Cognition Logs
+                </h2>
+                <button
+                  onClick={() => setShowLogsModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-full p-1"
+                  aria-label="Close modal"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <CognitionLogSection
+                cognitionEvents={cognitionEvents}
+                exporters={exporters}
+                exportEvents={exportEvents}
+                clearEvents={clearEvents}
+              />
+            </div>
           </div>
         )}
 
-        {/* Conversational Chat Zone - Main Panel */}
-        <div
-          key="neural-chat-zone"
-          className="neural-chat-zone"
-          style={{
-            height: "100%",
-            width: "100%",
-            padding: "0.5rem",
-            overflow: "hidden" /* Força o chat a usar scroll interno */,
-            display: "flex",
-            flexDirection: "column",
-          }}
+        {/* Settings Modal */}
+        {showSettingsModal && (
+          <SettingsModal
+            show={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+          />
+        )}
+
+        {/* Mobile Sidebar Toggle Button */}
+        <button
+          className="mobile-sidebar-toggle"
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          title="Chat History"
         >
-          <ConversationalChat
-            key={chatKey}
-            transcriptionText={texts.transcription}
-            onTranscriptionChange={handleTranscriptionChange}
-            onClearTranscription={clearTranscription}
-            aiResponseText={texts.aiResponse}
-            onAiResponseChange={handleAiResponseChange}
-            onClearAiResponse={clearAiResponse}
-            temporaryContext={temporaryContext}
-            onTemporaryContextChange={handleTemporaryContextChange}
-            microphoneState={microphoneState}
-            onToggleRecording={toggleRecording}
-            onSendPrompt={handleSendPrompt}
-            // Audio settings props
-            language={language}
-            setLanguage={setLanguage}
-            isMicrophoneOn={isMicrophoneOn}
-            setIsMicrophoneOn={setIsMicrophoneOn}
-            isSystemAudioOn={isSystemAudioOn}
-            setIsSystemAudioOn={setIsSystemAudioOn}
-            audioDevices={audioDevices}
-            selectedDevices={selectedDevices}
-            handleDeviceChange={handleDeviceChange}
-            // Chat History props
-            currentConversation={chatHistory.currentConversation}
-            onAddMessageToConversation={chatHistory.addMessageToConversation}
-            onProcessingChange={setIsProcessing}
-            chatHistory={chatHistory}
-          />
-        </div>
-      </div>
-
-      {/* Import Modal - Always on top */}
-      {showImportModal && (
-        <ImportModal
-          show={showImportModal}
-          onClose={handleCloseImportModal}
-          importFile={importFile}
-          setImportFile={setImportFile}
-          importMode={importMode}
-          setImportMode={setImportMode}
-          importProgress={importProgress}
-          importStage={importStage}
-          importSummary={importSummary}
-          isImporting={isImporting}
-          handleFileChange={handleFileChange}
-          handleStartImport={handleStartImport}
-          handleCloseImportModal={handleCloseImportModal}
-        />
-      )}
-
-      {/* Modal de Logs de Cognição */}
-      {showLogsModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10">
-          <div className="orchos-cognition-logs-modal">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                className="text-2xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]"
-                style={{ fontFamily: "Orbitron, Inter, sans-serif" }}
-              >
-                Cognition Logs
-              </h2>
-              <button
-                onClick={() => setShowLogsModal(false)}
-                className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-full p-1"
-                aria-label="Close modal"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <CognitionLogSection
-              cognitionEvents={cognitionEvents}
-              exporters={exporters}
-              exportEvents={exportEvents}
-              clearEvents={clearEvents}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M3 12h18m-18-6h18m-18 12h18"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
             />
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <SettingsModal
-          show={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
-        />
-      )}
-
-      {/* Mobile Sidebar Toggle Button */}
-      <button
-        className="mobile-sidebar-toggle"
-        onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-        title="Chat History"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M3 12h18m-18-6h18m-18 12h18"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
-    </div>
+          </svg>
+        </button>
+      </div>
+    </P2PProvider>
   );
 };
 
