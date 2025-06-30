@@ -543,8 +543,6 @@ const ConversationalChatComponent = React.forwardRef<
           onClose={() => setShowAudioSettings(false)}
           anchorRef={audioSettingsButtonRef}
           settings={{
-            language: language || "pt-BR",
-            setLanguage: setLanguage || (() => {}),
             isMicrophoneOn: isMicrophoneOn || false,
             setIsMicrophoneOn: setIsMicrophoneOn || (() => {}),
             isSystemAudioOn: isSystemAudioOn || false,

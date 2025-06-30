@@ -52,6 +52,8 @@ export interface SettingsState {
   setEnableMatrix: (enable: boolean) => void;
   matrixDensity: number;
   setMatrixDensity: (density: number) => void;
+  language: string;
+  setLanguage: (language: string) => void;
 
   // ChatGPT, Deepgram & Pinecone
   chatgptApiKey: string;

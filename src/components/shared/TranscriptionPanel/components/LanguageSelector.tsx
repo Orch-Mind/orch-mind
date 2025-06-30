@@ -43,9 +43,6 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
   return (
     <div className="language-selector-wrapper">
-      <label className="text-sm text-cyan-200/70 block mb-2">
-        Transcription Language
-      </label>
       <select
         title="Transcription Language"
         className="w-full p-2.5 rounded-lg bg-black/40 text-white/90 text-sm border border-cyan-500/20 focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all"

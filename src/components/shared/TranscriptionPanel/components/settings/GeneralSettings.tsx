@@ -2,10 +2,12 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import LanguageSelector from "../LanguageSelector";
 
 /**
  * Componente para configurações gerais do Orch-OS
  * Segue os princípios neurais-simbólicos (Single Responsibility)
+ * Inclui agora configuração de idioma de transcrição
  */
 
 interface GeneralSettingsProps {
@@ -15,6 +17,9 @@ interface GeneralSettingsProps {
   setEnableMatrix: (value: boolean) => void;
   matrixDensity: number;
   setMatrixDensity: (value: number) => void;
+  // Language settings
+  language: string;
+  setLanguage: (value: string) => void;
 }
 
 const GeneralSettings: React.FC<GeneralSettingsProps> = ({
@@ -24,6 +29,8 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setEnableMatrix,
   matrixDensity,
   setMatrixDensity,
+  language,
+  setLanguage,
 }) => {
   return (
     <div className="space-y-4">
@@ -38,6 +45,12 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
         />
+      </div>
+
+      {/* Language Selection */}
+      <div className="pt-1">
+        <h3 className="text-cyan-300 mb-2">Language</h3>
+        <LanguageSelector language={language} setLanguage={setLanguage} />
       </div>
 
       {/* Quantum Consciousness Matrix */}

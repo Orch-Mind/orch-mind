@@ -18,6 +18,7 @@ import { useSettingsState } from "./settings/useSettingsState";
  * - Clean Architecture (separação de responsabilidades)
  * - SOLID (componentes com responsabilidade única)
  * - KISS (simplificação da lógica)
+ * - Language settings movidos para General Tab
  */
 const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
   show,
@@ -68,6 +69,8 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
               setEnableMatrix={settings.setEnableMatrix}
               matrixDensity={settings.matrixDensity}
               setMatrixDensity={settings.setMatrixDensity}
+              language={settings.language}
+              setLanguage={settings.setLanguage}
             />
           )}
 

@@ -13,6 +13,7 @@ import {
 /**
  * Hook para gerenciamento de configurações gerais
  * Componente neural-simbólico para configurações básicas do sistema
+ * Agora inclui gerenciamento de idioma de transcrição
  */
 export const useGeneralSettings = () => {
   // Estado neural-simbólico para opções gerais
@@ -22,6 +23,9 @@ export const useGeneralSettings = () => {
   );
   const [matrixDensity, setMatrixDensity] = useState<number>(
     () => getOption<number>(STORAGE_KEYS.MATRIX_DENSITY) ?? 60
+  );
+  const [language, setLanguage] = useState<string>(
+    () => getOption<string>(STORAGE_KEYS.DEEPGRAM_LANGUAGE) ?? "pt-BR"
   );
 
   // Sincroniza mudanças do storage para o estado local
@@ -37,6 +41,9 @@ export const useGeneralSettings = () => {
         case STORAGE_KEYS.MATRIX_DENSITY:
           setMatrixDensity(value);
           break;
+        case STORAGE_KEYS.DEEPGRAM_LANGUAGE:
+          setLanguage(value);
+          break;
       }
     };
 
@@ -49,6 +56,7 @@ export const useGeneralSettings = () => {
     setOption(STORAGE_KEYS.USER_NAME, name);
     setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
     setOption(STORAGE_KEYS.MATRIX_DENSITY, matrixDensity);
+    setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, language);
   };
 
   return useMemo(
@@ -60,6 +68,8 @@ export const useGeneralSettings = () => {
       setEnableMatrix,
       matrixDensity,
       setMatrixDensity,
+      language,
+      setLanguage,
       // Ações
       saveGeneralSettings,
     }),
@@ -70,6 +80,8 @@ export const useGeneralSettings = () => {
       setEnableMatrix,
       matrixDensity,
       setMatrixDensity,
+      language,
+      setLanguage,
       saveGeneralSettings,
     ]
   );

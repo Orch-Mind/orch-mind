@@ -4,17 +4,12 @@
 import React from "react";
 import { SelectedDevices } from "../../../../context";
 import AudioControls from "../AudioControls";
-import LanguageSelector from "../LanguageSelector";
 
 /**
  * Componente simplificado de configurações de áudio
- * Apenas: Language e Device selection
+ * Apenas: Device selection (Language movido para General Settings)
  */
 interface AudioSettingsSimpleProps {
-  // Language
-  language: string;
-  setLanguage: (value: string) => void;
-
   // Device selection
   isMicrophoneOn: boolean;
   setIsMicrophoneOn: (value: boolean) => void;
@@ -26,10 +21,6 @@ interface AudioSettingsSimpleProps {
 }
 
 const AudioSettingsSimple: React.FC<AudioSettingsSimpleProps> = ({
-  // Language
-  language,
-  setLanguage,
-
   // Device selection
   isMicrophoneOn,
   setIsMicrophoneOn,
@@ -41,12 +32,6 @@ const AudioSettingsSimple: React.FC<AudioSettingsSimpleProps> = ({
 }) => {
   return (
     <div className="space-y-6">
-      {/* Language Selection */}
-      <div className="pb-5 border-b border-cyan-500/20">
-        <h4 className="text-cyan-300 mb-3 font-semibold text-base">Language</h4>
-        <LanguageSelector language={language} setLanguage={setLanguage} />
-      </div>
-
       {/* Device Controls */}
       <div>
         <h4 className="text-cyan-300 mb-4 font-semibold text-base">

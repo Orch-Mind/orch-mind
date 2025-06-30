@@ -10,11 +10,7 @@ interface AudioSettingsPopoverProps {
   onClose: () => void;
   anchorRef?: React.RefObject<HTMLElement>;
   settings: {
-    // Language
-    language: string;
-    setLanguage: (value: string) => void;
-
-    // Device selection
+    // Device selection only (Language moved to General Settings)
     isMicrophoneOn: boolean;
     setIsMicrophoneOn: (value: boolean) => void;
     isSystemAudioOn: boolean;
@@ -27,7 +23,8 @@ interface AudioSettingsPopoverProps {
 
 /**
  * Audio Settings Popover component
- * Shows audio configuration options in a floating panel
+ * Shows audio device configuration options in a floating panel
+ * Language settings moved to General Settings for better UX
  */
 export const AudioSettingsPopover: React.FC<AudioSettingsPopoverProps> = ({
   show,
@@ -90,15 +87,12 @@ export const AudioSettingsPopover: React.FC<AudioSettingsPopoverProps> = ({
           boxShadow:
             "0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 240, 255, 0.1)",
           padding: "24px",
-          width: "360px",
+          width: "320px",
           zIndex: 50,
         }}
       >
         <AudioSettingsSimple
-          // Language
-          language={settings.language}
-          setLanguage={settings.setLanguage}
-          // Device selection
+          // Device selection only
           isMicrophoneOn={settings.isMicrophoneOn}
           setIsMicrophoneOn={settings.setIsMicrophoneOn}
           isSystemAudioOn={settings.isSystemAudioOn}
