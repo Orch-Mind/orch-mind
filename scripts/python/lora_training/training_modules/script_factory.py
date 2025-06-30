@@ -3,11 +3,6 @@
 
 def create_peft_training_script(data_path, base_model, output_name, max_steps=10, adapter_path="./lora_adapter"):
     """Strategy 1: Create script for PEFT-only training (xformers-free)."""
-    hf_model_name = get_ollama_model_base_name(base_model)
-    # Use models without quantization for CPU
-    if "bnb-4bit" in hf_model_name:
-        hf_model_name = hf_model_name.replace("-bnb-4bit", "")
-        hf_model_name = hf_model_name.replace("unsloth/", "")
         
     return f'''
 import torch
@@ -55,12 +50,12 @@ try:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"🖥️  Using device: {{device}}")
     
-    tokenizer = AutoTokenizer.from_pretrained("{hf_model_name}")
+    tokenizer = AutoTokenizer.from_pretrained("{base_model}")
     
     # Load model with appropriate settings for device
     if device == "cuda":
         model = AutoModelForCausalLM.from_pretrained(
-            "{hf_model_name}",
+            "{base_model}",
             torch_dtype=torch.float16,
             device_map="auto",
             trust_remote_code=True
@@ -68,7 +63,7 @@ try:
     else:
         # For CPU, use float32 and no device_map
         model = AutoModelForCausalLM.from_pretrained(
-            "{hf_model_name}",
+            "{base_model}",
             torch_dtype=torch.float32,
             low_cpu_mem_usage=True,
             trust_remote_code=True
@@ -146,7 +141,6 @@ print("✅ LoRA adapter saved successfully!")
 
 def create_instant_adapter_script(data_path, base_model, output_name):
     """Strategy 2: Create script for instant adapter creation."""
-    hf_model_name = get_ollama_model_base_name(base_model)
     return f'''
 import json
 import os
@@ -168,7 +162,7 @@ adapter_dir = f"./lora_adapter/{{output_name}}"
 os.makedirs(adapter_dir, exist_ok=True)
 
 adapter_config = {{
-    "base_model_name_or_path": "{hf_model_name}",
+    "base_model_name_or_path": "{base_model}",
     "peft_type": "LORA",
     "r": 16, "lora_alpha": 32, "lora_dropout": 0.05,
     "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"]
@@ -182,7 +176,6 @@ print("✅ Instant LoRA adapter created!")
 
 def create_incremental_training_script(data_path, base_model, adapter_path, max_steps=10):
     """Create script for incremental training on existing adapter."""
-    hf_model_name = get_ollama_model_base_name(base_model)
     
     return f'''
 import torch
@@ -230,7 +223,7 @@ try:
     print(f"🖥️  Using device: {{device}}")
     
     # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained("{hf_model_name}")
+    tokenizer = AutoTokenizer.from_pretrained("{base_model}")
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -238,14 +231,14 @@ try:
     # Load base model
     if device == "cuda":
         base_model = AutoModelForCausalLM.from_pretrained(
-            "{hf_model_name}",
+            "{base_model}",
             torch_dtype=torch.float16,
             device_map="auto",
             trust_remote_code=True
         )
     else:
         base_model = AutoModelForCausalLM.from_pretrained(
-            "{hf_model_name}",
+            "{base_model}",
             torch_dtype=torch.float32,
             low_cpu_mem_usage=True,
             trust_remote_code=True
@@ -306,24 +299,3 @@ tokenizer.save_pretrained("{adapter_path}")
 print("✅ Incremental training completed!")
 print(f"📈 Adapter updated with {{len(formatted_data)}} new examples")
 '''
-
-def get_ollama_model_base_name(model_name):
-    """Map Ollama models to HuggingFace equivalents."""
-    model_mapping = {
-        # Modelos quantizados para GPU
-        "llama3.1:latest": "unsloth/Meta-Llama-3.1-8B-bnb-4bit",
-        "mistral:latest": "unsloth/mistral-7b-v0.1-bnb-4bit",
-        "qwen3:latest": "Qwen/Qwen2.5-7B",
-        # Modelos base não quantizados (fallback para CPU)
-        "llama3.1:latest-cpu": "meta-llama/Meta-Llama-3.1-8B",
-        "mistral:latest-cpu": "mistralai/Mistral-7B-v0.1",
-    }
-    
-    # Check if we're on CPU and use non-quantized models
-    base_name = model_mapping.get(model_name, "meta-llama/Meta-Llama-3.1-8B")
-    
-    # For unknown models, default to a reasonable base
-    if model_name not in model_mapping:
-        print(f"⚠️  Unknown model {model_name}, using default base model")
-        
-    return base_name
