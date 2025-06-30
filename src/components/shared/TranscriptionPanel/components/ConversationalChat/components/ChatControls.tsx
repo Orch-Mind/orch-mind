@@ -16,9 +16,10 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   onToggleContext,
   canSend,
   showContext,
-  onToggleAudioSettings,
-  showAudioSettings,
-  audioSettingsButtonRef,
+  // TODO: Re-enable for future versions - Audio Settings in chat input
+  // onToggleAudioSettings,
+  // showAudioSettings,
+  // audioSettingsButtonRef,
 }) => {
   return (
     <div className="input-controls">
@@ -51,7 +52,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         </svg>
       </button>
 
-      {/* Audio Settings Button - Futuristic wave design */}
+      {/* TODO: Re-enable for future versions - Audio Settings Button
       <button
         ref={audioSettingsButtonRef as React.RefObject<HTMLButtonElement>}
         className={`control-btn audio-settings-btn ${
@@ -78,6 +79,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
           />
         </svg>
       </button>
+      */}
 
       {/* Microphone Button - Modern minimal design */}
       <button

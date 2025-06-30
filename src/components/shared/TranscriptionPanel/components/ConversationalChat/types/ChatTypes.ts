@@ -61,9 +61,10 @@ export interface ChatControlsProps {
   onToggleContext: () => void;
   canSend: boolean;
   showContext: boolean;
-  onToggleAudioSettings?: () => void;
-  showAudioSettings?: boolean;
-  audioSettingsButtonRef?: React.RefObject<HTMLElement>;
+  // TODO: Re-enable for future versions - Audio Settings in chat input
+  // onToggleAudioSettings?: () => void;
+  // showAudioSettings?: boolean;
+  // audioSettingsButtonRef?: React.RefObject<HTMLElement>;
 }
 
 export interface DebugControlsProps {
@@ -229,7 +230,8 @@ export interface ChatInputAreaProps extends ConversationalChatProps {
   onRestore: () => void;
   onClearAll: () => void;
   hasBackup: boolean;
-  onToggleAudioSettings?: () => void;
-  showAudioSettings?: boolean;
-  audioSettingsButtonRef?: React.RefObject<HTMLElement>;
+  // TODO: Re-enable for future versions - Audio Settings in chat input
+  // onToggleAudioSettings?: () => void;
+  // showAudioSettings?: boolean;
+  // audioSettingsButtonRef?: React.RefObject<HTMLElement>;
 }

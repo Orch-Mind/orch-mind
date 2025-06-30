@@ -2,7 +2,8 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AudioSettingsPopover } from "./components/AudioSettingsPopover";
+// TODO: Re-enable for future versions - Audio Settings in chat input
+// import { AudioSettingsPopover } from "./components/AudioSettingsPopover";
 import { ChatInputArea } from "./components/ChatInputArea";
 import { ChatMessagesContainer } from "./components/ChatMessagesContainer";
 import { SummarizationIndicator } from "./components/SummarizationIndicator";
@@ -37,6 +38,33 @@ export interface ConversationalChatRef {
  * - StreamingManager: Gerencia estado de streaming
  * - MessageProcessor: Processa mensagens e respostas
  * - Hooks customizados: Encapsulam lógica específica
+ *
+ * ===== AUDIO SETTINGS REFACTORING =====
+ *
+ * REFATORAÇÃO COMPLETA - Language Settings movidos do Chat Input para General Settings:
+ *
+ * ❌ DESABILITADO no Chat Input (para versões futuras):
+ * - Botão de Audio Settings nos controles do chat
+ * - Popover AudioSettingsPopover
+ * - Props onToggleAudioSettings, showAudioSettings, audioSettingsButtonRef
+ * - Estado showAudioSettings e audioSettingsButtonRef
+ *
+ * ✅ ATIVADO em General Settings:
+ * - LanguageSelector agora está em Settings → General → Language
+ * - Sincronização automática via useGeneralSettings hook
+ * - Persistência no localStorage via STORAGE_KEYS.DEEPGRAM_LANGUAGE
+ *
+ * COMO REATIVAR (versões futuras):
+ * 1. Descomentar todos os blocos marcados com "TODO: Re-enable for future versions"
+ * 2. Descomentar import do AudioSettingsPopover
+ * 3. Descomentar props nos tipos ChatControlsProps e ChatInputAreaProps
+ * 4. Funcionalidade estará 100% funcional novamente
+ *
+ * BENEFÍCIOS DA REFATORAÇÃO:
+ * - UX melhorada: Language settings centralizados onde fazem sentido
+ * - Popover do chat mais limpo: apenas controles de dispositivos de áudio
+ * - Arquitetura SOLID: Separação clara de responsabilidades
+ * - Sincronização automática entre componentes
  */
 const ConversationalChatComponent = React.forwardRef<
   ConversationalChatRef,
@@ -80,9 +108,11 @@ const ConversationalChatComponent = React.forwardRef<
     const previousConversationId = useRef<string | null>(null);
 
     // Estado de UI
-    const [showAudioSettings, setShowAudioSettings] = useState(false);
+    // TODO: Re-enable for future versions - Audio Settings in chat input
+    // const [showAudioSettings, setShowAudioSettings] = useState(false);
     const [isAtTop, setIsAtTop] = useState(false);
-    const audioSettingsButtonRef = useRef<HTMLElement>(null!);
+    // TODO: Re-enable for future versions - Audio Settings in chat input
+    // const audioSettingsButtonRef = useRef<HTMLElement>(null!);
     const messagesContainerRef = useRef<HTMLDivElement>(null!);
 
     // Hooks customizados
@@ -532,12 +562,13 @@ const ConversationalChatComponent = React.forwardRef<
             recovery.clearBackup();
           }}
           hasBackup={recovery.hasBackup}
-          onToggleAudioSettings={() => setShowAudioSettings(!showAudioSettings)}
-          showAudioSettings={showAudioSettings}
-          audioSettingsButtonRef={audioSettingsButtonRef}
+          // TODO: Re-enable for future versions - Audio Settings in chat input
+          // onToggleAudioSettings={() => setShowAudioSettings(!showAudioSettings)}
+          // showAudioSettings={showAudioSettings}
+          // audioSettingsButtonRef={audioSettingsButtonRef}
         />
 
-        {/* Popover de Configurações de Áudio */}
+        {/* TODO: Re-enable for future versions - Audio Settings Popover in chat input
         <AudioSettingsPopover
           show={showAudioSettings}
           onClose={() => setShowAudioSettings(false)}
@@ -555,6 +586,7 @@ const ConversationalChatComponent = React.forwardRef<
             handleDeviceChange: handleDeviceChange || (() => {}),
           }}
         />
+        */}
       </div>
     );
   }
