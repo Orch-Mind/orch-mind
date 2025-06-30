@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { OrchOSMode } from "../../../../../services/ModeService";
-
 // Interfaces para props compartilhados entre componentes
 
 export interface SettingsModalProps {
@@ -67,12 +65,6 @@ export interface SettingsState {
   openaiEmbeddingModel: string;
   setOpenaiEmbeddingModel: (model: string) => void;
 
-  // HuggingFace
-  hfModel: string;
-  setHfModel: (model: string) => void;
-  hfEmbeddingModel: string;
-  setHfEmbeddingModel: (model: string) => void;
-
   // Deepgram
   deepgramApiKey: string;
   setDeepgramApiKey: (key: string) => void;
@@ -105,18 +97,12 @@ export interface SettingsState {
   logLevel: string;
   setLogLevel: (level: string) => void;
 
-  // Orch-OS Mode
-  applicationMode: OrchOSMode;
-  setApplicationMode: (mode: OrchOSMode) => void;
-
   // Métodos
   saveSettings: () => void;
 }
 
 // Props específicos para ApiSettings (mantido para compatibilidade)
 export interface ApiSettingsProps {
-  applicationMode: OrchOSMode;
-  setApplicationMode: (mode: OrchOSMode) => void;
   pineconeApiKey: string;
   setPineconeApiKey: (key: string) => void;
   chatgptApiKey: string;
@@ -125,10 +111,6 @@ export interface ApiSettingsProps {
   setChatgptModel: (model: string) => void;
   openaiEmbeddingModel: string;
   setOpenaiEmbeddingModel: (model: string) => void;
-  hfModel: string;
-  setHfModel: (model: string) => void;
-  hfEmbeddingModel: string;
-  setHfEmbeddingModel: (model: string) => void;
   deepgramApiKey: string;
   setDeepgramApiKey: (key: string) => void;
   deepgramModel: string;

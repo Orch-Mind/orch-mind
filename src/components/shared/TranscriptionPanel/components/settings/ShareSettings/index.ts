@@ -6,7 +6,6 @@ export { default as ShareSettings } from "../ShareSettings";
 
 // Exports por categoria - SRP
 export * from "./components";
-export * from "./hooks/useAdapters";
 export * from "./hooks/useP2PConnection";
 export * from "./types";
 export * from "./utils";

@@ -3,7 +3,6 @@
 
 // Componentes principais para Ollama
 export { default as ApiNavigation } from "./ApiNavigation";
-export { default as BasicModeSettings } from "./BasicModeSettings";
 export { default as OllamaSettings } from "./OllamaSettings";
 
 // Componentes legados mantidos para compatibilidade (podem ser removidos gradualmente)

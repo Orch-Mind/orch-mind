@@ -7,10 +7,11 @@
 import React from "react";
 import { IUIUpdateService } from "../../interfaces/utils/IUIUpdateService";
 import { LoggingUtils } from "../../utils/LoggingUtils";
+import { UIUpdater } from "../../interfaces/transcription/TranscriptionTypes";
 
 export class UIUpdateService implements IUIUpdateService {
   constructor(
-    private setTexts: React.Dispatch<React.SetStateAction<Record<string, any>>>
+    private setTexts: UIUpdater
   ) {}
 
   updateUI(update: Partial<Record<string, any>>, source?: string): void {

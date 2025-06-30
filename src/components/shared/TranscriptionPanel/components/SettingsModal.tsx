@@ -64,8 +64,6 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
             <GeneralSettings
               name={settings.name}
               setName={settings.setName}
-              applicationMode={settings.applicationMode}
-              setApplicationMode={settings.setApplicationMode}
               enableMatrix={settings.enableMatrix}
               setEnableMatrix={settings.setEnableMatrix}
               matrixDensity={settings.matrixDensity}
@@ -76,8 +74,6 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
           {/* Advanced Tab */}
           {settings.activeTab === "advanced" && (
             <ApiSettings
-              applicationMode={settings.applicationMode}
-              setApplicationMode={settings.setApplicationMode}
               ollamaModel={settings.ollamaModel}
               setOllamaModel={settings.setOllamaModel}
               ollamaEmbeddingModel={settings.ollamaEmbeddingModel}

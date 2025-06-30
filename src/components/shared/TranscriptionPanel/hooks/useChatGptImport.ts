@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { useState } from "react";
-import { ModeService } from "../../../../services/ModeService";
 import { getOption, STORAGE_KEYS } from "../../../../services/StorageService";
 import { ToastVariant } from "../../../ui/toast";
 import { ImportMode } from "../types/interfaces";
@@ -65,15 +64,10 @@ export const useChatGptImport = (
       let lastValidProgress = 0;
       let stageStartTime = Date.now();
 
-      // Get current application mode to pass to import process
-      const applicationMode = ModeService.getMode();
-      console.log("[useChatGptImport] Using applicationMode:", applicationMode);
-
       const result = await window.electronAPI.importChatHistory({
         fileBuffer,
         mode: importMode,
         user: userName,
-        applicationMode,
         onProgress: (data: ProgressData) => {
           // Use the percentage directly from backend (now with weighted stages)
           const currentProgress = data.percentage ?? 0;

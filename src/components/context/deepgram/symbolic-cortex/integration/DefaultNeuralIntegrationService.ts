@@ -2,17 +2,11 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import {
-  ModeService,
-  OrchOSModeEnum,
-} from "../../../../../services/ModeService";
-import {
   getOption,
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
-import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
 import { IEmbeddingService } from "../../interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../interfaces/openai/IOpenAIService";
-import { HuggingFaceServiceFacade } from "../../services/huggingface/HuggingFaceServiceFacade";
 import { OllamaEmbeddingService } from "../../services/ollama/OllamaEmbeddingService";
 import { OllamaClientService } from "../../services/ollama/neural/OllamaClientService";
 import { OllamaCompletionService } from "../../services/ollama/neural/OllamaCompletionService";
@@ -24,7 +18,6 @@ import {
   CognitiveMetrics,
   SymbolicPatternAnalyzer,
 } from "../patterns/SymbolicPatternAnalyzer";
-import { HuggingFaceCollapseStrategyService } from "./HuggingFaceCollapseStrategyService";
 import { ICollapseStrategyService } from "./ICollapseStrategyService";
 import {
   INeuralIntegrationService,
@@ -50,24 +43,14 @@ export class DefaultNeuralIntegrationService
   private readonly MAX_TEMPERATURE = 0.7;
 
   constructor(
-    aiService: IOpenAIService,
-    private huggingFaceService?: HuggingFaceServiceFacade
+    aiService: IOpenAIService
   ) {
     this.aiService = aiService;
 
     // Strategy pattern: choose embedding service based on mode
     this.embeddingService = this.createEmbeddingService(aiService);
 
-    // Strategy pattern: choose collapse strategy service based on mode
-    const currentMode = ModeService.getMode();
-    if (currentMode === OrchOSModeEnum.BASIC && this.huggingFaceService) {
-      LoggingUtils.logInfo(
-        "[NeuralIntegration] Using HuggingFace collapse strategy (Basic mode)"
-      );
-      this.collapseStrategyService = new HuggingFaceCollapseStrategyService(
-        this.aiService
-      );
-    } else {
+   
       LoggingUtils.logInfo(
         "[NeuralIntegration] Using Ollama collapse strategy (Advanced mode)"
       );
@@ -81,7 +64,6 @@ export class DefaultNeuralIntegrationService
       this.collapseStrategyService = new OllamaCollapseStrategyService(
         ollamaCompletionService
       );
-    }
 
     this.patternAnalyzer = new SymbolicPatternAnalyzer();
   }
@@ -92,18 +74,6 @@ export class DefaultNeuralIntegrationService
    * @returns The appropriate embedding service
    */
   private createEmbeddingService(aiService: IOpenAIService): IEmbeddingService {
-    const currentMode = ModeService.getMode();
-
-    if (currentMode === OrchOSModeEnum.BASIC) {
-      // In basic mode, use HuggingFace with the selected model
-      const hfModel = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL);
-      LoggingUtils.logInfo(
-        `[NeuralIntegration] Creating HuggingFaceEmbeddingService with model: ${
-          hfModel || "default"
-        } for Basic mode`
-      );
-      return new HuggingFaceEmbeddingService();
-    } else {
       // In advanced mode, use Ollama with the selected model
       const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
       LoggingUtils.logInfo(
@@ -112,7 +82,6 @@ export class DefaultNeuralIntegrationService
         } for Advanced mode`
       );
       return new OllamaEmbeddingService(aiService, { model: ollamaModel });
-    }
   }
 
   /**

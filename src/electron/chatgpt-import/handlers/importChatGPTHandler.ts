@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { ModeService, OrchOSModeEnum } from "../../../services/ModeService";
 import {
   ChatGPTSession,
   ImportChatGPTParams,
@@ -35,37 +34,18 @@ export async function importChatGPTHistoryHandler(
   const logger = new Logger("[ImportChatGPT]");
   const progressReporter = new ProgressReporter(onProgress, logger);
 
-  // Determine mode for service configuration
-  let currentMode: OrchOSModeEnum;
-  if (applicationMode) {
-    // Convert string to enum
-    if (applicationMode.toLowerCase() === "basic") {
-      currentMode = OrchOSModeEnum.BASIC;
-    } else if (applicationMode.toLowerCase() === "advanced") {
-      currentMode = OrchOSModeEnum.ADVANCED;
-    } else {
-      logger.warn(
-        `🟡 Unknown applicationMode: "${applicationMode}", falling back to ModeService`
-      );
-      currentMode = ModeService.getMode();
-    }
-    logger.info(
-      `🔧 Using applicationMode from IPC: "${applicationMode}" -> ${currentMode}`
-    );
-  } else {
-    currentMode = ModeService.getMode();
-    logger.info(
-      `🔧 No applicationMode provided, using ModeService: ${currentMode}`
-    );
-  }
+  // Always use advanced mode (Ollama)
+  const currentMode = "Ollama";
 
-  const isBasicMode = currentMode === OrchOSModeEnum.BASIC;
-  const storageType = "DuckDB"; // Always use DuckDB for both Basic and Advanced modes
   logger.info(
-    `🗄️ Storage mode: ${storageType} (${
-      isBasicMode ? "Basic" : "Advanced"
-    } mode)`
+    `🔧 [ImportChatGPTHandler] Application mode received: ${applicationMode}`
   );
+  logger.info(`🔧 [ImportChatGPTHandler] Using Advanced mode (Ollama)`);
+
+  // Always use DuckDB storage
+  const storageType = "DuckDB";
+
+  logger.info(`🗄️ Storage mode: ${storageType} (Advanced mode)`);
 
   // Use the helper passed from IPC (already correct for the mode)
   const vectorHelper = pineconeHelper;
@@ -167,14 +147,11 @@ export async function importChatGPTHistoryHandler(
     }
 
     // Initialize embedding service based on mode (both use DuckDB storage)
-    if (isBasicMode) {
-      logger.info(
-        "Initializing HuggingFace service for embeddings (Basic mode with DuckDB)..."
-      );
-    } else if (openAIService) {
-      logger.info(
-        "Initializing Ollama service for embeddings (Advanced mode with DuckDB)..."
-      );
+    logger.info(
+      "Initializing Ollama service for embeddings (Advanced mode with DuckDB)..."
+    );
+
+    if (openAIService) {
       const initialized = await embeddingService.ensureOpenAIInitialized();
       logger.info(
         `Ollama service initialization status: ${initialized ? "OK" : "FAILED"}`
@@ -279,9 +256,7 @@ export async function importChatGPTHistoryHandler(
 
     // 8. Generate embeddings and create vectors
     logger.info(
-      `STARTING EMBEDDINGS GENERATION using ${
-        isBasicMode ? "HuggingFace" : "Ollama"
-      } with DuckDB storage...`
+      `STARTING EMBEDDINGS GENERATION using Ollama with DuckDB storage...`
     );
     let vectors;
     try {
@@ -342,10 +317,8 @@ export async function importChatGPTHistoryHandler(
     logger.info(
       `- Mode: ${mode === "overwrite" ? "OVERWRITE" : "INCREMENTAL"}`
     );
-    logger.info(
-      `- Storage: ${storageType} (${isBasicMode ? "Basic" : "Advanced"} mode)`
-    );
-    logger.info(`- Embeddings: ${isBasicMode ? "HuggingFace" : "Ollama"}`);
+    logger.info(`- Storage: ${storageType} (Advanced mode)`);
+    logger.info(`- Embeddings: Ollama`);
     logger.info(`- Total messages in file: ${totalMessagesInFile}`);
     logger.info(
       `- Duplicated messages ignored: ${skipped} (${Math.round(

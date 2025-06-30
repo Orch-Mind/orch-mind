@@ -141,7 +141,6 @@ export interface ElectronAPI {
     fileBuffer: Buffer | ArrayBuffer | Uint8Array;
     mode: string;
     user: string;
-    applicationMode?: string;
     onProgress?: (data: {
       processed: number;
       total: number;

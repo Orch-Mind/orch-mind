@@ -6,7 +6,6 @@ import { getOption, STORAGE_KEYS } from "./../../../../services/StorageService";
 // Main transcription service for Deepgram that orchestrates other services
 
 import { getPrimaryUser } from "../../../../config/UserConfig";
-import { ModeService, OrchOSModeEnum } from "../../../../services/ModeService";
 import { IDeepgramTranscriptionService } from "../interfaces/deepgram/IDeepgramService";
 import { IMemoryService } from "../interfaces/memory/IMemoryService";
 import { IOpenAIService } from "../interfaces/openai/IOpenAIService";
@@ -213,22 +212,10 @@ export class DeepgramTranscriptionService
       hasContext: !!temporaryContext,
       hasConversationMessages: !!conversationMessages,
       messageCount: conversationMessages?.length || 0,
-      currentMode: ModeService.getMode(),
       timestamp: new Date().toISOString(),
     });
 
-    const currentMode = ModeService.getMode();
-
     try {
-      if (currentMode === OrchOSModeEnum.BASIC) {
-        LoggingUtils.logInfo("🤖 Using HuggingFace service (Basic mode)");
-        console.log("📤 [DEEPGRAM_SERVICE] Calling processWithHuggingFace");
-        await this.transcriptionPromptProcessor.processWithHuggingFace(
-          temporaryContext,
-          conversationMessages
-        );
-        console.log("✅ [DEEPGRAM_SERVICE] processWithHuggingFace completed");
-      } else {
         LoggingUtils.logInfo("🧠 Using Ollama service (Advanced mode)");
         console.log("📤 [DEEPGRAM_SERVICE] Calling processWithOpenAI");
         await this.transcriptionPromptProcessor.processWithOpenAI(
@@ -236,7 +223,6 @@ export class DeepgramTranscriptionService
           conversationMessages
         );
         console.log("✅ [DEEPGRAM_SERVICE] processWithOpenAI completed");
-      }
     } catch (error) {
       console.error(
         "❌ [DEEPGRAM_SERVICE] Error in sendTranscriptionPrompt:",

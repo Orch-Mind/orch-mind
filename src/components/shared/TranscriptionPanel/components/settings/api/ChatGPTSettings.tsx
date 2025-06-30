@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import { OrchOSModeEnum } from "../../../../../../services/ModeService";
 import {
   setOption,
   STORAGE_KEYS,
@@ -21,7 +20,6 @@ const SUPPORTED_OPENAI_EMBEDDING_MODELS = [
  * Implementa princípio de Responsabilidade Única (SRP) do SOLID
  */
 export const ChatGPTSettings: React.FC<ChatGPTSettingsProps> = ({
-  applicationMode,
   chatgptApiKey,
   setChatgptApiKey,
   chatgptModel,
@@ -84,7 +82,6 @@ export const ChatGPTSettings: React.FC<ChatGPTSettingsProps> = ({
         </div>
 
         {/* OpenAI Embedding Model - apenas no modo avançado */}
-        {applicationMode === OrchOSModeEnum.ADVANCED && (
           <div>
             <label
               htmlFor="openaiEmbeddingModel"
@@ -112,9 +109,8 @@ export const ChatGPTSettings: React.FC<ChatGPTSettingsProps> = ({
             <p className="text-xs text-cyan-400/60 mt-1">
               Modelo utilizado para gerar embeddings e busca semântica na
               memória no modo avançado.
-            </p>
-          </div>
-        )}
+          </p>
+        </div>
       </div>
     </div>
   );

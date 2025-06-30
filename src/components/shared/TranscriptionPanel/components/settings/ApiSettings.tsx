@@ -2,14 +2,13 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { memo, useState } from "react";
-import { OrchOSModeEnum } from "../../../../../services/ModeService";
 import {
   getOption,
   setOption,
   STORAGE_KEYS,
 } from "../../../../../services/StorageService";
 
-import { BasicModeSettings, OllamaSettings } from "./api";
+import { OllamaSettings } from "./api";
 import { ApiSettingsProps } from "./api/types";
 
 /**
@@ -27,8 +26,6 @@ import { ApiSettingsProps } from "./api/types";
  */
 const ApiSettings: React.FC<ApiSettingsProps> = memo(
   ({
-    applicationMode,
-    setApplicationMode,
     ollamaModel,
     setOllamaModel,
     ollamaEmbeddingModel,
@@ -40,38 +37,6 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
     const [duckDbPath, setDuckDbPath] = useState<string>(
       () => getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || "./orch-os-memory"
     );
-
-    const [toolsEnabled, setToolsEnabled] = useState<boolean>(
-      () => getOption<boolean>(STORAGE_KEYS.TOOLS_ENABLED) ?? true
-    );
-
-    // AI model options for HuggingFace (modo básico)
-    const HF_MODELS = [
-      {
-        id: "Xenova/llama2.c-stories15M",
-        label: "Llama2.c Stories (~15MB) - Ultra pequeno",
-      },
-      {
-        id: "Xenova/distilgpt2",
-        label: "DistilGPT-2 (~353MB) - Otimizado",
-      },
-      {
-        id: "Xenova/gpt2",
-        label: "GPT-2 Base (~548MB) - Estável",
-      },
-      {
-        id: "Xenova/TinyLlama-1.1B-Chat-v1.0",
-        label: "TinyLlama Chat (~1.1B) - Modelo de chat",
-      },
-    ];
-
-    // Lista de modelos de embedding compatíveis (modo básico)
-    const HF_EMBEDDING_MODELS = [
-      {
-        id: "Xenova/all-MiniLM-L6-v2",
-        label: "all-MiniLM-L6-v2 (MiniLM 384d) — Recomendado",
-      },
-    ];
 
     // Handler para seleção de diretório DuckDB
     const handleBrowseDirectory = async () => {
@@ -156,51 +121,6 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
       }
     };
 
-    // Handler para atualização do modelo HuggingFace (modo básico)
-    const handleHfModelChange = (value: string) => {
-      setOption(STORAGE_KEYS.HF_MODEL, value);
-    };
-
-    // Handler para atualização do modelo de embedding HuggingFace (modo básico)
-    const handleHfEmbeddingModelChange = (value: string) => {
-      setOption(STORAGE_KEYS.HF_EMBEDDING_MODEL, value);
-    };
-
-    // Renderização condicional baseada no modo da aplicação
-    if (applicationMode === OrchOSModeEnum.BASIC) {
-      return (
-        <div className="space-y-4">
-          {/* Header explicativo para modo básico */}
-          <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500/20">
-                <span className="text-green-400 text-sm">🤗</span>
-              </div>
-              <div>
-                <h3 className="text-green-400 font-medium">
-                  Modo Basic - HuggingFace
-                </h3>
-                <p className="text-green-400/70 text-sm">
-                  Modelos leves executados via Transformers.js no navegador
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <BasicModeSettings
-            applicationMode={applicationMode}
-            setApplicationMode={setApplicationMode}
-            hfModel=""
-            setHfModel={handleHfModelChange}
-            hfEmbeddingModel=""
-            setHfEmbeddingModel={handleHfEmbeddingModelChange}
-            hfModelOptions={HF_MODELS}
-            hfEmbeddingModelOptions={HF_EMBEDDING_MODELS}
-          />
-        </div>
-      );
-    }
-
     return (
       <div className="flex flex-col w-full space-y-6">
         <OllamaSettings
@@ -224,17 +144,6 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
             handlePathChange(path);
           }}
         />
-
-        {/* Botão para voltar ao modo básico */}
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="bg-gradient-to-r from-green-500/20 to-blue-500/20 text-green-300 border border-green-500/30 rounded-lg px-6 py-2 hover:from-green-500/30 hover:to-blue-500/30 transition-all shadow-[0_0_10px_rgba(0,255,100,0.2)] backdrop-blur-sm"
-            onClick={() => setApplicationMode(OrchOSModeEnum.BASIC)}
-          >
-            🤗 Switch to Basic Mode (HuggingFace)
-          </button>
-        </div>
       </div>
     );
   }

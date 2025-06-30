@@ -588,7 +588,6 @@ export class ElectronAPIFactory {
         fileBuffer,
         mode,
         user,
-        applicationMode,
         onProgress,
       }: {
         fileBuffer: Buffer | ArrayBuffer | Uint8Array;
@@ -604,9 +603,6 @@ export class ElectronAPIFactory {
       }) => {
         return this.errorHandler.wrapAsync(
           async () => {
-            this.logger.info(
-              `Starting ChatGPT import: mode=${mode}, user=${user}, applicationMode=${applicationMode}`
-            );
 
             if (onProgress) {
               const progressListener = (
@@ -664,7 +660,7 @@ export class ElectronAPIFactory {
               try {
                 const result = await ipcRenderer.invoke(
                   "import-chatgpt-history",
-                  { fileBuffer, mode, user, applicationMode }
+                  { fileBuffer, mode, user }
                 );
                 ipcRenderer.removeListener("import-progress", progressListener);
 
@@ -682,7 +678,6 @@ export class ElectronAPIFactory {
                 fileBuffer,
                 mode,
                 user,
-                applicationMode,
               });
             }
           },

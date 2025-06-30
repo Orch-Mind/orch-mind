@@ -2,19 +2,15 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import ModeToggle from "./ModeToggle";
 
 /**
  * Componente para configurações gerais do Orch-OS
  * Segue os princípios neurais-simbólicos (Single Responsibility)
  */
-import { OrchOSMode } from "../../../../../services/ModeService";
 
 interface GeneralSettingsProps {
   name: string;
   setName: (value: string) => void;
-  applicationMode: OrchOSMode;
-  setApplicationMode: (mode: OrchOSMode) => void;
   enableMatrix: boolean;
   setEnableMatrix: (value: boolean) => void;
   matrixDensity: number;
@@ -24,8 +20,6 @@ interface GeneralSettingsProps {
 const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   name,
   setName,
-  applicationMode,
-  setApplicationMode,
   enableMatrix,
   setEnableMatrix,
   matrixDensity,
@@ -44,12 +38,6 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
         />
-      </div>
-
-      {/* Toggle de modo Neural-Simbólico */}
-      <div className="pt-2">
-        <h3 className="text-cyan-300 mb-2">Neural Processing Mode</h3>
-        <ModeToggle mode={applicationMode} onChange={setApplicationMode} />
       </div>
 
       {/* Quantum Consciousness Matrix */}

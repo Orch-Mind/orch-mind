@@ -2,6 +2,5 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 export { default as GeneralSettings } from "./GeneralSettings";
+export { default as ShareSettings } from "./ShareSettings";
 export { default as TrainingSettings } from "./TrainingSettings";
-
-export { default as ModeToggle } from "./ModeToggle";

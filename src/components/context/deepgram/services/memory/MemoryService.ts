@@ -4,11 +4,6 @@
 // MemoryService.ts
 // Primary memory service using DuckDB for vector persistence
 
-import { HuggingFaceEmbeddingService } from "../../../../../services/huggingface/HuggingFaceEmbeddingService";
-import {
-  ModeService,
-  OrchOSModeEnum,
-} from "../../../../../services/ModeService";
 import {
   getOption,
   STORAGE_KEYS,
@@ -71,9 +66,6 @@ export class MemoryService implements IMemoryService {
     LoggingUtils.logInfo(
       `[MEMORY-SERVICE] Initialized with DuckDB vector storage (unified local persistence)`
     );
-
-    // Subscribe to mode changes to update embedding service when needed
-    ModeService.onModeChange(() => this.updateEmbeddingService(this.aiService));
   }
 
   /**
@@ -81,27 +73,14 @@ export class MemoryService implements IMemoryService {
    * Symbolic: Neural-symbolic gate to select correct embedding neural pathway
    */
   private createEmbeddingService(aiService: IOpenAIService): IEmbeddingService {
-    const currentMode = ModeService.getMode();
-
-    if (currentMode === OrchOSModeEnum.BASIC) {
-      // In basic mode, use HuggingFace with the selected model
-      const hfModel = getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL);
-      LoggingUtils.logInfo(
-        `[COGNITIVE-MEMORY] Creating HuggingFaceEmbeddingService with model: ${
-          hfModel || "default"
-        } for Basic mode`
-      );
-      return new HuggingFaceEmbeddingService();
-    } else {
-      // In advanced mode, use Ollama with the selected model
-      const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
-      LoggingUtils.logInfo(
-        `[COGNITIVE-MEMORY] Creating OllamaEmbeddingService with model: ${
-          ollamaModel || "default"
-        } for Advanced mode`
-      );
-      return new OllamaEmbeddingService(aiService, { model: ollamaModel });
-    }
+    // In advanced mode, use Ollama with the selected model
+    const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] Creating OllamaEmbeddingService with model: ${
+        ollamaModel || "default"
+      } for Advanced mode`
+    );
+    return new OllamaEmbeddingService(aiService, { model: ollamaModel });
   }
 
   /**

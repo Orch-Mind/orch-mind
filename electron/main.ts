@@ -14,11 +14,7 @@ import {
 } from "electron";
 import path, { join } from "path";
 import { IOpenAIService } from "../src/components/context/deepgram/interfaces/openai/IOpenAIService";
-import { HuggingFaceCompletionService } from "../src/components/context/deepgram/services/huggingface/HuggingFaceCompletionService";
-import { HuggingFaceServiceFacade } from "../src/components/context/deepgram/services/huggingface/HuggingFaceServiceFacade";
-import { HuggingFaceClientService } from "../src/components/context/deepgram/services/huggingface/neural/HuggingFaceClientService";
 import { OllamaServiceFacade } from "../src/components/context/deepgram/services/ollama/OllamaServiceFacade";
-import { getOption, STORAGE_KEYS } from "../src/services/StorageService";
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { setupLoRATrainingHandlers } from "./handlers/loraTrainingHandler";
@@ -66,7 +62,6 @@ const state = {
   shortcutsHelper: null as ShortcutsHelper | null,
   duckDBHelper: null as DuckDBHelper | null,
   openAIService: null as IOpenAIService | null,
-  huggingFaceService: null as HuggingFaceServiceFacade | null,
   vllmManager: null as VllmManager | null,
 
   // Processing events
@@ -144,24 +139,9 @@ function initializeHelpers() {
   // Initialize both services
   const ollamaServiceFacade = new OllamaServiceFacade();
 
-  // Create the required dependencies for HuggingFaceServiceFacade
-  const clientService = new HuggingFaceClientService();
-  const completionService = new HuggingFaceCompletionService(clientService);
-  const huggingFaceServiceFacade = new HuggingFaceServiceFacade(
-    completionService
-  );
-
-  state.huggingFaceService = huggingFaceServiceFacade;
-
   // Set the appropriate service based on application mode
-  const mode = getOption(STORAGE_KEYS.APPLICATION_MODE) || "advanced";
-  if (mode === "basic") {
-    state.openAIService = huggingFaceServiceFacade;
-    console.log("🧠 [MAIN] Using HuggingFaceServiceFacade (Basic mode)");
-  } else {
-    state.openAIService = ollamaServiceFacade;
-    console.log("🦙 [MAIN] Using OllamaServiceFacade (Advanced mode)");
-  }
+  state.openAIService = ollamaServiceFacade;
+  console.log("🦙 [MAIN] Using OllamaServiceFacade (Advanced mode)");
 }
 
 // Enhanced Chromium flags for WASM, WebGPU compatibility and error suppression

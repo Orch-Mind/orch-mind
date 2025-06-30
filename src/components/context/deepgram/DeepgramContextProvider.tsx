@@ -13,7 +13,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ModeService, OrchOSModeEnum } from "../../../services/ModeService";
 import { getOption, STORAGE_KEYS } from "../../../services/StorageService";
 import { useAudioAnalyzer } from "../audioAnalyzer/AudioAnalyzerProvider";
 import { AudioContextService } from "../microphone/AudioContextService";
@@ -29,9 +28,6 @@ import {
 } from "./interfaces/deepgram/IDeepgramService";
 import { IOpenAIService } from "./interfaces/openai/IOpenAIService";
 import { DeepgramTranscriptionService } from "./services/DeepgramTranscriptionService";
-import { HuggingFaceCompletionService } from "./services/huggingface/HuggingFaceCompletionService";
-import { HuggingFaceServiceFacade } from "./services/huggingface/HuggingFaceServiceFacade";
-import { HuggingFaceClientService } from "./services/huggingface/neural/HuggingFaceClientService";
 import { OllamaServiceFacade } from "./services/ollama/OllamaServiceFacade";
 // Import all custom hooks from index
 import {
@@ -94,21 +90,12 @@ export const useDeepgram = () => {
 };
 
 /**
- * Creates the appropriate AI service based on application mode
+ * Creates the AI service - Always uses Ollama
  * Following KISS principle - Keep It Simple
  */
 function createAIService(): IOpenAIService {
-  const mode = ModeService.getMode();
-
-  if (mode === OrchOSModeEnum.BASIC) {
-    console.log("🧠 Using HuggingFaceServiceFacade (Basic mode)");
-    const clientService = new HuggingFaceClientService();
-    const completionService = new HuggingFaceCompletionService(clientService);
-    return new HuggingFaceServiceFacade(completionService);
-  } else {
-    console.log("🦙 Using OllamaServiceFacade (Advanced mode)");
-    return new OllamaServiceFacade();
-  }
+  console.log("🦙 Using OllamaServiceFacade");
+  return new OllamaServiceFacade();
 }
 
 // Context provider
@@ -170,7 +157,7 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({
       // Setup audio context
       services.current.audioContext.setupAudioContext();
 
-      // Create AI service based on mode
+      // Create AI service - Always uses Ollama
       const aiService = createAIService();
 
       // Create transcription service with UI updater callback

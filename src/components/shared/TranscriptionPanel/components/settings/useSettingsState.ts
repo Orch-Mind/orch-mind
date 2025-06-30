@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { useMemo, useState } from "react";
-import { ModeService, OrchOSMode } from "../../../../../services/ModeService";
 import { useApiSettings } from "./hooks/useApiSettings";
 import { useDebugSettings } from "./hooks/useDebugSettings";
 import { useGeneralSettings } from "./hooks/useGeneralSettings";
@@ -24,18 +23,6 @@ export const useSettingsState = (
   const api = useApiSettings();
   const debug = useDebugSettings();
 
-  // Modo de aplicação (Básico/Avançado)
-  const [applicationMode, setApplicationModeState] = useState<OrchOSMode>(() =>
-    ModeService.getMode()
-  );
-
-  // As dependências são agora tratadas na instalação automática
-
-  // Handler para alteração do modo com persistência
-  const setApplicationMode = (mode: OrchOSMode) => {
-    ModeService.setMode(mode);
-    setApplicationModeState(mode);
-  };
 
   // Função unificada para salvar todas as configurações
   const saveSettings = () => {
@@ -57,9 +44,6 @@ export const useSettingsState = (
       ...api,
       // Debug
       ...debug,
-      // Modo da aplicação
-      applicationMode,
-      setApplicationMode,
 
       // Ação unificada
       saveSettings,
@@ -74,10 +58,6 @@ export const useSettingsState = (
       setChatgptMaxTokens: () => {},
       openaiEmbeddingModel: "",
       setOpenaiEmbeddingModel: () => {},
-      hfModel: "",
-      setHfModel: () => {},
-      hfEmbeddingModel: "",
-      setHfEmbeddingModel: () => {},
       deepgramApiKey: "",
       setDeepgramApiKey: () => {},
       deepgramModel: "",
@@ -99,8 +79,6 @@ export const useSettingsState = (
       general,
       api,
       debug,
-      applicationMode,
-      setApplicationMode,
 
       saveSettings,
     ]

@@ -4,8 +4,6 @@
 import { IEmbeddingService } from "../../../../components/context/deepgram/interfaces/openai/IEmbeddingService";
 import { IOpenAIService } from "../../../../components/context/deepgram/interfaces/openai/IOpenAIService";
 import { OllamaEmbeddingService } from "../../../../components/context/deepgram/services/ollama/OllamaEmbeddingService";
-import { HuggingFaceEmbeddingService } from "../../../../services/huggingface/HuggingFaceEmbeddingService";
-import { ModeService, OrchOSModeEnum } from "../../../../services/ModeService";
 import { getOption, STORAGE_KEYS } from "../../../../services/StorageService";
 import { getModelDimensions } from "../../../../utils/EmbeddingUtils";
 import { MessageChunk, PineconeVector } from "../../interfaces/types";
@@ -13,9 +11,7 @@ import { Logger } from "../../utils/logging";
 import { ProgressReporter } from "../../utils/progressReporter";
 
 /**
- * Service for generating embeddings
- * Switches between Ollama (Advanced mode) and HuggingFace (Basic mode)
- * Both modes use DuckDB for storage
+ * Service for generating embeddings using Ollama
  */
 export class EmbeddingService {
   private openAIService: IOpenAIService | null | undefined;
@@ -35,79 +31,17 @@ export class EmbeddingService {
     this.logger = logger || new Logger("[EmbeddingService]");
     this.progressReporter = progressReporter;
 
-    // Use provided applicationMode or detect from ModeService
-    let currentMode: OrchOSModeEnum;
-    if (applicationMode) {
-      // Convert string to enum
-      if (applicationMode.toLowerCase() === "basic") {
-        currentMode = OrchOSModeEnum.BASIC;
-      } else if (applicationMode.toLowerCase() === "advanced") {
-        currentMode = OrchOSModeEnum.ADVANCED;
-      } else {
-        this.logger.warn(
-          `🟡 [EmbeddingService] Unknown applicationMode: "${applicationMode}", falling back to ModeService`
-        );
-        currentMode = ModeService.getMode();
-      }
-      this.logger.info(
-        `🔧 [EmbeddingService] Using applicationMode from IPC: "${applicationMode}" -> ${currentMode}`
-      );
-    } else {
-      currentMode = ModeService.getMode();
-      this.logger.info(
-        `🔧 [EmbeddingService] No applicationMode provided, using ModeService: ${currentMode}`
-      );
-    }
+    // Always use advanced mode (Ollama)
+    this.isBasicMode = false;
 
-    this.isBasicMode = currentMode === OrchOSModeEnum.BASIC;
-
-    this.logger.info(`🔍 [EmbeddingService] === MODE DETECTION DEBUG ===`);
-    this.logger.info(
-      `🔍 [EmbeddingService] Input applicationMode: "${applicationMode}"`
-    );
-    this.logger.info(
-      `🔍 [EmbeddingService] Resolved OrchOSModeEnum: "${currentMode}"`
-    );
-    this.logger.info(
-      `🔍 [EmbeddingService] OrchOSModeEnum.BASIC: "${OrchOSModeEnum.BASIC}"`
-    );
-    this.logger.info(
-      `🔍 [EmbeddingService] OrchOSModeEnum.ADVANCED: "${OrchOSModeEnum.ADVANCED}"`
-    );
-    this.logger.info(
-      `🔍 [EmbeddingService] Final isBasicMode: ${this.isBasicMode}`
-    );
-    this.logger.info(
-      `🔍 [EmbeddingService] Final selected mode: ${
-        this.isBasicMode ? "BASIC (HuggingFace)" : "ADVANCED (Ollama)"
-      }`
-    );
-
-    // Check storage for debugging
-    const storageMode =
-      typeof window !== "undefined"
-        ? window.localStorage?.getItem("APPLICATION_MODE") || "undefined"
-        : "not-available-in-main-process";
-    this.logger.info(
-      `🔍 [EmbeddingService] Storage APPLICATION_MODE: "${storageMode}"`
-    );
-    this.logger.info(`�� [EmbeddingService] === END MODE DEBUG ===`);
+    this.logger.info(`🔧 [EmbeddingService] Using Ollama (Advanced mode)`);
 
     this.embeddingService = this.createEmbeddingService();
 
-    // Only subscribe to mode changes if no applicationMode was provided
-    // (to avoid conflicts between IPC and ModeService)
+    // Only subscribe to mode changes if not using explicit mode
     if (!applicationMode) {
-      // Subscribe to mode changes to update embedding service when needed
-      ModeService.onModeChange((newMode: OrchOSModeEnum) => {
-        this.logger.info(
-          `🔄 [EmbeddingService] Mode change detected: ${newMode}`
-        );
-        this.updateModeAndService(newMode);
-      });
-    } else {
       this.logger.info(
-        `🔧 [EmbeddingService] Skipping ModeService listener (using IPC mode: ${applicationMode})`
+        `🔧 [EmbeddingService] Skipping ModeService listener (using Ollama mode)`
       );
     }
   }
@@ -132,75 +66,47 @@ export class EmbeddingService {
       }
     }
 
-    // If service doesn't provide the dimension or there was an error, use the utility function
-    if (this.isBasicMode) {
-      const defaultHFModelName =
-        getOption(STORAGE_KEYS.HF_EMBEDDING_MODEL) || "";
-      this.embeddingDimension = getModelDimensions(defaultHFModelName);
-    } else {
-      const defaultOllamaModel =
-        getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL) || "";
-      this.embeddingDimension = getModelDimensions(defaultOllamaModel);
-    }
+    // Use Ollama embedding model dimension
+    const defaultOllamaModel =
+      getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL) || "";
+    this.embeddingDimension = getModelDimensions(defaultOllamaModel);
 
     this.logger.info(
-      `Using embedding dimension from utility for mode ${
-        this.isBasicMode ? "BASIC" : "ADVANCED"
-      }: ${this.embeddingDimension}`
+      `Using embedding dimension from utility for ADVANCED mode: ${this.embeddingDimension}`
     );
   }
 
   /**
-   * Creates the appropriate embedding service based on mode
+   * Creates the embedding service - always use Ollama
    */
   private createEmbeddingService(): IEmbeddingService {
-    if (this.isBasicMode) {
-      this.logger.info(
-        `[EmbeddingService] Creating HuggingFaceEmbeddingService for Basic mode`
-      );
-      const service = new HuggingFaceEmbeddingService();
-      // Use the service's method to get the embedding dimension
-      this.updateEmbeddingDimension(service);
-      return service;
-    } else {
-      // In advanced mode, use Ollama with the selected model
-      const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
-      this.logger.info(
-        `[EmbeddingService] Creating OllamaEmbeddingService with model: ${
-          ollamaModel || "default"
-        } for Advanced mode`
-      );
+    // Always use Ollama with the selected model
+    const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
+    this.logger.info(
+      `[EmbeddingService] Creating OllamaEmbeddingService with model: ${
+        ollamaModel || "default"
+      }`
+    );
 
-      if (!this.openAIService) {
-        this.logger.error(
-          "[EmbeddingService] OpenAI service not available for OllamaEmbeddingService"
-        );
-        // Fallback to HuggingFace if Ollama service is not available
-        const service = new HuggingFaceEmbeddingService();
-        this.updateEmbeddingDimension(service);
-        return service;
-      }
-
-      const service = new OllamaEmbeddingService(this.openAIService, {
-        model: ollamaModel,
-      });
-      // Use the service's method to get the embedding dimension
-      this.updateEmbeddingDimension(service);
-      return service;
+    if (!this.openAIService) {
+      this.logger.error(
+        "[EmbeddingService] OpenAI service not available for OllamaEmbeddingService"
+      );
+      throw new Error("Ollama service is required but not available");
     }
+
+    const service = new OllamaEmbeddingService(this.openAIService, {
+      model: ollamaModel,
+    });
+    // Use the service's method to get the embedding dimension
+    this.updateEmbeddingDimension(service);
+    return service;
   }
 
   /**
-   * Initializes the embedding service (Ollama for Advanced mode, HuggingFace for Basic mode)
+   * Initializes the Ollama embedding service
    */
   public async ensureOpenAIInitialized(): Promise<boolean> {
-    if (this.isBasicMode) {
-      this.logger.info(
-        "✅ Basic mode detected - using HuggingFace embeddings (no Ollama required)"
-      );
-      return true; // In basic mode, we don't need Ollama
-    }
-
     this.logger.info("Verifying Ollama service initialization...");
 
     if (!this.openAIService) {
@@ -290,15 +196,9 @@ export class EmbeddingService {
     );
 
     if (!embeddingInitialized) {
-      if (this.isBasicMode) {
-        throw new Error(
-          "HuggingFace embedding service not initialized in Basic mode."
-        );
-      } else {
-        throw new Error(
-          "Ollama service not initialized. Ensure Ollama is running and properly configured."
-        );
-      }
+      throw new Error(
+        "Ollama service not initialized. Ensure Ollama is running and properly configured."
+      );
     }
 
     const vectors: PineconeVector[] = [];
@@ -320,64 +220,47 @@ export class EmbeddingService {
       let batchEmbeddings: number[][] = [];
 
       try {
-        if (this.isBasicMode) {
-          // Use HuggingFace service for batch embeddings
-          this.logger.info(
-            `[BASIC MODE] Generating embeddings with HuggingFace for batch ${
-              batchIndex + 1
-            }`
-          );
-          batchEmbeddings = await this.embeddingService.createEmbeddings(
+        // Always use Ollama service for batch embeddings
+        this.logger.info(
+          `[ADVANCED MODE] Generating embeddings with Ollama for batch ${
+            batchIndex + 1
+          }`
+        );
+        if (this.openAIService && this.openAIService.createEmbeddings) {
+          // If the API supports batch embeddings
+          batchEmbeddings = await this.openAIService.createEmbeddings(
             batchTexts
           );
           this.logger.success(
-            `✅ HuggingFace embeddings generated successfully for batch ${
+            `✅ Ollama embeddings generated successfully for batch ${
               batchIndex + 1
             }/${batches.length}`
           );
         } else {
-          // Use Ollama service for batch embeddings
-          this.logger.info(
-            `[ADVANCED MODE] Generating embeddings with Ollama for batch ${
-              batchIndex + 1
-            }`
+          // Fallback: generate embeddings one by one
+          this.logger.warn(
+            "API does not support batch embeddings, processing sequentially..."
           );
-          if (this.openAIService && this.openAIService.createEmbeddings) {
-            // If the API supports batch embeddings
-            batchEmbeddings = await this.openAIService.createEmbeddings(
-              batchTexts
-            );
-            this.logger.success(
-              `✅ Ollama embeddings generated successfully for batch ${
-                batchIndex + 1
-              }/${batches.length}`
-            );
-          } else {
-            // Fallback: generate embeddings one by one
-            this.logger.warn(
-              "API does not support batch embeddings, processing sequentially..."
-            );
-            batchEmbeddings = await Promise.all(
-              batchTexts.map(async (text) => {
-                try {
-                  return await this.openAIService!.createEmbedding(text);
-                } catch (err) {
-                  this.logger.error(
-                    `Error generating embedding for text: ${text.substring(
-                      0,
-                      50
-                    )}...`,
-                    err
-                  );
-                  throw new Error(
-                    `Failed to generate embedding: ${
-                      err instanceof Error ? err.message : String(err)
-                    }`
-                  );
-                }
-              })
-            );
-          }
+          batchEmbeddings = await Promise.all(
+            batchTexts.map(async (text) => {
+              try {
+                return await this.openAIService!.createEmbedding(text);
+              } catch (err) {
+                this.logger.error(
+                  `Error generating embedding for text: ${text.substring(
+                    0,
+                    50
+                  )}...`,
+                  err
+                );
+                throw new Error(
+                  `Failed to generate embedding: ${
+                    err instanceof Error ? err.message : String(err)
+                  }`
+                );
+              }
+            })
+          );
         }
       } catch (batchError) {
         this.logger.error(
@@ -469,43 +352,5 @@ export class EmbeddingService {
 
     this.logger.info(`Generated ${vectors.length} vectors with embeddings`);
     return vectors;
-  }
-
-  private updateModeAndService(newMode: OrchOSModeEnum): void {
-    const oldMode = this.isBasicMode;
-    this.isBasicMode = newMode === OrchOSModeEnum.BASIC;
-
-    this.logger.info(`🔄 [EmbeddingService] === MODE UPDATE DEBUG ===`);
-    this.logger.info(`🔄 [EmbeddingService] Previous isBasicMode: ${oldMode}`);
-    this.logger.info(`🔄 [EmbeddingService] New mode from event: "${newMode}"`);
-    this.logger.info(
-      `🔄 [EmbeddingService] New isBasicMode: ${this.isBasicMode}`
-    );
-    this.logger.info(
-      `🔄 [EmbeddingService] Mode actually changed: ${
-        oldMode !== this.isBasicMode
-      }`
-    );
-    this.logger.info(
-      `🔄 [EmbeddingService] Final selected mode: ${
-        this.isBasicMode ? "BASIC (HuggingFace)" : "ADVANCED (Ollama)"
-      }`
-    );
-
-    if (oldMode !== this.isBasicMode) {
-      this.logger.info(
-        `🔄 [EmbeddingService] Creating new embedding service...`
-      );
-      this.embeddingService = this.createEmbeddingService();
-      this.logger.info(
-        `🔄 [EmbeddingService] New embedding service created successfully`
-      );
-    } else {
-      this.logger.info(
-        `🔄 [EmbeddingService] Mode unchanged, keeping existing service`
-      );
-    }
-
-    this.logger.info(`🔄 [EmbeddingService] === END MODE UPDATE DEBUG ===`);
   }
 }
