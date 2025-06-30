@@ -19,9 +19,17 @@ export const useAdapters = (
   // Use ref to access current adapters state without creating infinite loop
   const currentAdaptersRef = useRef<SharedAdapter[]>([]);
 
+  // Flag to prevent updateSharedAdapters call on initial mount with empty array
+  const hasInitiallyLoadedRef = useRef(false);
+
   // Update ref whenever sharedAdapters changes
   useEffect(() => {
     currentAdaptersRef.current = sharedAdapters;
+
+    // Mark as initially loaded once we have data
+    if (sharedAdapters.length > 0) {
+      hasInitiallyLoadedRef.current = true;
+    }
   }, [sharedAdapters]);
 
   // Listen for restoration events from useP2PConnection
@@ -204,12 +212,26 @@ export const useAdapters = (
 
   // Update persistence whenever shared adapters change
   useEffect(() => {
+    console.log(
+      "🔄 [ADAPTERS] useEffect triggered - analyzing sharedAdapters change:",
+      {
+        adapterCount: sharedAdapters.length,
+        adapters: sharedAdapters.map((a) => ({
+          name: a.name,
+          shared: a.shared,
+        })),
+        updateSharedAdaptersExists: !!updateSharedAdapters,
+        hasInitiallyLoaded: hasInitiallyLoadedRef.current,
+        stackTrace: new Error().stack?.split("\n").slice(1, 6),
+      }
+    );
+
     if (updateSharedAdapters && sharedAdapters.length > 0) {
       const sharedAdapterIds = sharedAdapters
         .filter((adapter) => adapter.shared)
         .map((adapter) => adapter.name);
 
-      console.log("🔄 [ADAPTERS] Updating shared adapters persistence:", {
+      console.log("🔄 [ADAPTERS] Calling updateSharedAdapters with data:", {
         totalAdapters: sharedAdapters.length,
         sharedCount: sharedAdapterIds.length,
         sharedAdapterIds,
@@ -218,8 +240,27 @@ export const useAdapters = (
       updateSharedAdapters(sharedAdapterIds);
     } else if (updateSharedAdapters && sharedAdapters.length === 0) {
       console.log(
-        "⚠️ [ADAPTERS] No adapters loaded yet, skipping persistence update"
+        "⚠️ [ADAPTERS] sharedAdapters is EMPTY - checking if this should delete localStorage:",
+        {
+          adapterCount: sharedAdapters.length,
+          hasInitiallyLoaded: hasInitiallyLoadedRef.current,
+          shouldAllowDeletion: hasInitiallyLoadedRef.current,
+          stackTrace: new Error().stack?.split("\n").slice(1, 6),
+        }
       );
+
+      if (hasInitiallyLoadedRef.current) {
+        // Only allow deletion if we've previously loaded data
+        console.log(
+          "🔄 [ADAPTERS] Allowing updateSharedAdapters([]) because adapters were previously loaded - this is a legitimate clear"
+        );
+        updateSharedAdapters([]);
+      } else {
+        // Prevent deletion on initial mount
+        console.log(
+          "🚫 [ADAPTERS] PREVENTING updateSharedAdapters([]) on initial mount - this would incorrectly delete localStorage!"
+        );
+      }
     } else if (!updateSharedAdapters) {
       console.log("⚠️ [ADAPTERS] updateSharedAdapters function not provided");
     }
