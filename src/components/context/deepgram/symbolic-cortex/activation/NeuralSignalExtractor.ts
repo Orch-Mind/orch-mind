@@ -177,15 +177,41 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
 
       // Filter out very weak signals (intensity < 0.4)
       const MIN_INTENSITY_THRESHOLD = 0.4;
+
+      console.log(`🧠 [NeuralSignalExtractor] 📊 INTENSITY FILTERING:`);
+      validSignals.forEach((signal, idx) => {
+        const status =
+          signal.intensity >= MIN_INTENSITY_THRESHOLD ? "✅ KEEP" : "❌ FILTER";
+        console.log(
+          `🧠 [NeuralSignalExtractor]   ${idx + 1}. [${
+            signal.core
+          }] intensity=${signal.intensity.toFixed(3)} - ${status}`
+        );
+      });
+
       finalSignals = finalSignals.filter(
         (s) => s.intensity >= MIN_INTENSITY_THRESHOLD
       );
 
+      console.log(
+        `🧠 [NeuralSignalExtractor] After intensity filter: ${finalSignals.length}/${validSignals.length} signals remaining`
+      );
+
       if (finalSignals.length === 0 && validSignals.length > 0) {
         // If all signals are weak, keep the strongest 2
+        console.log(
+          `🧠 [NeuralSignalExtractor] ⚠️ All signals were too weak! Keeping strongest 2 signals as fallback`
+        );
         finalSignals = validSignals
           .sort((a, b) => b.intensity - a.intensity)
           .slice(0, 2);
+        finalSignals.forEach((signal, idx) => {
+          console.log(
+            `🧠 [NeuralSignalExtractor]   Fallback ${idx + 1}. [${
+              signal.core
+            }] intensity=${signal.intensity.toFixed(3)}`
+          );
+        });
       } else {
         // Always sort by intensity
         finalSignals.sort((a, b) => b.intensity - a.intensity);
@@ -195,6 +221,18 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
       const maxSignals = 3;
 
       if (finalSignals.length > maxSignals) {
+        console.log(
+          `🧠 [NeuralSignalExtractor] 📏 CORE LIMIT FILTERING (max ${maxSignals}):`
+        );
+        finalSignals.forEach((signal, idx) => {
+          const status = idx < maxSignals ? "✅ KEEP" : "❌ LIMIT";
+          console.log(
+            `🧠 [NeuralSignalExtractor]   ${idx + 1}. [${
+              signal.core
+            }] intensity=${signal.intensity.toFixed(3)} - ${status}`
+          );
+        });
+
         LoggingUtils.logWarning(
           `⚠️ [NeuralSignalExtractor] Limiting to top ${maxSignals} signals (intensity threshold: ${MIN_INTENSITY_THRESHOLD}).`
         );
@@ -214,7 +252,7 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
         .map((s) => `${s.core}(${s.intensity.toFixed(2)})`)
         .join(", ");
       LoggingUtils.logInfo(
-        `🎯 [NeuralSignalExtractor] Activated cores: ${activatedCores}`
+        `🎯 [NeuralSignalExtractor] FINAL ACTIVATED CORES: ${activatedCores}`
       );
 
       return { signals: finalSignals };
@@ -409,23 +447,23 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
   ): string {
     const styleGuide = `COGNITIVE ACTIVATION FRAMEWORK (Orch-OS):
   Process this input using holographic neural simulation. Each cognitive core represents a functional module based on symbolic and neurobiological mappings.`;
-  
+
     const languageSpec = language
       ? `\n\nLANGUAGE CONTEXT: All analysis must respect the cultural and linguistic characteristics of ${language}.`
       : "";
-  
+
     const analysisProtocol = `USER BRAIN ANALYSIS PROTOCOL:
   
   1. DETECT which cognitive processes are activated in the input.
   2. IDENTIFY the 2–3 most relevant cognitive cores based on symbolic resonance.
   3. ESTIMATE their intensity (between 0.3 and 1.0).
   4. CALL the function activateBrainArea for each activation.`;
-  
+
     let prompt = `${styleGuide}${languageSpec}\n\nHOLOGRAPHIC INPUT:\n${originalPrompt}`;
-  
+
     if (Object.keys(userContextData).length > 0) {
       prompt += `\n\nCONTEXTUAL MEMORY PATTERNS:`;
-  
+
       if (userContextData.recent_topics) {
         prompt += `\n- Recent Activations: ${userContextData.recent_topics
           .toString()
@@ -442,9 +480,9 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
         ).substring(0, 150)}...`;
       }
     }
-  
+
     prompt += `\n\n${analysisProtocol}`;
-  
+
     return prompt;
   }
 }

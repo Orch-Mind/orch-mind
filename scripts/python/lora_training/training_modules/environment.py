@@ -38,52 +38,89 @@ def get_python_executable(python_cmd):
                           capture_output=True, text=True, check=True)
     return result.stdout.strip()
 
+def check_package_installed(python_executable, package_name):
+    """Check if a Python package is already installed."""
+    try:
+        # Extract just the package name (remove version specs)
+        base_package = package_name.split('>=')[0].split('==')[0].split('[')[0]
+        
+        result = subprocess.run(
+            [python_executable, "-c", f"import {base_package}; print('installed')"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.returncode == 0 and "installed" in result.stdout
+    except:
+        return False
+
 def setup_dependencies(python_executable):
     """Install dependencies using the compatible Python."""
     try:
-        print("🚀 Installing essential dependencies...")
+        print("🔍 Checking installed dependencies...")
         
         # Check if CUDA is available
         has_cuda = False
-        try:
-            result = subprocess.run(
-                [python_executable, "-c", "import torch; print(torch.cuda.is_available())"],
-                capture_output=True, text=True, check=True
-            )
-            has_cuda = result.stdout.strip().lower() == "true"
-        except:
+        torch_installed = check_package_installed(python_executable, "torch")
+        
+        if torch_installed:
+            try:
+                result = subprocess.run(
+                    [python_executable, "-c", "import torch; print(torch.cuda.is_available())"],
+                    capture_output=True, text=True, check=True, timeout=10
+                )
+                has_cuda = result.stdout.strip().lower() == "true"
+                print(f"✅ Torch already installed - CUDA available: {has_cuda}")
+            except:
+                print("✅ Torch already installed - CUDA status unknown")
+        else:
             # If torch is not installed yet, check for NVIDIA GPU on system
             try:
-                subprocess.run(["nvidia-smi"], capture_output=True, check=True)
+                subprocess.run(["nvidia-smi"], capture_output=True, check=True, timeout=5)
                 has_cuda = True
+                print("🔍 NVIDIA GPU detected - will install CUDA packages")
             except:
                 has_cuda = False
+                print("🔍 No NVIDIA GPU detected - will install CPU-only packages")
         
         if has_cuda:
-            print("✅ CUDA detected - installing full package set")
             essential_packages = [
                 "torch", "transformers>=4.36.0", "datasets",
                 "accelerate", "peft>=0.7.0", "trl", "bitsandbytes"
             ]
         else:
-            print("⚠️  No CUDA detected - installing CPU-only packages")
             essential_packages = [
                 "torch", "transformers>=4.36.0", "datasets",
                 "accelerate", "peft>=0.7.0", "trl"
             ]
         
+        # Check which packages need installation
+        packages_to_install = []
         for package in essential_packages:
+            if not check_package_installed(python_executable, package):
+                packages_to_install.append(package)
+            else:
+                base_name = package.split('>=')[0]
+                print(f"✅ {base_name} already installed")
+        
+        if not packages_to_install:
+            print("✅ All essential packages already installed - skipping installation")
+            return True
+        
+        print(f"🚀 Installing {len(packages_to_install)} missing packages...")
+        for package in packages_to_install:
             print(f"Installing {package}...")
             subprocess.check_call([
                 python_executable, "-m", "pip", "install", 
                 "--break-system-packages", "--user", "--upgrade", "--quiet",
                 package
-            ])
+            ], timeout=300)  # 5 minute timeout per package
         
         print("✅ Essential packages installed successfully")
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Dependency installation failed: {e}")
+        return False
+    except subprocess.TimeoutExpired:
+        print("❌ Dependency installation timed out")
         return False
 
 def setup_virtual_environment(script_dir, python_cmd):

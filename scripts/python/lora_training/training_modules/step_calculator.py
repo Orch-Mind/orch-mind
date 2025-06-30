@@ -272,4 +272,172 @@ QUICK_REFERENCE = {
     "medium_dataset": {"examples": "21-50", "recommended_steps": "700-1200"},
     "large_dataset": {"examples": "51-100", "recommended_steps": "1000-1800"},
     "very_large_dataset": {"examples": "100+", "recommended_steps": "1500-3000+"}
-} 
+}
+
+def analyze_content_complexity(data_path: str) -> Dict[str, Any]:
+    """
+    Analyze the actual content of training messages to calculate optimal steps.
+    
+    This function reads the JSONL training data and analyzes:
+    - Total tokens/words across all messages
+    - Vocabulary diversity (unique words ratio)
+    - Syntactic complexity (sentence structure)
+    - Conversation patterns
+    
+    Returns content-based metrics for dynamic step calculation.
+    """
+    import json
+    import re
+    from collections import Counter
+    
+    try:
+        with open(data_path, 'r', encoding='utf-8') as f:
+            data = [json.loads(line) for line in f if line.strip()]
+    except Exception as e:
+        print(f"⚠️ Could not analyze content: {e}")
+        return {
+            "total_tokens": 100,
+            "vocabulary_size": 50,
+            "complexity_score": 0.5,
+            "estimated_learning_difficulty": "medium"
+        }
+    
+    # Combine all text content
+    all_text = []
+    total_messages = len(data)
+    
+    for item in data:
+        input_text = str(item.get('input', '')).strip()
+        output_text = str(item.get('output', '')).strip()
+        all_text.append(input_text + ' ' + output_text)
+    
+    combined_text = ' '.join(all_text).lower()
+    
+    # 1. Token Analysis
+    words = re.findall(r'\b\w+\b', combined_text)
+    total_tokens = len(words)
+    unique_words = len(set(words))
+    vocabulary_diversity = unique_words / total_tokens if total_tokens > 0 else 0
+    
+    # 2. Sentence Complexity Analysis
+    sentences = re.split(r'[.!?]+', combined_text)
+    avg_sentence_length = sum(len(s.split()) for s in sentences) / len(sentences) if sentences else 0
+    
+    # 3. Complexity Indicators
+    question_ratio = combined_text.count('?') / max(total_tokens, 1)
+    
+    # 4. Calculate Content Complexity Score (0-1)
+    complexity_factors = [
+        min(vocabulary_diversity * 2, 1.0),  # Vocabulary richness
+        min(avg_sentence_length / 15, 1.0),  # Sentence complexity  
+        min(question_ratio * 10, 1.0),       # Interactive content
+    ]
+    
+    complexity_score = sum(complexity_factors) / len(complexity_factors)
+    
+    # 5. Estimate Learning Difficulty
+    if complexity_score < 0.3:
+        difficulty = "simple"
+    elif complexity_score < 0.6:
+        difficulty = "medium"
+    else:
+        difficulty = "complex"
+    
+    return {
+        "total_tokens": total_tokens,
+        "vocabulary_size": unique_words,
+        "vocabulary_diversity": vocabulary_diversity,
+        "avg_sentence_length": avg_sentence_length,
+        "complexity_score": complexity_score,
+        "estimated_learning_difficulty": difficulty,
+        "total_messages": total_messages,
+        "complexity_factors": {
+            "vocabulary_richness": complexity_factors[0],
+            "sentence_complexity": complexity_factors[1], 
+            "interactive_content": complexity_factors[2],
+        }
+    }
+
+def calculate_content_based_steps(data_path: str, target_training_minutes: int = 10) -> Dict[str, Any]:
+    """
+    Calculate optimal steps based on actual message content analysis.
+    
+    Designed for FAST but EFFECTIVE training (5-15 minutes).
+    
+    Args:
+        data_path: Path to JSONL training data
+        target_training_minutes: Target training duration (default: 10 minutes)
+    
+    Returns:
+        Dict with calculated steps and content analysis
+    """
+    
+    # 1. Analyze actual content
+    content_analysis = analyze_content_complexity(data_path)
+    
+    total_tokens = content_analysis["total_tokens"]
+    complexity_score = content_analysis["complexity_score"]
+    difficulty = content_analysis["estimated_learning_difficulty"]
+    
+    # 2. Base steps calculation using content-aware formula
+    # Rule: More complex content needs more steps per token
+    if total_tokens <= 500:
+        # Very short content: focus on quality over quantity
+        base_steps = 150 + (total_tokens * 0.8)
+    elif total_tokens <= 2000:
+        # Medium content: balanced approach
+        base_steps = 300 + (total_tokens * 0.4)
+    elif total_tokens <= 5000:
+        # Long content: efficiency focus
+        base_steps = 500 + (total_tokens * 0.2)
+    else:
+        # Very long content: prevent overfitting
+        base_steps = 800 + (total_tokens * 0.1)
+    
+    # 3. Apply complexity modifiers
+    complexity_modifier = 0.7 + (complexity_score * 0.6)  # Range: 0.7-1.3
+    steps = int(base_steps * complexity_modifier)
+    
+    # 4. Apply time-based optimization for fast training
+    # Target: 5-15 minutes training time
+    time_based_max = target_training_minutes * 50  # ~50 steps per minute on modern hardware
+    
+    if steps > time_based_max:
+        steps = time_based_max
+        time_optimized = True
+    else:
+        time_optimized = False
+    
+    # 5. Apply safety bounds for effectiveness
+    min_steps = max(100, total_tokens // 20)  # At least 100 steps, or 1 step per 20 tokens
+    max_steps = min(1000, total_tokens // 5)   # At most 1000 steps, or 1 step per 5 tokens
+    
+    final_steps = max(min_steps, min(steps, max_steps))
+    
+    # 6. Calculate training estimates
+    estimated_minutes = final_steps / 50  # Rough estimate: 50 steps per minute
+    tokens_per_step = total_tokens / final_steps if final_steps > 0 else 0
+    
+    return {
+        "steps": final_steps,
+        "content_analysis": content_analysis,
+        "calculation_details": {
+            "base_steps": int(base_steps),
+            "complexity_modifier": complexity_modifier,
+            "time_optimized": time_optimized,
+            "tokens_per_step": round(tokens_per_step, 1)
+        },
+        "training_estimates": {
+            "estimated_minutes": round(estimated_minutes, 1),
+            "estimated_seconds": round(estimated_minutes * 60),
+            "efficiency_level": "fast" if estimated_minutes <= 10 else "standard"
+        },
+        "optimization_summary": f"""
+Content-Based Step Calculation:
+• Total tokens: {total_tokens:,}
+• Complexity: {difficulty} ({complexity_score:.2f})
+• Calculated steps: {final_steps}
+• Training time: ~{estimated_minutes:.1f} minutes
+• Efficiency: {tokens_per_step:.1f} tokens per step
+""".strip()
+    } 

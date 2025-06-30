@@ -156,6 +156,30 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
         )}]`
       );
 
+      // Log detailed analysis of what we're evaluating
+      console.log(`🦙 [OllamaCollapseStrategy] 📊 COLLAPSE ANALYSIS:`);
+      console.log(
+        `🦙 [OllamaCollapseStrategy]   • Total Cores: ${params.activatedCores.length}`
+      );
+      console.log(
+        `🦙 [OllamaCollapseStrategy]   • Emotional Weight: ${params.averageEmotionalWeight.toFixed(
+          3
+        )}`
+      );
+      console.log(
+        `🦙 [OllamaCollapseStrategy]   • Contradiction Score: ${params.averageContradictionScore.toFixed(
+          3
+        )}`
+      );
+      console.log(
+        `🦙 [OllamaCollapseStrategy]   • Original Text: "${(
+          params.originalText || ""
+        ).substring(0, 100)}..."`
+      );
+      console.log(
+        `🦙 [OllamaCollapseStrategy] 🎯 This service will evaluate ALL ${params.activatedCores.length} candidates and decide optimal collapse strategy`
+      );
+
       // Debug log before calling the method
       console.log(
         `🦙 [OllamaCollapseStrategy] About to call callModelWithFunctions:`,
@@ -259,6 +283,12 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
                 justification: args.justification.substring(0, 100) + "...",
                 temperature: args.temperature,
               }
+            );
+
+            console.log(
+              `🦙 [OllamaCollapseStrategy] ✅ DECISION REACHED: ${
+                args.deterministic ? "DETERMINISTIC" : "PROBABILISTIC"
+              } collapse of ${params.activatedCores.length} candidates`
             );
 
             return {

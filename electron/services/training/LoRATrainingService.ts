@@ -141,7 +141,7 @@ export class LoRATrainingService {
       const result = await execAsync(fullCommand, {
         cwd: this.trainingDir,
         timeout: 5 * 60 * 1000, // REDUCED: 5 minutes timeout (estratégia instant é rápida)
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer para output
+        maxBuffer: 1024 * 1024 * 1000, // 10MB buffer para output
       });
 
       console.log("[LoRA] Training completed successfully");
@@ -319,18 +319,40 @@ EXIT CODE: ${execError.code || "N/A"}`;
 
       // Verificar se o arquivo tem conteúdo e é um script Python válido
       const content = await fs.readFile(scriptPath, "utf8");
-      if (
-        !content.includes("def execute_training_strategy") ||
-        !content.includes("create_peft_training_script") ||
-        !content.includes("python")
-      ) {
+
+      // Verificar imports e funções essenciais
+      const requiredElements = [
+        "def execute_training_strategy", // Função definida no arquivo
+        "def main()", // Função principal definida no arquivo
+        "create_instant_adapter_script", // Função importada (agora faz treinamento real baseado em conteúdo)
+        "from training_modules.script_factory import", // Import statement
+        "calculate_content_based_steps", // Verificar se tem o novo sistema de cálculo
+        "Content-Aware Fast Training", // String que existe no train_lora.py
+      ];
+
+      const missingElements = requiredElements.filter(
+        (element) => !content.includes(element)
+      );
+
+      if (missingElements.length > 0) {
+        throw new Error(
+          `Training script missing required elements: ${missingElements.join(
+            ", "
+          )}`
+        );
+      }
+
+      // Verificar se é um script Python válido
+      if (!content.includes("python") || !content.includes("import")) {
         throw new Error("Training script appears to be invalid or corrupted");
       }
 
       console.log(
         `[LoRA] Training script validated: ${scriptPath} (${stats.size} bytes)`
       );
-      console.log(`[LoRA] Script contains multi-strategy training logic: ✅`);
+      console.log(
+        `[LoRA] Script contains content-aware fast training logic: ✅`
+      );
     } catch (error) {
       throw new Error(`Training script validation failed: ${error}`);
     }

@@ -50,6 +50,51 @@ export function buildSignalFromArgs(
     symbolicInsights: args.symbolicInsights,
   };
 
+  // CRITICAL: Ensure symbolic_query.query is always a string
+  // Fix any malformed symbolic_query structures early
+  if (signal.symbolic_query) {
+    // If symbolic_query exists but query is not a string, fix it
+    if (typeof signal.symbolic_query.query !== "string") {
+      console.warn(
+        `🧠 [NeuralSignalParser] symbolic_query.query is not a string (type: ${typeof signal
+          .symbolic_query.query}), converting...`
+      );
+
+      // Try to extract or convert to string
+      if (
+        signal.symbolic_query.query === null ||
+        signal.symbolic_query.query === undefined
+      ) {
+        signal.symbolic_query.query =
+          originalPrompt || `${signal.core} cognitive processing`;
+      } else if (typeof signal.symbolic_query.query === "object") {
+        // If it's an object, try to stringify it or extract a meaningful value
+        if (
+          signal.symbolic_query.query.query &&
+          typeof signal.symbolic_query.query.query === "string"
+        ) {
+          signal.symbolic_query.query = signal.symbolic_query.query.query;
+        } else {
+          signal.symbolic_query.query = JSON.stringify(
+            signal.symbolic_query.query
+          );
+        }
+      } else {
+        // Convert any other type to string
+        signal.symbolic_query.query = String(signal.symbolic_query.query);
+      }
+
+      console.log(
+        `🧠 [NeuralSignalParser] Converted symbolic_query.query to string: "${signal.symbolic_query.query}"`
+      );
+    }
+  } else {
+    // If no symbolic_query at all, create a default one
+    signal.symbolic_query = {
+      query: originalPrompt || `${signal.core} cognitive processing`,
+    };
+  }
+
   // Handle symbolic_query - check if it's already a valid object first
   if (signal.symbolic_query && typeof signal.symbolic_query === "object") {
     // If it's already an object with a query field, we're good
@@ -69,7 +114,7 @@ export function buildSignalFromArgs(
     let trimmed = signal.symbolic_query.trim();
 
     // HOTFIX: Replace smart quotes with standard quotes to prevent JSON.parse errors
-    trimmed = trimmed.replace(/[“”]/g, '"');
+    trimmed = trimmed.replace(/[""]/g, '"');
 
     // First, try to parse as valid JSON without any modifications
     let parsed = null;
@@ -212,7 +257,9 @@ export function buildSignalFromArgs(
   // Check if symbolic_query exists but query is empty or just whitespace
   if (
     signal.symbolic_query &&
-    (!signal.symbolic_query.query || !signal.symbolic_query.query.trim())
+    (!signal.symbolic_query.query ||
+      (typeof signal.symbolic_query.query === "string" &&
+        !signal.symbolic_query.query.trim()))
   ) {
     // Use originalPrompt as fallback
     signal.symbolic_query.query =
@@ -225,10 +272,14 @@ export function buildSignalFromArgs(
   // Additional validation to ensure we always have a non-empty query
   if (
     !signal.symbolic_query.query ||
-    signal.symbolic_query.query.trim().length === 0
+    (typeof signal.symbolic_query.query === "string" &&
+      signal.symbolic_query.query.trim().length === 0) ||
+    typeof signal.symbolic_query.query !== "string"
   ) {
     console.warn(
-      `🧠 [NeuralSignalParser] Still empty query after fixes for core ${signal.core}, using default`
+      `🧠 [NeuralSignalParser] Invalid or empty query for core ${
+        signal.core
+      } (type: ${typeof signal.symbolic_query.query}), using default`
     );
     signal.symbolic_query.query = `${signal.core} cognitive processing`;
   }
@@ -276,6 +327,84 @@ export function parseNeuralSignal(json: string): NeuralSignal | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Test function to validate TypeError fixes
+ * Can be called from console for debugging
+ */
+export function testTypeErrorFixes(): void {
+  console.log("🧪 [NeuralSignalParser] Testing TypeError fixes...");
+
+  const testCases = [
+    // Case 1: symbolic_query.query as object
+    {
+      name: "Object query",
+      args: {
+        core: "memory",
+        intensity: 0.7,
+        symbolic_query: { query: { nested: "test" } },
+      },
+    },
+    // Case 2: symbolic_query.query as number
+    {
+      name: "Number query",
+      args: {
+        core: "valence",
+        intensity: 0.5,
+        symbolic_query: { query: 123 },
+      },
+    },
+    // Case 3: symbolic_query.query as null
+    {
+      name: "Null query",
+      args: {
+        core: "language",
+        intensity: 0.8,
+        symbolic_query: { query: null },
+      },
+    },
+    // Case 4: symbolic_query as string
+    {
+      name: "String symbolic_query",
+      args: {
+        core: "planning",
+        intensity: 0.6,
+        symbolic_query: "test query",
+      },
+    },
+    // Case 5: No symbolic_query
+    {
+      name: "Missing symbolic_query",
+      args: {
+        core: "metacognitive",
+        intensity: 0.9,
+      },
+    },
+  ];
+
+  testCases.forEach((testCase, index) => {
+    try {
+      console.log(`\n🧪 Test ${index + 1}: ${testCase.name}`);
+      const signal = buildSignalFromArgs(testCase.args, "test prompt");
+      const isValid = isValidNeuralSignal(signal);
+
+      console.log(`✅ Result: ${isValid ? "VALID" : "INVALID"}`);
+      if (signal) {
+        console.log(`   Query: "${signal.symbolic_query?.query}"`);
+        console.log(`   Type: ${typeof signal.symbolic_query?.query}`);
+      }
+    } catch (error) {
+      console.error(`❌ Test ${index + 1} failed:`, error);
+    }
+  });
+
+  console.log("\n🧪 Testing completed!");
+}
+
+// Make test function available in global scope for console debugging
+if (typeof window !== "undefined") {
+  (window as any).testNeuralSignalParser = testTypeErrorFixes;
 }
 
 /**

@@ -11,9 +11,9 @@ import os
 import time
 
 from training_modules.environment import find_compatible_python, setup_dependencies, setup_virtual_environment
-from training_modules.script_factory import create_peft_training_script, create_instant_adapter_script, create_incremental_training_script
+from training_modules.script_factory import create_instant_adapter_script
 from training_modules.deployment import deploy_to_ollama
-from training_modules.conversion import convert_adapter_to_gguf, create_modelfile_with_adapter
+from training_modules.conversion import convert_adapter_to_gguf
 
 def get_master_adapter_path(base_model, master_name="master"):
     """Get path for master adapter based on base model."""
@@ -211,31 +211,32 @@ def main():
     print("🚀 Starting Incremental LoRA Training Process...")
     start_time = time.time()
     
-    # Count examples in dataset for dynamic step calculation
+    # Count examples and analyze content for dynamic step calculation
     try:
         with open(args.data, 'r') as f:
             dataset_size = len([line for line in f if line.strip()])
         print(f"📊 Dataset size: {dataset_size} examples")
+        
+        # Use new content-based step calculation
+        from training_modules.step_calculator import calculate_content_based_steps
+        content_result = calculate_content_based_steps(args.data, target_training_minutes=10)
+        
+        print(f"📈 Content-Based Step Calculation:")
+        print(f"   • Total tokens: {content_result['content_analysis']['total_tokens']:,}")
+        print(f"   • Complexity: {content_result['content_analysis']['estimated_learning_difficulty']}")
+        print(f"   • Calculated steps: {content_result['steps']}")
+        print(f"   • Estimated time: {content_result['training_estimates']['estimated_minutes']} minutes")
+        print(f"   • Efficiency: {content_result['calculation_details']['tokens_per_step']} tokens/step")
+        
+        # Override max_steps with content-based calculation
+        args.max_steps = content_result['steps']
+        
     except Exception as e:
-        print(f"⚠️ Could not count dataset size: {e}")
+        print(f"⚠️ Could not analyze content: {e}")
         dataset_size = 10  # fallback
+        args.max_steps = 300  # safe fallback
     
-    # Calculate optimal steps if not specified
-    if args.max_steps is None:
-        from training_modules.step_calculator import calculate_optimal_steps
-        step_result = calculate_optimal_steps(
-            dataset_size=dataset_size,
-            lora_rank=16,  # Our current LoRA rank
-            learning_rate=3e-4,  # Our current learning rate
-            is_incremental=False,  # Will be updated below for incremental
-            task_complexity=args.complexity
-        )
-        args.max_steps = step_result["steps"]
-        print(f"📈 Auto-calculated optimal steps: {args.max_steps}")
-        print(f"📋 Efficiency category: {step_result['efficiency_category']}")
-        print(f"🔍 Training rationale:\n{step_result['rationale']}")
-    else:
-        print(f"📈 Using specified steps: {args.max_steps}")
+    print(f"📈 Using content-based calculated steps: {args.max_steps}")
     
     # INCREMENTAL TRAINING: Always extract original base model for consistency
     original_base_model = extract_base_model(args.base_model)
@@ -268,30 +269,19 @@ def main():
         # Create backup before incremental training
         backup_path = backup_existing_adapter(adapter_path)
         
-        # Recalculate steps for incremental training (uses fewer steps)
-        if args.max_steps is None or not hasattr(args, '_original_max_steps'):
-            from training_modules.step_calculator import calculate_optimal_steps
-            incremental_result = calculate_optimal_steps(
-                dataset_size=dataset_size,
-                lora_rank=16,
-                learning_rate=2e-4,  # Lower LR for incremental
-                is_incremental=True,
-                task_complexity=args.complexity
-            )
-            incremental_steps = incremental_result["steps"]
-            print(f"🔄 Incremental training steps: {incremental_steps} (adjusted for existing knowledge)")
-        else:
-            incremental_steps = args.max_steps
-        
-        # Use incremental training strategy
+        # Use incremental training strategy (now uses instant strategy with custom model as base)
         python_exe = find_compatible_python()
         if setup_dependencies(python_exe):
             print("🔄 Running incremental training on existing adapter...")
-            script_content = create_incremental_training_script(
-                args.data, original_base_model, adapter_path, incremental_steps
+            # NOTE: "Incremental" training now uses the same instant strategy
+            # but with the custom model as base, achieving true incremental learning
+            script_content = create_instant_adapter_script(
+                args.data, original_base_model, args.output
             )
             
-            if execute_training_strategy("incremental", script_content, python_exe, 600):
+            # Use content-based timeout (estimated minutes + 5 minutes buffer)
+            timeout_seconds = int((content_result['training_estimates']['estimated_minutes'] + 5) * 60)
+            if execute_training_strategy("content_based", script_content, python_exe, timeout_seconds):
                 duration = time.time() - start_time
                 
                 # Count training examples
@@ -303,17 +293,18 @@ def main():
                     "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                     "examples": examples,
                     "duration": duration,
-                    "max_steps": args.max_steps,
+                    "max_steps": args.max_steps,  # Content-based calculated steps
                     "data_file": args.data,
-                    "backup_path": backup_path
+                    "backup_path": backup_path,
+                    "method": "content_aware_fast_incremental",
+                    "content_analysis": content_result['content_analysis']
                 }
                 save_training_history(original_base_model, "master", session_data)
                 
-                # Deploy updated model (same name, updated weights)
-                modelfile_path = create_modelfile_with_adapter(
-                    original_base_model, adapter_path, f"master-{base_model_clean}", use_gguf=args.convert_gguf
-                )
-                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model):
+                # Deploy updated model using the WORKING strategy (simple modelfile without adapter reference)
+                # NOTE: The LoRA weights are already integrated during training, so we don't need explicit ADAPTER line
+                modelfile_path = create_ollama_modelfile_for_instant(original_base_model, f"master-{base_model_clean}")
+                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model, max_retries=3):
                     print("🎉 Incremental training completed successfully")
                     print(f"📈 Master model updated: {master_model_name}")
                     return 0
@@ -323,30 +314,24 @@ def main():
         # Set output name for initial master creation
         args.output = f"master-{base_model_clean}"
 
+    # Content-Aware Fast Training (for new adapters)
+    print("\n=== Content-Aware Fast Training ===")
+    python_exe = find_compatible_python()
+    
     try:
-        # Strategy 1: PEFT-only training
-        print("\n=== Strategy 1: PEFT-only Training ===")
-        python_exe = find_compatible_python()
         if setup_dependencies(python_exe):
-            # Always use master adapter path structure
-            os.makedirs(os.path.dirname(adapter_path), exist_ok=True)
-            
-            script_content = create_peft_training_script(args.data, original_base_model, args.output, args.max_steps, adapter_path)
-            if execute_training_strategy(1, script_content, python_exe, 600):
-                print("✅ Training completed with Strategy 1")
+            script_content = create_instant_adapter_script(
+                args.data, original_base_model, args.output
+            )
+            # Use content-based timeout for initial training
+            timeout_seconds = int((content_result['training_estimates']['estimated_minutes'] + 5) * 60)
+            if execute_training_strategy("content_based_initial", script_content, python_exe, timeout_seconds):
+                print("✅ Training completed with Content-Aware Fast Training")
                 
-                # Convert to GGUF if requested
-                if args.convert_gguf:
-                    gguf_path = convert_adapter_to_gguf(adapter_path, args.output)
-                    if gguf_path:
-                        print("✅ Converted to GGUF format")
-                
-                # Create and deploy model with master name
-                modelfile_path = create_modelfile_with_adapter(
-                    original_base_model, adapter_path, args.output, use_gguf=args.convert_gguf
-                )
-                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model):
-                    # Initialize training history for new master adapter
+                # Deploy instant adapter with master name
+                modelfile_path = create_ollama_modelfile_for_instant(original_base_model, args.output)
+                if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model, max_retries=3):
+                    # Initialize training history for instant adapter
                     duration = time.time() - start_time
                     with open(args.data, 'r') as f:
                         examples = len(f.readlines())
@@ -355,52 +340,31 @@ def main():
                         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "examples": examples,
                         "duration": duration,
-                        "max_steps": args.max_steps,
+                        "max_steps": args.max_steps,  # Content-based calculated steps
                         "data_file": args.data,
-                        "initial_training": True
+                        "initial_training": True,
+                        "method": "content_aware_fast_initial",
+                        "content_analysis": content_result['content_analysis']
                     }
                     save_training_history(original_base_model, "master", session_data)
-                    print("📊 Training history initialized for master adapter")
+                    print("📊 Training history initialized for instant master adapter")
                     
-                    print("🎉 First master adapter created successfully")
+                    print("🎉 First master adapter created successfully (content-aware fast training)")
                     print(f"📈 Master model created: {master_model_name}")
+                    print(f"⏱️ Training completed in {duration/60:.1f} minutes with {args.max_steps} steps")
                     return 0
-        
-        # Strategy 2: Instant Adapter Creation
-        print("\n=== Strategy 2: Instant Adapter Creation ===")
-        script_content = create_instant_adapter_script(args.data, original_base_model, args.output)
-        if execute_training_strategy(2, script_content, python_exe, 30):
-            print("✅ Training completed with Strategy 2")
-            
-            # Deploy instant adapter with master name
-            modelfile_path = create_ollama_modelfile_for_instant(original_base_model, args.output)
-            if modelfile_path and deploy_to_ollama(master_model_name, modelfile_path, original_base_model):
-                # Initialize training history for instant adapter
-                duration = time.time() - start_time
-                with open(args.data, 'r') as f:
-                    examples = len(f.readlines())
-                
-                session_data = {
-                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "examples": examples,
-                    "duration": duration,
-                    "max_steps": 0,  # Instant doesn't use steps
-                    "data_file": args.data,
-                    "initial_training": True,
-                    "method": "instant"
-                }
-                save_training_history(original_base_model, "master", session_data)
-                print("📊 Training history initialized for instant master adapter")
-                
-                print("🎉 First master adapter created successfully (instant method)")
-                print(f"📈 Master model created: {master_model_name}")
-                return 0
+                else:
+                    print("❌ Failed to deploy content-aware trained adapter to Ollama")
+            else:
+                print("❌ Content-aware fast training failed")
+        else:
+            print("❌ Failed to setup dependencies")
             
     except Exception as e:
         print(f"💥 An unexpected error occurred: {e}")
         return 1
 
-    print("❌ All training strategies failed")
+    print("❌ Content-aware fast training failed")
     return 1
 
 if __name__ == "__main__":

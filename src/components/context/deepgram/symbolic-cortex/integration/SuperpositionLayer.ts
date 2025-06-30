@@ -91,7 +91,9 @@ export class SuperpositionLayer implements ISuperpositionLayer {
       const similarity = this.cosineSimilarity(embedding, answer.embedding);
       if (similarity > threshold) {
         console.info(
-          `[SuperpositionLayer] Found similar answer with similarity ${similarity}`
+          `[SuperpositionLayer] ⚠️ Found similar answer with similarity ${similarity.toFixed(
+            3
+          )} > threshold ${threshold} (existing: ${answer.origin})`
         );
         return true;
       }
@@ -171,6 +173,9 @@ export class SuperpositionLayer implements ISuperpositionLayer {
   register(answer: ISuperposedAnswer): boolean {
     // Skip if there's a very similar answer already registered
     if (this.hasSimilar(answer.embedding, 0.95)) {
+      console.warn(
+        `[SuperpositionLayer] ❌ Skipping registration of [${answer.origin}] due to high similarity (>95%)`
+      );
       return false;
     }
 
@@ -185,6 +190,9 @@ export class SuperpositionLayer implements ISuperpositionLayer {
     }
 
     this.answers.push(answer);
+    console.info(
+      `[SuperpositionLayer] ✅ Successfully registered candidate [${answer.origin}] (total: ${this.answers.length})`
+    );
     return true;
   }
 

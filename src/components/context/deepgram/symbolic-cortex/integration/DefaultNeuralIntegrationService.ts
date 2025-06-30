@@ -42,28 +42,25 @@ export class DefaultNeuralIntegrationService
   private readonly MIN_TEMPERATURE = 0.1;
   private readonly MAX_TEMPERATURE = 0.7;
 
-  constructor(
-    aiService: IOpenAIService
-  ) {
+  constructor(aiService: IOpenAIService) {
     this.aiService = aiService;
 
     // Strategy pattern: choose embedding service based on mode
     this.embeddingService = this.createEmbeddingService(aiService);
 
-   
-      LoggingUtils.logInfo(
-        "[NeuralIntegration] Using Ollama collapse strategy (Advanced mode)"
-      );
+    LoggingUtils.logInfo(
+      "[NeuralIntegration] Using Ollama collapse strategy (Advanced mode)"
+    );
 
-      // Create dedicated Ollama services for the collapse strategy
-      const ollamaClientService = new OllamaClientService();
-      const ollamaCompletionService = new OllamaCompletionService(
-        ollamaClientService
-      );
+    // Create dedicated Ollama services for the collapse strategy
+    const ollamaClientService = new OllamaClientService();
+    const ollamaCompletionService = new OllamaCompletionService(
+      ollamaClientService
+    );
 
-      this.collapseStrategyService = new OllamaCollapseStrategyService(
-        ollamaCompletionService
-      );
+    this.collapseStrategyService = new OllamaCollapseStrategyService(
+      ollamaCompletionService
+    );
 
     this.patternAnalyzer = new SymbolicPatternAnalyzer();
   }
@@ -74,14 +71,14 @@ export class DefaultNeuralIntegrationService
    * @returns The appropriate embedding service
    */
   private createEmbeddingService(aiService: IOpenAIService): IEmbeddingService {
-      // In advanced mode, use Ollama with the selected model
-      const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
-      LoggingUtils.logInfo(
-        `[NeuralIntegration] Creating OllamaEmbeddingService with model: ${
-          ollamaModel || "default"
-        } for Advanced mode`
-      );
-      return new OllamaEmbeddingService(aiService, { model: ollamaModel });
+    // In advanced mode, use Ollama with the selected model
+    const ollamaModel = getOption(STORAGE_KEYS.OLLAMA_EMBEDDING_MODEL);
+    LoggingUtils.logInfo(
+      `[NeuralIntegration] Creating OllamaEmbeddingService with model: ${
+        ollamaModel || "default"
+      } for Advanced mode`
+    );
+    return new OllamaEmbeddingService(aiService, { model: ollamaModel });
   }
 
   /**
@@ -137,8 +134,96 @@ export class DefaultNeuralIntegrationService
   }
 
   /**
+   * Debug utility to log detailed candidate information
+   * Helps diagnose why certain candidates might not be appearing
+   */
+  private logCandidateAnalysis(
+    neuralResults: Array<{
+      core: string;
+      intensity: number;
+      output: string;
+      insights: Record<string, unknown>;
+    }>,
+    superposition: SuperpositionLayer,
+    phase: string
+  ): void {
+    console.log(
+      `\n🔍 [NeuralIntegration] === CANDIDATE ANALYSIS (${phase}) ===`
+    );
+    console.log(`📊 Input neural results: ${neuralResults.length}`);
+    console.log(`🎯 Superposition candidates: ${superposition.answers.length}`);
+
+    if (neuralResults.length !== superposition.answers.length) {
+      const difference = neuralResults.length - superposition.answers.length;
+      console.warn(
+        `⚠️ ${difference} candidate(s) were filtered during registration!`
+      );
+      console.log(`📋 Possible reasons:`);
+      console.log(`   • High similarity (>95%) with existing candidates`);
+      console.log(`   • Invalid embedding generation`);
+      console.log(`   • Registration failure in SuperpositionLayer`);
+    }
+
+    console.log(`📝 Detailed breakdown:`);
+    neuralResults.forEach((result, idx) => {
+      const inSuperposition = superposition.answers.find(
+        (a) => a.origin === result.core
+      );
+      const status = inSuperposition ? "✅ REGISTERED" : "❌ FILTERED";
+      console.log(
+        `   ${idx + 1}. [${result.core}] intensity=${result.intensity.toFixed(
+          3
+        )} outputLen=${result.output.length} - ${status}`
+      );
+    });
+
+    if (superposition.answers.length > 0) {
+      console.log(`🎲 Final candidates for collapse:`);
+      superposition.answers.forEach((answer, idx) => {
+        console.log(
+          `   ${idx + 1}. [${
+            answer.origin
+          }] emotion=${answer.emotionalWeight.toFixed(
+            3
+          )} coherence=${answer.narrativeCoherence.toFixed(3)}`
+        );
+      });
+    }
+
+    console.log(`=================================================\n`);
+  }
+
+  /**
    * Neural integration using superposition, non-deterministic collapse and emergent property registration.
    * Now uses real embeddings for each answer via OpenAIEmbeddingService.
+   *
+   * 🧠 ORCH-OS NEURAL COLLAPSE PROCESS:
+   *
+   * Phase 1: SIGNAL EXTRACTION
+   * - NeuralSignalExtractor generates 1-3 neural core activations
+   * - Filters by intensity (>= 0.4) and limits to max 3 cores
+   *
+   * Phase 2: SUPERPOSITION REGISTRATION
+   * - Each neural core result becomes a "candidate" in quantum superposition
+   * - Candidates with >95% similarity are filtered out
+   * - Multiple candidates can coexist until collapse
+   *
+   * Phase 3: COLLAPSE STRATEGY EVALUATION
+   * - OllamaCollapseStrategy evaluates ALL candidates simultaneously
+   * - Analyzes emotional weight, contradiction, user intent
+   * - Decides optimal collapse approach (deterministic/probabilistic)
+   *
+   * Phase 4: QUANTUM COLLAPSE
+   * - SuperpositionLayer performs the collapse operation
+   * - Multiple candidates → 1 final answer (by design)
+   * - Simulates quantum measurement/observer effect
+   *
+   * ⚡ IMPORTANT: The system is designed to show multiple candidates
+   *    DURING evaluation but collapse to 1 final answer. This is not a bug!
+   *
+   * 📊 To see all candidates being evaluated, check console logs for:
+   *    - "TOTAL CANDIDATES FOR EVALUATION"
+   *    - "ALL CANDIDATES BEING EVALUATED"
    */
   async integrate(
     neuralResults: Array<{
@@ -167,6 +252,14 @@ export class DefaultNeuralIntegrationService
 
     // 1. Superposition: each result is a possible answer
     const superposition = new SuperpositionLayer();
+
+    console.info(
+      `[NeuralIntegration] 📊 Starting superposition registration with ${cleanedNeuralResults.length} neural results`
+    );
+
+    let registeredCount = 0;
+    let filteredBySimilarity = 0;
+
     for (const result of cleanedNeuralResults) {
       // Generate real embedding for the answer text
       const embedding = await this.embeddingService.createEmbedding(
@@ -185,7 +278,23 @@ export class DefaultNeuralIntegrationService
         (result.insights as Record<string, unknown>)?.contradiction,
         Math.random() * 0.5
       );
-      superposition.register({
+
+      const candidateInfo = {
+        core: result.core,
+        intensity: result.intensity,
+        outputLength: result.output.length,
+        emotionalWeight: emotionalWeight.toFixed(3),
+        coherence: narrativeCoherence.toFixed(3),
+        contradiction: contradictionScore.toFixed(3),
+      };
+
+      console.info(
+        `[NeuralIntegration] 🧠 Candidate ${
+          registeredCount + 1
+        }: ${JSON.stringify(candidateInfo)}`
+      );
+
+      const wasRegistered = superposition.register({
         embedding,
         text: result.output,
         emotionalWeight,
@@ -194,9 +303,61 @@ export class DefaultNeuralIntegrationService
         origin: result.core,
         insights: result.insights,
       });
+
+      if (wasRegistered) {
+        registeredCount++;
+        console.info(
+          `[NeuralIntegration] ✅ Candidate ${registeredCount} (${result.core}) registered successfully`
+        );
+      } else {
+        filteredBySimilarity++;
+        console.warn(
+          `[NeuralIntegration] ❌ Candidate ${result.core} filtered out due to high similarity (>95%)`
+        );
+      }
     }
+
+    console.info(
+      `[NeuralIntegration] 📈 Superposition summary: ${registeredCount} registered, ${filteredBySimilarity} filtered by similarity`
+    );
+
+    // Debug analysis of candidates
+    this.logCandidateAnalysis(
+      cleanedNeuralResults,
+      superposition,
+      "POST-REGISTRATION"
+    );
+
     // 2. Collapse: Use OpenAI-based strategy to decide deterministic vs probabilistic
     const numCandidates = superposition.answers.length;
+
+    console.info(
+      `[NeuralIntegration] 🎯 TOTAL CANDIDATES FOR EVALUATION: ${numCandidates}`
+    );
+
+    // Log all candidates before collapse
+    if (numCandidates > 1) {
+      console.info(`[NeuralIntegration] 📋 ALL CANDIDATES BEING EVALUATED:`);
+      superposition.answers.forEach((answer, idx) => {
+        console.info(
+          `[NeuralIntegration]   ${idx + 1}. [${
+            answer.origin
+          }] Emotional: ${answer.emotionalWeight.toFixed(
+            3
+          )}, Coherence: ${answer.narrativeCoherence.toFixed(
+            3
+          )}, Contradiction: ${answer.contradictionScore.toFixed(3)}`
+        );
+      });
+    } else if (numCandidates === 1) {
+      console.info(
+        `[NeuralIntegration] ⚠️ Only 1 candidate available - no collapse needed. Core: ${superposition.answers[0].origin}`
+      );
+    } else {
+      console.error(
+        `[NeuralIntegration] ❌ No candidates available for evaluation!`
+      );
+    }
 
     // Calculate average values for symbolic properties
     const averageEmotionalWeight =

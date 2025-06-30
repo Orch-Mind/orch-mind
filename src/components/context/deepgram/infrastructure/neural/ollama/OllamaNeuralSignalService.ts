@@ -346,15 +346,65 @@ export class OllamaNeuralSignalService
             call.function.arguments
           );
 
-          // Debug logging for Llama 3.1
+          // Debug logging for arguments structure
           console.log(
-            "🦙 [OllamaNeuralSignal] Tool call arguments:",
+            "🦙 [OllamaNeuralSignal] Raw tool call arguments:",
             JSON.stringify(args, null, 2)
           );
 
-          // Se temos enriched_query (do prompt combinado), usa ele como query principal
-          if (args.enriched_query && typeof args.symbolic_query === "object") {
-            args.symbolic_query.query = args.enriched_query;
+          // CRITICAL: Validate and sanitize arguments before passing to buildSignalFromArgs
+          if (args && typeof args === "object") {
+            // Ensure symbolic_query is properly structured
+            if (args.symbolic_query) {
+              if (typeof args.symbolic_query === "string") {
+                // If symbolic_query is a string, convert to object
+                console.log(
+                  "🦙 [OllamaNeuralSignal] Converting string symbolic_query to object"
+                );
+                args.symbolic_query = { query: args.symbolic_query };
+              } else if (typeof args.symbolic_query === "object") {
+                // Ensure the query field exists and is a string
+                if (!args.symbolic_query.query) {
+                  console.warn(
+                    "🦙 [OllamaNeuralSignal] symbolic_query missing query field, using core as fallback"
+                  );
+                  args.symbolic_query.query = args.core || "neural processing";
+                } else if (typeof args.symbolic_query.query !== "string") {
+                  console.warn(
+                    `🦙 [OllamaNeuralSignal] symbolic_query.query is not a string (type: ${typeof args
+                      .symbolic_query.query}), converting`
+                  );
+                  args.symbolic_query.query = String(
+                    args.symbolic_query.query ||
+                      args.core ||
+                      "neural processing"
+                  );
+                }
+              }
+            } else {
+              // Create default symbolic_query if missing
+              console.log(
+                "🦙 [OllamaNeuralSignal] Creating default symbolic_query"
+              );
+              args.symbolic_query = {
+                query: args.core || originalPrompt || "neural processing",
+              };
+            }
+
+            // Se temos enriched_query (do prompt combinado), usa ele como query principal
+            if (
+              args.enriched_query &&
+              typeof args.enriched_query === "string" &&
+              args.symbolic_query
+            ) {
+              args.symbolic_query.query = args.enriched_query;
+            }
+
+            console.log("🦙 [OllamaNeuralSignal] Sanitized arguments:", {
+              core: args.core,
+              symbolic_query: args.symbolic_query,
+              hasEnrichedQuery: !!args.enriched_query,
+            });
           }
 
           const signal = buildSignalFromArgs(args, originalPrompt);
@@ -365,5 +415,80 @@ export class OllamaNeuralSignalService
         }
       })
       .filter((signal) => signal !== null);
+  }
+
+  /**
+   * Test method to validate argument sanitization
+   * Can be called for debugging purposes
+   */
+  public testArgumentSanitization(): void {
+    console.log("🧪 [OllamaNeuralSignal] Testing argument sanitization...");
+
+    const testToolCalls = [
+      {
+        function: {
+          name: "activateBrainArea",
+          arguments: {
+            core: "memory",
+            intensity: 0.7,
+            symbolic_query: { query: { type: "object" } }, // Object instead of string
+          },
+        },
+      },
+      {
+        function: {
+          name: "activateBrainArea",
+          arguments: {
+            core: "valence",
+            intensity: 0.5,
+            symbolic_query: "raw string query", // String instead of object
+          },
+        },
+      },
+      {
+        function: {
+          name: "activateBrainArea",
+          arguments: {
+            core: "language",
+            intensity: 0.8,
+            symbolic_query: { query: 123 }, // Number instead of string
+          },
+        },
+      },
+      {
+        function: {
+          name: "activateBrainArea",
+          arguments: {
+            core: "planning",
+            intensity: 0.6,
+            // Missing symbolic_query entirely
+          },
+        },
+      },
+    ];
+
+    const results = this.extractFromToolCalls(testToolCalls, "test prompt");
+
+    console.log(`🧪 [OllamaNeuralSignal] Test results:`, {
+      inputCount: testToolCalls.length,
+      outputCount: results.length,
+      allValid: results.every(
+        (signal) => signal && typeof signal.symbolic_query?.query === "string"
+      ),
+    });
+
+    results.forEach((signal, index) => {
+      if (signal) {
+        console.log(
+          `✅ Signal ${index + 1}: [${signal.core}] query="${
+            signal.symbolic_query?.query
+          }"`
+        );
+      } else {
+        console.log(`❌ Signal ${index + 1}: Failed to process`);
+      }
+    });
+
+    console.log("🧪 [OllamaNeuralSignal] Testing completed!");
   }
 }
