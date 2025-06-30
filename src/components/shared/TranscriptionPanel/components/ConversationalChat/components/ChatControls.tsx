@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import { MicrophoneState } from "../../../../../context";
 import { ChatControlsProps } from "../types/ChatTypes";
 
 /**
@@ -10,8 +9,9 @@ import { ChatControlsProps } from "../types/ChatTypes";
  * Enhanced with better visual feedback and animations
  */
 export const ChatControls: React.FC<ChatControlsProps> = ({
-  microphoneState,
-  onToggleRecording,
+  // TODO: Funcionalidade futura - Microphone props (voice input in chat)
+  // microphoneState,
+  // onToggleRecording,
   onSend,
   onToggleContext,
   canSend,
@@ -81,7 +81,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
       </button>
       */}
 
-      {/* Microphone Button - Modern minimal design */}
+      {/* TODO: Funcionalidade futura - Microphone Button (voice input in chat)
       <button
         className={`control-btn mic-btn ${
           microphoneState === MicrophoneState.Open ? "recording" : ""
@@ -153,25 +153,23 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
           )}
         </svg>
       </button>
+      */}
 
-      {/* Send Button - Modern arrow design */}
+      {/* Send Button - Enhanced design */}
       <button
-        className={`control-btn send-btn ${canSend ? "ready" : "disabled"}`}
+        className={`control-btn send-btn ${canSend ? "ready" : ""}`}
         onClick={onSend}
         disabled={!canSend}
-        title="Send message (Enter)"
+        title="Send message"
         type="button"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path
-            d="M3 12L5 4l16 8-16 8 2-8zm2 0h7"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
+            d="M2 21l21-9L2 3v7l15 2-15 2v7z"
+            fill="currentColor"
+            opacity="0.9"
           />
-          <circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.3" />
+          <circle cx="7" cy="12" r="2" fill="currentColor" opacity="0.6" />
         </svg>
       </button>
     </div>

@@ -97,8 +97,9 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
 
             {/* Main Chat Controls - Debug controls removed */}
             <ChatControls
-              microphoneState={microphoneState}
-              onToggleRecording={onToggleRecording}
+              // TODO: Funcionalidade futura - Microphone props (voice input in chat)
+              // microphoneState={microphoneState}
+              // onToggleRecording={onToggleRecording}
               onSend={onSendMessage}
               onToggleContext={onToggleContext}
               canSend={canSend}

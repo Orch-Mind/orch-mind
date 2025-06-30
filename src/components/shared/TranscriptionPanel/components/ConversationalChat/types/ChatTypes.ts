@@ -55,8 +55,9 @@ export interface TranscriptionDisplayProps {
 }
 
 export interface ChatControlsProps {
-  microphoneState: MicrophoneState;
-  onToggleRecording: () => void;
+  // TODO: Funcionalidade futura - Microphone props (voice input in chat)
+  // microphoneState: MicrophoneState;
+  // onToggleRecording: () => void;
   onSend: () => void;
   onToggleContext: () => void;
   canSend: boolean;
