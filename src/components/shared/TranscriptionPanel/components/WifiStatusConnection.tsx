@@ -9,7 +9,6 @@ import styles from "./WifiStatusConnection.module.css";
 interface WifiStatusConnectionProps {
   connectionState?: ConnectionState;
   microphoneState?: MicrophoneState;
-  signalStrength?: "strong" | "medium" | "weak" | "none";
   onStatusClick?: () => void;
   showDetailedText?: boolean;
   className?: string;
@@ -109,28 +108,6 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
   // Get color variables for the component
   const colors = getConnectionColors();
   const statusText = getConnectionStatusText();
-
-  // Determine which bars should be active based on P2P status
-  const getSignalBars = () => {
-    if (p2pStatus.isConnected && !p2pStatus.isLoading) {
-      switch (p2pStatus.signalStrength) {
-        case "strong":
-          return [true, true, true];
-        case "medium":
-          return [true, true, false];
-        case "weak":
-          return [true, false, false];
-        default:
-          return [true, false, false];
-      }
-    } else if (p2pStatus.isLoading) {
-      return [true, true, false]; // Show medium signal while connecting
-    } else {
-      return [false, false, false]; // No signal when disconnected
-    }
-  };
-
-  const signalBars = getSignalBars();
 
   // Generate dynamic classNames based on P2P connection state
   const getConnectionStateClass = () => {
@@ -237,21 +214,6 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
                         {p2pStatus.currentRoom.peersCount}
                       </span>
                     </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Signal:</span>
-                      <span
-                        className={`font-mono ${
-                          p2pStatus.signalStrength === "strong"
-                            ? "text-green-400"
-                            : p2pStatus.signalStrength === "medium"
-                            ? "text-yellow-400"
-                            : "text-orange-400"
-                        }`}
-                      >
-                        {p2pStatus.signalStrength.toUpperCase()}
-                      </span>
-                    </div>
                   </>
                 )}
 
@@ -309,7 +271,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinecap="round"
-            strokeOpacity={signalBars[0] ? "1" : "0.25"}
+            strokeOpacity={p2pStatus.isConnected ? "1" : "0.25"}
           />
 
           {/* WiFi signal wave - lower arc */}
@@ -319,7 +281,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinecap="round"
-            strokeOpacity={signalBars[1] ? "1" : "0.25"}
+            strokeOpacity={p2pStatus.isConnected ? "1" : "0.25"}
           />
 
           {/* Central signal point */}
@@ -333,7 +295,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
                 : ""
             }`}
             fill="currentColor"
-            fillOpacity={signalBars[2] ? "1" : "0.25"}
+            fillOpacity={p2pStatus.isConnected ? "1" : "0.25"}
           />
         </svg>
       </div>

@@ -33,7 +33,6 @@ export interface P2PGlobalStatus {
   isConnected: boolean;
   isLoading: boolean;
   currentRoom: P2PRoom | null;
-  signalStrength: "strong" | "medium" | "weak" | "none";
   lastError?: string;
 }
 
@@ -103,7 +102,6 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     isConnected: false,
     isLoading: false,
     currentRoom: null,
-    signalStrength: "none",
   });
 
   // Adapter state, now living in the context
@@ -117,6 +115,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
   const isAutoRestoring = useRef(false);
   const autoRestoreSuccessful = useRef(false);
   const connectionCheckInterval = useRef<NodeJS.Timeout | null>(null);
+  const isInitialized = useRef(false); // Flag to prevent multiple initializations
 
   // Ref for accessing current adapter state in callbacks without dependency loops
   const currentAdaptersRef = useRef<SharedAdapter[]>([]);
@@ -248,6 +247,11 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Setup P2P event listeners (includes addAvailableAdapters now)
   const setupEventListeners = useCallback(() => {
+    // Increase max listeners to prevent warnings
+    if (p2pShareService.setMaxListeners) {
+      p2pShareService.setMaxListeners(20);
+    }
+
     const handleRoomJoined = (data: any) => {
       const newRoom: P2PRoom = {
         type: data.type || "local",
@@ -260,14 +264,12 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
         isConnected: true,
         isLoading: false,
         currentRoom: newRoom,
-        signalStrength: getSignalStrength(0, true),
       }));
     };
 
     const handlePeersUpdated = (count: number) => {
       setStatus((prev) => ({
         ...prev,
-        signalStrength: getSignalStrength(count, prev.isConnected),
         currentRoom: prev.currentRoom
           ? { ...prev.currentRoom, peersCount: count }
           : null,
@@ -282,7 +284,6 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
         isConnected: false,
         isLoading: false,
         currentRoom: null,
-        signalStrength: "none",
       });
       clearIncomingAdapters(); // Clear available adapters on disconnect
     };
@@ -295,11 +296,19 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
       }));
     };
 
+    // Remove existing listeners first to prevent duplicates
+    p2pShareService.removeAllListeners("room-joined");
+    p2pShareService.removeAllListeners("peers-updated");
+    p2pShareService.removeAllListeners("room-left");
+    p2pShareService.removeAllListeners("connection-error");
+    p2pShareService.removeAllListeners("adapters-available");
+
+    // Add new listeners
     p2pShareService.on("room-joined", handleRoomJoined);
     p2pShareService.on("peers-updated", handlePeersUpdated);
     p2pShareService.on("room-left", handleRoomLeft);
     p2pShareService.on("connection-error", handleConnectionError);
-    p2pShareService.on("adapters-available", addAvailableAdapters); // Directly use addAvailableAdapters
+    p2pShareService.on("adapters-available", addAvailableAdapters);
 
     return () => {
       p2pShareService.removeListener("room-joined", handleRoomJoined);
@@ -315,23 +324,15 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Connection health monitoring
   const startConnectionMonitoring = useCallback(() => {
+    if (connectionCheckInterval.current) {
+      clearInterval(connectionCheckInterval.current);
+    }
     connectionCheckInterval.current = setInterval(() => {
       if (status.isConnected && status.currentRoom) {
         // Health check logic...
       }
     }, 30000);
   }, [status.isConnected, status.currentRoom]);
-
-  // Signal strength calculation
-  const getSignalStrength = (
-    peersCount: number,
-    isConnected: boolean
-  ): P2PGlobalStatus["signalStrength"] => {
-    if (!isConnected) return "none";
-    if (peersCount >= 3) return "strong";
-    if (peersCount >= 1) return "medium";
-    return "weak";
-  };
 
   // Connect function - moved before checkAndAutoReconnect to fix dependency order
   const connect = useCallback(
@@ -481,20 +482,31 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [persistedState, connect, restoreSharedAdapters, clearPersistedState]);
 
-  // Initialize P2P service, load adapters, and setup event listeners
+  // Initialize P2P service, load adapters, and setup event listeners - ONLY ONCE
   useEffect(() => {
+    if (isInitialized.current) {
+      console.log("🔄 [P2P-CONTEXT] Already initialized, skipping...");
+      return;
+    }
+
     const initializeP2P = async () => {
       try {
+        console.log("🔧 [P2P-CONTEXT] Initializing P2P service...");
+        isInitialized.current = true;
+
         if (!p2pShareService.isInitialized()) {
-          console.log("🔧 [P2P-CONTEXT] Initializing P2P service...");
           await p2pShareService.initialize();
         }
-        setupEventListeners();
+
+        const cleanup = setupEventListeners();
         startConnectionMonitoring();
-        loadLocalAdapters(); // Load adapters ONCE on init
+        loadLocalAdapters();
         checkAndAutoReconnect();
+
+        return cleanup;
       } catch (error) {
         console.error("❌ [P2P-CONTEXT] Failed to initialize P2P:", error);
+        isInitialized.current = false; // Reset flag on error
         setStatus((prev) => ({
           ...prev,
           lastError: "Failed to initialize P2P service",
@@ -502,19 +514,20 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    initializeP2P();
+    let cleanup: (() => void) | undefined;
+    initializeP2P().then((cleanupFn) => {
+      cleanup = cleanupFn;
+    });
 
     return () => {
       if (connectionCheckInterval.current) {
         clearInterval(connectionCheckInterval.current);
       }
+      if (cleanup) {
+        cleanup();
+      }
     };
-  }, [
-    loadLocalAdapters,
-    checkAndAutoReconnect,
-    setupEventListeners,
-    startConnectionMonitoring,
-  ]);
+  }, []); // Empty dependency array - run only once
 
   // Disconnect function
   const disconnect = useCallback(async () => {

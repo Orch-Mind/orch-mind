@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "./ShareSettings/styles.css";
 
 // SRP: Imports segregados por responsabilidade
@@ -12,13 +12,12 @@ import {
   ConnectedStatusComponent,
   SmartConnectComponent,
 } from "./ShareSettings/components";
-import { useAdapters } from "./ShareSettings/hooks/useAdapters";
 
 // KISS: Componente principal focado APENAS em orquestração
 const ShareSettings: React.FC = () => {
   const [roomCode, setRoomCode] = useState("");
 
-  // Use global P2P context - single source of truth
+  // Use global P2P context - single source of truth for ALL P2P state
   const {
     status,
     connect,
@@ -26,59 +25,21 @@ const ShareSettings: React.FC = () => {
     reconnectToLastSession,
     persistedState,
     shouldShowReconnectPanel,
-    onAdaptersAvailable,
-    offAdaptersAvailable,
-  } = useP2PContext();
-
-  // SRP: Hook especializado para adapters
-  const {
+    // Adapter state and functions now come directly from context
     sharedAdapters,
     incomingAdapters,
-    loadLocalAdapters,
     toggleAdapterSharing,
     downloadAdapter,
-    addAvailableAdapters,
     clearIncomingAdapters,
-  } = useAdapters(persistedState.updateSharedAdapters); // Use correct function from context
-
-  // SRP: Effect focado APENAS em carregar adapters locais
-  // P2P initialization is handled by the global context
-  useEffect(() => {
-    console.log("🔧 [SHARESETS] Loading local adapters only");
-    loadLocalAdapters();
-
-    // No cleanup needed - context handles P2P lifecycle
-  }, [loadLocalAdapters]); // Depend on loadLocalAdapters function
+  } = useP2PContext();
 
   // SRP: Handler focado apenas em desconexão
   const handleDisconnect = async () => {
     console.log("🔄 [SHARESETS] Disconnecting from P2P...");
     await disconnect();
-    clearIncomingAdapters();
+    clearIncomingAdapters(); // Also clear incoming adapters on manual disconnect
   };
 
-  // SRP: Effect para escutar adapters disponíveis do contexto global
-  useEffect(() => {
-    console.log("🔧 [SHARESETS] Registering for adapters-available events");
-
-    // Register callback with the global P2P context
-    onAdaptersAvailable(addAvailableAdapters);
-
-    // Cleanup callback on unmount
-    return () => {
-      console.log("🔧 [SHARESETS] Unregistering adapters-available events");
-      offAdaptersAvailable(addAvailableAdapters);
-    };
-  }, [onAdaptersAvailable, offAdaptersAvailable, addAvailableAdapters]);
-
-  console.log("🔄 [SHARESETS] Render with status:", {
-    isConnected: status.isConnected,
-    isLoading: status.isLoading,
-    roomType: status.currentRoom?.type,
-    roomCode: status.currentRoom?.code,
-  });
-
-  // YAGNI: Render simples sem over-engineering
   return (
     <div className="space-y-3 max-w-7xl mx-auto">
       <ShareHeader />
@@ -128,8 +89,8 @@ const ShareHeader: React.FC = () => (
 const ConnectionStats: React.FC<{
   currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
   isSharing: boolean;
-  sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
-  incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
+  sharedAdapters: ReturnType<typeof useP2PContext>["sharedAdapters"];
+  incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
 }> = ({ currentRoom, isSharing, sharedAdapters, incomingAdapters }) => (
   <div className="grid grid-cols-2 gap-3">
     <ConnectionStatusCard currentRoom={currentRoom} isSharing={isSharing} />
@@ -199,8 +160,8 @@ const ConnectionStatusCard: React.FC<{
 
 // SRP: Card focado apenas nas estatísticas de sharing
 const SharingStatsCard: React.FC<{
-  sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
-  incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
+  sharedAdapters: ReturnType<typeof useP2PContext>["sharedAdapters"];
+  incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
 }> = ({ sharedAdapters, incomingAdapters }) => (
   <div className="bg-gradient-to-r from-cyan-900/50 to-blue-900/50 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
     <div className="flex items-center justify-between">
@@ -247,10 +208,10 @@ const MainSharingSection: React.FC<{
   setRoomCode: (code: string) => void;
   onConnect: ReturnType<typeof useP2PContext>["connect"];
   onDisconnect: () => void;
-  sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
-  incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
-  onToggleSharing: ReturnType<typeof useAdapters>["toggleAdapterSharing"];
-  onDownload: ReturnType<typeof useAdapters>["downloadAdapter"];
+  sharedAdapters: ReturnType<typeof useP2PContext>["sharedAdapters"];
+  incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
+  onToggleSharing: ReturnType<typeof useP2PContext>["toggleAdapterSharing"];
+  onDownload: ReturnType<typeof useP2PContext>["downloadAdapter"];
   persistedState: ReturnType<typeof useP2PContext>["persistedState"];
   getRecentRoomCodes: () => string[];
   reconnectToLastSession: ReturnType<

@@ -10,7 +10,6 @@ export interface P2PStatus {
   roomCode?: string;
   peersCount: number;
   isLoading: boolean;
-  signalStrength: "strong" | "medium" | "weak" | "none";
 }
 
 /**
@@ -24,7 +23,6 @@ export const useP2PStatus = (): P2PStatus => {
     roomCode: undefined,
     peersCount: 0,
     isLoading: false,
-    signalStrength: "none",
   });
 
   useEffect(() => {
@@ -70,7 +68,6 @@ export const useP2PStatus = (): P2PStatus => {
         const newStatus = {
           ...prev,
           peersCount: count,
-          signalStrength: getSignalStrength(count, prev.isConnected),
         };
 
         console.log(
@@ -90,7 +87,6 @@ export const useP2PStatus = (): P2PStatus => {
         roomCode: undefined,
         peersCount: 0,
         isLoading: false,
-        signalStrength: "none" as const,
       };
 
       console.log(
@@ -110,7 +106,6 @@ export const useP2PStatus = (): P2PStatus => {
       setStatus((prev) => ({
         ...prev,
         isLoading: false,
-        signalStrength: "none" as const,
       }));
     };
 
@@ -140,7 +135,6 @@ export const useP2PStatus = (): P2PStatus => {
         roomCode: undefined,
         peersCount: 0,
         isLoading: false,
-        signalStrength: "none" as const,
       };
       setStatus(disconnectedStatus);
     };
@@ -195,18 +189,4 @@ export const useP2PStatus = (): P2PStatus => {
   }, []);
 
   return status;
-};
-
-/**
- * Determina a força do sinal baseada no número de peers e status de conexão
- */
-const getSignalStrength = (
-  peersCount: number,
-  isConnected: boolean
-): P2PStatus["signalStrength"] => {
-  if (!isConnected) return "none";
-
-  if (peersCount >= 3) return "strong";
-  if (peersCount >= 1) return "medium";
-  return "weak";
 };
