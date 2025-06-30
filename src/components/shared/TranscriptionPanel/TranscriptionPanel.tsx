@@ -35,6 +35,11 @@ import { useChatHistory } from "./components/ConversationalChat/hooks/useChatHis
 // Brain visualization is now handled in a separate module
 import { P2PProvider } from "./context/P2PContext";
 
+// Import test script for development
+if (process.env.NODE_ENV === "development") {
+  import("../../../utils/test-adapter-persistence");
+}
+
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   onClose,
   width,
@@ -268,6 +273,19 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   // Estados para modais
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] =
+    useState<string>("general");
+
+  // Function to open settings modal with specific tab
+  const openSettingsModal = (tab: string = "general") => {
+    setSettingsInitialTab(tab);
+    setShowSettingsModal(true);
+  };
+
+  // Function to handle WiFi status click - opens Share settings
+  const handleWifiStatusClick = () => {
+    openSettingsModal("share");
+  };
 
   // Settings content for the chat component
   const settingsContent = (
@@ -336,9 +354,10 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
               window.electronAPI.minimizeWindow();
             }
           }}
-          onShowSettings={() => setShowSettingsModal(true)}
+          onShowSettings={() => openSettingsModal("general")}
           onShowLogsModal={() => setShowLogsModal(true)}
           onShowImportModal={() => setShowImportModal(true)}
+          onWifiStatusClick={handleWifiStatusClick}
         />
 
         {/* Main Chat Dashboard Layout */}
@@ -533,11 +552,12 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           </div>
         )}
 
-        {/* Settings Modal */}
+        {/* Modal de Configurações */}
         {showSettingsModal && (
           <SettingsModal
             show={showSettingsModal}
             onClose={() => setShowSettingsModal(false)}
+            initialTab={settingsInitialTab}
           />
         )}
 

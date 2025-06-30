@@ -19,9 +19,13 @@ import { useSettingsState } from "./settings/useSettingsState";
  * - SOLID (componentes com responsabilidade única)
  * - KISS (simplificação da lógica)
  */
-const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
+  show,
+  onClose,
+  initialTab = "general",
+}) => {
   // Usando o hook customizado para gerenciar todo o estado
-  const settings = useSettingsState(show);
+  const settings = useSettingsState(show, initialTab);
 
   // Se não for exibido, não renderizar nada
   if (!show) return null;

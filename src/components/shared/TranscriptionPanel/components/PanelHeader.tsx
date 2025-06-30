@@ -19,6 +19,7 @@ interface PanelHeaderProps {
   onShowSettings?: () => void; // Abre as configurações gerais do sistema
   onShowDebugModal?: () => void; // Abre o modal de debug DuckDB
   onMinimize?: () => void;
+  onWifiStatusClick?: () => void; // Abre configurações de Share P2P
   connectionState?: ConnectionState;
   microphoneState?: MicrophoneState;
   hasActiveConnection?: () => boolean;
@@ -33,6 +34,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onShowSettings,
   onShowDebugModal,
   onMinimize,
+  onWifiStatusClick,
 }) => {
   return (
     <div className="orchos-header-glass flex justify-between items-center mb-4 h-14 px-4">
@@ -152,7 +154,10 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         )}
 
         {/* Indicador P2P Status - agora usa useP2PStatus internamente */}
-        <WifiStatusConnection showDetailedText={false} />
+        <WifiStatusConnection
+          showDetailedText={false}
+          onStatusClick={onWifiStatusClick}
+        />
 
         {/* Área dos botões de controle de janela com flexbox para alinhamento perfeito */}
         <div className="flex items-center gap-2 ml-4">

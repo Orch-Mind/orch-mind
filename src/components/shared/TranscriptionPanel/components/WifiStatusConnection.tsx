@@ -57,9 +57,6 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
   // Alterna a visibilidade do popup de status
   const toggleStatusPopup = () => {
     setShowStatusPopup((prev) => !prev);
-    if (onStatusClick) {
-      onStatusClick();
-    }
   };
 
   // Convert P2P status to user-friendly message
@@ -170,11 +167,19 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
       {/* P2P Status popup flutuante */}
       {showStatusPopup && (
         <div
-          className={styles.statusPopupContainer}
+          className={`${styles.statusPopupContainer} cursor-pointer`}
           ref={statusPopupRef}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowStatusPopup(false);
+            if (onStatusClick) {
+              onStatusClick();
+            }
+          }}
         >
-          <div className={styles.statusPopup}>
+          <div
+            className={`${styles.statusPopup} hover:bg-black/20 transition-colors`}
+          >
             <div className="p-3 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-cyan-400/20">
                 <div
@@ -262,7 +267,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
 
               <div className="pt-2 border-t border-cyan-400/20">
                 <p className="text-[10px] text-gray-500">
-                  Click to manage P2P connections in settings
+                  Click anywhere on this popup to open P2P settings
                 </p>
               </div>
             </div>

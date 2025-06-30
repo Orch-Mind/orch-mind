@@ -120,7 +120,22 @@ export function useP2PPersistence() {
   );
 
   const updateSharedAdapters = useCallback((adapterIds: string[]) => {
+    console.log("🔄 [P2P-PERSISTENCE] updateSharedAdapters called with:", {
+      adapterIds,
+      count: adapterIds.length,
+      stackTrace: new Error().stack?.split("\n").slice(1, 4),
+    });
+
     setPersistedState((prev) => {
+      console.log("🔄 [P2P-PERSISTENCE] Previous state:", {
+        previousAdapterIds: prev.sharedAdapterIds,
+        newAdapterIds: adapterIds,
+        changing:
+          prev.sharedAdapterIds.length !== adapterIds.length ||
+          JSON.stringify(prev.sharedAdapterIds.sort()) !==
+            JSON.stringify(adapterIds.sort()),
+      });
+
       const newState = {
         ...prev,
         sharedAdapterIds: adapterIds,

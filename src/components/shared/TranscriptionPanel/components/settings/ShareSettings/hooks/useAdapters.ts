@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { p2pShareService } from "../../../../../../../services/p2p/P2PShareService";
 import { loadFromStorage } from "../../training/utils";
 import { IncomingAdapter, SharedAdapter } from "../types";
@@ -15,6 +15,14 @@ export const useAdapters = (
   const [incomingAdapters, setIncomingAdapters] = useState<IncomingAdapter[]>(
     []
   );
+
+  // Use ref to access current adapters state without creating infinite loop
+  const currentAdaptersRef = useRef<SharedAdapter[]>([]);
+
+  // Update ref whenever sharedAdapters changes
+  useEffect(() => {
+    currentAdaptersRef.current = sharedAdapters;
+  }, [sharedAdapters]);
 
   // Listen for restoration events from useP2PConnection
   useEffect(() => {
@@ -62,7 +70,9 @@ export const useAdapters = (
   // Function to restore shared adapters
   const restoreSharedAdapters = useCallback(
     async (adapterIds: string[], isAutoRestore: boolean, retryAttempt = 0) => {
-      if (sharedAdapters.length === 0) {
+      const currentAdapters = currentAdaptersRef.current;
+
+      if (currentAdapters.length === 0) {
         if (retryAttempt < 2) {
           setTimeout(() => {
             window.dispatchEvent(
@@ -79,7 +89,7 @@ export const useAdapters = (
         return;
       }
 
-      const updatedAdapters = [...sharedAdapters];
+      const updatedAdapters = [...currentAdapters];
       let restoredCount = 0;
       const restoredAdapterNames: string[] = [];
 
@@ -140,32 +150,57 @@ export const useAdapters = (
       } else {
         console.log(`⚠️ [ADAPTER-RESTORE] No adapters were restored:`, {
           requestedAdapters: adapterIds,
-          availableAdapters: sharedAdapters.map((a) => a.name),
+          availableAdapters: currentAdapters.map((a) => a.name),
           reason: "Adapters may already be shared or not found",
         });
       }
     },
-    [sharedAdapters]
+    [] // No dependencies - use ref to access current state
   );
 
   // SRP: Carregar adapters locais
   const loadLocalAdapters = useCallback(() => {
+    console.log(
+      "🔄 [ADAPTERS] loadLocalAdapters called, loading from storage..."
+    );
+
     const trainingHistory = loadFromStorage("orch-training-history", {
       trainedModels: [] as string[],
     });
 
+    console.log("🔄 [ADAPTERS] Training history loaded:", {
+      trainedModels: trainingHistory.trainedModels,
+      count: trainingHistory.trainedModels.length,
+    });
+
+    // Create new adapters while preserving existing shared state
     const adapters: SharedAdapter[] = trainingHistory.trainedModels.map(
-      (modelName: string) => ({
-        name: modelName,
-        topic: "",
-        size: "Unknown", // TODO: Get actual file size from Ollama
-        shared: false,
-        peers: 0,
-      })
+      (modelName: string) => {
+        // Check if this adapter already exists and preserve its shared state
+        const existingAdapter = currentAdaptersRef.current.find(
+          (adapter) => adapter.name === modelName
+        );
+
+        return {
+          name: modelName,
+          topic: existingAdapter?.topic || "",
+          size: "Unknown", // TODO: Get actual file size from Ollama
+          shared: existingAdapter?.shared || false, // Preserve existing shared state
+          peers: existingAdapter?.peers || 0, // Preserve existing peers count
+        };
+      }
     );
 
+    console.log("🔄 [ADAPTERS] Setting adapters with preserved shared state:", {
+      adapters: adapters.map((a) => ({ name: a.name, shared: a.shared })),
+      count: adapters.length,
+      preservedSharedCount: adapters.filter((a) => a.shared).length,
+      currentAdaptersCount: currentAdaptersRef.current.length,
+      stackTrace: new Error().stack?.split("\n").slice(1, 4),
+    });
+
     setSharedAdapters(adapters);
-  }, []);
+  }, []); // No dependencies - use ref to access current state
 
   // Update persistence whenever shared adapters change
   useEffect(() => {
@@ -193,10 +228,11 @@ export const useAdapters = (
   // SRP: Toggle compartilhamento de adapter
   const toggleAdapterSharing = useCallback(
     async (index: number) => {
-      const adapter = sharedAdapters[index];
+      const currentAdapters = currentAdaptersRef.current;
+      const adapter = currentAdapters[index];
       const willBeShared = !adapter.shared;
 
-      const updatedAdapters = [...sharedAdapters];
+      const updatedAdapters = [...currentAdapters];
       updatedAdapters[index].shared = willBeShared;
 
       if (willBeShared && !updatedAdapters[index].topic) {
@@ -239,7 +275,7 @@ export const useAdapters = (
 
       setSharedAdapters(updatedAdapters);
     },
-    [sharedAdapters]
+    [] // No dependencies - use ref to access current state
   );
 
   // SRP: Download adapter de peer

@@ -15,9 +15,12 @@ import { SettingsState } from "./types";
  * Implementa o princípio de responsabilidade única e composição
  * agregando os hooks especializados por domínio
  */
-export const useSettingsState = (show: boolean): SettingsState => {
+export const useSettingsState = (
+  show: boolean,
+  initialTab: string = "general"
+): SettingsState => {
   // Composição de hooks especializados por domínio
-  const navigation = useNavigationState();
+  const navigation = useNavigationState(initialTab);
   const general = useGeneralSettings();
   const audio = useAudioSettings(show);
   const api = useApiSettings();
