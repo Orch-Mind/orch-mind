@@ -3,785 +3,412 @@
 
 import React, { useEffect, useState } from "react";
 import { p2pShareService } from "../../../../../services/p2p/P2PShareService";
-import { loadFromStorage } from "./training/utils";
+import "./ShareSettings/styles.css";
 
-interface SharedAdapter {
-  name: string;
-  topic: string;
-  size: string;
-  shared: boolean;
-  peers: number;
-}
+// SRP: Imports segregados por responsabilidade
+import {
+  AdapterListComponent,
+  AvailableAdaptersComponent,
+  ConnectedStatusComponent,
+  SmartConnectComponent,
+} from "./ShareSettings/components";
+import { useAdapters } from "./ShareSettings/hooks/useAdapters";
+import { useP2PConnection } from "./ShareSettings/hooks/useP2PConnection";
+import { StorageDebugUtils } from "./ShareSettings/utils";
 
-interface IncomingAdapter {
-  name: string;
-  topic: string;
-  size: string;
-  from: string;
-}
-
-interface P2PRoom {
-  type: "general" | "local" | "private";
-  code?: string;
-  peersCount: number;
-  isActive: boolean;
-}
-
-// Smart Connect Component
-const SmartConnectComponent: React.FC<{
-  onConnect: (
-    type: "general" | "local" | "private",
-    privateCode?: string
-  ) => void;
-  isLoading: boolean;
-  roomCode: string;
-  onRoomCodeChange: (code: string) => void;
-}> = ({ onConnect, isLoading, roomCode, onRoomCodeChange }) => {
-  const [selectedMode, setSelectedMode] = useState<"auto" | "manual">("auto");
-
-  const handleAutoConnect = () => {
-    // Smart auto-detection: try local first, fallback to general
-    onConnect("local");
-  };
-
-  const handlePrivateConnect = () => {
-    onConnect("private", roomCode);
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* Mode Toggle */}
-      <div className="flex bg-black/30 rounded-lg p-1">
-        <button
-          onClick={() => setSelectedMode("auto")}
-          className={`flex-1 px-3 py-1.5 text-[10px] font-medium rounded transition-colors ${
-            selectedMode === "auto"
-              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-400/30"
-              : "text-gray-400 hover:text-cyan-400"
-          }`}
-        >
-          🎯 Smart
-        </button>
-        <button
-          onClick={() => setSelectedMode("manual")}
-          className={`flex-1 px-3 py-1.5 text-[10px] font-medium rounded transition-colors ${
-            selectedMode === "manual"
-              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-400/30"
-              : "text-gray-400 hover:text-cyan-400"
-          }`}
-        >
-          ⚙️ Manual
-        </button>
-      </div>
-
-      {selectedMode === "auto" ? (
-        /* Auto Mode */
-        <div className="p-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded border border-cyan-400/30">
-          <h4 className="text-cyan-400 font-medium text-xs mb-2">
-            🎯 Smart Connect
-          </h4>
-          <p className="text-[10px] text-gray-400 mb-3">
-            Finds best connection: Local → Community → Create Room
-          </p>
-          <button
-            onClick={handleAutoConnect}
-            disabled={isLoading}
-            className="w-full px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-400 rounded text-[11px] font-medium transition-all border border-cyan-400/30 disabled:opacity-50"
-          >
-            {isLoading ? "🔄 Connecting..." : "🚀 Smart Connect"}
-          </button>
-        </div>
-      ) : (
-        /* Manual Mode */
-        <div className="space-y-2">
-          {/* Quick Options */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onConnect("general")}
-              disabled={isLoading}
-              className="px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded text-[10px] font-medium transition-colors border border-purple-400/20 disabled:opacity-50"
-            >
-              🌍 Community
-            </button>
-            <button
-              onClick={() => onConnect("local")}
-              disabled={isLoading}
-              className="px-3 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 rounded text-[10px] font-medium transition-colors border border-green-400/20 disabled:opacity-50"
-            >
-              📡 Local
-            </button>
-          </div>
-
-          {/* Private Room */}
-          <div className="p-2 bg-blue-500/10 rounded border border-blue-400/20">
-            <div className="flex gap-1">
-              <input
-                type="text"
-                value={roomCode}
-                onChange={(e) => onRoomCodeChange(e.target.value)}
-                placeholder="PIZZA-123 or create new"
-                className="flex-1 px-2 py-1 bg-black/50 border border-blue-400/30 rounded text-white placeholder-gray-500 text-[10px] focus:outline-none focus:border-blue-400 uppercase"
-                maxLength={9}
-              />
-              <button
-                onClick={handlePrivateConnect}
-                disabled={isLoading}
-                className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded text-[10px] font-medium transition-colors border border-blue-400/30 disabled:opacity-50"
-              >
-                🔒
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Connected Status Component
-const ConnectedStatusComponent: React.FC<{
-  currentRoom: P2PRoom | null;
-  onDisconnect: () => void;
-  isLoading: boolean;
-}> = ({ currentRoom, onDisconnect, isLoading }) => {
-  const getRoomIcon = () => {
-    switch (currentRoom?.type) {
-      case "general":
-        return "🌍";
-      case "local":
-        return "📡";
-      case "private":
-        return "🔒";
-      default:
-        return "❓";
-    }
-  };
-
-  const getRoomName = () => {
-    switch (currentRoom?.type) {
-      case "general":
-        return "Community Room";
-      case "local":
-        return "Local Network";
-      case "private":
-        return `Room ${currentRoom.code}`;
-      default:
-        return "Unknown";
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* Connection Status */}
-      <div className="p-3 bg-green-500/10 rounded border border-green-400/30">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{getRoomIcon()}</span>
-            <div>
-              <h4 className="text-green-400 font-medium text-xs">Connected</h4>
-              <p className="text-[10px] text-gray-400">{getRoomName()}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="flex items-center gap-1 text-green-400 text-[10px]">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              {currentRoom?.peersCount || 0} peers
-            </div>
-          </div>
-        </div>
-
-        {currentRoom?.code && (
-          <div className="mb-2 p-2 bg-black/20 rounded">
-            <span className="text-[9px] text-gray-500">Share Code:</span>
-            <div className="flex items-center gap-2 mt-1">
-              <code className="text-cyan-400 font-mono text-xs bg-black/30 px-2 py-1 rounded">
-                {currentRoom.code}
-              </code>
-              <button
-                onClick={() =>
-                  navigator.clipboard.writeText(currentRoom.code || "")
-                }
-                className="text-[8px] text-gray-400 hover:text-cyan-400 transition-colors"
-              >
-                📋
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Disconnect Button */}
-      <button
-        onClick={onDisconnect}
-        disabled={isLoading}
-        className="w-full px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-[10px] font-medium transition-colors border border-red-400/30 disabled:opacity-50"
-      >
-        {isLoading ? "🔄 Disconnecting..." : "🚫 Disconnect"}
-      </button>
-    </div>
-  );
-};
-
+// KISS: Componente principal focado APENAS em orquestração
 const ShareSettings: React.FC = () => {
-  const [sharedAdapters, setSharedAdapters] = useState<SharedAdapter[]>([]);
-  const [incomingAdapters, setIncomingAdapters] = useState<IncomingAdapter[]>(
-    []
-  );
-  const [currentRoom, setCurrentRoom] = useState<P2PRoom | null>(null);
   const [roomCode, setRoomCode] = useState("");
-  const [isSharing, setIsSharing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Carrega os modelos LoRA treinados localmente
+  // SRP: Hooks especializados para diferentes responsabilidades
+  const {
+    currentRoom,
+    isLoading,
+    isSharing,
+    connect,
+    disconnect,
+    updatePeerCount,
+    setCurrentRoom,
+    persistedState,
+    reconnectToLastSession,
+    resetP2PState,
+    getRecentRoomCodes,
+    updateSharedAdapters,
+    shouldShowReconnectPanel,
+  } = useP2PConnection();
+
+  const {
+    sharedAdapters,
+    incomingAdapters,
+    loadLocalAdapters,
+    toggleAdapterSharing,
+    downloadAdapter,
+    addAvailableAdapters,
+    clearIncomingAdapters,
+  } = useAdapters(updateSharedAdapters);
+
+  // DEBUGGING: Log component mount and key state changes
   useEffect(() => {
-    loadLocalAdapters();
+    console.log("🚀 [SHARESETS] ShareSettings component mounted");
+    console.log("🚀 [SHARESETS] Initial persistence state:", persistedState);
 
-    // Initialize P2P service
-    p2pShareService.initialize().catch(console.error);
+    // Test localStorage functionality
+    console.log("🧪 [SHARESETS] Testing localStorage functionality...");
+    const isLocalStorageWorking = StorageDebugUtils.testLocalStorage();
 
-    // Setup event listeners
-    const handleRoomJoined = (data: any) => {
-      console.log("Joined room:", data);
-      if (data.type === "general") {
-        setCurrentRoom({ type: "general", peersCount: 0, isActive: true });
-      } else if (data.type === "local") {
-        setCurrentRoom({ type: "local", peersCount: 0, isActive: true });
-      } else {
-        setCurrentRoom({
-          type: "private",
-          code: data.code,
-          peersCount: 0,
-          isActive: true,
-        });
-      }
-      setIsSharing(true);
-    };
-
-    const handlePeersUpdated = (count: number) => {
-      setCurrentRoom((prev) => (prev ? { ...prev, peersCount: count } : null));
-    };
-
-    const handleAdaptersAvailable = (data: {
-      from: string;
-      adapters: any[];
-    }) => {
-      const newAdapters: IncomingAdapter[] = data.adapters.map((adapter) => ({
-        name: adapter.name,
-        topic: adapter.topic,
-        size: formatFileSize(adapter.size),
-        from: data.from,
-      }));
-
-      setIncomingAdapters((prev) => {
-        // Remove duplicates and add new ones
-        const filtered = prev.filter(
-          (existing) =>
-            !newAdapters.some(
-              (newAdapter) =>
-                newAdapter.topic === existing.topic &&
-                newAdapter.from === existing.from
-            )
-        );
-        return [...filtered, ...newAdapters];
-      });
-    };
-
-    p2pShareService.on("room-joined", handleRoomJoined);
-    p2pShareService.on("peers-updated", handlePeersUpdated);
-    p2pShareService.on("adapters-available", handleAdaptersAvailable);
-
-    return () => {
-      // Cleanup event listeners - P2PShareService extends EventEmitter
-      p2pShareService.removeListener("room-joined", handleRoomJoined);
-      p2pShareService.removeListener("peers-updated", handlePeersUpdated);
-      p2pShareService.removeListener(
-        "adapters-available",
-        handleAdaptersAvailable
+    if (isLocalStorageWorking) {
+      // Inspect current P2P state
+      StorageDebugUtils.inspectP2PState();
+      StorageDebugUtils.getAllOrchKeys();
+    } else {
+      console.error(
+        "❌ [SHARESETS] localStorage is not working - persistence will fail!"
       );
-      p2pShareService.leaveRoom().catch(console.error);
-    };
+    }
   }, []);
 
-  const loadLocalAdapters = () => {
-    const trainingHistory = loadFromStorage("orch-training-history", {
-      trainedModels: [] as string[],
+  useEffect(() => {
+    console.log("🔍 [SHARESETS] State changed:", {
+      isSharing,
+      currentRoom,
+      sharedAdaptersCount: sharedAdapters.length,
+      persistedStateSharing: persistedState.isSharing,
     });
+  }, [isSharing, currentRoom, sharedAdapters.length, persistedState.isSharing]);
 
-    const adapters: SharedAdapter[] = trainingHistory.trainedModels.map(
-      (modelName: string) => ({
-        name: modelName,
-        topic: "", // Será gerado quando compartilhar
-        size: "Unknown", // TODO: Get actual file size from Ollama
-        shared: false,
-        peers: 0,
-      })
-    );
-    setSharedAdapters(adapters);
-  };
+  // SRP: Effect focado APENAS na inicialização com melhor ordem
+  useEffect(() => {
+    const initializeShareSettings = async () => {
+      console.log("🔄 [SHARESETS] Starting ShareSettings initialization...");
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    if (bytes < 1024 * 1024 * 1024)
-      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
-  };
+      // Step 1: Load local adapters FIRST
+      console.log("📂 [SHARESETS] Step 1: Loading local adapters...");
+      loadLocalAdapters();
 
-  const stopSharing = async () => {
-    setIsLoading(true);
+      // Step 2: Initialize P2P service
+      console.log("🌐 [SHARESETS] Step 2: Initializing P2P service...");
+      await initializeP2P();
+
+      console.log("✅ [SHARESETS] ShareSettings initialization completed");
+    };
+
+    initializeShareSettings();
+    return cleanupP2P;
+  }, []);
+
+  // KISS: Funções simples e focadas
+  const initializeP2P = async () => {
     try {
-      await p2pShareService.leaveRoom();
-      setCurrentRoom(null);
-      setIsSharing(false);
-      setIncomingAdapters([]);
+      console.log("🔄 [SHARESETS] Initializing P2P share service...");
+      await p2pShareService.initialize();
+      console.log("✅ [SHARESETS] P2P service initialized");
+
+      console.log("🔄 [SHARESETS] Setting up P2P event listeners...");
+      setupEventListeners();
+      console.log("✅ [SHARESETS] P2P event listeners set up");
     } catch (error) {
-      console.error("Error stopping sharing:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("❌ [SHARESETS] Failed to initialize P2P:", error);
     }
   };
 
-  const toggleAdapterSharing = async (index: number) => {
-    const updatedAdapters = [...sharedAdapters];
-    updatedAdapters[index].shared = !updatedAdapters[index].shared;
+  const setupEventListeners = () => {
+    // SRP: Event handlers focados em suas responsabilidades específicas
+    console.log("🔧 [SHARESETS] Registering event listeners...");
 
-    if (updatedAdapters[index].shared && !updatedAdapters[index].topic) {
-      updatedAdapters[index].topic = generateAdapterTopic();
+    p2pShareService.on("room-joined", handleRoomJoined);
+    p2pShareService.on("peers-updated", updatePeerCount);
+    p2pShareService.on("adapters-available", addAvailableAdapters);
 
-      try {
-        await p2pShareService.shareAdapter(updatedAdapters[index].name, {
-          name: updatedAdapters[index].name,
-          size: 0,
-          checksum: "pending",
-          topic: updatedAdapters[index].topic,
-        });
-      } catch (error) {
-        console.error("Error sharing adapter:", error);
-        updatedAdapters[index].shared = false;
-        showError("Failed to share adapter");
-      }
-    } else if (!updatedAdapters[index].shared && updatedAdapters[index].topic) {
-      await p2pShareService.unshareAdapter(updatedAdapters[index].topic);
-    }
-
-    setSharedAdapters(updatedAdapters);
+    console.log("✅ [SHARESETS] Event listeners registered");
   };
 
-  const downloadAdapter = async (adapter: IncomingAdapter) => {
-    console.log("Downloading adapter:", adapter.name);
-    try {
-      await p2pShareService.requestAdapter(adapter.topic, adapter.from);
-      showSuccess(`Started downloading ${adapter.name}`);
-    } catch (error) {
-      console.error("Error downloading adapter:", error);
-      showError("Failed to download adapter");
-    }
+  const cleanupP2P = () => {
+    console.log("🧹 [SHARESETS] Cleaning up P2P connections...");
+    p2pShareService.removeAllListeners();
+    p2pShareService.leaveRoom().catch(console.error);
+    console.log("✅ [SHARESETS] P2P cleanup completed");
   };
 
-  // Helper functions
-  const generateLocalNetworkTopic = async (): Promise<string> => {
-    // Simula geração de topic baseado na rede local
-    const networkId = "local-network"; // TODO: Get real network ID
-    const crypto = window.crypto;
-    const data = new TextEncoder().encode(`orch-os-local-${networkId}`);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  // KISS: Handler simples para room joined
+  const handleRoomJoined = (data: any) => {
+    const roomType = data.type || "local";
+    console.log("🏠 [SHARESETS] Room joined:", { roomType, data });
+
+    setCurrentRoom({
+      type: roomType,
+      code: data.code,
+      peersCount: 0,
+      isActive: true,
+    });
   };
 
-  const generateFriendlyCode = (): string => {
-    const words = [
-      "MUSIC",
-      "PIZZA",
-      "COFFEE",
-      "BOOKS",
-      "GAMES",
-      "ART",
-      "SPACE",
-      "OCEAN",
-    ];
-    const word = words[Math.floor(Math.random() * words.length)];
-    const number = Math.floor(Math.random() * 999)
-      .toString()
-      .padStart(3, "0");
-    return `${word}-${number}`;
+  // SRP: Handler focado apenas em desconexão
+  const handleDisconnect = async () => {
+    console.log("🔌 [SHARESETS] Handling disconnect...");
+    await disconnect();
+    clearIncomingAdapters();
+    console.log("✅ [SHARESETS] Disconnect completed");
   };
 
-  const codeToTopic = async (code: string): Promise<string> => {
-    const crypto = window.crypto;
-    const data = new TextEncoder().encode(`orch-os-room-${code}`);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  };
-
-  const generateAdapterTopic = (): string => {
-    const bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-  };
-
-  const showError = (message: string) => {
-    // TODO: Replace with proper toast notification
-    alert(`❌ ${message}`);
-  };
-
-  const showSuccess = (message: string) => {
-    // TODO: Replace with proper toast notification
-    alert(`✅ ${message}`);
-  };
-
-  const handleSmartConnect = async (
-    type: "general" | "local" | "private",
-    privateCode?: string
-  ) => {
-    setIsLoading(true);
-    try {
-      if (type === "general") {
-        await p2pShareService.joinGeneralRoom();
-        setCurrentRoom({ type: "general", peersCount: 0, isActive: true });
-      } else if (type === "local") {
-        // Try local first, fallback to general if no local peers found
-        try {
-          const localTopic = await generateLocalNetworkTopic();
-          await p2pShareService.joinRoom(localTopic);
-          setCurrentRoom({ type: "local", peersCount: 0, isActive: true });
-
-          // Wait a bit to see if peers are found, otherwise fallback
-          setTimeout(async () => {
-            if (currentRoom?.peersCount === 0) {
-              await p2pShareService.joinGeneralRoom();
-              setCurrentRoom({
-                type: "general",
-                peersCount: 0,
-                isActive: true,
-              });
-            }
-          }, 3000);
-        } catch (error) {
-          // Fallback to general room
-          await p2pShareService.joinGeneralRoom();
-          setCurrentRoom({ type: "general", peersCount: 0, isActive: true });
-        }
-      } else {
-        // Private room - either join existing or create new
-        const codeToUse = privateCode || roomCode.trim();
-        if (codeToUse) {
-          const topic = await codeToTopic(codeToUse);
-          await p2pShareService.joinRoom(topic);
-          setCurrentRoom({
-            type: "private",
-            code: codeToUse,
-            peersCount: 0,
-            isActive: true,
-          });
-        } else {
-          // Create new private room
-          const friendlyCode = generateFriendlyCode();
-          const topic = await codeToTopic(friendlyCode);
-          await p2pShareService.joinRoom(topic);
-          setCurrentRoom({
-            type: "private",
-            code: friendlyCode,
-            peersCount: 0,
-            isActive: true,
-          });
-          setRoomCode(friendlyCode);
-        }
-      }
-      setIsSharing(true);
-    } catch (error) {
-      console.error("Error connecting:", error);
-      showError("Failed to connect");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // YAGNI: Render simples sem over-engineering
   return (
     <div className="space-y-3 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="text-center pb-2 border-b border-cyan-400/20">
-        <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
-          🌐 P2P Sharing Center
-        </h2>
-      </div>
-
-      {/* Connection Status & Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Connection Status */}
-        <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-slate-500/20 rounded-sm flex items-center justify-center">
-                <svg
-                  className="w-3 h-3 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold text-white">Connection</h3>
-                <p className="text-slate-400 text-[9px]">P2P Network Status</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-mono text-cyan-400 truncate max-w-32">
-                {isSharing
-                  ? currentRoom?.type === "general"
-                    ? "General Room"
-                    : currentRoom?.type === "local"
-                    ? "Local Network"
-                    : `Room: ${currentRoom?.code}`
-                  : "Disconnected"}
-              </p>
-              <div
-                className={`flex items-center text-[9px] ${
-                  isSharing ? "text-green-400" : "text-gray-400"
-                }`}
-              >
-                <svg
-                  className="w-2 h-2 mr-1"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                {isSharing
-                  ? `${currentRoom?.peersCount || 0} peers`
-                  : "Offline"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sharing Stats */}
-        <div className="bg-gradient-to-r from-cyan-900/50 to-blue-900/50 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-cyan-500/20 rounded-sm flex items-center justify-center">
-                <svg
-                  className="w-3 h-3 text-cyan-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold text-white">Sharing</h3>
-                <p className="text-slate-400 text-[9px]">
-                  Adapters & Downloads
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-mono text-cyan-400">
-                {sharedAdapters.filter((a) => a.shared).length}/
-                {sharedAdapters.length}
-              </p>
-              <div className="flex items-center text-cyan-400 text-[9px]">
-                <span>{incomingAdapters.length} available</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Sharing Section */}
-      <div className="grid grid-cols-12 gap-3">
-        {/* Connection Controls */}
-        <div className="col-span-5">
-          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
-            <h3 className="text-sm font-semibold text-cyan-400 mb-3">
-              🌐 Smart Connect
-            </h3>
-
-            {!isSharing ? (
-              <SmartConnectComponent
-                onConnect={handleSmartConnect}
-                isLoading={isLoading}
-                roomCode={roomCode}
-                onRoomCodeChange={setRoomCode}
-              />
-            ) : (
-              <ConnectedStatusComponent
-                currentRoom={currentRoom}
-                onDisconnect={stopSharing}
-                isLoading={isLoading}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Your Adapters */}
-        <div className="col-span-4">
-          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
-            <h3 className="text-sm font-semibold text-cyan-400 mb-3">
-              📦 Your Adapters
-            </h3>
-
-            {sharedAdapters.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-gray-400 text-[10px] mb-1">
-                  No trained adapters found
-                </p>
-                <p className="text-gray-500 text-[9px]">Train a model first!</p>
-              </div>
-            ) : (
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {sharedAdapters.map((adapter, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-2 bg-black/20 rounded border border-slate-400/10"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-medium text-white truncate">
-                        {adapter.name}
-                      </p>
-                      <p className="text-[9px] text-gray-400">
-                        {adapter.size} •{" "}
-                        {adapter.shared
-                          ? currentRoom?.type === "general"
-                            ? "Public in General"
-                            : currentRoom?.type === "local"
-                            ? "Shared Locally"
-                            : `Shared in ${currentRoom?.code}`
-                          : "Private"}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => toggleAdapterSharing(idx)}
-                      disabled={!isSharing}
-                      className={`ml-2 px-2 py-0.5 rounded text-[9px] font-medium transition-colors border ${
-                        adapter.shared
-                          ? currentRoom?.type === "general"
-                            ? "bg-purple-500/20 text-purple-400 border-purple-400/30 hover:bg-purple-500/30"
-                            : currentRoom?.type === "local"
-                            ? "bg-green-500/20 text-green-400 border-green-400/30 hover:bg-green-500/30"
-                            : "bg-blue-500/20 text-blue-400 border-blue-400/30 hover:bg-blue-500/30"
-                          : "bg-gray-500/20 text-gray-400 border-gray-400/30 hover:bg-gray-500/30"
-                      } disabled:opacity-50`}
-                    >
-                      {adapter.shared ? "👁️ Public" : "🔒 Private"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Available Downloads */}
-        <div className="col-span-3">
-          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
-            <h3 className="text-sm font-semibold text-cyan-400 mb-3">
-              🎁 Available
-            </h3>
-
-            {!isSharing ? (
-              <div className="text-center py-4">
-                <p className="text-gray-400 text-[10px] mb-1">
-                  Connect to see adapters
-                </p>
-                <p className="text-gray-500 text-[9px]">Start sharing first</p>
-              </div>
-            ) : incomingAdapters.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-gray-400 text-[10px] mb-1">
-                  No adapters yet
-                </p>
-                <p className="text-gray-500 text-[9px]">
-                  {currentRoom?.type === "local"
-                    ? "Check local network"
-                    : "Share room code"}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                {incomingAdapters.map((adapter, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-black/50 rounded border border-cyan-400/10"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-white font-medium text-xs truncate">
-                        {adapter.name}
-                      </h4>
-                      <p className="text-[9px] text-gray-400">
-                        {adapter.from} • {adapter.size}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => downloadAdapter(adapter)}
-                      className="px-2 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors border border-green-400/30 text-[9px] font-medium"
-                    >
-                      📥
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Info Footer */}
-      <div className="p-2 bg-amber-500/10 rounded border border-amber-400/30">
-        <p className="text-[10px] text-amber-400">
-          <strong>💡 How it works:</strong>
-          {currentRoom?.type === "general"
-            ? " General room connects you to the global Orch-OS community. Models shared here are visible to everyone!"
-            : currentRoom?.type === "local"
-            ? " Auto-discovery finds peers on your local network. Perfect for sharing within the same office or home."
-            : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to connect securely."}
-        </p>
-      </div>
-
-      {/* Custom Scrollbar */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 2px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(34, 197, 94, 0.3);
-            border-radius: 2px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(34, 197, 94, 0.5);
-          }
-        `,
-        }}
+      <ShareHeader />
+      <ConnectionStats
+        currentRoom={currentRoom}
+        isSharing={isSharing}
+        sharedAdapters={sharedAdapters}
+        incomingAdapters={incomingAdapters}
       />
+      <MainSharingSection
+        currentRoom={currentRoom}
+        isSharing={isSharing}
+        isLoading={isLoading}
+        roomCode={roomCode}
+        setRoomCode={setRoomCode}
+        onConnect={connect}
+        onDisconnect={handleDisconnect}
+        sharedAdapters={sharedAdapters}
+        incomingAdapters={incomingAdapters}
+        onToggleSharing={toggleAdapterSharing}
+        onDownload={downloadAdapter}
+        persistedState={persistedState}
+        getRecentRoomCodes={getRecentRoomCodes}
+        reconnectToLastSession={reconnectToLastSession}
+        resetP2PState={resetP2PState}
+        shouldShowReconnectPanel={shouldShowReconnectPanel}
+      />
+      <InfoFooter currentRoom={currentRoom} />
     </div>
   );
 };
+
+// SRP: Componente focado apenas no header
+const ShareHeader: React.FC = () => (
+  <div className="text-center pb-2 border-b border-cyan-400/20">
+    <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
+      🌐 P2P Sharing Center
+    </h2>
+  </div>
+);
+
+// SRP: Componente focado apenas nas estatísticas
+const ConnectionStats: React.FC<{
+  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  isSharing: boolean;
+  sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
+  incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
+}> = ({ currentRoom, isSharing, sharedAdapters, incomingAdapters }) => (
+  <div className="grid grid-cols-2 gap-3">
+    <ConnectionStatusCard currentRoom={currentRoom} isSharing={isSharing} />
+    <SharingStatsCard
+      sharedAdapters={sharedAdapters}
+      incomingAdapters={incomingAdapters}
+    />
+  </div>
+);
+
+// SRP: Card focado apenas no status de conexão
+const ConnectionStatusCard: React.FC<{
+  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  isSharing: boolean;
+}> = ({ currentRoom, isSharing }) => (
+  <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <div className="w-6 h-6 bg-slate-500/20 rounded-sm flex items-center justify-center">
+          <svg
+            className="w-3 h-3 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+            />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-xs font-semibold text-white">Connection</h3>
+          <p className="text-slate-400 text-[9px]">P2P Network Status</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-xs font-mono text-cyan-400 truncate max-w-32">
+          {isSharing
+            ? currentRoom?.type === "general"
+              ? "General Room"
+              : currentRoom?.type === "local"
+              ? "Local Network"
+              : `Room: ${currentRoom?.code}`
+            : "Disconnected"}
+        </p>
+        <div
+          className={`flex items-center text-[9px] ${
+            isSharing ? "text-green-400" : "text-gray-400"
+          }`}
+        >
+          <svg className="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clipRule="evenodd"
+            />
+          </svg>
+          {isSharing ? `${currentRoom?.peersCount || 0} peers` : "Offline"}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// SRP: Card focado apenas nas estatísticas de sharing
+const SharingStatsCard: React.FC<{
+  sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
+  incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
+}> = ({ sharedAdapters, incomingAdapters }) => (
+  <div className="bg-gradient-to-r from-cyan-900/50 to-blue-900/50 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <div className="w-6 h-6 bg-cyan-500/20 rounded-sm flex items-center justify-center">
+          <svg
+            className="w-3 h-3 text-cyan-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+            />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-xs font-semibold text-white">Sharing</h3>
+          <p className="text-slate-400 text-[9px]">Adapters & Downloads</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-xs font-mono text-cyan-400">
+          {sharedAdapters.filter((a) => a.shared).length}/
+          {sharedAdapters.length}
+        </p>
+        <div className="flex items-center text-cyan-400 text-[9px]">
+          <span>{incomingAdapters.length} available</span>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// SRP: Seção principal focada no layout
+const MainSharingSection: React.FC<{
+  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+  isSharing: boolean;
+  isLoading: boolean;
+  roomCode: string;
+  setRoomCode: (code: string) => void;
+  onConnect: ReturnType<typeof useP2PConnection>["connect"];
+  onDisconnect: () => void;
+  sharedAdapters: ReturnType<typeof useAdapters>["sharedAdapters"];
+  incomingAdapters: ReturnType<typeof useAdapters>["incomingAdapters"];
+  onToggleSharing: ReturnType<typeof useAdapters>["toggleAdapterSharing"];
+  onDownload: ReturnType<typeof useAdapters>["downloadAdapter"];
+  persistedState: ReturnType<typeof useP2PConnection>["persistedState"];
+  getRecentRoomCodes: ReturnType<typeof useP2PConnection>["getRecentRoomCodes"];
+  reconnectToLastSession: ReturnType<
+    typeof useP2PConnection
+  >["reconnectToLastSession"];
+  resetP2PState: ReturnType<typeof useP2PConnection>["resetP2PState"];
+  shouldShowReconnectPanel: ReturnType<
+    typeof useP2PConnection
+  >["shouldShowReconnectPanel"];
+}> = ({
+  currentRoom,
+  isSharing,
+  isLoading,
+  roomCode,
+  setRoomCode,
+  onConnect,
+  onDisconnect,
+  sharedAdapters,
+  incomingAdapters,
+  onToggleSharing,
+  onDownload,
+  persistedState,
+  getRecentRoomCodes,
+  reconnectToLastSession,
+  resetP2PState,
+  shouldShowReconnectPanel,
+}) => (
+  <div className="flex gap-3 justify-between">
+    {/* KISS: Layout flexbox com distribuição igual de espaço */}
+    <div className="flex-1 min-w-0">
+      <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full">
+        <h3 className="text-sm font-semibold text-cyan-400 mb-3">
+          🌐 Smart Connect
+        </h3>
+
+        {!isSharing ? (
+          <SmartConnectComponent
+            onConnect={onConnect}
+            isLoading={isLoading}
+            roomCode={roomCode}
+            onRoomCodeChange={setRoomCode}
+            persistedState={persistedState}
+            getRecentRoomCodes={getRecentRoomCodes}
+            reconnectToLastSession={reconnectToLastSession}
+            shouldShowReconnectPanel={shouldShowReconnectPanel}
+          />
+        ) : (
+          <ConnectedStatusComponent
+            currentRoom={currentRoom}
+            onDisconnect={onDisconnect}
+            isLoading={isLoading}
+          />
+        )}
+      </div>
+    </div>
+
+    <div className="flex-1 min-w-0">
+      <AdapterListComponent
+        adapters={sharedAdapters}
+        currentRoom={currentRoom}
+        onToggleSharing={onToggleSharing}
+        isSharing={isSharing}
+      />
+    </div>
+
+    <div className="flex-1 min-w-0">
+      <AvailableAdaptersComponent
+        adapters={incomingAdapters}
+        currentRoom={currentRoom}
+        onDownload={onDownload}
+        isSharing={isSharing}
+      />
+    </div>
+  </div>
+);
+
+// SRP: Footer focado apenas em informações
+const InfoFooter: React.FC<{
+  currentRoom: ReturnType<typeof useP2PConnection>["currentRoom"];
+}> = ({ currentRoom }) => (
+  <div className="p-2 bg-amber-500/10 rounded border border-amber-400/30">
+    <p className="text-[10px] text-amber-400">
+      <strong>💡 How it works:</strong>
+      {currentRoom?.type === "general"
+        ? " General room connects you to the global Orch-OS community. Models shared here are visible to everyone!"
+        : currentRoom?.type === "local"
+        ? " Auto-discovery finds peers on your local network. Perfect for sharing within the same office or home."
+        : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to connect securely."}
+    </p>
+  </div>
+);
 
 export default ShareSettings;

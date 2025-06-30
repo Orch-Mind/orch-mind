@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+// Copyright (c) 2025 Guilherme Ferrari Brescia
+
+// ISP: Interface Segregation - interfaces específicas e focadas
+export interface SharedAdapter {
+  name: string;
+  topic: string;
+  size: string;
+  shared: boolean;
+  peers: number;
+}
+
+export interface IncomingAdapter {
+  name: string;
+  topic: string;
+  size: string;
+  from: string;
+}
+
+export interface P2PRoom {
+  type: "general" | "local" | "private";
+  code?: string;
+  peersCount: number;
+  isActive: boolean;
+}
+
+// ISP: Interfaces segregadas por responsabilidade
+export interface ConnectionProps {
+  onConnect: (
+    type: "general" | "local" | "private",
+    privateCode?: string
+  ) => void;
+  isLoading: boolean;
+}
+
+export interface PrivateRoomProps extends ConnectionProps {
+  roomCode: string;
+  onRoomCodeChange: (code: string) => void;
+}
+
+export interface ConnectionStatusProps {
+  currentRoom: P2PRoom | null;
+  onDisconnect: () => void;
+  isLoading: boolean;
+}
+
+export interface AdapterListProps {
+  adapters: SharedAdapter[];
+  currentRoom: P2PRoom | null;
+  onToggleSharing: (index: number) => void;
+  isSharing: boolean;
+}
+
+export interface AvailableAdaptersProps {
+  adapters: IncomingAdapter[];
+  currentRoom: P2PRoom | null;
+  onDownload: (adapter: IncomingAdapter) => void;
+  isSharing: boolean;
+}
