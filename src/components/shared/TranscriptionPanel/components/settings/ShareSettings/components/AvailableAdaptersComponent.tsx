@@ -47,10 +47,12 @@ export const AvailableAdaptersComponent: React.FC<AvailableAdaptersProps> = ({
           )}
           <button
             onClick={() => setShowMergeSection(!showMergeSection)}
-            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-            title="Toggle merge section"
+            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors whitespace-nowrap px-1"
+            title={
+              showMergeSection ? "Hide merge section" : "Show merge section"
+            }
           >
-            {showMergeSection ? "🔗 Hide Merge" : "🔗 Merge"}
+            {showMergeSection ? "🔗 Hide" : "🔗 Merge"}
           </button>
         </div>
       </div>
