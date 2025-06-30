@@ -109,6 +109,9 @@ export class ElectronAPIFactory {
 
       // P2P Management
       ...this.createP2PManager(),
+
+      // LoRA Merge Manager
+      ...this.createLoRAMergeManager(),
     };
 
     this.logger.success("Neural Electron API composition completed");
@@ -1115,6 +1118,57 @@ export class ElectronAPIFactory {
         return () => {
           ipcRenderer.removeListener("p2p:adapters-available", subscription);
         };
+      },
+    };
+  }
+
+  /**
+   * Create LoRA Merge Manager service methods
+   */
+  private createLoRAMergeManager() {
+    return {
+      mergeLoRAAdapters: async (request: any) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("merge-lora-adapters", request),
+          {
+            component: "LoRAMergeManager",
+            operation: "mergeAdapters",
+            severity: "high",
+          }
+        );
+      },
+
+      listMergedAdapters: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("list-merged-adapters"),
+          {
+            component: "LoRAMergeManager",
+            operation: "listMergedAdapters",
+            severity: "low",
+          }
+        );
+      },
+
+      removeMergedAdapter: async (adapterName: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("remove-merged-adapter", adapterName),
+          {
+            component: "LoRAMergeManager",
+            operation: "removeMergedAdapter",
+            severity: "medium",
+          }
+        );
+      },
+
+      shareMergedAdapter: async (adapterName: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("share-merged-adapter", adapterName),
+          {
+            component: "LoRAMergeManager",
+            operation: "shareMergedAdapter",
+            severity: "medium",
+          }
+        );
       },
     };
   }

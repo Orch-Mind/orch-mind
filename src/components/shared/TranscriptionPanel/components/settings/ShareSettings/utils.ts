@@ -103,8 +103,8 @@ export class NotificationUtils {
       console.log(`🔕 [SILENT-ERROR] ${message}`);
       return;
     }
-    // TODO: Replace with proper toast notification
-    alert(`❌ ${message}`);
+    // YAGNI: Just log to console, no popup alerts needed
+    console.error(`❌ ${message}`);
   }
 
   static showSuccess(message: string, forceSilent?: boolean): void {
@@ -112,8 +112,8 @@ export class NotificationUtils {
       console.log(`🔕 [SILENT-SUCCESS] ${message}`);
       return;
     }
-    // TODO: Replace with proper toast notification
-    alert(`✅ ${message}`);
+    // YAGNI: Just log to console, no popup alerts needed
+    console.log(`✅ ${message}`);
   }
 }
 
@@ -298,25 +298,11 @@ export class ClipboardUtils {
   }
 
   /**
-   * Last resort: show manual copy option when all automated methods fail
+   * Last resort: log copy instruction when all automated methods fail
    */
   private static showManualCopyFallback(text: string): void {
-    // Create a simple prompt for manual copy as absolute last resort
-    try {
-      const message = `Copy failed automatically. Please manually copy this code:\n\n${text}`;
-
-      // On mobile or when available, try to at least show the text in a way user can select
-      if (
-        confirm(
-          `${message}\n\nClick OK to see the code in an alert you can select from.`
-        )
-      ) {
-        // Show in prompt so user can select and copy manually
-        prompt("Copy this code manually:", text);
-      }
-    } catch (error) {
-      console.error("❌ Even manual copy fallback failed:", error);
-    }
+    // YAGNI: Just log the text for manual copy, no popups needed
+    console.warn("📋 Manual copy required. Text to copy:", text);
   }
 
   /**

@@ -4,12 +4,17 @@
 import { spawn } from "child_process";
 import { ipcMain, IpcMainInvokeEvent } from "electron";
 import {
+  LoRAMergeService,
+  MergeRequest,
+} from "../services/training/LoRAMergeService";
+import {
   LoRATrainingService,
   TrainingParams,
 } from "../services/training/LoRATrainingService";
 
 export function setupLoRATrainingHandlers(): void {
   const trainingService = new LoRATrainingService();
+  const mergeService = new LoRAMergeService();
 
   // Handle LoRA training requests
   ipcMain.handle(
@@ -33,6 +38,137 @@ export function setupLoRATrainingHandlers(): void {
         return result;
       } catch (error) {
         console.error("[IPC] LoRA training error:", error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        };
+      }
+    }
+  );
+
+  // Handle LoRA adapter merging requests
+  ipcMain.handle(
+    "merge-lora-adapters",
+    async (event: IpcMainInvokeEvent, request: MergeRequest) => {
+      console.log("[IPC] Received LoRA merge request:", {
+        adapterCount: request.adapters.length,
+        strategy: request.strategy,
+        outputName: request.outputName,
+        baseModel: request.targetBaseModel,
+      });
+
+      try {
+        const result = await mergeService.mergeAdapters(request);
+
+        if (result.success) {
+          console.log("[IPC] LoRA merge completed successfully");
+          console.log("[IPC] Merged adapter path:", result.mergedAdapterPath);
+        } else {
+          console.error("[IPC] LoRA merge failed:", result.error);
+        }
+
+        return result;
+      } catch (error) {
+        console.error("[IPC] LoRA merge error:", error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        };
+      }
+    }
+  );
+
+  // Handle listing merged adapters
+  ipcMain.handle("list-merged-adapters", async (event: IpcMainInvokeEvent) => {
+    try {
+      const adapters = await mergeService.listMergedAdapters();
+      console.log(`[IPC] Listed ${adapters.length} merged adapters`);
+      return { success: true, adapters };
+    } catch (error) {
+      console.error("[IPC] Error listing merged adapters:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+        adapters: [],
+      };
+    }
+  });
+
+  // Handle removing merged adapter
+  ipcMain.handle(
+    "remove-merged-adapter",
+    async (event: IpcMainInvokeEvent, adapterName: string) => {
+      console.log(
+        "[IPC] Received request to remove merged adapter:",
+        adapterName
+      );
+
+      try {
+        const result = await mergeService.removeMergedAdapter(adapterName);
+
+        if (result.success) {
+          console.log("[IPC] Merged adapter removed successfully");
+        } else {
+          console.error("[IPC] Failed to remove merged adapter:", result.error);
+        }
+
+        return result;
+      } catch (error) {
+        console.error("[IPC] Error removing merged adapter:", error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        };
+      }
+    }
+  );
+
+  // Handle sharing merged adapter via P2P
+  ipcMain.handle(
+    "share-merged-adapter",
+    async (event: IpcMainInvokeEvent, adapterName: string) => {
+      console.log(
+        "[IPC] Received request to share merged adapter:",
+        adapterName
+      );
+
+      try {
+        // Get merged adapter info
+        const mergedAdapters = await mergeService.listMergedAdapters();
+        const targetAdapter = mergedAdapters.find(
+          (adapter) => adapter.name === adapterName
+        );
+
+        if (!targetAdapter) {
+          throw new Error(`Merged adapter not found: ${adapterName}`);
+        }
+
+        // Create P2P adapter info with merge metadata
+        const adapterInfo = {
+          name: `${adapterName} (merged)`,
+          topic: `merged-${adapterName}-${Date.now()}`,
+          size: "Unknown", // Will be calculated during sharing
+          metadata: targetAdapter.metadata,
+        };
+
+        console.log("[IPC] Sharing merged adapter with metadata:", {
+          name: adapterInfo.name,
+          topic: adapterInfo.topic,
+          sourceAdapters: targetAdapter.metadata.sourceAdapters.length,
+          strategy: targetAdapter.metadata.mergeStrategy,
+        });
+
+        return {
+          success: true,
+          adapterInfo,
+          mergedAdapterPath: targetAdapter.path,
+        };
+      } catch (error) {
+        console.error("[IPC] Error sharing merged adapter:", error);
         return {
           success: false,
           error:

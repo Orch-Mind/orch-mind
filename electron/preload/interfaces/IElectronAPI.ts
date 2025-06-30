@@ -259,9 +259,7 @@ export interface IP2PShareManager {
   }>;
   p2pJoinRoom(topic: string): Promise<{ success: boolean; error?: string }>;
   p2pLeaveRoom(): Promise<{ success: boolean; error?: string }>;
-  p2pShareAdapter(
-    modelName: string
-  ): Promise<{
+  p2pShareAdapter(modelName: string): Promise<{
     success: boolean;
     adapterInfo?: P2PAdapterInfo;
     error?: string;
@@ -275,6 +273,99 @@ export interface IP2PShareManager {
   ): () => void;
 }
 
+// LoRA Training Types & Interface (existing)
+export interface TrainingParams {
+  conversations: Array<{
+    id: string;
+    messages: Array<{
+      role: "user" | "assistant" | "system";
+      content: string;
+    }>;
+  }>;
+  baseModel: string;
+  outputName: string;
+}
+
+export interface TrainingResult {
+  success: boolean;
+  adapterPath?: string;
+  error?: string;
+  details?: {
+    trainingExamples: number;
+    modelName: string;
+    trainingDuration?: number;
+  };
+}
+
+// LoRA Adapter Merging Types & Interface (new)
+export interface AdapterMergeMetadata {
+  sourceAdapters: Array<{
+    id: string;
+    name: string;
+    baseModel: string;
+    checksum: string;
+    timestamp: string;
+    author?: string;
+    peers?: number;
+  }>;
+  mergeStrategy: "arithmetic_mean" | "weighted_average" | "svd_merge";
+  mergeTimestamp: string;
+  mergedBy: string;
+  targetBaseModel: string;
+  mergedAdapterPath: string;
+  mergedChecksum: string;
+}
+
+export interface MergeRequest {
+  adapters: Array<{
+    name: string;
+    path: string;
+    baseModel: string;
+    checksum: string;
+    weight?: number;
+  }>;
+  strategy: "arithmetic_mean" | "weighted_average" | "svd_merge";
+  outputName: string;
+  targetBaseModel: string;
+}
+
+export interface MergeResult {
+  success: boolean;
+  mergedAdapterPath?: string;
+  metadata?: AdapterMergeMetadata;
+  error?: string;
+}
+
+export interface MergedAdapterInfo {
+  name: string;
+  path: string;
+  metadata: AdapterMergeMetadata;
+}
+
+export interface ILoRAMergeManager {
+  mergeLoRAAdapters(request: MergeRequest): Promise<MergeResult>;
+  listMergedAdapters(): Promise<{
+    success: boolean;
+    adapters: MergedAdapterInfo[];
+    error?: string;
+  }>;
+  removeMergedAdapter(adapterName: string): Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  shareMergedAdapter(adapterName: string): Promise<{
+    success: boolean;
+    adapterInfo?: {
+      name: string;
+      topic: string;
+      size: string;
+      metadata: AdapterMergeMetadata;
+    };
+    mergedAdapterPath?: string;
+    error?: string;
+  }>;
+}
+
 // Complete Electron API Interface
 export interface IElectronAPI
   extends IWindowManager,
@@ -286,7 +377,8 @@ export interface IElectronAPI
     IDuckDBCommander,
     IVllmManager,
     IOllamaManager,
-    IP2PShareManager {
+    IP2PShareManager,
+    ILoRAMergeManager {
   // Legacy support for existing vector databases
   queryPinecone(
     embedding: number[],

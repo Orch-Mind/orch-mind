@@ -183,7 +183,9 @@ const SharingStatsCard: React.FC<{
         </div>
         <div>
           <h3 className="text-xs font-semibold text-white">Sharing</h3>
-          <p className="text-slate-400 text-[9px]">Adapters & Downloads</p>
+          <p className="text-slate-400 text-[9px]">
+            Adapters, Downloads & Merge
+          </p>
         </div>
       </div>
       <div className="text-right">
@@ -296,10 +298,10 @@ const InfoFooter: React.FC<{
     <p className="text-[10px] text-amber-400">
       <strong>💡 How it works:</strong>
       {currentRoom?.type === "general"
-        ? " General room connects you to the global Orch-OS community. Models shared here are visible to everyone!"
+        ? " General room connects you to the global Orch-OS community. Download adapters and merge them into powerful combinations!"
         : currentRoom?.type === "local"
-        ? " Auto-discovery finds peers on your local network. Perfect for sharing within the same office or home."
-        : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to connect securely."}
+        ? " Auto-discovery finds peers on your local network. Perfect for sharing and merging adapters within the same office or home."
+        : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to collaborate and merge adapters securely."}
     </p>
   </div>
 );
