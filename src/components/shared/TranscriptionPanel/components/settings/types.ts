@@ -26,7 +26,6 @@ export interface SettingsFooterProps {
 
 export type TabType =
   | "general"
-  | "audio"
   | "appearance"
   | "conversation"
   | "advanced"
@@ -55,20 +54,6 @@ export interface SettingsState {
   setEnableMatrix: (enable: boolean) => void;
   matrixDensity: number;
   setMatrixDensity: (density: number) => void;
-
-  // Audio
-  audioQuality: number;
-  setAudioQuality: (quality: number) => void;
-  autoGainControl: boolean;
-  setAutoGainControl: (enable: boolean) => void;
-  noiseSuppression: boolean;
-  setNoiseSuppression: (enable: boolean) => void;
-  echoCancellation: boolean;
-  setEchoCancellation: (enable: boolean) => void;
-  enhancedPunctuation: boolean;
-  setEnhancedPunctuation: (enable: boolean) => void;
-  speakerDiarization: boolean;
-  setSpeakerDiarization: (enable: boolean) => void;
 
   // ChatGPT, Deepgram & Pinecone
   chatgptApiKey: string;
@@ -105,12 +90,6 @@ export interface SettingsState {
   setOllamaEmbeddingModel: (model: string) => void;
   ollamaEnabled: boolean;
   setOllamaEnabled: (enabled: boolean) => void;
-
-  // Transcrição
-  transcriptionEnabled: boolean;
-  setTranscriptionEnabled: (enable: boolean) => void;
-  speakerIdentification: boolean;
-  setSpeakerIdentification: (enable: boolean) => void;
 
   // Pinecone
   pineconeApiKey: string;

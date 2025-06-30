@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import { AudioSettings, GeneralSettings } from "./settings";
+import { GeneralSettings } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
 import SettingsFooter from "./settings/SettingsFooter";
 import SettingsHeader from "./settings/SettingsHeader";
@@ -70,24 +70,6 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
               setEnableMatrix={settings.setEnableMatrix}
               matrixDensity={settings.matrixDensity}
               setMatrixDensity={settings.setMatrixDensity}
-            />
-          )}
-
-          {/* Audio Tab */}
-          {settings.activeTab === "audio" && (
-            <AudioSettings
-              enhancedPunctuation={settings.enhancedPunctuation}
-              setEnhancedPunctuation={settings.setEnhancedPunctuation}
-              speakerDiarization={settings.speakerDiarization}
-              setSpeakerDiarization={settings.setSpeakerDiarization}
-              audioQuality={settings.audioQuality}
-              setAudioQuality={settings.setAudioQuality}
-              autoGainControl={settings.autoGainControl}
-              setAutoGainControl={settings.setAutoGainControl}
-              noiseSuppression={settings.noiseSuppression}
-              setNoiseSuppression={settings.setNoiseSuppression}
-              echoCancellation={settings.echoCancellation}
-              setEchoCancellation={settings.setEchoCancellation}
             />
           )}
 

@@ -51,19 +51,6 @@ export const STORAGE_KEYS = {
   COLOR_THEME: "colorTheme",
   SHOW_ADVANCED_SETTINGS: "showAdvancedSettings",
 
-  // ===== Configurações de áudio e transcrição =====
-  // Processamento de áudio
-  AUDIO_QUALITY: "audioQuality",
-  AUTO_GAIN_CONTROL: "autoGainControl",
-  NOISE_SUPPRESSION: "noiseSuppression",
-  ECHO_CANCELLATION: "echoCancellation",
-
-  // Transcrição
-  TRANSCRIPTION_ENABLED: "transcriptionEnabled",
-  ENHANCED_PUNCTUATION: "enhancedPunctuation",
-  SPEAKER_DIARIZATION: "speakerDiarization",
-  SPEAKER_IDENTIFICATION: "speakerIdentificationEnabled",
-
   // ===== Configurações de APIs e serviços externos =====
   // OpenAI/ChatGPT
   OPENAI_API_KEY: "openaiApiKey", // Mesmo que chatgptApiKey

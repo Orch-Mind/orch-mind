@@ -4,7 +4,6 @@
 import { useMemo, useState } from "react";
 import { ModeService, OrchOSMode } from "../../../../../services/ModeService";
 import { useApiSettings } from "./hooks/useApiSettings";
-import { useAudioSettings } from "./hooks/useAudioSettings";
 import { useDebugSettings } from "./hooks/useDebugSettings";
 import { useGeneralSettings } from "./hooks/useGeneralSettings";
 import { useNavigationState } from "./hooks/useNavigationState";
@@ -22,7 +21,6 @@ export const useSettingsState = (
   // Composição de hooks especializados por domínio
   const navigation = useNavigationState(initialTab);
   const general = useGeneralSettings();
-  const audio = useAudioSettings(show);
   const api = useApiSettings();
   const debug = useDebugSettings();
 
@@ -43,7 +41,6 @@ export const useSettingsState = (
   const saveSettings = () => {
     // Salva as configurações de cada domínio
     general.saveGeneralSettings();
-    audio.saveAudioSettings();
     api.saveApiSettings();
     debug.saveDebugSettings();
   };
@@ -56,8 +53,6 @@ export const useSettingsState = (
       ...navigation,
       // General
       ...general,
-      // Audio e Transcrição
-      ...audio,
       // API (OpenAI, Deepgram, HuggingFace, Pinecone)
       ...api,
       // Debug
@@ -102,7 +97,6 @@ export const useSettingsState = (
       // Dependências: todos os objetos retornados pelos hooks especializados e applicationMode
       navigation,
       general,
-      audio,
       api,
       debug,
       applicationMode,
