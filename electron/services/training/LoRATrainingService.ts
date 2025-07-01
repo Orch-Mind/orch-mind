@@ -726,23 +726,96 @@ EXIT CODE: ${execError.code || "N/A"}`;
   }
 
   private async findCompatiblePython(): Promise<string> {
-    // Try specific versions in order of preference (most stable first for LoRA)
-    const pythonCandidates = [
-      "python3.11", // PRIORIDADE: Funciona melhor com estratégia instant
-      "python3.10",
-      "python3.9",
-      "python3.12", // Pode ter problemas, mas ainda compatível
-      "python3", // fallback
-    ];
+    const isWindows = process.platform === "win32";
+    const isMacOS = process.platform === "darwin";
+    const isLinux = process.platform === "linux";
+
+    console.log(`[LoRA] Detecting Python on ${process.platform}...`);
+
+    // Define platform-specific Python candidates
+    let pythonCandidates: string[] = [];
+
+    if (isWindows) {
+      // First try PATH-based commands
+      pythonCandidates = [
+        "py -3.11", // Python Launcher with specific version
+        "py -3.10",
+        "py -3.9",
+        "py -3.12",
+        "python", // Standard command
+        "python3", // Sometimes available on Windows
+        "py", // Python Launcher default
+      ];
+
+      // Then try common Windows installation paths
+      const windowsPaths = [
+        // Python.org installer locations
+        "C:\\Python311\\python.exe",
+        "C:\\Python310\\python.exe",
+        "C:\\Python39\\python.exe",
+        "C:\\Python312\\python.exe",
+        // Microsoft Store installations
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python311\\python.exe`,
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python310\\python.exe`,
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python39\\python.exe`,
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python312\\python.exe`,
+        // User AppData installations
+        `${process.env.APPDATA}\\Python\\Python311\\python.exe`,
+        `${process.env.APPDATA}\\Python\\Python310\\python.exe`,
+        `${process.env.APPDATA}\\Python\\Python39\\python.exe`,
+        `${process.env.APPDATA}\\Python\\Python312\\python.exe`,
+        // Program Files installations
+        "C:\\Program Files\\Python311\\python.exe",
+        "C:\\Program Files\\Python310\\python.exe",
+        "C:\\Program Files\\Python39\\python.exe",
+        "C:\\Program Files\\Python312\\python.exe",
+        "C:\\Program Files (x86)\\Python311\\python.exe",
+        "C:\\Program Files (x86)\\Python310\\python.exe",
+        "C:\\Program Files (x86)\\Python39\\python.exe",
+        "C:\\Program Files (x86)\\Python312\\python.exe",
+      ];
+
+      pythonCandidates = pythonCandidates.concat(windowsPaths);
+    } else {
+      // macOS/Linux Python commands
+      pythonCandidates = [
+        "python3.11", // PRIORIDADE: Funciona melhor com estratégia instant
+        "python3.10",
+        "python3.9",
+        "python3.12", // Pode ter problemas, mas ainda compatível
+        "python3", // fallback Unix
+        "python", // General fallback
+      ];
+    }
+
+    console.log(
+      `[LoRA] Trying ${pythonCandidates.length} Python candidates...`
+    );
 
     for (const pythonCmd of pythonCandidates) {
       try {
+        console.log(`[LoRA] Testing Python: ${pythonCmd}`);
+
+        // For full paths on Windows, check if file exists first
+        if (isWindows && pythonCmd.includes(":\\")) {
+          try {
+            await fs.access(pythonCmd);
+          } catch {
+            console.log(`[LoRA] ❌ Path not found: ${pythonCmd}`);
+            continue;
+          }
+        }
+
         // Check if this Python version exists and get its version
-        const { stdout } = await execAsync(`${pythonCmd} --version`);
+        const { stdout } = await execAsync(`"${pythonCmd}" --version`);
 
         // Parse version (e.g., "Python 3.12.10")
         const versionStr = stdout.trim().split(" ")[1];
         const [major, minor] = versionStr.split(".").map(Number);
+
+        console.log(
+          `[LoRA] Found Python version: ${major}.${minor} (${versionStr})`
+        );
 
         // Check if it's in the compatible range for LoRA training
         if (major === 3 && minor >= 9 && minor <= 13) {
@@ -754,7 +827,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
           }
 
           console.log(
-            `[LoRA] ✅ Selected Python: ${pythonCmd} (version ${versionStr})`
+            `[LoRA] ✅ Selected Python: ${pythonCmd} (version ${versionStr}) on ${process.platform}`
           );
           return pythonCmd;
         } else {
@@ -763,15 +836,62 @@ EXIT CODE: ${execError.code || "N/A"}`;
           );
         }
       } catch (error) {
+        console.log(
+          `[LoRA] ❌ ${pythonCmd} failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
         // This Python version doesn't exist or is not accessible
         continue;
       }
     }
 
-    // Fallback error
+    // Enhanced error message with platform-specific instructions
+    let installInstructions = "";
+    if (isWindows) {
+      installInstructions = `
+🔧 For Windows - Python Installation Guide:
+
+OPTION 1 - Download from python.org (RECOMMENDED):
+1. Go to https://python.org/downloads/
+2. Download Python 3.11 (most stable for LoRA training)
+3. ⚠️ IMPORTANT: Check "Add Python to PATH" during installation
+4. Restart this application after installation
+
+OPTION 2 - Using Windows Package Manager:
+1. Open Command Prompt as Administrator
+2. Run: winget install Python.Python.3.11
+3. Restart this application
+
+OPTION 3 - If Python is already installed but not in PATH:
+1. Press Win + R, type "sysdm.cpl", press Enter
+2. Click "Environment Variables"
+3. Find "Path" variable and click "Edit"
+4. Add your Python installation directory (e.g., C:\\Python311)
+5. Add your Python Scripts directory (e.g., C:\\Python311\\Scripts)
+6. Restart this application
+
+📍 Common Python installation locations we checked:
+- C:\\Python311\\python.exe
+- %LOCALAPPDATA%\\Programs\\Python\\Python311\\python.exe
+- C:\\Program Files\\Python311\\python.exe`;
+    } else if (isMacOS) {
+      installInstructions = `
+For macOS:
+1. brew install python@3.11
+2. Or download from https://python.org/downloads/
+3. Restart the application after installation`;
+    } else {
+      installInstructions = `
+For Linux:
+1. sudo apt install python3.11 (Ubuntu/Debian)
+2. sudo yum install python3.11 (RHEL/CentOS)
+3. Restart the application after installation`;
+    }
+
     throw new Error(
-      "No compatible Python version found for Unsloth. " +
-        "Please install Python 3.9, 3.10, 3.11, or 3.12."
+      `No compatible Python version found for LoRA training on ${process.platform}. ` +
+        `We checked ${pythonCandidates.length} possible locations.${installInstructions}`
     );
   }
 }
