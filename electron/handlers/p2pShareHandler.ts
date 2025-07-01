@@ -204,9 +204,34 @@ class P2PShareManager extends EventEmitter {
       throw new Error("P2P not initialized");
     }
 
+    console.log(`[P2P] Joining room with topic: ${topicHex}`);
     const topic = Buffer.from(topicHex, "hex");
+
+    // Log network interfaces for debugging
+    try {
+      const os = await import("os");
+      const interfaces = os.networkInterfaces();
+      console.log("[P2P] Network interfaces:");
+      Object.keys(interfaces).forEach((name) => {
+        interfaces[name]?.forEach((iface) => {
+          if (!iface.internal) {
+            console.log(`[P2P]   ${name}: ${iface.address} (${iface.family})`);
+          }
+        });
+      });
+    } catch (e) {
+      console.log("[P2P] Could not list network interfaces:", e);
+    }
+
     this.discovery = this.swarm.join(topic, { client: true, server: true });
+
+    // Add discovery event handlers for debugging
+    this.discovery.on("peer", (peer: any) => {
+      console.log("[P2P] Discovery: Found peer via DHT/mDNS");
+    });
+
     await this.discovery.flushed();
+    console.log("[P2P] Room joined, discovery flushed");
 
     this.emit("room-joined", topicHex);
   }

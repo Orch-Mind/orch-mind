@@ -211,7 +211,25 @@ export const useP2PConnection = () => {
     if (type === "general") {
       await connectToGeneral();
     } else if (type === "local") {
+      console.log("📡 [P2P] Starting local network sharing...");
+      console.log(
+        "📡 [P2P] Note: Local discovery may not work between VM and host."
+      );
+      console.log(
+        "📡 [P2P] If running in Parallels/VMware, try Community mode instead."
+      );
+
       await connectToLocal();
+
+      // Add a timeout warning for VM users
+      setTimeout(() => {
+        const peersCount = currentRoom?.peersCount || 0;
+        if (peersCount === 0) {
+          console.warn(
+            "⚠️ [P2P] No peers found after 5s. If using a VM, try Community mode or check docs/P2P-VM-NETWORKING-GUIDE.md"
+          );
+        }
+      }, 5000);
     } else {
       await connectToPrivate(privateCode);
     }
