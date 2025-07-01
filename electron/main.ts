@@ -18,7 +18,7 @@ import { OllamaServiceFacade } from "../src/components/context/deepgram/services
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { setupLoRATrainingHandlers } from "./handlers/loraTrainingHandler";
-import setupP2PHandlers from "./handlers/p2pShareHandler";
+import setupP2PHandlers, { cleanupP2P } from "./handlers/p2pShareHandler";
 import { initializeIpcHandlers } from "./ipcHandlers";
 
 import { ShortcutsHelper } from "./shortcuts";
@@ -332,7 +332,7 @@ async function createWindow(): Promise<void> {
       offscreen: false,
 
       // DevTools error suppression
-      devTools: isDev, // Enable DevTools for debugging
+      devTools: true, // Enable DevTools for debugging
 
       // Memory optimization for large AI models
       spellcheck: false, // Disable spellcheck to save memory
@@ -744,6 +744,25 @@ process.on("uncaughtException", (error) => {
 });
 
 // App event handlers
+let isCleaningUp = false;
+
+app.on("before-quit", async (event) => {
+  if (isCleaningUp) return; // Prevent re-entry
+
+  console.log("🛑 App is about to quit, cleaning up P2P connections...");
+  event.preventDefault(); // Prevent immediate quit
+  isCleaningUp = true;
+
+  try {
+    await cleanupP2P();
+    console.log("✅ P2P cleanup completed");
+  } catch (error) {
+    console.error("❌ Error during P2P cleanup:", error);
+  } finally {
+    app.quit(); // Now actually quit
+  }
+});
+
 app.on("window-all-closed", () => {
   console.log("🪟 All windows closed");
   if (process.platform !== "darwin") {

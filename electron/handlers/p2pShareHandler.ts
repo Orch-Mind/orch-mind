@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+// @ts-ignore - b4a doesn't have official TypeScript types
+import b4a from "b4a";
 import * as crypto from "crypto";
 import { BrowserWindow, ipcMain } from "electron";
 import { EventEmitter } from "events";
@@ -59,7 +61,7 @@ class P2PShareManager extends EventEmitter {
   }
 
   private handleNewPeer(peer: any): void {
-    const peerId = peer.remotePublicKey.toString("hex").substring(0, 6);
+    const peerId = b4a.toString(peer.remotePublicKey, "hex").substring(0, 6);
     console.log(`[P2P] New peer connected: ${peerId}`);
 
     this.connections.add(peer);
@@ -103,7 +105,7 @@ class P2PShareManager extends EventEmitter {
   }
 
   private handleAdapterList(peer: any, adapters: AdapterInfo[]): void {
-    const peerId = peer.remotePublicKey.toString("hex").substring(0, 6);
+    const peerId = b4a.toString(peer.remotePublicKey, "hex").substring(0, 6);
     this.emit("adapters-available", {
       from: peerId,
       adapters,
@@ -164,7 +166,7 @@ class P2PShareManager extends EventEmitter {
     }
 
     const download = this.downloadQueue.get(topic)!;
-    download.chunks[index] = Buffer.from(chunk, "base64");
+    download.chunks[index] = b4a.from(chunk, "base64");
 
     // Check if all chunks received
     if (download.chunks.every((c) => c !== undefined)) {
@@ -195,8 +197,9 @@ class P2PShareManager extends EventEmitter {
 
   async createRoom(): Promise<string> {
     const topic = crypto.randomBytes(32);
-    await this.joinRoom(topic.toString("hex"));
-    return topic.toString("hex");
+    const topicHex = b4a.toString(topic, "hex");
+    await this.joinRoom(topicHex);
+    return topicHex;
   }
 
   async joinRoom(topicHex: string): Promise<void> {
@@ -205,7 +208,7 @@ class P2PShareManager extends EventEmitter {
     }
 
     console.log(`[P2P] Joining room with topic: ${topicHex}`);
-    const topic = Buffer.from(topicHex, "hex");
+    const topic = b4a.from(topicHex, "hex");
 
     // Log network interfaces for debugging
     try {
@@ -238,6 +241,7 @@ class P2PShareManager extends EventEmitter {
 
   async leaveRoom(): Promise<void> {
     if (this.discovery) {
+      console.log("[P2P] Destroying discovery to unannounce from DHT...");
       await this.discovery.destroy();
       this.discovery = null;
     }
@@ -260,7 +264,7 @@ class P2PShareManager extends EventEmitter {
     const stats = await fs.stat(modelPath);
     const fileData = await fs.readFile(modelPath);
     const checksum = crypto.createHash("sha256").update(fileData).digest("hex");
-    const topic = crypto.randomBytes(32).toString("hex");
+    const topic = b4a.toString(crypto.randomBytes(32), "hex");
 
     const adapterInfo: AdapterInfo = {
       name: modelName,
@@ -292,6 +296,37 @@ class P2PShareManager extends EventEmitter {
       return modelPath;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Properly destroy the P2P manager and clean up resources
+   * Following Pears best practices to avoid DHT pollution
+   */
+  async destroy(): Promise<void> {
+    console.log("[P2P] Starting graceful teardown...");
+
+    try {
+      // First, leave any active rooms
+      if (this.discovery) {
+        await this.leaveRoom();
+      }
+
+      // Destroy the swarm itself
+      if (this.swarm) {
+        console.log("[P2P] Destroying Hyperswarm instance...");
+        await this.swarm.destroy();
+        this.swarm = null;
+      }
+
+      // Clear all internal state
+      this.connections.clear();
+      this.sharedAdapters.clear();
+      this.downloadQueue.clear();
+
+      console.log("[P2P] Teardown completed successfully");
+    } catch (error) {
+      console.error("[P2P] Error during teardown:", error);
     }
   }
 }
@@ -399,6 +434,27 @@ export function setupP2PHandlers(): void {
       return { success: false, error: (error as Error).message };
     }
   });
+
+  // Cleanup handler
+  ipcMain.handle("p2p:destroy", async () => {
+    try {
+      if (!p2pManager) throw new Error("P2P not initialized");
+      await p2pManager.destroy();
+      p2pManager = null;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  });
+}
+
+// Export cleanup function for main process
+export async function cleanupP2P(): Promise<void> {
+  if (p2pManager) {
+    console.log("[P2P] Cleaning up P2P connections before app exit...");
+    await p2pManager.destroy();
+    p2pManager = null;
+  }
 }
 
 // Export for main process
