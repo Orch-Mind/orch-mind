@@ -204,16 +204,42 @@ export class P2PShareService extends EventEmitter {
     adapterPath: string,
     adapterInfo: AdapterInfo
   ): Promise<void> {
-    this.sharedAdapters.set(adapterInfo.topic, adapterInfo);
-    this.broadcastAdapterList();
+    if (this.isElectron && (window.electronAPI as any)?.p2pShareAdapter) {
+      // Use Electron IPC to share adapter
+      const result = await (window.electronAPI as any).p2pShareAdapter(
+        adapterPath
+      );
+      if (!result.success) {
+        throw new Error(result.error || "Failed to share adapter");
+      }
+      // Update local state with the returned adapter info
+      this.sharedAdapters.set(result.adapterInfo.topic, result.adapterInfo);
+      console.log(
+        "[P2P-SERVICE] Adapter shared via Electron:",
+        result.adapterInfo
+      );
+    } else {
+      // Browser fallback
+      this.sharedAdapters.set(adapterInfo.topic, adapterInfo);
+      this.broadcastAdapterList();
+    }
   }
 
   /**
    * Para de compartilhar um adapter
    */
   async unshareAdapter(topic: string): Promise<void> {
+    if (this.isElectron && (window.electronAPI as any)?.p2pUnshareAdapter) {
+      // Use Electron IPC to unshare adapter
+      const result = await (window.electronAPI as any).p2pUnshareAdapter(topic);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to unshare adapter");
+      }
+    }
     this.sharedAdapters.delete(topic);
-    this.broadcastAdapterList();
+    if (!this.isElectron) {
+      this.broadcastAdapterList();
+    }
   }
 
   /**

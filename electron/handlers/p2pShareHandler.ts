@@ -180,18 +180,32 @@ class P2PShareManager extends EventEmitter {
   }
 
   private sendAdapterList(peer?: any): void {
+    const adaptersList = Array.from(this.sharedAdapters.values());
+    console.log(`[P2P] Sending adapter list:`, {
+      adapterCount: adaptersList.length,
+      adapters: adaptersList.map((a) => ({ name: a.name, topic: a.topic })),
+      toPeer: peer ? "specific peer" : "all peers",
+      totalPeers: this.connections.size,
+    });
+
     const message: P2PMessage = {
       type: "adapter-list",
-      data: Array.from(this.sharedAdapters.values()),
+      data: adaptersList,
     };
 
     const data = JSON.stringify(message);
 
     if (peer) {
       peer.write(data);
+      console.log(`[P2P] Sent adapter list to specific peer`);
     } else {
       // Broadcast to all peers
-      this.connections.forEach((p) => p.write(data));
+      let sentCount = 0;
+      this.connections.forEach((p) => {
+        p.write(data);
+        sentCount++;
+      });
+      console.log(`[P2P] Broadcasted adapter list to ${sentCount} peers`);
     }
   }
 
@@ -255,11 +269,16 @@ class P2PShareManager extends EventEmitter {
   }
 
   async shareAdapter(modelName: string): Promise<AdapterInfo> {
+    console.log(`[P2P] Starting to share adapter: ${modelName}`);
+
     // Get model info from Ollama
     const modelPath = await this.getOllamaModelPath(modelName);
     if (!modelPath) {
+      console.error(`[P2P] Model path not found for ${modelName}`);
       throw new Error(`Model ${modelName} not found in Ollama`);
     }
+
+    console.log(`[P2P] Found model at path: ${modelPath}`);
 
     const stats = await fs.stat(modelPath);
     const fileData = await fs.readFile(modelPath);
@@ -273,7 +292,19 @@ class P2PShareManager extends EventEmitter {
       topic,
     };
 
+    console.log(`[P2P] Created adapter info:`, {
+      name: adapterInfo.name,
+      size: adapterInfo.size,
+      topic: adapterInfo.topic,
+      checksum: adapterInfo.checksum.substring(0, 8) + "...",
+    });
+
     this.sharedAdapters.set(topic, adapterInfo);
+    console.log(
+      `[P2P] Added adapter to shared list. Total shared: ${this.sharedAdapters.size}`
+    );
+
+    // Send updated list to all connected peers
     this.sendAdapterList();
 
     return adapterInfo;
@@ -285,16 +316,100 @@ class P2PShareManager extends EventEmitter {
   }
 
   private async getOllamaModelPath(modelName: string): Promise<string | null> {
-    // TODO: Implement actual Ollama model path resolution
-    // This is a placeholder - actual implementation would query Ollama
-    const ollamaHome =
-      process.env.OLLAMA_HOME || path.join(process.env.HOME || "", ".ollama");
-    const modelPath = path.join(ollamaHome, "models", "blobs", modelName);
-
     try {
-      await fs.access(modelPath);
-      return modelPath;
-    } catch {
+      // Use Ollama API to get model info
+      const response = await fetch("http://localhost:11434/api/show", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: modelName }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          `[P2P] Failed to get model info from Ollama: ${response.statusText}`
+        );
+        return null;
+      }
+
+      const modelInfo = await response.json();
+
+      // Try to locate the model file in Ollama's models directory
+      const ollamaHome =
+        process.env.OLLAMA_MODELS ||
+        (process.platform === "win32"
+          ? path.join(process.env.USERPROFILE || "", ".ollama", "models")
+          : path.join(process.env.HOME || "", ".ollama", "models"));
+
+      // Extract model hash from the model info
+      // The model path typically includes the hash in the blob directory
+      const modelDetails = modelInfo.details || {};
+
+      // For LoRA adapters, check the manifests directory first
+      const manifestsDir = path.join(
+        ollamaHome,
+        "manifests",
+        "registry.ollama.ai",
+        "library"
+      );
+      const modelParts = modelName.split(":");
+      const baseModel = modelParts[0];
+      const tag = modelParts[1] || "latest";
+
+      const manifestPath = path.join(manifestsDir, baseModel, tag);
+
+      try {
+        // Read the manifest to find the model blob
+        const manifestData = await fs.readFile(manifestPath, "utf-8");
+        const manifest = JSON.parse(manifestData);
+
+        // For LoRA models, the adapter layer is usually the last layer
+        const layers = manifest.layers || [];
+        const adapterLayer = layers.find(
+          (layer: any) =>
+            layer.mediaType === "application/vnd.ollama.adapter.lora" ||
+            layer.mediaType === "application/vnd.ollama.image.adapter"
+        );
+
+        if (adapterLayer && adapterLayer.digest) {
+          // Extract the hash from the digest (format: sha256:hash)
+          const hash = adapterLayer.digest.split(":")[1];
+          const blobPath = path.join(ollamaHome, "blobs", `sha256-${hash}`);
+
+          // Verify the file exists
+          await fs.access(blobPath);
+          console.log(`[P2P] Found model file at: ${blobPath}`);
+          return blobPath;
+        }
+      } catch (manifestError) {
+        console.log(`[P2P] Could not read manifest, trying alternative method`);
+      }
+
+      // Alternative: Look for the model in blobs directory by checking file sizes
+      // This is less reliable but can work as a fallback
+      const blobsDir = path.join(ollamaHome, "blobs");
+      try {
+        const files = await fs.readdir(blobsDir);
+        // For LoRA adapters, they're typically smaller files
+        for (const file of files) {
+          if (file.startsWith("sha256-")) {
+            const filePath = path.join(blobsDir, file);
+            const stats = await fs.stat(filePath);
+            // LoRA adapters are typically under 500MB
+            if (stats.size < 500 * 1024 * 1024) {
+              console.log(
+                `[P2P] Found potential adapter file: ${filePath} (${stats.size} bytes)`
+              );
+              // You might want to add additional validation here
+            }
+          }
+        }
+      } catch (blobError) {
+        console.error(`[P2P] Could not read blobs directory:`, blobError);
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`[P2P] Error getting Ollama model path:`, error);
       return null;
     }
   }
@@ -370,6 +485,13 @@ export function setupP2PHandlers(): void {
           console.log("[P2P] Forwarding room-left event");
           BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
             window.webContents.send("p2p:room-left");
+          });
+        });
+
+        p2pManager.on("adapter-downloaded", (data: any) => {
+          console.log("[P2P] Forwarding adapter-downloaded event:", data.topic);
+          BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
+            window.webContents.send("p2p:adapter-downloaded", data);
           });
         });
       }

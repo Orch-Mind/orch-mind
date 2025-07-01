@@ -162,11 +162,22 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
       const adapter = sharedAdapters[index];
       const willBeShared = !adapter.shared;
 
+      console.log(`🔄 [P2P-CONTEXT] Toggling adapter sharing:`, {
+        adapter: adapter.name,
+        currentlyShared: adapter.shared,
+        willBeShared: willBeShared,
+        currentTopic: adapter.topic,
+      });
+
       const updatedAdapters = [...sharedAdapters];
       updatedAdapters[index].shared = willBeShared;
 
       if (willBeShared && !updatedAdapters[index].topic) {
         updatedAdapters[index].topic = ShareUtils.generateAdapterTopic();
+        console.log(
+          `📤 [P2P-CONTEXT] Sharing adapter with new topic:`,
+          updatedAdapters[index].topic
+        );
         try {
           await p2pShareService.shareAdapter(updatedAdapters[index].name, {
             name: updatedAdapters[index].name,
@@ -177,22 +188,40 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
           NotificationUtils.showSuccess(
             `Started sharing ${updatedAdapters[index].name}`
           );
+          console.log(
+            `✅ [P2P-CONTEXT] Successfully shared adapter:`,
+            updatedAdapters[index].name
+          );
         } catch (error) {
+          console.error(`❌ [P2P-CONTEXT] Failed to share adapter:`, error);
           updatedAdapters[index].shared = false; // Revert on error
           NotificationUtils.showError("Failed to share adapter");
         }
       } else if (!willBeShared && updatedAdapters[index].topic) {
+        console.log(
+          `📥 [P2P-CONTEXT] Unsharing adapter:`,
+          updatedAdapters[index].name
+        );
         try {
           await p2pShareService.unshareAdapter(updatedAdapters[index].topic);
           NotificationUtils.showSuccess(
             `Stopped sharing ${updatedAdapters[index].name}`
           );
+          console.log(
+            `✅ [P2P-CONTEXT] Successfully unshared adapter:`,
+            updatedAdapters[index].name
+          );
         } catch (error) {
+          console.error(`❌ [P2P-CONTEXT] Failed to unshare adapter:`, error);
           NotificationUtils.showError("Failed to stop sharing adapter");
         }
       }
 
       setSharedAdapters(updatedAdapters);
+      console.log(
+        `🔄 [P2P-CONTEXT] Updated shared adapters state:`,
+        updatedAdapters.filter((a) => a.shared).map((a) => a.name)
+      );
     },
     [sharedAdapters]
   );
