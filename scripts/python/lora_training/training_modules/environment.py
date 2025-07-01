@@ -9,8 +9,6 @@ import platform
 
 def find_compatible_python():
     """Find a Python version compatible with training libraries (3.9-3.15)."""
-    import platform
-    
     # Different commands based on OS
     if platform.system() == "Windows":
         python_candidates = [
@@ -26,7 +24,7 @@ def find_compatible_python():
     for python_cmd in python_candidates:
         try:
             # Set environment for proper encoding on Windows
-            env = dict(os.environ) if 'os' in globals() else {}
+            env = dict(os.environ)
             env['PYTHONIOENCODING'] = 'utf-8'
             
             result = subprocess.run(
@@ -48,7 +46,6 @@ def find_compatible_python():
     
     # If not found in PATH, try common Windows locations
     if platform.system() == "Windows":
-        import os
         windows_paths = [
             r"C:\Python311\python.exe",
             r"C:\Python310\python.exe",
