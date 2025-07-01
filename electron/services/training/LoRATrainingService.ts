@@ -266,13 +266,15 @@ EXIT CODE: ${execError.code || "N/A"}`;
   private getTrainingScriptPath(): string {
     // Try multiple possible locations for the training script
     const possiblePaths = [
+      // For packaged applications (Windows/macOS/Linux) - extraResources
       path.join(
-        app.getAppPath(),
+        process.resourcesPath || path.dirname(process.execPath),
         "scripts",
         "python",
         "lora_training",
         "train_lora.py"
       ),
+      // For development mode
       path.join(
         process.cwd(),
         "scripts",
@@ -280,6 +282,15 @@ EXIT CODE: ${execError.code || "N/A"}`;
         "lora_training",
         "train_lora.py"
       ),
+      // Alternative for packaged apps in app.asar
+      path.join(
+        app.getAppPath(),
+        "scripts",
+        "python",
+        "lora_training",
+        "train_lora.py"
+      ),
+      // Alternative relative path from build directory
       path.join(
         __dirname,
         "..",
@@ -292,13 +303,22 @@ EXIT CODE: ${execError.code || "N/A"}`;
       ),
     ];
 
+    console.log(`[LoRA] Searching for training script...`);
+    console.log(`[LoRA] process.resourcesPath: ${process.resourcesPath}`);
+    console.log(`[LoRA] process.execPath: ${process.execPath}`);
+    console.log(`[LoRA] app.getAppPath(): ${app.getAppPath()}`);
+    console.log(`[LoRA] process.cwd(): ${process.cwd()}`);
+    console.log(`[LoRA] __dirname: ${__dirname}`);
+
     for (const scriptPath of possiblePaths) {
       try {
+        console.log(`[LoRA] Trying path: ${scriptPath}`);
         // Synchronous check since we're in a loop
         require("fs").accessSync(scriptPath);
         console.log(`[LoRA] Found training script at: ${scriptPath}`);
         return scriptPath;
       } catch (error) {
+        console.log(`[LoRA] Path not found: ${scriptPath}`);
         // Continue to next path
       }
     }

@@ -1,6 +1,7 @@
 {
   "name": "orch-os",
   "version": "1.0.0",
+  "description": "Orch-OS - Integrative Symbolic Intelligence Desktop Application",
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
@@ -42,7 +43,8 @@
       "dist/**/*",
       "dist-electron/**/*",
       "package.json",
-      "electron/**/*"
+      "electron/**/*",
+      "scripts/**/*"
     ],
     "directories": {
       "output": "release",
@@ -124,10 +126,7 @@
         "schemes": [
           "orch-os"
         ]
-      },
-      "scripts": [
-        "build/postinstall-linux.sh"
-      ]
+      }
     },
     "publish": [
       {
@@ -145,15 +144,22 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "scripts/python",
+        "to": "scripts/python",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "extraMetadata": {
       "main": "dist-electron/main.js"
     }
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["electron", "desktop", "ai", "llm", "neural", "symbolic-intelligence"],
+  "author": "Guilherme Ferrari Brescia",
+  "license": "MIT",
   "engines": {
     "node": ">=22.16.0",
     "npm": ">=10.0.0"
