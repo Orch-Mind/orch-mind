@@ -94,13 +94,13 @@ def analyze_content_complexity(data_path):
 
 # Load and analyze training data
 try:
-    with open("{data_path}", "r", encoding="utf-8") as f:
+    with open(r"{data_path}", "r", encoding="utf-8") as f:
         raw_data = [json.loads(line) for line in f if line.strip()]
     
     print(f"📊 Loaded {{len(raw_data)}} training examples")
     
     # Analyze content for step calculation
-    content_analysis = analyze_content_complexity("{data_path}")
+    content_analysis = analyze_content_complexity(r"{data_path}")
     
     print(f"🔍 Content Analysis Results:")
     print(f"   • Total tokens: {{content_analysis['total_tokens']:,}}")
