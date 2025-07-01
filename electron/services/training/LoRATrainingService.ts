@@ -132,16 +132,36 @@ export class LoRATrainingService {
       const optimalSteps = this.calculateOptimalSteps(datasetSize, true); // true = incremental
 
       // Always use incremental training (simplified command) with dynamically calculated steps
-      const fullCommand = `${pythonCommand} "${scriptPath}" --data "${dataPath}" --base-model "${params.baseModel}" --output "master" --max-steps ${optimalSteps} --complexity medium`;
+      let fullCommand = `${pythonCommand} "${scriptPath}" --data "${dataPath}" --base-model "${params.baseModel}" --output "master" --max-steps ${optimalSteps} --complexity medium`;
+
+      // For Windows, prepend command to set console code page to UTF-8
+      if (process.platform === "win32") {
+        fullCommand = `chcp 65001 >nul && ${fullCommand}`;
+      }
 
       console.log(`[LoRA] Command to execute: ${fullCommand}`);
       console.log(`[LoRA] Working directory: ${this.trainingDir}`);
       console.log(`[LoRA] Mode: Incremental training (always)`);
 
+      // Environment variables for proper encoding
+      const execEnv: Record<string, string> = {
+        ...process.env,
+        PYTHONIOENCODING: "utf-8:replace", // Force UTF-8 with replacement for unprintable chars
+        PYTHONLEGACYWINDOWSSTDIO: "0", // Use Unicode console on Windows
+        LANG: "en_US.UTF-8", // Set locale to UTF-8
+        LC_ALL: "en_US.UTF-8", // Force all locale settings to UTF-8
+      };
+
+      // Add Windows-specific encoding fix
+      if (process.platform === "win32") {
+        execEnv.PYTHONUTF8 = "1"; // Force Python to use UTF-8 mode on Windows
+      }
+
       const result = await execAsync(fullCommand, {
         cwd: this.trainingDir,
         timeout: 5 * 60 * 1000, // REDUCED: 5 minutes timeout (estratégia instant é rápida)
         maxBuffer: 1024 * 1024 * 1000, // 10MB buffer para output
+        env: execEnv,
       });
 
       console.log("[LoRA] Training completed successfully");
