@@ -4,15 +4,14 @@
 /**
  * DuckDB Neural Database Service - Electron Compatible
  *
- * Implementation following DuckDB-WASM official documentation for Electron
- * @see https://duckdb.org/docs/stable/clients/wasm/instantiation.html
+ * Implementation using DuckDB Node API for Electron
  */
 
 import { DuckDBMatch } from "../../vector-database/interfaces/IVectorDatabase";
 import { ErrorHandler } from "../utils/ErrorHandler";
 import { Logger } from "../utils/Logger";
 
-// Legacy compatibility alias for DuckDB-WASM types
+// Legacy compatibility alias for DuckDB types
 interface NormalizedMatch extends DuckDBMatch {}
 
 export class DuckDBService {
@@ -44,7 +43,7 @@ export class DuckDBService {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
-    // DuckDB WASM is not recommended for Electron applications
+    // DuckDB Node API is recommended for Electron applications
     // This service is deprecated - use DuckDBHelper in main process instead
     this.logger.warn(
       "DuckDBService: Deprecated for Electron - use main process DuckDBHelper instead"
@@ -230,7 +229,7 @@ export class DuckDBService {
       hasConnection: !!this.connection,
       hasDatabase: !!this.db,
       crossOriginIsolated: crossOriginIsolated,
-      version: "DuckDB-WASM-Electron",
+      version: "DuckDB-Node-Electron",
       environment: "electron",
     };
   }

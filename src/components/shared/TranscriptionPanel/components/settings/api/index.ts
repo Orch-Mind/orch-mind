@@ -8,7 +8,6 @@ export { default as OllamaSettings } from "./OllamaSettings";
 // Componentes legados mantidos para compatibilidade (podem ser removidos gradualmente)
 export { default as ChatGPTSettings } from "./ChatGPTSettings";
 export { default as DeepgramSettings } from "./DeepgramSettings";
-export { default as HuggingFaceSettings } from "./HuggingFaceSettings";
 export { default as PineconeSettings } from "./PineconeSettings";
 
 // Tipos

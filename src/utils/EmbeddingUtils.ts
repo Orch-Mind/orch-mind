@@ -13,7 +13,7 @@
  * @returns Número de dimensões do embedding
  */
 export const getModelDimensions = (model: string): number => {
-  // ONNX Community models - novos modelos ONNX otimizados disponíveis na UI
+  // Community models - modelos otimizados disponíveis na UI
   if (model.includes("all-MiniLM-L6-v2")) return 384;
 
   // Default para modelos desconhecidos - dimensão intermediária mais comum

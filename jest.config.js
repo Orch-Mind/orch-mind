@@ -25,16 +25,12 @@ module.exports = {
     ],
     "^.+\\.jsx?$": "babel-jest",
   },
-  transformIgnorePatterns: [
-    "/node_modules/(?!(@huggingface/transformers|@dqbd/tiktoken|onnxruntime-web|onnxruntime-common|nanoid))",
-  ],
+  transformIgnorePatterns: ["/node_modules/(?!(@dqbd/tiktoken|nanoid))"],
   setupFiles: ["<rootDir>/jest.setup.js"],
   setupFilesAfterEnv: ["<rootDir>/jest.silence-console.js"],
   moduleNameMapper: {
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "^@/(.*)$": "<rootDir>/src/$1",
-    "^@huggingface/transformers$":
-      "<rootDir>/test/__mocks__/@huggingface/transformers.js",
     "^nanoid$": "<rootDir>/test/__mocks__/nanoid.js",
   },
 };

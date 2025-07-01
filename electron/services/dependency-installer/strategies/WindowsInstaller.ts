@@ -34,9 +34,6 @@ export class WindowsInstaller extends BasePlatformInstaller {
       case "ollama":
         await this.installOllama(onProgress);
         break;
-      case "docker":
-        await this.installDocker(onProgress);
-        break;
       default:
         throw new Error(`Unknown dependency: ${dependency}`);
     }
@@ -51,12 +48,6 @@ export class WindowsInstaller extends BasePlatformInstaller {
 2. Run the installer
 3. Follow the installation wizard
 Alternative: Run 'winget install Ollama.Ollama' in PowerShell`,
-
-      docker: `1. Download Docker Desktop from https://docker.com/products/docker-desktop
-2. Run the installer
-3. Follow the installation wizard
-4. Restart your computer
-Alternative: Run 'winget install Docker.DockerDesktop' in PowerShell`,
     };
 
     return (
@@ -101,34 +92,6 @@ Alternative: Run 'winget install Docker.DockerDesktop' in PowerShell`,
     if (!success) {
       throw new Error(
         "Please download Ollama from https://ollama.com/download/windows"
-      );
-    }
-  }
-
-  private async installDocker(
-    onProgress?: (message: string) => void
-  ): Promise<void> {
-    this.progressReporter.reportDownloading(
-      "docker",
-      "Installing Docker Desktop for Windows..."
-    );
-
-    const success = await this.tryPackageManagers("docker", [
-      {
-        name: "winget",
-        checkCommand: "winget",
-        installCommand: "winget install Docker.DockerDesktop",
-      },
-      {
-        name: "Chocolatey",
-        checkCommand: "choco",
-        installCommand: "choco install docker-desktop -y",
-      },
-    ]);
-
-    if (!success) {
-      throw new Error(
-        "Please download Docker Desktop from https://docker.com/products/docker-desktop"
       );
     }
   }

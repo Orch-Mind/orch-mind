@@ -26,9 +26,6 @@ export class MacOSInstaller extends BasePlatformInstaller {
       case "ollama":
         await this.installOllama(onProgress);
         break;
-      case "docker":
-        await this.installDocker(onProgress);
-        break;
       default:
         throw new Error(`Unknown dependency: ${dependency}`);
     }
@@ -44,13 +41,6 @@ export class MacOSInstaller extends BasePlatformInstaller {
 2. Open the downloaded file and drag Ollama to Applications
 3. Launch Ollama from Applications
 Alternative: Run 'brew install ollama' in Terminal`,
-
-      docker: `Manual installation for macOS:
-1. Download Docker Desktop from https://docker.com/products/docker-desktop
-2. Open the downloaded .dmg file
-3. Drag Docker to Applications
-4. Launch Docker Desktop
-Alternative: Run 'brew install --cask docker' in Terminal`,
     };
 
     return (
@@ -110,33 +100,5 @@ Alternative: Run 'brew install --cask docker' in Terminal`,
         "Homebrew not found. Please install Homebrew first or download Ollama from https://ollama.com"
       );
     }
-  }
-
-  private async installDocker(
-    onProgress?: (message: string) => void
-  ): Promise<void> {
-    this.progressReporter.reportDownloading(
-      "docker",
-      "Installing Docker Desktop for macOS..."
-    );
-
-    const success = await this.tryPackageManagers("docker", [
-      {
-        name: "Homebrew Cask",
-        checkCommand: "brew",
-        installCommand: "brew install --cask docker",
-      },
-    ]);
-
-    if (!success) {
-      throw new Error(
-        "Homebrew not found. Please install Homebrew first or download Docker Desktop from https://docker.com"
-      );
-    }
-
-    this.progressReporter.reportInstalling(
-      "docker",
-      "Docker Desktop installed. Please launch Docker Desktop from Applications."
-    );
   }
 }

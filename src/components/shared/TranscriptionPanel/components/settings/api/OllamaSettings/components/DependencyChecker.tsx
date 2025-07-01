@@ -22,23 +22,18 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
   const [status, setStatus] = useState<DependencyStatus | null>(null);
   const [checking, setChecking] = useState(true);
   const [initialCheck, setInitialCheck] = useState(true);
-  const [dockerRequired, setDockerRequired] = useState(true);
   const [installing, setInstalling] = useState<{
     ollama: boolean;
-    docker: boolean;
-  }>({ ollama: false, docker: false });
+  }>({ ollama: false });
   const [installProgress, setInstallProgress] =
     useState<InstallProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showManualInstructions, setShowManualInstructions] = useState<{
     ollama: boolean;
-    docker: boolean;
-  }>({ ollama: false, docker: false });
+  }>({ ollama: false });
   const [manualInstructions, setManualInstructions] = useState<{
     ollama: string;
-    docker: string;
-  }>({ ollama: "", docker: "" });
-  const [startingDocker, setStartingDocker] = useState(false);
+  }>({ ollama: "" });
 
   // Check dependencies on mount
   useLayoutEffect(() => {
@@ -50,9 +45,6 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
   }, []);
 
   useEffect(() => {
-    // Detect hardware on mount to determine if Docker is needed
-    detectHardware();
-
     // Set up progress listener
     const cleanup = window.electronAPI.onInstallProgress((progress) => {
       setInstallProgress(progress);
@@ -81,64 +73,22 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
       const depStatus = await window.electronAPI.checkDependencies();
       setStatus(depStatus);
 
-      // Notify parent component based on what's actually required
-      const isReady = dockerRequired
-        ? depStatus.ollama.installed && depStatus.docker.installed
-        : depStatus.ollama.installed; // Only Ollama needed for Apple Silicon
-
+      // Notify parent component - only Ollama needed for desktop apps
+      const isReady = depStatus.ollama.installed;
       onDependenciesReady(isReady);
 
-      // Load manual instructions for both dependencies
-      const [ollamaInstructions, dockerInstructions] = await Promise.all([
-        window.electronAPI.getInstallInstructions("ollama"),
-        window.electronAPI.getInstallInstructions("docker"),
-      ]);
-
+      // Load manual instructions for Ollama
+      const ollamaInstructions =
+        await window.electronAPI.getInstallInstructions("ollama");
       setManualInstructions({
         ollama: ollamaInstructions,
-        docker: dockerInstructions,
       });
-
-      // Check if Docker was just started automatically
-      if (status && !status.docker.running && depStatus.docker.running) {
-        setStartingDocker(false);
-      } else if (
-        status &&
-        status.docker.installed &&
-        !status.docker.running &&
-        depStatus.docker.installed &&
-        !depStatus.docker.running &&
-        !startingDocker
-      ) {
-        setStartingDocker(true);
-        // Reset startingDocker after 15 seconds if Docker doesn't start
-        setTimeout(() => {
-          setStartingDocker(false);
-        }, 15000);
-      }
     } catch (err) {
       setError("Failed to check dependencies");
       console.error(err);
     } finally {
       setChecking(false);
       setInitialCheck(false);
-    }
-  };
-
-  const detectHardware = async () => {
-    try {
-      const result = await window.electronAPI.detectHardware();
-      if (result.success) {
-        setDockerRequired(result.dockerRequired);
-        console.log(
-          `[DependencyChecker] Hardware detected - Docker required: ${result.dockerRequired}`,
-          result.hardware
-        );
-      }
-    } catch (error) {
-      console.error("[DependencyChecker] Failed to detect hardware:", error);
-      // Default to requiring Docker if detection fails
-      setDockerRequired(true);
     }
   };
 
@@ -151,18 +101,6 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
     } catch (err) {
       setError("Failed to install Ollama. Try manual installation.");
       setShowManualInstructions((prev) => ({ ...prev, ollama: true }));
-    }
-  };
-
-  const installDocker = async () => {
-    setInstalling((prev) => ({ ...prev, docker: true }));
-    setError(null);
-
-    try {
-      await window.electronAPI.installDocker();
-    } catch (err) {
-      setError("Failed to install Docker. Try manual installation.");
-      setShowManualInstructions((prev) => ({ ...prev, docker: true }));
     }
   };
 
@@ -187,15 +125,13 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
 
   if (!status) return null;
 
-  const allInstalled = dockerRequired
-    ? status.ollama.installed && status.docker.installed
-    : status.ollama.installed; // Only check Ollama for Apple Silicon
+  const allInstalled = status.ollama.installed;
 
   // Always show the dependency status in the Requirements tab
   return (
     <div className="space-y-3">
       {/* Success Banner when all installed */}
-      {allInstalled && (!dockerRequired || status.docker.running) && (
+      {allInstalled && (
         <div className="bg-green-500/10 border border-green-500/30 rounded p-3">
           <div className="flex items-center">
             <CheckCircleIcon className="w-5 h-5 text-green-400 mr-2" />
@@ -205,26 +141,6 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
               </h4>
               <p className="text-green-400/70 text-xs mt-1">
                 You can now access advanced features in the Advanced tab.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Partial Success Banner */}
-      {allInstalled && dockerRequired && !status.docker.running && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3">
-          <div className="flex items-start">
-            <div className="animate-pulse w-5 h-5 mt-0.5 mr-2 flex-shrink-0">
-              ⚡
-            </div>
-            <div className="flex-1">
-              <h4 className="text-blue-400 font-medium text-sm">
-                Almost Ready!
-              </h4>
-              <p className="text-blue-400/70 text-xs mt-1">
-                All dependencies are installed. Just start Docker Desktop to
-                enable advanced features.
               </p>
             </div>
           </div>
@@ -241,8 +157,7 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
                 Dependencies Required
               </h4>
               <p className="text-yellow-400/70 text-xs mt-1">
-                Install the missing dependencies below to unlock advanced
-                features.
+                Install Ollama below to unlock advanced features.
               </p>
             </div>
           </div>
@@ -333,116 +248,22 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
           )}
         </div>
 
-        {/* Docker Status - Only show if required */}
-        {dockerRequired && (
-          <div className="bg-black/30 border border-cyan-500/20 rounded p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-sm mr-2">🐳</span>
-                <div>
-                  <h5 className="text-cyan-300 text-sm font-medium">Docker</h5>
-                  {status.docker.installed ? (
-                    <div>
-                      <p className="text-green-400 text-xs flex items-center mt-1">
-                        <CheckCircleIcon className="w-3 h-3 mr-1" />
-                        Installed{" "}
-                        {status.docker.version && `(v${status.docker.version})`}
-                      </p>
-                      {status.docker.running && (
-                        <p className="text-green-400 text-xs mt-1 flex items-center">
-                          <span className="animate-pulse w-2 h-2 bg-green-400 rounded-full mr-1"></span>
-                          Docker daemon is running
-                        </p>
-                      )}
-                      {!status.docker.running && startingDocker && (
-                        <p className="text-yellow-400 text-xs mt-1 flex items-center">
-                          <span className="animate-spin w-3 h-3 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full mr-1"></span>
-                          Starting Docker daemon...
-                        </p>
-                      )}
-                      {!status.docker.running && !startingDocker && (
-                        <p className="text-yellow-400 text-xs mt-1 flex items-center">
-                          <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
-                          Docker daemon is not running
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-yellow-400 text-xs">Not installed</p>
-                  )}
-                </div>
-              </div>
-
-              {!status.docker.installed && (
-                <button
-                  onClick={installDocker}
-                  disabled={installing.docker}
-                  className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded px-3 py-1 text-xs transition-colors disabled:opacity-50 flex items-center"
-                >
-                  {installing.docker ? (
-                    <div className="animate-spin w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full mr-1" />
-                  ) : (
-                    <ArrowDownTrayIcon className="w-3 h-3 mr-1" />
-                  )}
-                  Install
-                </button>
-              )}
-
-              {status.docker.installed &&
-                !status.docker.running &&
-                !startingDocker && (
-                  <p className="text-yellow-500 text-xs">
-                    Launch Docker Desktop
-                  </p>
-                )}
-            </div>
-
-            {/* Manual Instructions for Docker */}
-            {showManualInstructions.docker && (
-              <div className="mt-3 p-2 bg-black/20 rounded">
-                <h6 className="text-cyan-400 text-xs font-medium mb-1">
-                  Manual Installation:
-                </h6>
-                <pre className="text-cyan-300/70 text-[10px] whitespace-pre-wrap">
-                  {manualInstructions.docker}
-                </pre>
-              </div>
-            )}
-
-            {/* Docker Running Hint */}
-            {status.docker.installed && !status.docker.running && (
-              <div className="mt-2 p-2 bg-yellow-500/10 rounded border border-yellow-500/20">
-                <p className="text-yellow-400 text-xs font-medium mb-1">
-                  To start Docker:
-                </p>
-                <ul className="text-yellow-300/80 text-[10px] space-y-1">
-                  <li>• Open Docker Desktop from your Applications</li>
-                  <li>• Wait for the Docker icon in the system tray</li>
-                  <li>• The whale icon should be steady (not animated)</li>
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Apple Silicon Notice */}
-        {!dockerRequired && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded p-3 mt-3">
-            <div className="flex items-start">
-              <span className="text-lg mr-2">🍎</span>
-              <div className="flex-1">
-                <h5 className="text-green-400 text-sm font-medium">
-                  Apple Silicon Detected
-                </h5>
-                <p className="text-green-400/70 text-xs mt-1">
-                  Your Mac uses Apple Silicon (M1/M2/M3) which provides
-                  excellent performance with Ollama running natively. Docker is
-                  not required for your system.
-                </p>
-              </div>
+        {/* Desktop App Notice */}
+        <div className="bg-green-500/10 border border-green-500/30 rounded p-3 mt-3">
+          <div className="flex items-start">
+            <span className="text-lg mr-2">🖥️</span>
+            <div className="flex-1">
+              <h5 className="text-green-400 text-sm font-medium">
+                Desktop Application
+              </h5>
+              <p className="text-green-400/70 text-xs mt-1">
+                Orch-OS runs natively as a desktop application with excellent
+                performance. Only Ollama is required for local LLM
+                functionality.
+              </p>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Refresh Button */}

@@ -79,7 +79,7 @@ export default function App() {
     variant: "neutral",
   });
 
-  // Initialize performance optimizations and ONNX Runtime config once at application startup
+  // Initialize performance optimizations once at application startup
   useEffect(() => {
     const cleanup = initializeQuantumPerformanceOptimizations();
 

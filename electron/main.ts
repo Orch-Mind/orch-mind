@@ -12,7 +12,7 @@ import {
   shell,
   systemPreferences,
 } from "electron";
-import path, { join } from "path";
+import path from "path";
 import { IOpenAIService } from "../src/components/context/deepgram/interfaces/openai/IOpenAIService";
 import { OllamaServiceFacade } from "../src/components/context/deepgram/services/ollama/OllamaServiceFacade";
 import { initAutoUpdater } from "./autoUpdater";
@@ -139,22 +139,13 @@ function initializeHelpers() {
   console.log("🦙 [MAIN] Using OllamaServiceFacade (Advanced mode)");
 }
 
-// Enhanced Chromium flags for WASM, WebGPU compatibility and error suppression
+// Enhanced Chromium flags for GPU compatibility and error suppression
 // Reference: https://www.electronjs.org/docs/latest/development/build-instructions-macos
 console.log("🔧 Configuring Chromium flags...");
 
 // Simplified flags to avoid crashes and compatibility issues
 const commonFlags = [
-  // Essential for ONNX and transformers.js
-  "enable-features=SharedArrayBuffer", // Required for WASM threads
-  "enable-unsafe-webgpu", // Required for WebGPU models
-
-  // Memory optimization for AI workloads (more conservative)
-  "max-old-space-size=4096", // Reduce to 4GB to avoid memory issues
-  "max-semi-space-size=128", // More conservative semi-space
-
   // Network and fetch improvements for model loading
-  "disable-web-security", // Allow CORS for HuggingFace models in development
   "disable-features=VizDisplayCompositor", // Reduces GPU crashes
 
   // macOS specific fixes for crashes
@@ -285,16 +276,7 @@ async function handleAuthCallback(url: string, win: BrowserWindow | null) {
   }
 }
 
-// Set up environment variables for HuggingFace and transformers.js cache
-const userDataPath = app.getPath("userData");
-process.env.HF_HOME = join(userDataPath, "huggingface");
-process.env.TRANSFORMERS_CACHE = join(userDataPath, "transformers-cache");
-process.env.HF_HUB_CACHE = join(userDataPath, "huggingface", "hub");
-
-console.log("🔧 [Electron] Environment variables set:");
-console.log("  HF_HOME:", process.env.HF_HOME);
-console.log("  TRANSFORMERS_CACHE:", process.env.TRANSFORMERS_CACHE);
-console.log("  HF_HUB_CACHE:", process.env.HF_HUB_CACHE);
+// Desktop application - no external cache needed
 
 // Window management functions
 async function createWindow(): Promise<void> {
@@ -438,24 +420,7 @@ async function createWindow(): Promise<void> {
     });
   }
 
-  // Set up CSP using session.defaultSession approach (YY-EN40P method)
-  // This prevents the Electron security warning by setting CSP before window loads
-  state.mainWindow.webContents.session.webRequest.onHeadersReceived(
-    { urls: ["*://*/*"] },
-    (details, callback) => {
-      const responseHeaders = {
-        ...details.responseHeaders,
-        "Cross-Origin-Opener-Policy": ["same-origin-allow-popups"],
-        "Cross-Origin-Embedder-Policy": ["credentialless"],
-        "Cross-Origin-Resource-Policy": ["cross-origin"],
-        "Content-Security-Policy": [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: *; style-src 'self' 'unsafe-inline' *; img-src 'self' data: blob: *; font-src 'self' data: *; connect-src 'self' *; worker-src 'self' blob: data: *; child-src 'self' blob: *; object-src 'self' blob: *; media-src 'self' data: blob: *; manifest-src 'self' *; frame-src 'self' *;",
-        ],
-      };
-
-      callback({ responseHeaders });
-    }
-  );
+  // Desktop application - no restrictive headers needed
 
   // Enhanced error handling and recovery for dev server connection
   state.mainWindow.webContents.on("did-finish-load", () => {
@@ -655,8 +620,7 @@ async function createWindow(): Promise<void> {
     }
   );
 
-  // Note: CSP is already configured via webContents.session.webRequest.onHeadersReceived above
-  // This section removed to prevent conflicting CSP headers
+  // Desktop application - CSP configured in index.html
 }
 
 // Window visibility functions

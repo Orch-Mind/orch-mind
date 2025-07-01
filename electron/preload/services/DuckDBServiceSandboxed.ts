@@ -62,7 +62,7 @@ export class DuckDBServiceSandboxed {
 
       this.logger.info(`🔄 DuckDB-IPC: ${command} (${dataInfo})`);
 
-      // Delegate to main process which can safely use DuckDB-WASM
+      // Delegate to main process which can safely use DuckDB Node API
       const result = await ipcRenderer.invoke("duckdb-command", command, data);
 
       // Log completion with result info

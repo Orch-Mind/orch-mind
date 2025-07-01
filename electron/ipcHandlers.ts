@@ -917,7 +917,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   // 🔧 DEPENDENCY MANAGEMENT HANDLERS
   // ========================================
 
-  // Check if Ollama and Docker are installed
+  // Check if Ollama is installed
   ipcMain.handle("check-dependencies", async (): Promise<DependencyStatus> => {
     try {
       console.log("🔧 [IPC] Checking dependencies...");
@@ -988,7 +988,6 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         ramGB: hardware.ramGB,
         gpu: hardware.gpu,
         isAppleSilicon,
-        dockerRequired: !isAppleSilicon,
       });
 
       return {
