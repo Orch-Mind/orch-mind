@@ -4,19 +4,35 @@
 import subprocess
 from pathlib import Path
 import sys
+import os
+import platform
 
 def find_compatible_python():
     """Find a Python version compatible with training libraries (3.9-3.15)."""
-    python_candidates = [
-        "python3.11", "python3.10", "python3.9",
-        "python3.12", "python3.13", "python3.14", "python3.15", "python3"
-    ]
+    import platform
+    
+    # Different commands based on OS
+    if platform.system() == "Windows":
+        python_candidates = [
+            "py -3.11", "py -3.10", "py -3.9", "py -3.12",
+            "python", "python3", "py"
+        ]
+    else:
+        python_candidates = [
+            "python3.11", "python3.10", "python3.9",
+            "python3.12", "python3.13", "python3.14", "python3.15", "python3"
+        ]
     
     for python_cmd in python_candidates:
         try:
+            # Set environment for proper encoding on Windows
+            env = dict(os.environ) if 'os' in globals() else {}
+            env['PYTHONIOENCODING'] = 'utf-8'
+            
             result = subprocess.run(
-                [python_cmd, "--version"],
-                capture_output=True, text=True, check=True
+                python_cmd.split() + ["--version"],
+                capture_output=True, text=True, check=True,
+                env=env, errors='replace'
             )
             version_str = result.stdout.strip().split()[1]
             major, minor = map(int, version_str.split('.')[:2])
@@ -30,12 +46,62 @@ def find_compatible_python():
         except (subprocess.CalledProcessError, FileNotFoundError, ValueError, IndexError):
             continue
     
+    # If not found in PATH, try common Windows locations
+    if platform.system() == "Windows":
+        import os
+        windows_paths = [
+            r"C:\Python311\python.exe",
+            r"C:\Python310\python.exe",
+            r"C:\Python39\python.exe",
+            r"C:\Python312\python.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python311\python.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python310\python.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python39\python.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python312\python.exe"),
+            r"C:\Program Files\Python311\python.exe",
+            r"C:\Program Files\Python310\python.exe",
+            r"C:\Program Files\Python39\python.exe",
+            r"C:\Program Files (x86)\Python311\python.exe",
+            r"C:\Program Files (x86)\Python310\python.exe",
+        ]
+        
+        for python_path in windows_paths:
+            if os.path.exists(python_path):
+                try:
+                    env = dict(os.environ)
+                    env['PYTHONIOENCODING'] = 'utf-8'
+                    
+                    result = subprocess.run(
+                        [python_path, "--version"],
+                        capture_output=True, text=True, check=True,
+                        env=env, errors='replace'
+                    )
+                    version_str = result.stdout.strip().split()[1]
+                    major, minor = map(int, version_str.split('.')[:2])
+                    
+                    if major == 3 and 9 <= minor <= 15:
+                        print(f"✅ Found compatible Python at: {python_path} (version {version_str})")
+                        return python_path
+                except:
+                    continue
+    
     raise Exception("No compatible Python version found (3.9-3.15 required)")
 
 def get_python_executable(python_cmd):
     """Get the absolute path to the Python executable."""
-    result = subprocess.run([python_cmd, "-c", "import sys; print(sys.executable)"], 
-                          capture_output=True, text=True, check=True)
+    # Handle Windows py launcher commands
+    if isinstance(python_cmd, str) and python_cmd.startswith("py "):
+        cmd_list = python_cmd.split() + ["-c", "import sys; print(sys.executable)"]
+    else:
+        cmd_list = [python_cmd, "-c", "import sys; print(sys.executable)"]
+    
+    # Set environment for proper encoding
+    env = dict(os.environ)
+    env['PYTHONIOENCODING'] = 'utf-8'
+    
+    result = subprocess.run(cmd_list, 
+                          capture_output=True, text=True, check=True,
+                          env=env, errors='replace')
     return result.stdout.strip()
 
 def check_package_installed(python_executable, package_name):
@@ -44,9 +110,14 @@ def check_package_installed(python_executable, package_name):
         # Extract just the package name (remove version specs)
         base_package = package_name.split('>=')[0].split('==')[0].split('[')[0]
         
+        # Set environment for proper encoding
+        env = dict(os.environ)
+        env['PYTHONIOENCODING'] = 'utf-8'
+        
         result = subprocess.run(
             [python_executable, "-c", f"import {base_package}; print('installed')"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, timeout=5,
+            env=env, errors='replace'
         )
         return result.returncode == 0 and "installed" in result.stdout
     except:
@@ -63,9 +134,12 @@ def setup_dependencies(python_executable):
         
         if torch_installed:
             try:
+                env = dict(os.environ)
+                env['PYTHONIOENCODING'] = 'utf-8'
                 result = subprocess.run(
                     [python_executable, "-c", "import torch; print(torch.cuda.is_available())"],
-                    capture_output=True, text=True, check=True, timeout=10
+                    capture_output=True, text=True, check=True, timeout=10,
+                    env=env, errors='replace'
                 )
                 has_cuda = result.stdout.strip().lower() == "true"
                 print(f"✅ Torch already installed - CUDA available: {has_cuda}")
@@ -106,13 +180,16 @@ def setup_dependencies(python_executable):
             return True
         
         print(f"🚀 Installing {len(packages_to_install)} missing packages...")
+        env = dict(os.environ)
+        env['PYTHONIOENCODING'] = 'utf-8'
+        
         for package in packages_to_install:
             print(f"Installing {package}...")
             subprocess.check_call([
                 python_executable, "-m", "pip", "install", 
                 "--break-system-packages", "--user", "--upgrade", "--quiet",
                 package
-            ], timeout=300)  # 5 minute timeout per package
+            ], timeout=300, env=env)  # 5 minute timeout per package
         
         print("✅ Essential packages installed successfully")
         return True
@@ -134,19 +211,25 @@ def setup_virtual_environment(script_dir, python_cmd):
     
     try:
         python_executable = get_python_executable(python_cmd)
-        subprocess.run([python_executable, "-m", "venv", str(venv_dir)], check=True)
+        
+        env = dict(os.environ)
+        env['PYTHONIOENCODING'] = 'utf-8'
+        
+        subprocess.run([python_executable, "-m", "venv", str(venv_dir)], check=True, env=env)
 
         if sys.platform == "win32":
             pip_exe = venv_dir / "Scripts" / "pip.exe"
+            python_exe = venv_dir / "Scripts" / "python.exe"
         else:
             pip_exe = venv_dir / "bin" / "pip"
+            python_exe = venv_dir / "bin" / "python"
 
         packages = ["torch", "transformers", "datasets", "accelerate", "peft", "trl", "bitsandbytes"]
         for package in packages:
-            subprocess.check_call([str(pip_exe), "install", package, "--quiet"])
+            subprocess.check_call([str(pip_exe), "install", package, "--quiet"], env=env)
             
         print("✅ Virtual environment setup successful")
-        return str(pip_exe).replace('pip', 'python')
+        return str(python_exe)
     except subprocess.CalledProcessError as e:
         print(f"❌ Virtual environment setup failed: {e}")
         return None

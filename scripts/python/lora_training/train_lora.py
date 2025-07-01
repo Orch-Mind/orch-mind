@@ -105,7 +105,12 @@ def extract_base_model(model_name):
 def check_ollama_model_exists(model_name):
     """Check if model exists in Ollama."""
     try:
-        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=10)
+        # Set environment for proper encoding on Windows
+        env = dict(os.environ)
+        env['PYTHONIOENCODING'] = 'utf-8'
+        
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=10, 
+                              env=env, errors='replace')
         if result.returncode == 0:
             models_output = result.stdout
             # Check if model name appears in the output

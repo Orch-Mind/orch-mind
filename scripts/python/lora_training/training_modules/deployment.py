@@ -5,6 +5,12 @@ import subprocess
 import os
 import time
 
+def _get_subprocess_env():
+    """Get environment dict with proper encoding for subprocess calls."""
+    env = dict(os.environ)
+    env['PYTHONIOENCODING'] = 'utf-8'
+    return env
+
 def verify_adapter_files(adapter_path):
     """Verify that adapter files exist and are ready for deployment."""
     try:
@@ -105,11 +111,14 @@ def deploy_to_ollama(model_name, modelfile_path, base_model, max_retries=3):
                 return False
             
             # Check if model already exists and remove it
-            result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
+            env = _get_subprocess_env()
+            result = subprocess.run(["ollama", "list"], capture_output=True, text=True, 
+                                  env=env, errors='replace')
             if model_name in result.stdout:
                 print(f"🔄 Removing existing model: {model_name}")
                 try:
-                    subprocess.run(["ollama", "rm", model_name], capture_output=True, text=True, check=True)
+                    subprocess.run(["ollama", "rm", model_name], capture_output=True, text=True, 
+                                 check=True, env=env, errors='replace')
                     print(f"✅ Existing model removed: {model_name}")
                     # Wait after removal to ensure cleanup
                     time.sleep(1)
@@ -120,7 +129,7 @@ def deploy_to_ollama(model_name, modelfile_path, base_model, max_retries=3):
             # Pull base model if not available
             if base_model not in result.stdout:
                 print(f"📥 Pulling base model {base_model}...")
-                subprocess.run(["ollama", "pull", base_model], check=True)
+                subprocess.run(["ollama", "pull", base_model], check=True, env=env)
             
             # Wait for file system sync before creating model
             time.sleep(1)
@@ -128,13 +137,14 @@ def deploy_to_ollama(model_name, modelfile_path, base_model, max_retries=3):
             # Create model with detailed error handling
             result = subprocess.run(
                 ["ollama", "create", model_name, "-f", modelfile_path],
-                capture_output=True, text=True, check=True
+                capture_output=True, text=True, check=True, env=env, errors='replace'
             )
             
             print(f"✅ Model created successfully: {model_name}")
             
             # Verify model was actually created
-            verify_result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
+            verify_result = subprocess.run(["ollama", "list"], capture_output=True, text=True, 
+                                         env=env, errors='replace')
             if model_name in verify_result.stdout:
                 print(f"✅ Model verified in Ollama: {model_name}")
                 return True
