@@ -64,6 +64,18 @@ export class DuckDBConnectionManager {
     );
 
     try {
+      // Check for Windows ARM64 compatibility issue
+      if (process.platform === "win32" && process.arch === "arm64") {
+        console.warn(
+          "DuckDBConnectionManager: DuckDB native bindings not available for Windows ARM64"
+        );
+        console.warn(
+          "DuckDBConnectionManager: Using fallback mode - vector persistence disabled"
+        );
+        this.lastError = "DuckDB not supported on Windows ARM64";
+        return; // Gracefully fail without throwing
+      }
+
       // Dynamic import to avoid bundling issues
       const duckdb = await import("@duckdb/node-api");
       const { DuckDBInstance } = duckdb;
@@ -83,6 +95,20 @@ export class DuckDBConnectionManager {
       );
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : "Unknown error";
+
+      // Special handling for Windows ARM64
+      if (
+        this.lastError.includes("unsupported arch 'arm64' for platform 'win32'")
+      ) {
+        console.warn(
+          "DuckDBConnectionManager: DuckDB native bindings not available for Windows ARM64"
+        );
+        console.warn(
+          "DuckDBConnectionManager: Using fallback mode - vector persistence disabled"
+        );
+        return; // Gracefully fail without throwing
+      }
+
       console.error("DuckDBConnectionManager: Failed to initialize:", error);
       throw error;
     }

@@ -449,9 +449,21 @@ export class DuckDBMemoryService implements IPersistenceService {
             `[Buffer] Persistido no DuckDB: ${duckdbEntries.length} entradas`
           );
         } else {
-          LoggingUtils.logError(
-            `[Buffer] Erro ao persistir no DuckDB: ${result?.error}`
-          );
+          // Check if error is due to Windows ARM64 incompatibility
+          if (
+            result?.error?.includes(
+              "unsupported arch 'arm64' for platform 'win32'"
+            ) ||
+            result?.error?.includes("Windows ARM64")
+          ) {
+            LoggingUtils.logInfo(
+              `[Buffer] DuckDB not available on Windows ARM64 - vector persistence disabled`
+            );
+          } else {
+            LoggingUtils.logError(
+              `[Buffer] Erro ao persistir no DuckDB: ${result?.error}`
+            );
+          }
         }
 
         // Atualizar timestamp do último flush
@@ -543,9 +555,21 @@ export class DuckDBMemoryService implements IPersistenceService {
               `[COGNITIVE-BUFFER] Persisted only assistant response to DuckDB: ${duckdbEntries.length} entries`
             );
           } else {
-            LoggingUtils.logError(
-              `[COGNITIVE-BUFFER] Error persisting to DuckDB: ${result?.error}`
-            );
+            // Check if error is due to Windows ARM64 incompatibility
+            if (
+              result?.error?.includes(
+                "unsupported arch 'arm64' for platform 'win32'"
+              ) ||
+              result?.error?.includes("Windows ARM64")
+            ) {
+              LoggingUtils.logInfo(
+                `[COGNITIVE-BUFFER] DuckDB not available on Windows ARM64 - vector persistence disabled`
+              );
+            } else {
+              LoggingUtils.logError(
+                `[COGNITIVE-BUFFER] Error persisting to DuckDB: ${result?.error}`
+              );
+            }
           }
         }
       }
