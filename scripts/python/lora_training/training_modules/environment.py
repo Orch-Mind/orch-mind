@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import os
 import platform
+import shutil
 
 def find_compatible_python():
     """Find a Python version compatible with training libraries (3.9-3.15)."""
@@ -96,10 +97,17 @@ def get_python_executable(python_cmd):
     env = dict(os.environ)
     env['PYTHONIOENCODING'] = 'utf-8'
     
-    result = subprocess.run(cmd_list, 
-                          capture_output=True, text=True, check=True,
-                          env=env, errors='replace')
-    return result.stdout.strip()
+    try:
+        result = subprocess.run(cmd_list, 
+                              capture_output=True, text=True, check=True,
+                              env=env, errors='replace')
+        executable_path = result.stdout.strip()
+        print(f"   Python command '{python_cmd}' resolved to: {executable_path}")
+        return executable_path
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to get Python executable path for: {python_cmd}")
+        print(f"   Error: {e.stderr}")
+        raise
 
 def check_package_installed(python_executable, package_name):
     """Check if a Python package is already installed."""
@@ -124,6 +132,7 @@ def setup_dependencies(python_executable):
     """Install dependencies using the compatible Python."""
     try:
         print("🔍 Checking installed dependencies...")
+        print(f"   Using Python executable: {python_executable}")
         
         # Check if CUDA is available
         has_cuda = False
@@ -182,11 +191,30 @@ def setup_dependencies(python_executable):
         
         for package in packages_to_install:
             print(f"Installing {package}...")
-            subprocess.check_call([
-                python_executable, "-m", "pip", "install", 
-                "--break-system-packages", "--user", "--upgrade", "--quiet",
-                package
-            ], timeout=300, env=env)  # 5 minute timeout per package
+            try:
+                # First check if pip is available
+                pip_check = subprocess.run(
+                    [python_executable, "-m", "pip", "--version"],
+                    capture_output=True, text=True, env=env, errors='replace'
+                )
+                if pip_check.returncode != 0:
+                    print(f"❌ pip not available for {python_executable}")
+                    print(f"   Error: {pip_check.stderr}")
+                    return False
+                
+                # Install the package
+                pip_cmd = [python_executable, "-m", "pip", "install", "--user", "--upgrade", "--quiet"]
+                
+                # Only add --break-system-packages on non-Windows systems
+                if platform.system() != "Windows":
+                    pip_cmd.insert(4, "--break-system-packages")
+                
+                pip_cmd.append(package)
+                subprocess.check_call(pip_cmd, timeout=300, env=env)  # 5 minute timeout per package
+            except FileNotFoundError as e:
+                print(f"❌ Python executable not found: {python_executable}")
+                print(f"   Error: {e}")
+                return False
         
         print("✅ Essential packages installed successfully")
         return True
@@ -203,7 +231,6 @@ def setup_virtual_environment(script_dir, python_cmd):
     
     venv_dir = script_dir / "training_venv"
     if venv_dir.exists():
-        import shutil
         shutil.rmtree(venv_dir)
     
     try:

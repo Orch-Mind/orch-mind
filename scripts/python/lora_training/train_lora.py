@@ -8,6 +8,8 @@ import json
 import subprocess
 import os
 import time
+import shutil
+import re
 
 from training_modules.environment import find_compatible_python, setup_dependencies
 from training_modules.script_factory import create_instant_adapter_script
@@ -33,7 +35,6 @@ def backup_existing_adapter(adapter_path):
     backup_path = f"{adapter_path}_backup_{timestamp}"
     
     try:
-        import shutil
         shutil.copytree(adapter_path, backup_path)
         print(f"✅ Backup created: {backup_path}")
         return backup_path
@@ -88,7 +89,6 @@ def extract_base_model(model_name):
     # "gemma3:latest" → "gemma3:latest"
     # "gemma3-custom:latest" → "gemma3:latest"
     # "llama3.1-custom:latest" → "llama3.1:latest"
-    import re
     
     # Remove -custom suffix first
     model_name = re.sub(r'-custom(:latest)?$', '', model_name)
@@ -273,7 +273,9 @@ def main():
         backup_path = backup_existing_adapter(adapter_path)
         
         # Use incremental training strategy (now uses instant strategy with custom model as base)
-        python_exe = find_compatible_python()
+        python_cmd = find_compatible_python()
+        from training_modules.environment import get_python_executable
+        python_exe = get_python_executable(python_cmd)
         if setup_dependencies(python_exe):
             print("🔄 Running incremental training on existing adapter...")
             # NOTE: "Incremental" training now uses the same instant strategy
@@ -319,9 +321,11 @@ def main():
 
     # Content-Aware Fast Training (for new adapters)
     print("\n=== Content-Aware Fast Training ===")
-    python_exe = find_compatible_python()
+    python_cmd = find_compatible_python()
     
     try:
+        from training_modules.environment import get_python_executable
+        python_exe = get_python_executable(python_cmd)
         if setup_dependencies(python_exe):
             script_content = create_instant_adapter_script(
                 args.data, original_base_model, args.output

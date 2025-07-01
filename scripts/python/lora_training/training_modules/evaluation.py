@@ -5,6 +5,8 @@ import json
 import time
 from typing import List, Dict, Any
 import subprocess
+import urllib.request
+import urllib.error
 
 def evaluate_model_response(model_name: str, test_prompts: List[str]) -> Dict[str, Any]:
     """Evaluate model responses using basic metrics."""
@@ -61,6 +63,7 @@ def evaluate_model_response(model_name: str, test_prompts: List[str]) -> Dict[st
 def generate_response(model_name: str, prompt: str, timeout: int = 30) -> str:
     """Generate response from Ollama model."""
     try:
+        # Use urllib for cross-platform compatibility (works on Windows too)
         # Create request payload
         payload = {
             "model": model_name,
@@ -68,24 +71,29 @@ def generate_response(model_name: str, prompt: str, timeout: int = 30) -> str:
             "stream": False
         }
         
-        # Use curl to call Ollama API
-        result = subprocess.run([
-            "curl", "-s", "-X", "POST", 
-            "http://localhost:11434/api/generate",
-            "-H", "Content-Type: application/json",
-            "-d", json.dumps(payload)
-        ], capture_output=True, text=True, timeout=timeout)
+        # Convert to JSON
+        data = json.dumps(payload).encode('utf-8')
         
-        if result.returncode == 0:
-            response_data = json.loads(result.stdout)
-            return response_data.get("response", "")
-        else:
-            print(f"⚠️ Error calling Ollama: {result.stderr}")
+        # Create request
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=data,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Make request with timeout
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                result_data = response.read().decode('utf-8')
+                response_json = json.loads(result_data)
+                return response_json.get("response", "")
+        except urllib.error.HTTPError as e:
+            print(f"⚠️ HTTP Error calling Ollama: {e.code} - {e.reason}")
+            return ""
+        except urllib.error.URLError as e:
+            print(f"⚠️ URL Error calling Ollama: {e.reason}")
             return ""
             
-    except subprocess.TimeoutExpired:
-        print(f"⚠️ Timeout generating response for prompt")
-        return ""
     except Exception as e:
         print(f"⚠️ Error generating response: {e}")
         return ""

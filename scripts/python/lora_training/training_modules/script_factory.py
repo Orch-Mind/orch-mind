@@ -12,7 +12,9 @@ import os
 import time
 import sys
 import numpy as np
+import re
 from datetime import datetime
+from collections import Counter
 
 print("🚀 Content-Aware Fast LoRA Training (Real Training Optimized)")
 
@@ -21,8 +23,6 @@ print("🔍 Analyzing message content for dynamic step calculation...")
 
 def analyze_content_complexity(data_path):
     """Analyze content to determine optimal training parameters."""
-    import re
-    from collections import Counter
     
     try:
         with open(data_path, "r", encoding="utf-8") as f:

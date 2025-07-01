@@ -2,7 +2,10 @@
 # Dynamic Step Calculator for LoRA Training
 
 import math
+import json
+import re
 from typing import Dict, Any
+from collections import Counter
 
 def calculate_optimal_steps(
     dataset_size: int,
@@ -286,10 +289,6 @@ def analyze_content_complexity(data_path: str) -> Dict[str, Any]:
     
     Returns content-based metrics for dynamic step calculation.
     """
-    import json
-    import re
-    from collections import Counter
-    
     try:
         with open(data_path, 'r', encoding='utf-8') as f:
             data = [json.loads(line) for line in f if line.strip()]
