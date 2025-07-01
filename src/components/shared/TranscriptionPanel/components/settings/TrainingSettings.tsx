@@ -177,8 +177,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     // INCREMENTAL TRAINING: Always use original base model for consistency
     const originalBaseModel = extractBaseModel(selectedBaseModel);
     const baseModelClean = originalBaseModel
-      .replace(":latest", "")
-      .replace(/[:.]/g, "_");
+      .replace(":latest", "");
     const masterModelName = `${baseModelClean}-custom:latest`;
 
     console.log("[Training] Incremental training logic:");

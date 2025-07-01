@@ -17,7 +17,7 @@ from training_modules.deployment import deploy_to_ollama
 
 def get_master_adapter_path(base_model, master_name="master"):
     """Get path for master adapter based on base model."""
-    base_model_clean = base_model.replace(":latest", "").replace(":", "_").replace("/", "_")
+    base_model_clean = base_model.replace(":latest", "")
     return f"adapters/{base_model_clean}_{master_name}"
 
 def check_existing_adapter(base_model, master_name="master"):
@@ -243,7 +243,7 @@ def main():
     
     # INCREMENTAL TRAINING: Always extract original base model for consistency
     original_base_model = extract_base_model(args.base_model)
-    base_model_clean = original_base_model.replace(":latest", "").replace(":", "_").replace("/", "_")
+    base_model_clean = original_base_model.replace(":latest", "")
     master_model_name = f"{base_model_clean}-custom:latest"
     
     print(f"🔄 Incremental training logic:")

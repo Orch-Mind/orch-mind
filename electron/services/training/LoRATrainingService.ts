@@ -105,9 +105,7 @@ export class LoRATrainingService {
 
       // INCREMENTAL TRAINING: Extract original base model to ensure consistency
       const originalBaseModel = this.extractBaseModel(params.baseModel);
-      const baseModelClean = originalBaseModel
-        .replace(":latest", "")
-        .replace(/[:.]/g, "_");
+      const baseModelClean = originalBaseModel.replace(":latest", "");
       const modelName = `${baseModelClean}-custom:latest`;
 
       console.log(`[LoRA] Incremental training logic:
@@ -230,9 +228,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         }
       }
 
-      const baseModelClean = params.baseModel
-        .replace(":latest", "")
-        .replace(/[:.]/g, "_");
+      const baseModelClean = params.baseModel.replace(":latest", "");
       const expectedModelName = `${baseModelClean}-custom:latest`;
 
       return {
@@ -441,9 +437,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
     trainingHistory?: any;
   }> {
     try {
-      const baseModelClean = baseModel
-        .replace(":latest", "")
-        .replace(/[:.]/g, "_");
+      const baseModelClean = baseModel.replace(":latest", "");
       const adapterPath = path.join(
         this.trainingDir,
         "adapters",

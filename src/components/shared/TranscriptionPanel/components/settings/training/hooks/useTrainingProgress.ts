@@ -32,8 +32,7 @@ export const useTrainingProgress = () => {
 
       // Always use master naming for incremental training
       const baseModelClean = request.baseModel
-        .replace(":latest", "")
-        .replace(/[:.]/g, "_");
+        .replace(":latest", "");
       const expectedModelName = `${baseModelClean}-custom:latest`;
       let progressInterval: NodeJS.Timeout | null = null;
 
