@@ -12,6 +12,21 @@ Orch-OS uses [Hyperswarm](https://github.com/hypercore-protocol/hyperswarm) for 
 
 Virtual machines often have network restrictions that prevent multicast/broadcast packets from crossing between VM and host.
 
+## Known Parallels Limitations
+
+### NAT (Shared Network) Mode
+- **Default mode** in Parallels
+- VM shares the host's IP address
+- **Blocks multicast/mDNS traffic** between VM and host
+- Prevents local P2P discovery
+- Only allows outbound connections
+
+### Why Local Discovery Fails
+1. **Multicast isolation**: mDNS packets (port 5353) don't cross the NAT boundary
+2. **Different subnets**: VM typically on 10.211.55.x, host on 192.168.x.x
+3. **Firewall rules**: Parallels firewall may block peer-to-peer traffic
+4. **Virtual network adapter**: Creates a separate network segment
+
 ## Solutions
 
 ### Option 1: Use Community Room (Recommended for Testing)
@@ -19,89 +34,103 @@ Virtual machines often have network restrictions that prevent multicast/broadcas
 The easiest solution is to use the **Community/Global** room instead of Local:
 
 1. In both instances (Mac and Windows VM), go to the **Share** tab
-2. Use **Manual Mode** (toggle from Smart to Manual)
-3. Click **🌍 Community** button on both
-4. Your adapters should now be visible to each other
+2. Use **Manual Mode** (toggle Smart → Manual)  
+3. Click the **🌍 Community** button
+4. Start sharing adapters - they should see each other immediately
 
-### Option 2: Configure Parallels for Bridged Networking
+**Why this works**: Community mode uses the DHT (global internet) instead of local mDNS, bypassing VM network isolation.
 
-To make Local Network discovery work between VM and host:
+### Option 2: Configure Bridged Networking (Permanent Solution)
 
-1. **Stop your Windows VM** in Parallels
-2. Open Parallels Control Center
-3. Right-click your Windows VM → **Configure**
-4. Go to **Hardware** → **Network**
-5. Change from **Shared Network** (NAT) to **Bridged Network**
-6. Select **Default Adapter** or your active network interface
-7. Start the VM
+For local network discovery to work, configure Parallels to use **Bridged Networking**:
 
-**Note:** Bridged mode puts the VM on the same network as your host, which may expose it to other devices on your network.
+1. **Shut down the Windows VM completely**
 
-### Option 3: Use Private Rooms
+2. **Open VM Configuration**:
+   - Right-click the VM → **Configure**
+   - Or: **Actions** menu → **Configure**
 
-Create a private room that both can join:
+3. **Change Network Settings**:
+   - Go to **Hardware** → **Network**
+   - Change **Source** from:
+     - ❌ **Shared Network** (NAT)
+     - ✅ **Bridged Network: Default Adapter**
+   
+4. **Select Network Adapter**:
+   - Choose your active network adapter (usually Wi-Fi or Ethernet)
+   - If unsure, select **Default Adapter**
 
-1. On the first instance (e.g., Mac):
-   - Go to Share → Manual Mode
-   - Leave the room code field empty
-   - Click **🆕** to create a new room
-   - Copy the generated room code (e.g., `PIZZA-123`)
+5. **Start the VM** - it will now get its own IP on your local network
 
-2. On the second instance (e.g., Windows VM):
-   - Go to Share → Manual Mode
-   - Enter the room code
-   - Click **🔍** to join
+6. **Verify Configuration**:
+   ```powershell
+   # In Windows VM
+   ipconfig
+   # Should show IP like 192.168.1.x (same subnet as Mac)
+   ```
+
+**Note**: Your router must support multiple DHCP clients. Most home routers do.
+
+### Option 3: Use Private Rooms (Works with NAT)
+
+Create a private room with a specific code:
+
+1. In **Manual Mode**, enter a room code (e.g., `MYROOM123`)
+2. Click **🔍 Join**
+3. Share the code with the other instance
+4. Both join the same code
+
+This uses the global DHT with a specific topic, working around local network restrictions.
 
 ### Option 4: Port Forwarding (Advanced)
 
-If you must use NAT mode, you can configure port forwarding:
+If you must use NAT mode with local discovery:
 
-1. In Parallels Configuration → **Network** → **Shared** → **Port Forwarding Rules**
-2. Add rules for Hyperswarm ports:
-   - Protocol: TCP/UDP
-   - Source Port: 49737 (or range 49737-49837)
-   - Destination: Your VM's IP
-   - Destination Port: Same as source
+1. Configure port forwarding in Parallels for Hyperswarm ports
+2. This is complex and not recommended
 
-**Note:** This is complex and may not work reliably for P2P discovery.
+## Debugging Tips
 
-## Debugging
+### Check Network Configuration
 
-To debug P2P connections:
+In the Windows VM:
+```powershell
+# Check IP configuration
+ipconfig /all
 
-1. Open DevTools (F12) in both instances
-2. Look for console logs starting with:
-   - `[P2P-SERVICE]`
-   - `[SMART-CONNECT]`
-   - `[P2P]`
+# Test connectivity to host
+ping [host-ip]
 
-3. Check if peers are being detected:
-   ```
-   📡 [SMART-CONNECT] Peers detected: 0
-   ```
+# Check if on same subnet
+# Host: 192.168.1.x
+# VM should be: 192.168.1.y (not 10.211.55.x)
+```
 
-4. If using Local mode shows "0 peers" after 3 seconds, the network discovery is blocked.
+### Monitor P2P Logs
 
-## Technical Details
+Open DevTools (F12) and check console for:
+- `[P2P] Network interfaces:` - Shows detected network adapters
+- `[P2P] Starting local network sharing...` - Local mode active
+- `[P2P] No peers found after 5s` - Indicates network isolation
 
-- **Local Mode**: Uses mDNS (multicast DNS) on port 5353
-- **Community Mode**: Uses DHT with bootstrap nodes
-- **Smart Connect**: Tries Local for 3s, then falls back to Community
+### Test Multicast
 
-The issue with VMs is that multicast packets (224.0.0.0/4) often don't cross the VM boundary when using NAT mode.
+```powershell
+# On Windows, test if multicast works
+# This will fail in NAT mode
+ping 224.0.0.251
+```
 
-## Additional Tips
+## Summary
 
-1. **Windows Firewall**: Make sure Windows Firewall isn't blocking the Orch-OS app
-2. **Antivirus**: Some antivirus software may block P2P connections
-3. **VPN**: Disable VPN on both host and VM when testing
-4. **Same Network**: For Local mode, both devices must be on the same subnet
+- **Quickest Solution**: Use Community mode (🌍) instead of Local (📡)
+- **Best Solution**: Configure Bridged Networking in Parallels
+- **Alternative**: Use private room codes
 
-## Still Having Issues?
+The issue is not with Orch-OS but with how VMs handle network isolation. These solutions work around those limitations.
 
-If adapters still don't appear:
+## Additional Resources
 
-1. Try restarting both Orch-OS instances
-2. Make sure you've clicked "Share" on the adapters you want to share
-3. Check that both instances show "Connected" status
-4. Use Community room as it's more reliable across network boundaries 
+- [Parallels Networking Guide](https://download.parallels.com/desktop/v18/docs/en_US/Parallels%20Desktop%20User's%20Guide/33013.htm)
+- [Hyperswarm Documentation](https://github.com/hypercore-protocol/hyperswarm)
+- [Understanding mDNS](https://en.wikipedia.org/wiki/Multicast_DNS) 
