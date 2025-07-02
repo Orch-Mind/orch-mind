@@ -232,6 +232,20 @@
   color: white;
   font-size: 12px;
   position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced hover effect that preserves glassmorphism */
+.statusPopup:hover {
+  background: rgba(17, 24, 39, 0.98);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(200%);
+  border-color: rgba(0, 250, 255, 0.5);
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(0, 250, 255, 0.2),
+    inset 0 0 25px rgba(0, 250, 255, 0.08);
+  transform: translateY(-2px);
 }
 
 /* Arrow pointing up to the icon */

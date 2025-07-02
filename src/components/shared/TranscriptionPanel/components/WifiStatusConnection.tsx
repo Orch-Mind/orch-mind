@@ -155,7 +155,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
           }}
         >
           <div
-            className={`${styles.statusPopup} hover:bg-black/20 transition-colors`}
+            className={styles.statusPopup}
           >
             <div className="p-3 space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-cyan-400/20">
