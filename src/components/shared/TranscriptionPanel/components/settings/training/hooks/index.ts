@@ -2,7 +2,8 @@
 // Training Hooks Index - Following DRY principle
 // Single export point for all training hooks
 
-export { useTrainingConversations } from './useTrainingConversations';
-export { useTrainingProgress } from './useTrainingProgress';
-export { useTrainedModels } from './useTrainedModels';
-export { useTrainingModals } from './useTrainingModals';
+export { useLoRAAdapters } from "./useLoRAAdapters";
+export { useTrainedModels } from "./useTrainedModels";
+export { useTrainingConversations } from "./useTrainingConversations";
+export { useTrainingModals } from "./useTrainingModals";
+export { useTrainingProgress } from "./useTrainingProgress";

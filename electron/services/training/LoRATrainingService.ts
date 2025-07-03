@@ -6,6 +6,7 @@ import { app } from "electron";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { promisify } from "util";
+import * as fsSync from "fs";
 
 const execAsync = promisify(exec);
 
@@ -21,6 +22,7 @@ export interface TrainingParams {
   conversations: TrainingConversation[];
   baseModel: string;
   outputName: string; // Will be ignored, always uses master
+  action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
 }
 
 export interface TrainingResult {
@@ -68,6 +70,15 @@ export class LoRATrainingService {
     const startTime = Date.now();
 
     try {
+      // Handle real adapter enable/disable actions
+      if (params.action === "enable_real_adapter") {
+        return await this.enableRealAdapter(params.outputName);
+      }
+
+      if (params.action === "disable_real_adapter") {
+        return await this.disableRealAdapter(params.outputName);
+      }
+
       // Validate input parameters
       this.validateTrainingParams(params);
 
@@ -113,24 +124,26 @@ export class LoRATrainingService {
         - Extracted base model: ${originalBaseModel}
         - Target custom model: ${modelName}`);
 
-      console.log(`[LoRA] Starting incremental training with:
+      // The Python script will automatically calculate optimal steps based on content analysis
+      // We pass a reasonable max_steps value that will be overridden by content-based calculation
+      const datasetSize = params.conversations.length;
+      const fallbackSteps = this.calculateOptimalSteps(datasetSize, true); // Fallback if content analysis fails
+
+      console.log(`[LoRA] Starting Ollama LoRA training with content-based optimization:
         - Base model: ${params.baseModel}
         - Data: ${dataPath}
         - Training examples: ${params.conversations.length}
-        - Master model name: ${modelName}`);
+        - Target model name: ${modelName}
+        - Fallback steps: ${fallbackSteps} (will be overridden by content analysis)`);
 
-      // Execute the Python training script
+      // Execute the Ollama LoRA training script
       console.log(
-        `[LoRA] Executing FAST training script (optimized for speed)...`
+        `[LoRA] Executing Ollama LoRA training script with automatic step calculation...`
       );
       const pythonCommand = await this.findCompatiblePython();
 
-      // Calculate optimal steps based on dataset size and complexity
-      const datasetSize = params.conversations.length;
-      const optimalSteps = this.calculateOptimalSteps(datasetSize, true); // true = incremental
-
-      // Always use incremental training (simplified command) with dynamically calculated steps
-      let fullCommand = `${pythonCommand} "${scriptPath}" --data "${dataPath}" --base-model "${params.baseModel}" --output "master" --max-steps ${optimalSteps} --complexity medium`;
+      // Use Ollama LoRA training with automatic content-based step calculation
+      let fullCommand = `${pythonCommand} "${scriptPath}" --data "${dataPath}" --base-model "${params.baseModel}" --output "master" --max-steps ${fallbackSteps}`;
 
       // For Windows, prepend command to set console code page to UTF-8
       if (process.platform === "win32") {
@@ -139,7 +152,9 @@ export class LoRATrainingService {
 
       console.log(`[LoRA] Command to execute: ${fullCommand}`);
       console.log(`[LoRA] Working directory: ${this.trainingDir}`);
-      console.log(`[LoRA] Mode: Incremental training (always)`);
+      console.log(
+        `[LoRA] Mode: Ollama LoRA with content-based step calculation`
+      );
 
       // Environment variables for proper encoding
       const execEnv: Record<string, string> = {
@@ -157,9 +172,10 @@ export class LoRATrainingService {
 
       const result = await execAsync(fullCommand, {
         cwd: this.trainingDir,
-        timeout: 5 * 60 * 1000, // REDUCED: 5 minutes timeout (estratégia instant é rápida)
-        maxBuffer: 1024 * 1024 * 1000, // 10MB buffer para output
+        timeout: 30 * 60 * 1000, // INCREASED: 30 minutes timeout para acomodar problemas de dependência
+        maxBuffer: 1024 * 1024 * 100, // 100MB buffer para output extenso
         env: execEnv,
+        killSignal: "SIGTERM" as const, // Explicit kill signal
       });
 
       console.log("[LoRA] Training completed successfully");
@@ -189,11 +205,13 @@ export class LoRATrainingService {
         trainingDate: new Date().toISOString(),
         trainingDuration: trainingDuration,
         examples: this.countTrainingExamples(trainingData),
-        mode: "incremental",
+        mode: "ollama_lora_content_based",
+        fallbackSteps: fallbackSteps,
+        note: "Steps calculated automatically based on content analysis",
       };
 
       console.log(
-        `[LoRA] Incremental training completed with metadata:`,
+        `[LoRA] Ollama LoRA training completed with metadata:`,
         trainingMetadata
       );
 
@@ -280,7 +298,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
   }
 
   private getTrainingScriptPath(): string {
-    // Try multiple possible locations for the training script
+    // Try multiple possible locations for the Ollama LoRA training script
     const possiblePaths = [
       // For packaged applications (Windows/macOS/Linux) - extraResources
       path.join(
@@ -288,7 +306,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         "scripts",
         "python",
         "lora_training",
-        "train_lora.py"
+        "ollama_lora_training.py"
       ),
       // For development mode
       path.join(
@@ -296,7 +314,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         "scripts",
         "python",
         "lora_training",
-        "train_lora.py"
+        "ollama_lora_training.py"
       ),
       // Alternative for packaged apps in app.asar
       path.join(
@@ -304,7 +322,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         "scripts",
         "python",
         "lora_training",
-        "train_lora.py"
+        "ollama_lora_training.py"
       ),
       // Alternative relative path from build directory
       path.join(
@@ -315,7 +333,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         "scripts",
         "python",
         "lora_training",
-        "train_lora.py"
+        "ollama_lora_training.py"
       ),
     ];
 
@@ -356,14 +374,13 @@ EXIT CODE: ${execError.code || "N/A"}`;
       // Verificar se o arquivo tem conteúdo e é um script Python válido
       const content = await fs.readFile(scriptPath, "utf8");
 
-      // Verificar imports e funções essenciais
+      // Verificar elementos essenciais do script Ollama LoRA (corrigido para funções reais)
       const requiredElements = [
-        "def execute_training_strategy", // Função definida no arquivo
         "def main()", // Função principal definida no arquivo
-        "create_instant_adapter_script", // Função importada (agora faz treinamento real baseado em conteúdo)
-        "from training_modules.script_factory import", // Import statement
-        "calculate_content_based_steps", // Verificar se tem o novo sistema de cálculo
-        "Content-Aware Fast Training", // String que existe no train_lora.py
+        "train_lora_adapter", // Função principal de treinamento LoRA
+        "create_ollama_modelfile_with_adapter", // Função de criação do Modelfile com adapter
+        "manage_lora_adapters", // Função de gerenciamento de adapters
+        "Real LoRA Training for Orch-OS", // String identificadora do sistema
       ];
 
       const missingElements = requiredElements.filter(
@@ -379,7 +396,10 @@ EXIT CODE: ${execError.code || "N/A"}`;
       }
 
       // Verificar se é um script Python válido
-      if (!content.includes("python") || !content.includes("import")) {
+      if (
+        !content.includes("#!/usr/bin/env python3") &&
+        !content.includes("import")
+      ) {
         throw new Error("Training script appears to be invalid or corrupted");
       }
 
@@ -387,7 +407,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         `[LoRA] Training script validated: ${scriptPath} (${stats.size} bytes)`
       );
       console.log(
-        `[LoRA] Script contains content-aware fast training logic: ✅`
+        `[LoRA] Script contains real LoRA training with adapter management: ✅`
       );
     } catch (error) {
       throw new Error(`Training script validation failed: ${error}`);
@@ -793,7 +813,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
     } else {
       // macOS/Linux Python commands
       pythonCandidates = [
-        "python3.11", // PRIORIDADE: Funciona melhor com estratégia instant
+        "python3.11", // PRIORIDADE: Versão mais estável para treinamento LoRA
         "python3.10",
         "python3.9",
         "python3.12", // Pode ter problemas, mas ainda compatível
@@ -836,7 +856,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
           // Adicionar nota sobre versões problemáticas
           if (minor >= 12) {
             console.log(
-              `[LoRA] ⚠️ Found Python ${versionStr} - may have ML library compatibility issues, but will use instant strategy`
+              `[LoRA] ⚠️ Found Python ${versionStr} - may have ML library compatibility issues, will attempt training anyway`
             );
           }
 
@@ -907,5 +927,202 @@ For Linux:
       `No compatible Python version found for LoRA training on ${process.platform}. ` +
         `We checked ${pythonCandidates.length} possible locations.${installInstructions}`
     );
+  }
+
+  /**
+   * Enable a LoRA adapter with REAL merging using the real adapter manager script
+   */
+  private async enableRealAdapter(adapterId: string): Promise<TrainingResult> {
+    console.log(`[LoRA] Enabling adapter with REAL merge: ${adapterId}`);
+
+    try {
+      // Get the path to the real adapter manager script
+      const scriptPath = this.getRealAdapterManagerPath();
+
+      // Find compatible Python
+      const pythonCommand = await this.findCompatiblePython();
+
+      // Execute the real adapter manager
+      const command = `${pythonCommand} "${scriptPath}" enable "${adapterId}"`;
+
+      console.log(`[LoRA] Executing real adapter enable: ${command}`);
+
+      const result = await execAsync(command, {
+        cwd: this.trainingDir,
+        timeout: 10 * 60 * 1000, // 10 minutes timeout for real merge
+        maxBuffer: 1024 * 1024 * 50, // 50MB buffer
+      });
+
+      console.log("[LoRA] Real adapter enable output:", result.stdout);
+
+      if (result.stderr && result.stderr.trim()) {
+        console.warn("[LoRA] Real adapter enable warnings:", result.stderr);
+      }
+
+      // Parse the result to get the active model name
+      let activeModel = "";
+      try {
+        const resultJson = JSON.parse(result.stdout.trim());
+        if (resultJson.success && resultJson.active_model) {
+          activeModel = resultJson.active_model;
+        }
+      } catch (parseError) {
+        // If parsing fails, try to extract model name from output
+        const modelMatch = result.stdout.match(/Active model: ([^\s\n]+)/);
+        if (modelMatch) {
+          activeModel = modelMatch[1];
+        }
+      }
+
+      return {
+        success: true,
+        adapterPath: activeModel,
+        details: {
+          trainingExamples: 0, // Not applicable for enable
+          modelName: activeModel,
+          trainingDuration: 0,
+        },
+      };
+    } catch (error) {
+      console.error("[LoRA] Failed to enable real adapter:", error);
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
+      return {
+        success: false,
+        error: `Failed to enable real adapter: ${errorMessage}`,
+        details: {
+          trainingExamples: 0,
+          modelName: "",
+          trainingDuration: 0,
+        },
+      };
+    }
+  }
+
+  /**
+   * Disable a LoRA adapter using the real adapter manager script
+   */
+  private async disableRealAdapter(adapterId: string): Promise<TrainingResult> {
+    console.log(`[LoRA] Disabling adapter: ${adapterId}`);
+
+    try {
+      // Get the path to the real adapter manager script
+      const scriptPath = this.getRealAdapterManagerPath();
+
+      // Find compatible Python
+      const pythonCommand = await this.findCompatiblePython();
+
+      // Execute the real adapter manager
+      const command = `${pythonCommand} "${scriptPath}" disable "${adapterId}"`;
+
+      console.log(`[LoRA] Executing real adapter disable: ${command}`);
+
+      const result = await execAsync(command, {
+        cwd: this.trainingDir,
+        timeout: 5 * 60 * 1000, // 5 minutes timeout for disable
+        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      });
+
+      console.log("[LoRA] Real adapter disable output:", result.stdout);
+
+      if (result.stderr && result.stderr.trim()) {
+        console.warn("[LoRA] Real adapter disable warnings:", result.stderr);
+      }
+
+      return {
+        success: true,
+        adapterPath: "",
+        details: {
+          trainingExamples: 0, // Not applicable for disable
+          modelName: "",
+          trainingDuration: 0,
+        },
+      };
+    } catch (error) {
+      console.error("[LoRA] Failed to disable real adapter:", error);
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
+      return {
+        success: false,
+        error: `Failed to disable real adapter: ${errorMessage}`,
+        details: {
+          trainingExamples: 0,
+          modelName: "",
+          trainingDuration: 0,
+        },
+      };
+    }
+  }
+
+  /**
+   * Get the path to the real adapter manager script
+   */
+  private getRealAdapterManagerPath(): string {
+    // In development mode, use the source path
+    if (process.env.NODE_ENV === "development") {
+      return path.join(
+        process.cwd(),
+        "scripts",
+        "python",
+        "lora_training",
+        "real_adapter_manager.py"
+      );
+    }
+
+    // In production, check multiple possible locations
+    const possiblePaths = [
+      // Packaged app resources
+      path.join(
+        process.resourcesPath,
+        "scripts",
+        "python",
+        "lora_training",
+        "real_adapter_manager.py"
+      ),
+      // Development fallback
+      path.join(
+        process.cwd(),
+        "scripts",
+        "python",
+        "lora_training",
+        "real_adapter_manager.py"
+      ),
+      // Alternative development path
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "scripts",
+        "python",
+        "lora_training",
+        "real_adapter_manager.py"
+      ),
+    ];
+
+    for (const scriptPath of possiblePaths) {
+      console.log(`[LoRA] Trying path: ${scriptPath}`);
+      if (fsSync.existsSync(scriptPath)) {
+        console.log(`[LoRA] Found real adapter manager at: ${scriptPath}`);
+        return scriptPath;
+      } else {
+        console.log(`[LoRA] Path not found: ${scriptPath}`);
+      }
+    }
+
+    // If not found, return the most likely path for better error reporting
+    const defaultPath = path.join(
+      process.cwd(),
+      "scripts",
+      "python",
+      "lora_training",
+      "real_adapter_manager.py"
+    );
+    console.log(`[LoRA] Using default path: ${defaultPath}`);
+    return defaultPath;
   }
 }

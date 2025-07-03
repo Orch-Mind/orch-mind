@@ -38,6 +38,7 @@ export interface TrainingRequest {
   conversations: TrainingConversation[];
   baseModel: string;
   outputName: string; // Will be ignored, always uses master
+  action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
 }
 
 export interface TrainingProgress {
@@ -57,8 +58,12 @@ export interface TrainingResult {
 export interface TrainingDetails {
   trainingExamples: number;
   modelName: string;
+  adapterId?: string;
   trainingDuration?: number;
   errorDetails?: string;
+  activeModel?: string;
+  validationStatus?: "passed" | "failed" | "unknown";
+  hasRealWeights?: boolean;
 }
 
 // === STATS INTERFACES ===
@@ -95,7 +100,9 @@ export interface ModalState {
   showSuccess: boolean;
   showReset: boolean;
   showDeleteModel: boolean;
+  showDeleteAdapter: boolean;
   modelToDelete: string;
+  adapterToDelete: string;
 }
 
 export interface TrainingState {

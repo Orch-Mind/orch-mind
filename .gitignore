@@ -15,6 +15,8 @@ scripts/python/lora_training/training_modules/__pycache__/*
 scripts/python/lora_training/adapters
 scripts/python/lora_training/lora_adapter
 scripts/python/lora_training/Modelfile*
+scripts/python/lora_training/lora_training_output
+scripts/lora_adapters
 adapters
 lora_adapter
 out/

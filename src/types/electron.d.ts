@@ -120,6 +120,7 @@ export interface ElectronAPI {
     conversations: TrainingConversation[];
     baseModel: string;
     outputName: string;
+    action?: "enable_real_adapter" | "disable_real_adapter";
   }) => Promise<{
     success: boolean;
     error?: string;
@@ -128,6 +129,10 @@ export interface ElectronAPI {
       trainingExamples: number;
       modelName: string;
       trainingDuration: number;
+      adapterId?: string;
+      activeModel?: string;
+      validationStatus?: "passed" | "failed" | "unknown";
+      hasRealWeights?: boolean;
     };
   }>;
 

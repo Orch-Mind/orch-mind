@@ -15,14 +15,14 @@
 
 import React from "react";
 import {
+  AdaptersList,
   ConversationSelector,
-  TrainedModelsList,
   TrainingControls,
   TrainingModals,
   TrainingStats,
 } from "./training/components";
 import {
-  useTrainedModels,
+  useLoRAAdapters,
   useTrainingConversations,
   useTrainingModals,
   useTrainingProgress,
@@ -59,24 +59,26 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
   } = useTrainingProgress();
 
   const {
-    trainedModels,
+    adapters,
     selectedBaseModel,
     isDeleting,
-    saveTrainedModel,
-    deleteModel,
-    activateModel,
-    resetTrainedModels,
-  } = useTrainedModels();
+    isToggling,
+    saveAdapter,
+    deleteAdapter,
+    enableAdapter,
+    disableAdapter,
+    resetAdapters,
+  } = useLoRAAdapters();
 
   const {
     modalState,
-    trainedModelName,
+    adapterName,
     showSuccessModal,
     hideSuccessModal,
     showResetModal,
     hideResetModal,
-    showDeleteModelModal,
-    hideDeleteModelModal,
+    showDeleteAdapterModal,
+    hideDeleteAdapterModal,
   } = useTrainingModals();
 
   // === DERIVED STATE (Following KISS) ===
@@ -87,6 +89,15 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     (sum, conv) => sum + conv.validPairs,
     0
   );
+
+  // Create stats object for TrainingStats component
+  const trainingStatsData = {
+    totalConversations: trainingStats.totalConversations,
+    selectedConversations: selectedConversations.size,
+    totalMessages: trainingStats.totalMessages,
+    validPairs: totalValidPairs,
+    lastTraining: undefined, // Could be enhanced to track last training time
+  };
 
   // === UTILITY FUNCTIONS (Following DRY) ===
   const extractBaseModel = (modelName: string): string => {
@@ -174,49 +185,44 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     );
     setTimeout(() => setTrainingStatus(""), 2000);
 
-    // INCREMENTAL TRAINING: Always use original base model for consistency
+    // ADAPTER TRAINING: Create new adapter for base model
     const originalBaseModel = extractBaseModel(selectedBaseModel);
-    const baseModelClean = originalBaseModel
-      .replace(":latest", "");
-    const masterModelName = `${baseModelClean}-custom:latest`;
+    const adapterName = `${originalBaseModel.replace(
+      ":latest",
+      ""
+    )}_adapter_${Date.now()}`;
 
-    console.log("[Training] Incremental training logic:");
-    console.log(`  - Selected model: ${selectedBaseModel}`);
-    console.log(`  - Extracted base: ${originalBaseModel}`);
-    console.log(`  - Target custom model: ${masterModelName}`);
+    console.log("[Training] LoRA Adapter training logic:");
+    console.log(`  - Base model: ${originalBaseModel}`);
+    console.log(`  - New adapter: ${adapterName}`);
 
     const request: TrainingRequest = {
       conversations: trainingConversations,
-      baseModel: originalBaseModel, // Always use original base model
-      outputName: "master", // Always master
+      baseModel: originalBaseModel,
+      outputName: adapterName.split("_adapter_")[0], // Use clean name for output
     };
 
-    console.log(
-      "[Training] Starting incremental training for:",
-      masterModelName
-    );
+    console.log("[Training] Starting LoRA adapter training for:", adapterName);
 
     // Start training with callbacks (Following SRP)
     await startTraining(
       request,
       (result) => {
-        // Success callback - Always use the consistent master model name
+        // Success callback - Save new adapter
+        console.log("[Training] LoRA adapter created:", adapterName);
         console.log(
-          "[Training] Master model created/updated:",
-          masterModelName
-        );
-        console.log(
-          "[Training] Backend returned model name:",
-          result.details?.modelName
+          "[Training] Backend returned adapter ID:",
+          result.details?.adapterId || result.details?.modelName
         );
 
-        // Always use the consistent masterModelName to avoid duplicates
-        saveTrainedModel(masterModelName);
+        // Save the new adapter
+        const adapterId = result.details?.adapterId || adapterName;
+        saveAdapter(adapterId, originalBaseModel);
         markConversationsAsProcessed(
           selectedConversationsList.map((c) => c.id),
-          masterModelName
+          adapterId
         );
-        showSuccessModal(masterModelName);
+        showSuccessModal(adapterId);
       },
       (error) => {
         // Error callback
@@ -227,39 +233,79 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
 
   const handleResetTraining = () => {
     resetTrainingData();
-    resetTrainedModels();
+    resetAdapters();
     localStorage.removeItem("orch-training-status");
     setTrainingStatus("Training data reset successfully");
     setTimeout(clearStatus, 3000);
     hideResetModal();
   };
 
-  const handleDeleteModel = async () => {
-    const result = await deleteModel(modalState.modelToDelete);
+  const handleDeleteAdapter = async () => {
+    const result = await deleteAdapter(modalState.adapterToDelete);
 
     if (result.success) {
       setTrainingStatus(
-        `Model ${modalState.modelToDelete} deleted successfully`
+        `Adapter ${modalState.adapterToDelete} deleted successfully`
       );
     } else {
-      setTrainingStatus(`Error deleting model: ${result.error}`);
+      setTrainingStatus(`Error deleting adapter: ${result.error}`);
     }
 
     setTimeout(clearStatus, 5000);
-    hideDeleteModelModal();
+    hideDeleteAdapterModal();
   };
 
-  const handleActivateModel = async () => {
-    const result = await activateModel(trainedModelName);
+  const handleEnableAdapter = async (adapterId: string) => {
+    const result = await enableAdapter(adapterId);
 
     if (result.success) {
-      setTrainingStatus(`Successfully activated model: ${trainedModelName}`);
+      if (result.validationStatus === "verified_real_weights") {
+        setTrainingStatus(
+          `🔥 VERIFIED: Adapter ${adapterId} enabled with REAL LoRA weights! Active model: ${
+            result.activeModel || adapterId
+          }`
+        );
+      } else {
+        setTrainingStatus(
+          `⚠️ WARNING: Adapter ${adapterId} enabled but validation status unknown. Check logs for details.`
+        );
+      }
     } else {
-      setTrainingStatus(`Failed to activate model: ${result.error}`);
+      // Show detailed error based on validation status
+      const errorMsg = result.error || "Unknown error";
+
+      if (result.validationStatus === "validation_failed") {
+        setTrainingStatus(
+          `🚨 VALIDATION FAILED: ${adapterId} - Real weights not detected. No fake model created to prevent silent failure.`
+        );
+      } else if (result.validationStatus === "conversion_failed") {
+        setTrainingStatus(
+          `🔧 CONVERSION ERROR: ${adapterId} - Check dependencies (torch, transformers, peft). ${errorMsg}`
+        );
+      } else if (result.validationStatus === "safety_block") {
+        setTrainingStatus(
+          `🛡️ SAFETY PROTECTION: ${adapterId} - Real merge failed, cosmetic fallback blocked. This prevents silent failure.`
+        );
+      } else {
+        setTrainingStatus(
+          `❌ Failed to enable adapter ${adapterId}: ${errorMsg}`
+        );
+      }
+    }
+
+    setTimeout(clearStatus, 8000); // Longer timeout for detailed messages
+  };
+
+  const handleDisableAdapter = async (adapterId: string) => {
+    const result = await disableAdapter(adapterId);
+
+    if (result.success) {
+      setTrainingStatus(`Adapter ${adapterId} disabled successfully`);
+    } else {
+      setTrainingStatus(`Failed to disable adapter: ${result.error}`);
     }
 
     setTimeout(clearStatus, 3000);
-    hideSuccessModal();
   };
 
   // === RENDER (Following KISS - Simple, focused layout) ===
@@ -276,8 +322,8 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       <div className="grid grid-cols-2 gap-3">
         {/* Statistics */}
         <TrainingStats
-          stats={trainingStats}
-          trainedModelsCount={trainedModels.length}
+          stats={trainingStatsData}
+          adaptersCount={adapters.length}
         />
 
         {/* Current Model Status */}
@@ -370,13 +416,16 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
           </div>
         </div>
 
-        {/* Trained Models */}
+        {/* LoRA Adapters */}
         <div className="col-span-3">
-          <TrainedModelsList
-            models={trainedModels}
+          <AdaptersList
+            adapters={adapters}
             isDeleting={isDeleting}
+            isToggling={isToggling}
             isTraining={isTraining}
-            onDeleteModel={showDeleteModelModal}
+            onDeleteAdapter={showDeleteAdapterModal}
+            onEnableAdapter={handleEnableAdapter}
+            onDisableAdapter={handleDisableAdapter}
           />
         </div>
       </div>
@@ -390,7 +439,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
               ? "bg-red-900/20 border-red-500/30 text-red-300"
               : trainingStatus.includes("success") ||
                 trainingStatus.includes("deleted") ||
-                trainingStatus.includes("activated")
+                trainingStatus.includes("activated") ||
+                trainingStatus.includes("enabled") ||
+                trainingStatus.includes("disabled")
               ? "bg-green-900/20 border-green-500/30 text-green-300"
               : "bg-blue-900/20 border-blue-500/30 text-blue-300"
           }`}
@@ -434,15 +485,14 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       {/* Modals */}
       <TrainingModals
         modalState={modalState}
-        trainedModelName={trainedModelName}
+        adapterName={adapterName}
         trainingDetails={trainingResult?.details || null}
         isDeleting={isDeleting}
-        onActivateModel={handleActivateModel}
         onResetTraining={handleResetTraining}
-        onDeleteModel={handleDeleteModel}
+        onDeleteAdapter={handleDeleteAdapter}
         onHideSuccessModal={hideSuccessModal}
         onHideResetModal={hideResetModal}
-        onHideDeleteModal={hideDeleteModelModal}
+        onHideDeleteModal={hideDeleteAdapterModal}
       />
 
       {/* Custom Styles */}

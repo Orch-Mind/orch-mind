@@ -2,17 +2,16 @@
 // Training Modals Component - Following SRP and KISS
 // Single responsibility: Handle all training-related modals
 
-import React from 'react';
-import type { ModalState, TrainingDetails } from '../types';
+import React from "react";
+import type { ModalState, TrainingDetails } from "../types";
 
 interface TrainingModalsProps {
   modalState: ModalState;
-  trainedModelName: string;
+  adapterName: string;
   trainingDetails: TrainingDetails | null;
   isDeleting: boolean;
-  onActivateModel: () => void;
   onResetTraining: () => void;
-  onDeleteModel: () => void;
+  onDeleteAdapter: () => void;
   onHideSuccessModal: () => void;
   onHideResetModal: () => void;
   onHideDeleteModal: () => void;
@@ -20,12 +19,11 @@ interface TrainingModalsProps {
 
 export const TrainingModals: React.FC<TrainingModalsProps> = ({
   modalState,
-  trainedModelName,
+  adapterName,
   trainingDetails,
   isDeleting,
-  onActivateModel,
   onResetTraining,
-  onDeleteModel,
+  onDeleteAdapter,
   onHideSuccessModal,
   onHideResetModal,
   onHideDeleteModal,
@@ -35,27 +33,23 @@ export const TrainingModals: React.FC<TrainingModalsProps> = ({
       {/* Success Modal */}
       {modalState.showSuccess && (
         <SuccessModal
-          modelName={trainedModelName}
+          adapterName={adapterName}
           trainingDetails={trainingDetails}
-          onActivate={onActivateModel}
           onClose={onHideSuccessModal}
         />
       )}
 
       {/* Reset Modal */}
       {modalState.showReset && (
-        <ResetModal
-          onConfirm={onResetTraining}
-          onClose={onHideResetModal}
-        />
+        <ResetModal onConfirm={onResetTraining} onClose={onHideResetModal} />
       )}
 
-      {/* Delete Model Modal */}
-      {modalState.showDeleteModel && (
-        <DeleteModelModal
-          modelName={modalState.modelToDelete}
+      {/* Delete Adapter Modal */}
+      {modalState.showDeleteAdapter && (
+        <DeleteAdapterModal
+          adapterId={modalState.adapterToDelete}
           isDeleting={isDeleting}
-          onConfirm={onDeleteModel}
+          onConfirm={onDeleteAdapter}
           onClose={onHideDeleteModal}
         />
       )}
@@ -65,16 +59,14 @@ export const TrainingModals: React.FC<TrainingModalsProps> = ({
 
 // Success Modal Component (SRP)
 interface SuccessModalProps {
-  modelName: string;
+  adapterName: string;
   trainingDetails: TrainingDetails | null;
-  onActivate: () => void;
   onClose: () => void;
 }
 
 const SuccessModal: React.FC<SuccessModalProps> = ({
-  modelName,
+  adapterName,
   trainingDetails,
-  onActivate,
   onClose,
 }) => (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center">
@@ -97,13 +89,11 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          Training Completed!
+          LoRA Adapter Created!
         </h3>
         <p className="text-gray-300 mb-4">
-          Your custom model{" "}
-          <span className="text-cyan-400 font-mono text-sm">
-            {modelName}
-          </span>{" "}
+          Your LoRA adapter{" "}
+          <span className="text-cyan-400 font-mono text-sm">{adapterName}</span>{" "}
           has been created successfully.
         </p>
 
@@ -129,21 +119,16 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         )}
 
         <p className="text-sm text-gray-400 mb-6">
-          Would you like to activate this model now?
+          The adapter is ready to be enabled/disabled from the LoRA Adapters
+          panel.
         </p>
 
-        <div className="flex space-x-3">
+        <div className="flex justify-center">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            className="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
           >
-            Keep Current Model
-          </button>
-          <button
-            onClick={onActivate}
-            className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
-          >
-            Activate New Model
+            Continue
           </button>
         </div>
       </div>
@@ -181,7 +166,8 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
           Reset Training Data?
         </h3>
         <p className="text-gray-300 mb-4">
-          This will clear all training history and reset conversation processing status.
+          This will clear all training history and reset conversation processing
+          status.
         </p>
 
         <div className="mb-4 p-3 bg-yellow-900/20 rounded-lg text-sm text-yellow-200">
@@ -189,8 +175,10 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
           <ul className="text-left space-y-1">
             <li>• Clear all conversation processing status</li>
             <li>• Remove training history from localStorage</li>
-            <li>• Reset trained models list</li>
-            <li>• <strong>NOT</strong> delete actual models from Ollama</li>
+            <li>• Reset LoRA adapters list</li>
+            <li>
+              • <strong>NOT</strong> delete actual adapters from disk
+            </li>
           </ul>
         </div>
 
@@ -213,16 +201,16 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
   </div>
 );
 
-// Delete Model Modal Component (SRP)
-interface DeleteModelModalProps {
-  modelName: string;
+// Delete Adapter Modal Component (SRP)
+interface DeleteAdapterModalProps {
+  adapterId: string;
   isDeleting: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
 
-const DeleteModelModal: React.FC<DeleteModelModalProps> = ({
-  modelName,
+const DeleteAdapterModal: React.FC<DeleteAdapterModalProps> = ({
+  adapterId,
   isDeleting,
   onConfirm,
   onClose,
@@ -247,22 +235,19 @@ const DeleteModelModal: React.FC<DeleteModelModalProps> = ({
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          Delete Model?
+          Delete LoRA Adapter?
         </h3>
         <p className="text-gray-300 mb-4">
-          Are you sure you want to delete the model{" "}
-          <span className="text-red-400 font-mono text-sm">
-            {modelName}
-          </span>
-          ?
+          Are you sure you want to delete the LoRA adapter{" "}
+          <span className="text-red-400 font-mono text-sm">{adapterId}</span>?
         </p>
 
         <div className="mb-4 p-3 bg-red-900/20 rounded-lg text-sm text-red-200">
           <p className="font-medium mb-1">This action will:</p>
           <ul className="text-left space-y-1">
-            <li>• Permanently delete the model from Ollama</li>
-            <li>• Remove the model from your trained models list</li>
-            <li>• Free up disk space used by the model</li>
+            <li>• Permanently delete the adapter files</li>
+            <li>• Remove the adapter from your adapters list</li>
+            <li>• Disable the adapter if currently enabled</li>
           </ul>
         </div>
 
@@ -278,7 +263,7 @@ const DeleteModelModal: React.FC<DeleteModelModalProps> = ({
             disabled={isDeleting}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50"
           >
-            {isDeleting ? "Deleting..." : "Delete Model"}
+            {isDeleting ? "Deleting..." : "Delete Adapter"}
           </button>
         </div>
       </div>
