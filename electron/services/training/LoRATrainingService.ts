@@ -148,7 +148,9 @@ export class LoRATrainingService {
         scriptPath
       )} --data ${JSON.stringify(dataPath)} --base-model ${JSON.stringify(
         params.baseModel
-      )} --output "master" --max-steps ${fallbackSteps}`;
+      )} --output ${JSON.stringify(
+        params.outputName
+      )} --max-steps ${fallbackSteps}`;
 
       // For Windows, prepend command to set console code page to UTF-8
       if (process.platform === "win32") {

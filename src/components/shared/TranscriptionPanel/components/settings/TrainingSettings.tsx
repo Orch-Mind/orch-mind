@@ -199,7 +199,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     const request: TrainingRequest = {
       conversations: trainingConversations,
       baseModel: originalBaseModel,
-      outputName: adapterName.split("_adapter_")[0], // Use clean name for output
+      outputName: adapterName, // Use full adapter name for consistency
     };
 
     console.log("[Training] Starting LoRA adapter training for:", adapterName);
