@@ -27,17 +27,41 @@ export function setupLoRATrainingHandlers(): void {
       });
 
       try {
-        const result = await trainingService.trainAdapter(params);
+        // Add progress callback to send updates to renderer
+        const paramsWithProgress = {
+          ...params,
+          onProgress: (progress: number, message: string) => {
+            console.log(`[IPC] Training progress: ${progress}% - ${message}`);
+            event.sender.send("training-progress", { progress, message });
+          },
+        };
+
+        const result = await trainingService.trainAdapter(paramsWithProgress);
 
         if (result.success) {
           console.log("[IPC] LoRA training completed successfully");
+          // Send final progress update
+          event.sender.send("training-progress", {
+            progress: 100,
+            message: "Training completed successfully!",
+          });
         } else {
           console.error("[IPC] LoRA training failed:", result.error);
+          // Send error progress update
+          event.sender.send("training-progress", {
+            progress: 0,
+            message: `Training failed: ${result.error}`,
+          });
         }
 
         return result;
       } catch (error) {
         console.error("[IPC] LoRA training error:", error);
+        // Send error progress update
+        event.sender.send("training-progress", {
+          progress: 0,
+          message: `Training error: ${error}`,
+        });
         return {
           success: false,
           error:

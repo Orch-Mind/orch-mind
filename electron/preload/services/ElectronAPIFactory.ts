@@ -780,29 +780,18 @@ export class ElectronAPIFactory {
   }
 
   /**
-   * Create Training Manager service methods
+   * Create Training Management service methods
    */
   private createTrainingManager() {
     return {
       trainLoRAAdapter: async (params: {
-        conversations: Array<{
-          id: string;
-          messages: Array<{
-            role: string;
-            content: string;
-          }>;
-        }>;
+        conversations: any[];
         baseModel: string;
         outputName: string;
+        action?: "enable_real_adapter" | "disable_real_adapter";
       }) => {
         return this.errorHandler.wrapAsync(
-          async () => {
-            const result = await ipcRenderer.invoke(
-              "train-lora-adapter",
-              params
-            );
-            return result;
-          },
+          () => ipcRenderer.invoke("train-lora-adapter", params),
           {
             component: "TrainingManager",
             operation: "trainLoRAAdapter",
@@ -813,19 +802,34 @@ export class ElectronAPIFactory {
 
       deleteOllamaModel: async (modelName: string) => {
         return this.errorHandler.wrapAsync(
-          async () => {
-            const result = await ipcRenderer.invoke(
-              "delete-ollama-model",
-              modelName
-            );
-            return result;
-          },
+          () => ipcRenderer.invoke("delete-ollama-model", modelName),
           {
             component: "TrainingManager",
             operation: "deleteOllamaModel",
             severity: "medium",
           }
         );
+      },
+
+      onTrainingProgress: (
+        callback: (data: { progress: number; message: string }) => void
+      ) => {
+        const subscription = (
+          _: Electron.IpcRendererEvent,
+          data: { progress: number; message: string }
+        ) => {
+          try {
+            callback(data);
+          } catch (error) {
+            this.logger.error("Error in training progress callback", error);
+          }
+        };
+
+        ipcRenderer.on("training-progress", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("training-progress", subscription);
+        };
       },
     };
   }

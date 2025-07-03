@@ -246,6 +246,11 @@ export interface ElectronAPI {
   onP2PRoomLeft: (callback: () => void) => () => void;
   onP2PAdaptersAvailable: (callback: (data: any) => void) => () => void;
   onP2PChunkReceived: (callback: (data: any) => void) => () => void;
+
+  // Training Progress Event Listener
+  onTrainingProgress: (
+    callback: (data: { progress: number; message: string }) => void
+  ) => () => void;
 }
 
 export interface DependencyStatus {

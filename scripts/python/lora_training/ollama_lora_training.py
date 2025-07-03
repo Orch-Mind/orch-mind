@@ -120,11 +120,11 @@ def main():
         """Map Ollama model names to HuggingFace model names (using latest Unsloth models)."""
         model_mapping = {
             # Latest Unsloth optimized models
-            "gemma3:latest": "unsloth/gemma-3-1b-it-GGUF",
-            "qwen3:latest": "unsloth/Qwen3-8B-GGUF",
+            "gemma3:latest": "unsloth/gemma-3-1b-it",
+            "qwen3:latest": "unsloth/Qwen3-8B",
             "mistral:latest": "unsloth/mistral-7b-v0.3",
             "mistral-nemo:latest": "unsloth/Mistral-Nemo-Instruct-2407",
-            "llama3.1:latest": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+            "llama3.1:latest": "unsloth/Llama-3.1-8B-Instruct",
         }
         
         # Try exact match first
@@ -139,15 +139,15 @@ def main():
         # Fallback - try to guess using latest Unsloth models
         base_name = ollama_model.split(':')[0]
         if "llama3.1" in base_name.lower():
-            return "unsloth/Llama-3.1-8B-Instruct-GGUF"
+            return "unsloth/Llama-3.1-8B-Instruct"
         elif "gemma3" in base_name.lower():
-            return "unsloth/gemma-3-1b-it-GGUF"
+            return "unsloth/gemma-3-1b-it"
         elif "mistral-nemo" in base_name.lower():
             return "unsloth/Mistral-Nemo-Instruct-2407"
         elif "mistral" in base_name.lower():
             return "unsloth/mistral-7b-v0.3"
         elif "qwen3" in base_name.lower():
-            return "unsloth/Qwen3-8B-GGUF"
+            return "unsloth/Qwen3-8B"
         else:
             print(f"⚠️ Unknown model {ollama_model}, using Llama-3.1 as fallback")
             return "unsloth/Llama-3.1-8B-Instruct-GGUF"
@@ -222,6 +222,13 @@ def main():
         print(f"   • Formatted {len(formatted_data)} examples for training")
         return formatted_data
 
+    def report_progress(step, total_steps, message=""):
+        """Report training progress in a format that can be parsed by the frontend."""
+        if total_steps > 0:
+            progress = min(100, (step / total_steps) * 100)
+            print(f"PROGRESS:{progress:.1f}:{message}")
+            sys.stdout.flush()
+
     def train_lora_adapter(hf_model_name, training_data, output_dir, max_steps):
         """Perform actual LoRA training using PEFT."""
         print(f"\n🔧 Starting real LoRA training...")
@@ -229,11 +236,14 @@ def main():
         print(f"   • Training Examples: {len(training_data)}")
         print(f"   • Max Steps: {max_steps}")
         
+        report_progress(0, max_steps, "Initializing LoRA training environment")
+        
         try:
             import torch
             from transformers import (
                 AutoTokenizer, AutoModelForCausalLM, 
-                TrainingArguments, Trainer, DataCollatorForLanguageModeling
+                TrainingArguments, Trainer, DataCollatorForLanguageModeling,
+                TrainerCallback
             )
             from peft import (
                 LoraConfig, get_peft_model, TaskType, 
@@ -246,8 +256,33 @@ def main():
             print("Please ensure all dependencies are installed correctly.")
             return None
         
+        # Progress callback class
+        class ProgressCallback(TrainerCallback):
+            def __init__(self, max_steps):
+                self.max_steps = max_steps
+                self.current_step = 0
+                
+            def on_step_end(self, args, state, control, **kwargs):
+                self.current_step = state.global_step
+                progress_percent = (self.current_step / self.max_steps) * 100
+                
+                # Report progress with different messages based on training phase
+                if self.current_step <= self.max_steps * 0.1:
+                    message = f"Training step {self.current_step}/{self.max_steps} (warmup phase)"
+                elif self.current_step <= self.max_steps * 0.8:
+                    message = f"Training step {self.current_step}/{self.max_steps} (main training)"
+                else:
+                    message = f"Training step {self.current_step}/{self.max_steps} (fine-tuning)"
+                
+                report_progress(self.current_step, self.max_steps, message)
+                
+            def on_train_end(self, args, state, control, **kwargs):
+                report_progress(self.max_steps, self.max_steps, "Training completed, saving adapter")
+
         # Load model and tokenizer
         print(f"📥 Loading model: {hf_model_name}")
+        report_progress(5, max_steps, "Loading base model (optimized)")
+        
         try:
             tokenizer = AutoTokenizer.from_pretrained(hf_model_name, trust_remote_code=True)
             model = AutoModelForCausalLM.from_pretrained(
@@ -264,6 +299,7 @@ def main():
                 tokenizer.pad_token_id = tokenizer.eos_token_id
             
             print(f"✅ Model loaded successfully")
+            report_progress(15, max_steps, "Analyzing training data quality")
             
         except Exception as e:
             print(f"❌ Failed to load model {hf_model_name}: {e}")
@@ -274,6 +310,7 @@ def main():
             return None
         
         # Prepare model for training
+        report_progress(20, max_steps, "Configuring LoRA adapters (r=16, α=32)")
         model = prepare_model_for_kbit_training(model)
         
         # Configure LoRA
@@ -287,6 +324,7 @@ def main():
         )
         
         # Apply LoRA to model
+        report_progress(25, max_steps, "Setting up PEFT neural pathways")
         model = get_peft_model(model, lora_config)
         model.print_trainable_parameters()
         
@@ -323,6 +361,7 @@ def main():
             return tokenized
         
         print("   • Tokenizing dataset...")
+        report_progress(30, max_steps, "Tokenizing training data")
         tokenized_dataset = dataset.map(
             tokenize_function, 
             batched=True, 
@@ -356,19 +395,23 @@ def main():
             mlm=False,
         )
         
-        # Create trainer
+        # Create trainer with progress callback
+        progress_callback = ProgressCallback(max_steps)
         trainer = Trainer(
             model=model,
             args=training_args,
             train_dataset=tokenized_dataset,
             data_collator=data_collator,
+            callbacks=[progress_callback],
         )
         
         # Train the model
         print("🚀 Starting LoRA training...")
+        report_progress(35, max_steps, "Starting LoRA training process")
         trainer.train()
         
         # Save the adapter
+        report_progress(95, max_steps, "Saving adapter weights")
         adapter_dir = os.path.join(output_dir, "lora_adapter")
         os.makedirs(adapter_dir, exist_ok=True)
         
@@ -376,6 +419,7 @@ def main():
         tokenizer.save_pretrained(adapter_dir)
         
         print(f"💾 LoRA adapter saved: {adapter_dir}")
+        report_progress(100, max_steps, "LoRA training completed successfully")
         return adapter_dir
 
     def manage_lora_adapters(hf_model_name, adapter_path, output_name, base_model_name):
@@ -683,6 +727,7 @@ PARAMETER repeat_penalty 1.1
             sys.exit(1)
         
         # Step 8: Manage LoRA adapters
+        print("📝 Registering LoRA adapter in management system...")
         adapter_info = manage_lora_adapters(hf_model_name, adapter_path, args.output, args.base_model)
         
         if adapter_info:

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import { app } from "electron";
+import * as fsSync from "fs";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { promisify } from "util";
-import * as fsSync from "fs";
 
 const execAsync = promisify(exec);
 
@@ -23,6 +23,7 @@ export interface TrainingParams {
   baseModel: string;
   outputName: string; // Will be ignored, always uses master
   action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
+  onProgress?: (progress: number, message: string) => void; // Progress callback
 }
 
 export interface TrainingResult {
@@ -170,12 +171,10 @@ export class LoRATrainingService {
         execEnv.PYTHONUTF8 = "1"; // Force Python to use UTF-8 mode on Windows
       }
 
-      const result = await execAsync(fullCommand, {
+      const result = await this.executeTrainingWithProgress(fullCommand, [], {
         cwd: this.trainingDir,
-        timeout: 30 * 60 * 1000, // INCREASED: 30 minutes timeout para acomodar problemas de dependência
-        maxBuffer: 1024 * 1024 * 100, // 100MB buffer para output extenso
         env: execEnv,
-        killSignal: "SIGTERM" as const, // Explicit kill signal
+        onProgress: params.onProgress,
       });
 
       console.log("[LoRA] Training completed successfully");
@@ -374,12 +373,12 @@ EXIT CODE: ${execError.code || "N/A"}`;
       // Verificar se o arquivo tem conteúdo e é um script Python válido
       const content = await fs.readFile(scriptPath, "utf8");
 
-      // Verificar elementos essenciais do script Ollama LoRA (corrigido para funções reais)
+      // Verificar elementos essenciais do script Ollama LoRA (arquitetura atual)
       const requiredElements = [
         "def main()", // Função principal definida no arquivo
         "train_lora_adapter", // Função principal de treinamento LoRA
-        "create_ollama_modelfile_with_adapter", // Função de criação do Modelfile com adapter
         "manage_lora_adapters", // Função de gerenciamento de adapters
+        "report_progress", // Sistema de progresso real
         "Real LoRA Training for Orch-OS", // String identificadora do sistema
       ];
 
@@ -947,10 +946,15 @@ For Linux:
 
       console.log(`[LoRA] Executing real adapter enable: ${command}`);
 
-      const result = await execAsync(command, {
+      const result = await this.executeTrainingWithProgress(command, [], {
         cwd: this.trainingDir,
-        timeout: 10 * 60 * 1000, // 10 minutes timeout for real merge
-        maxBuffer: 1024 * 1024 * 50, // 50MB buffer
+        env: {
+          ...process.env,
+          PYTHONIOENCODING: "utf-8:replace", // Force UTF-8 with replacement for unprintable chars
+          PYTHONLEGACYWINDOWSSTDIO: "0", // Use Unicode console on Windows
+          LANG: "en_US.UTF-8", // Set locale to UTF-8
+          LC_ALL: "en_US.UTF-8", // Force all locale settings to UTF-8
+        },
       });
 
       console.log("[LoRA] Real adapter enable output:", result.stdout);
@@ -1019,10 +1023,15 @@ For Linux:
 
       console.log(`[LoRA] Executing real adapter disable: ${command}`);
 
-      const result = await execAsync(command, {
+      const result = await this.executeTrainingWithProgress(command, [], {
         cwd: this.trainingDir,
-        timeout: 5 * 60 * 1000, // 5 minutes timeout for disable
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+        env: {
+          ...process.env,
+          PYTHONIOENCODING: "utf-8:replace", // Force UTF-8 with replacement for unprintable chars
+          PYTHONLEGACYWINDOWSSTDIO: "0", // Use Unicode console on Windows
+          LANG: "en_US.UTF-8", // Set locale to UTF-8
+          LC_ALL: "en_US.UTF-8", // Force all locale settings to UTF-8
+        },
       });
 
       console.log("[LoRA] Real adapter disable output:", result.stdout);
@@ -1124,5 +1133,120 @@ For Linux:
     );
     console.log(`[LoRA] Using default path: ${defaultPath}`);
     return defaultPath;
+  }
+
+  private async executeTrainingWithProgress(
+    fullCommand: string,
+    args: string[],
+    options: {
+      cwd: string;
+      env: Record<string, string>;
+      onProgress?: (progress: number, message: string) => void;
+    }
+  ): Promise<{ stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      console.log(`[LoRA] Executing with progress: ${fullCommand}`);
+
+      // Parse the full command to extract command and arguments
+      let command: string;
+      let commandArgs: string[];
+
+      if (process.platform === "win32" && fullCommand.startsWith("chcp")) {
+        // Handle Windows chcp command
+        command = "cmd";
+        commandArgs = ["/c", fullCommand];
+      } else {
+        // Split command and arguments properly
+        const parts = fullCommand.split(" ").filter((part) => part.trim());
+        command = parts[0];
+        commandArgs = parts.slice(1);
+      }
+
+      const child = spawn(command, commandArgs, {
+        cwd: options.cwd,
+        env: options.env,
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: process.platform === "win32",
+      });
+
+      let stdout = "";
+      let stderr = "";
+      let lastProgress = 0;
+
+      // Parse progress from stdout
+      child.stdout.on("data", (data: Buffer) => {
+        const output = data.toString("utf8");
+        stdout += output;
+
+        // Look for progress lines in format: PROGRESS:75.5:Training step 150/200 (main training)
+        const progressLines = output
+          .split("\n")
+          .filter((line) => line.startsWith("PROGRESS:"));
+
+        for (const line of progressLines) {
+          const parts = line.split(":");
+          if (parts.length >= 3) {
+            const progress = parseFloat(parts[1]);
+            const message = parts.slice(2).join(":").trim();
+
+            if (!isNaN(progress) && progress >= lastProgress) {
+              lastProgress = progress;
+              console.log(`[LoRA] Progress: ${progress}% - ${message}`);
+
+              if (options.onProgress) {
+                options.onProgress(progress, message);
+              }
+            }
+          }
+        }
+
+        // Log other output (non-progress lines)
+        const nonProgressLines = output
+          .split("\n")
+          .filter((line) => line.trim() && !line.startsWith("PROGRESS:"));
+
+        for (const line of nonProgressLines) {
+          if (line.trim()) {
+            console.log(`[LoRA] ${line}`);
+          }
+        }
+      });
+
+      child.stderr.on("data", (data: Buffer) => {
+        const output = data.toString("utf8");
+        stderr += output;
+        console.warn(`[LoRA] stderr: ${output}`);
+      });
+
+      child.on("close", (code) => {
+        if (code === 0) {
+          console.log(`[LoRA] Process completed successfully`);
+          resolve({ stdout, stderr });
+        } else {
+          console.error(`[LoRA] Process failed with exit code: ${code}`);
+          reject(
+            new Error(
+              `Training process failed with exit code: ${code}\nSTDOUT: ${stdout}\nSTDERR: ${stderr}`
+            )
+          );
+        }
+      });
+
+      child.on("error", (error) => {
+        console.error(`[LoRA] Process error:`, error);
+        reject(error);
+      });
+
+      // Set timeout
+      const timeout = setTimeout(() => {
+        console.error(`[LoRA] Process timeout after 30 minutes`);
+        child.kill("SIGTERM");
+        reject(new Error("Training process timeout"));
+      }, 30 * 60 * 1000); // 30 minutes
+
+      child.on("close", () => {
+        clearTimeout(timeout);
+      });
+    });
   }
 }

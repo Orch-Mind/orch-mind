@@ -2,9 +2,8 @@
 // Hook for managing training progress - Following SRP
 // Single responsibility: Handle training progress, status, and execution
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { TrainingRequest, TrainingResult } from "../types";
-import { getProgressMessage, updateTimeEstimate } from "../utils";
 
 export const useTrainingProgress = () => {
   const [isTraining, setIsTraining] = useState(false);
@@ -17,6 +16,40 @@ export const useTrainingProgress = () => {
   const [trainingResult, setTrainingResult] = useState<TrainingResult | null>(
     null
   );
+
+  // Set up real-time progress listener
+  useEffect(() => {
+    if (!window.electronAPI?.onTrainingProgress) {
+      console.warn("[Training] onTrainingProgress not available");
+      return;
+    }
+
+    const cleanup = window.electronAPI.onTrainingProgress((data) => {
+      console.log(
+        `[Training] Real progress: ${data.progress}% - ${data.message}`
+      );
+
+      setTrainingProgress(data.progress);
+      setTrainingStatus(data.message);
+
+      // Update time estimate based on real progress
+      if (trainingStartTime && data.progress > 0 && data.progress < 100) {
+        const elapsed = Date.now() - trainingStartTime;
+        const estimated = (elapsed / data.progress) * (100 - data.progress);
+        const estimatedSeconds = Math.round(estimated / 1000);
+
+        if (estimatedSeconds > 60) {
+          const minutes = Math.floor(estimatedSeconds / 60);
+          const seconds = estimatedSeconds % 60;
+          setEstimatedTime(`~${minutes}m ${seconds}s remaining`);
+        } else {
+          setEstimatedTime(`~${estimatedSeconds}s remaining`);
+        }
+      }
+    });
+
+    return cleanup;
+  }, [trainingStartTime]);
 
   const startTraining = useCallback(
     async (
@@ -31,46 +64,10 @@ export const useTrainingProgress = () => {
       setTrainingResult(null);
 
       // Always use master naming for incremental training
-      const baseModelClean = request.baseModel
-        .replace(":latest", "");
+      const baseModelClean = request.baseModel.replace(":latest", "");
       const expectedModelName = `${baseModelClean}-custom:latest`;
-      let progressInterval: NodeJS.Timeout | null = null;
 
       try {
-        // Start progress simulation
-        progressInterval = setInterval(() => {
-          setTrainingProgress((prev) => {
-            // More realistic progress simulation with smaller, smoother increments
-            let increment: number;
-
-            if (prev < 20) {
-              increment = Math.random() * 8 + 2; // 2-10% increments for early stages
-            } else if (prev < 60) {
-              increment = Math.random() * 6 + 1; // 1-7% increments for middle stages
-            } else if (prev < 85) {
-              increment = Math.random() * 4 + 0.5; // 0.5-4.5% increments for later stages
-            } else {
-              increment = Math.random() * 2 + 0.2; // 0.2-2.2% increments for final stages
-            }
-
-            const newProgress = Math.min(prev + increment, 90);
-
-            // Update status based on progress
-            setTrainingStatus(getProgressMessage(newProgress));
-
-            // Update time estimate
-            if (trainingStartTime) {
-              const estimate = updateTimeEstimate(
-                newProgress,
-                trainingStartTime
-              );
-              setEstimatedTime(estimate);
-            }
-
-            return newProgress;
-          });
-        }, 1500); // Update every 1.5 seconds for smoother animation
-
         // Training conversations already loaded with messages from TrainingSettings
         const trainingConversations = request.conversations;
 
@@ -79,16 +76,15 @@ export const useTrainingProgress = () => {
           throw new Error("Training function not available");
         }
 
+        console.log(
+          "[Training] Starting real LoRA training with progress tracking..."
+        );
+
         const result = await window.electronAPI.trainLoRAAdapter({
           conversations: trainingConversations,
           baseModel: request.baseModel,
           outputName: "master", // Always master for incremental
         });
-
-        // Clear progress interval
-        if (progressInterval) {
-          clearInterval(progressInterval);
-        }
 
         if (result?.success) {
           setTrainingProgress(100);
@@ -105,9 +101,6 @@ export const useTrainingProgress = () => {
           onError(result?.error || "Unknown error");
         }
       } catch (error) {
-        if (progressInterval) {
-          clearInterval(progressInterval);
-        }
         setTrainingProgress(0);
         const errorMessage =
           error instanceof Error ? error.message : String(error);
