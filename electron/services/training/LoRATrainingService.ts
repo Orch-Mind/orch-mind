@@ -144,7 +144,11 @@ export class LoRATrainingService {
       const pythonCommand = await this.findCompatiblePython();
 
       // Use Ollama LoRA training with automatic content-based step calculation
-      let fullCommand = `${pythonCommand} "${scriptPath}" --data "${dataPath}" --base-model "${params.baseModel}" --output "master" --max-steps ${fallbackSteps}`;
+      let fullCommand = `${pythonCommand} ${JSON.stringify(
+        scriptPath
+      )} --data ${JSON.stringify(dataPath)} --base-model ${JSON.stringify(
+        params.baseModel
+      )} --output "master" --max-steps ${fallbackSteps}`;
 
       // For Windows, prepend command to set console code page to UTF-8
       if (process.platform === "win32") {
@@ -942,7 +946,9 @@ For Linux:
       const pythonCommand = await this.findCompatiblePython();
 
       // Execute the real adapter manager
-      const command = `${pythonCommand} "${scriptPath}" enable "${adapterId}"`;
+      const command = `${pythonCommand} ${JSON.stringify(
+        scriptPath
+      )} enable ${JSON.stringify(adapterId)}`;
 
       console.log(`[LoRA] Executing real adapter enable: ${command}`);
 
@@ -1019,7 +1025,9 @@ For Linux:
       const pythonCommand = await this.findCompatiblePython();
 
       // Execute the real adapter manager
-      const command = `${pythonCommand} "${scriptPath}" disable "${adapterId}"`;
+      const command = `${pythonCommand} ${JSON.stringify(
+        scriptPath
+      )} disable ${JSON.stringify(adapterId)}`;
 
       console.log(`[LoRA] Executing real adapter disable: ${command}`);
 
@@ -1135,6 +1143,41 @@ For Linux:
     return defaultPath;
   }
 
+  /**
+   * Parse command line string into command and arguments, handling quoted strings properly
+   */
+  private parseCommandLine(commandLine: string): string[] {
+    const args: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    let quoteChar = "";
+
+    for (let i = 0; i < commandLine.length; i++) {
+      const char = commandLine[i];
+
+      if (!inQuotes && (char === '"' || char === "'")) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (inQuotes && char === quoteChar) {
+        inQuotes = false;
+        quoteChar = "";
+      } else if (!inQuotes && char === " ") {
+        if (current.trim()) {
+          args.push(current.trim());
+          current = "";
+        }
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) {
+      args.push(current.trim());
+    }
+
+    return args;
+  }
+
   private async executeTrainingWithProgress(
     fullCommand: string,
     args: string[],
@@ -1156,8 +1199,8 @@ For Linux:
         command = "cmd";
         commandArgs = ["/c", fullCommand];
       } else {
-        // Split command and arguments properly
-        const parts = fullCommand.split(" ").filter((part) => part.trim());
+        // Parse command and arguments properly handling quoted strings
+        const parts = this.parseCommandLine(fullCommand);
         command = parts[0];
         commandArgs = parts.slice(1);
       }
