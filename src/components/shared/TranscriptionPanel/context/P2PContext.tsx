@@ -9,7 +9,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { p2pShareService } from "../../../../services/p2p/P2PShareService";
+import { p2pService } from "../../../../services/p2p/P2PService";
+import { p2pEventBus } from "../../../../services/p2p/core/EventBus";
 import { useP2PPersistence } from "../components/settings/ShareSettings/hooks/useP2PPersistence";
 import {
   IncomingAdapter,
@@ -179,12 +180,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
           updatedAdapters[index].topic
         );
         try {
-          await p2pShareService.shareAdapter(updatedAdapters[index].name, {
-            name: updatedAdapters[index].name,
-            size: 0,
-            checksum: "pending",
-            topic: updatedAdapters[index].topic,
-          });
+          await p2pService.shareAdapter(updatedAdapters[index].name);
           NotificationUtils.showSuccess(
             `Started sharing ${updatedAdapters[index].name}`
           );
@@ -195,7 +191,30 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
         } catch (error) {
           console.error(`❌ [P2P-CONTEXT] Failed to share adapter:`, error);
           updatedAdapters[index].shared = false; // Revert on error
-          NotificationUtils.showError("Failed to share adapter");
+          
+          // Provide specific error messages based on the error
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (errorMessage.includes("not found in Ollama")) {
+            NotificationUtils.showError(
+              `Model ${updatedAdapters[index].name} not found. Please check if it exists in Ollama.`
+            );
+          } else if (errorMessage.includes("Ollama API not available")) {
+            NotificationUtils.showError(
+              "Ollama is not running. Please start Ollama and try again."
+            );
+          } else if (errorMessage.includes("File size") && errorMessage.includes("greater than")) {
+            NotificationUtils.showError(
+              `Model ${updatedAdapters[index].name} is too large for P2P sharing. Large model sharing will be supported in a future update.`
+            );
+          } else if (errorMessage.includes("out of memory") || errorMessage.includes("ENOMEM")) {
+            NotificationUtils.showError(
+              `Not enough memory to process ${updatedAdapters[index].name}. Try closing other applications.`
+            );
+          } else {
+            NotificationUtils.showError(
+              `Failed to share ${updatedAdapters[index].name}: ${errorMessage}`
+            );
+          }
         }
       } else if (!willBeShared && updatedAdapters[index].topic) {
         console.log(
@@ -203,7 +222,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
           updatedAdapters[index].name
         );
         try {
-          await p2pShareService.unshareAdapter(updatedAdapters[index].topic);
+          await p2pService.unshareAdapter(updatedAdapters[index].topic);
           NotificationUtils.showSuccess(
             `Stopped sharing ${updatedAdapters[index].name}`
           );
@@ -228,7 +247,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const downloadAdapter = useCallback(async (adapter: IncomingAdapter) => {
     try {
-      await p2pShareService.requestAdapter(adapter.topic, adapter.from);
+      await p2pService.requestAdapter(adapter.topic, adapter.from);
       NotificationUtils.showSuccess(`Started downloading ${adapter.name}`);
     } catch (error) {
       NotificationUtils.showError("Failed to download adapter");
@@ -276,10 +295,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Setup P2P event listeners (includes addAvailableAdapters now)
   const setupEventListeners = useCallback(() => {
-    // Increase max listeners to prevent warnings
-    if (p2pShareService.setMaxListeners) {
-      p2pShareService.setMaxListeners(20);
-    }
+    // EventBus doesn't need max listeners configuration
 
     const handleRoomJoined = (data: any) => {
       const newRoom: P2PRoom = {
@@ -326,28 +342,22 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     // Remove existing listeners first to prevent duplicates
-    p2pShareService.removeAllListeners("room-joined");
-    p2pShareService.removeAllListeners("peers-updated");
-    p2pShareService.removeAllListeners("room-left");
-    p2pShareService.removeAllListeners("connection-error");
-    p2pShareService.removeAllListeners("adapters-available");
+    p2pEventBus.off("room:joined", handleRoomJoined);
+    p2pEventBus.off("peers:updated", handlePeersUpdated);
+    p2pEventBus.off("room:left", handleRoomLeft);
+    p2pEventBus.off("adapters:available", addAvailableAdapters);
 
-    // Add new listeners
-    p2pShareService.on("room-joined", handleRoomJoined);
-    p2pShareService.on("peers-updated", handlePeersUpdated);
-    p2pShareService.on("room-left", handleRoomLeft);
-    p2pShareService.on("connection-error", handleConnectionError);
-    p2pShareService.on("adapters-available", addAvailableAdapters);
+    // Add new listeners using EventBus
+    p2pEventBus.on("room:joined", handleRoomJoined);
+    p2pEventBus.on("peers:updated", handlePeersUpdated);
+    p2pEventBus.on("room:left", handleRoomLeft);
+    p2pEventBus.on("adapters:available", addAvailableAdapters);
 
     return () => {
-      p2pShareService.removeListener("room-joined", handleRoomJoined);
-      p2pShareService.removeListener("peers-updated", handlePeersUpdated);
-      p2pShareService.removeListener("room-left", handleRoomLeft);
-      p2pShareService.removeListener("connection-error", handleConnectionError);
-      p2pShareService.removeListener(
-        "adapters-available",
-        addAvailableAdapters
-      );
+      p2pEventBus.off("room:joined", handleRoomJoined);
+      p2pEventBus.off("peers:updated", handlePeersUpdated);
+      p2pEventBus.off("room:left", handleRoomLeft);
+      p2pEventBus.off("adapters:available", addAvailableAdapters);
     };
   }, [addAvailableAdapters, clearIncomingAdapters]);
 
@@ -377,34 +387,41 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         if (type === "general") {
-          await p2pShareService.joinGeneralRoom();
-          p2pShareService.emit("room-joined", { type: "general" });
+          await p2pService.joinGeneralRoom();
+          p2pEventBus.emit("room:joined", {
+            type: "general",
+            topic: "general-room",
+            peersCount: 0,
+          });
         } else if (type === "local") {
           const localTopic = await ShareUtils.generateLocalNetworkTopic();
-          await p2pShareService.joinRoom(localTopic);
-          p2pShareService.emit("room-joined", {
+          await p2pService.joinRoom(localTopic);
+          p2pEventBus.emit("room:joined", {
             type: "local",
             topic: localTopic,
+            peersCount: 0,
           });
         } else if (type === "private") {
           const codeToUse = privateCode?.trim();
 
           if (codeToUse) {
             const topic = await ShareUtils.codeToTopic(codeToUse);
-            await p2pShareService.joinRoom(topic);
-            p2pShareService.emit("room-joined", {
+            await p2pService.joinRoom(topic);
+            p2pEventBus.emit("room:joined", {
               type: "private",
               code: codeToUse,
               topic,
+              peersCount: 0,
             });
           } else {
             const friendlyCode = ShareUtils.generateFriendlyCode();
             const topic = await ShareUtils.codeToTopic(friendlyCode);
-            await p2pShareService.joinRoom(topic);
-            p2pShareService.emit("room-joined", {
+            await p2pService.joinRoom(topic);
+            p2pEventBus.emit("room:joined", {
               type: "private",
               code: friendlyCode,
               topic,
+              peersCount: 0,
             });
           }
         }
@@ -461,12 +478,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
           const topic = adapter.topic || ShareUtils.generateAdapterTopic();
           updatedAdapters[i].topic = topic;
 
-          await p2pShareService.shareAdapter(adapter.name, {
-            name: adapter.name,
-            size: 0,
-            checksum: "pending",
-            topic: topic,
-          });
+          await p2pService.shareAdapter(adapter.name);
           restoredCount++;
         } catch (error) {
           console.error(
@@ -523,23 +535,74 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("🔧 [P2P-CONTEXT] Initializing P2P service...");
         isInitialized.current = true;
 
-        if (!p2pShareService.isInitialized()) {
-          await p2pShareService.initialize();
+        // Check if we're in Electron environment first
+        if (typeof window === "undefined" || !window.__ORCH_OS__) {
+          console.warn(
+            "⚠️ [P2P-CONTEXT] Not in Orch-OS Electron environment, P2P disabled"
+          );
+          setStatus((prev) => ({
+            ...prev,
+            lastError: "P2P requires Orch-OS desktop application",
+          }));
+          return;
+        }
+
+        // Wait a bit for Electron API to be ready
+        let retries = 0;
+        const maxRetries = 10;
+        while (!window.electronAPI && retries < maxRetries) {
+          console.log(
+            `🔄 [P2P-CONTEXT] Waiting for Electron API... (${
+              retries + 1
+            }/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          retries++;
+        }
+
+        if (!window.electronAPI) {
+          throw new Error(
+            "Electron API not available after waiting. Please restart the application."
+          );
+        }
+
+        if (!p2pService.isInitialized()) {
+          await p2pService.initialize();
+          console.log("✅ [P2P-CONTEXT] P2P service initialized successfully");
         }
 
         const cleanup = setupEventListeners();
         startConnectionMonitoring();
         loadLocalAdapters();
+
+        // Only attempt auto-reconnect if initialization was successful
         checkAndAutoReconnect();
 
         return cleanup;
       } catch (error) {
         console.error("❌ [P2P-CONTEXT] Failed to initialize P2P:", error);
         isInitialized.current = false; // Reset flag on error
+
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to initialize P2P service";
+
         setStatus((prev) => ({
           ...prev,
-          lastError: "Failed to initialize P2P service",
+          lastError: errorMessage,
         }));
+
+        // Show user-friendly notification if not a browser environment issue
+        if (
+          !errorMessage.includes("browser environment") &&
+          !errorMessage.includes("Electron environment")
+        ) {
+          console.warn(
+            "🔧 [P2P-CONTEXT] P2P initialization failed, but continuing without P2P features"
+          );
+          // Don't show error notification - just log and continue
+        }
       }
     };
 
@@ -563,7 +626,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log("🔄 [P2P-CONTEXT] Disconnecting...");
 
     try {
-      await p2pShareService.leaveRoom();
+      await p2pService.leaveRoom();
 
       // Clear persistence
       updateConnectionState(null, "", false);

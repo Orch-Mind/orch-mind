@@ -109,6 +109,40 @@ export function useP2PPersistence() {
     [] // No dependencies - functional update pattern
   );
 
+  const updateConnectionType = useCallback(
+    (type: P2PPersistedState["lastConnectionType"]) => {
+      setPersistedState((prev) => ({
+        ...prev,
+        lastConnectionType: type,
+      }));
+    },
+    []
+  );
+
+  const updateRoomCode = useCallback((code: string) => {
+    setPersistedState((prev) => ({
+      ...prev,
+      lastRoomCode: code,
+    }));
+  }, []);
+
+  const updateIsSharing = useCallback((isSharing: boolean) => {
+    setPersistedState((prev) => ({
+      ...prev,
+      isSharing,
+    }));
+  }, []);
+
+  const addToRoomHistory = useCallback(
+    (entry: { type: string; code?: string; timestamp: number }) => {
+      setPersistedState((prev) => ({
+        ...prev,
+        roomHistory: [entry, ...prev.roomHistory.slice(0, 4)], // Keep last 5 entries
+      }));
+    },
+    []
+  );
+
   const updateSelectedMode = useCallback(
     (mode: P2PPersistedState["lastSelectedMode"]) => {
       setPersistedState((prev) => ({
@@ -145,13 +179,6 @@ export function useP2PPersistence() {
     });
   }, []); // No dependencies - functional update pattern
 
-  const updateLastRoomCode = useCallback((code: string) => {
-    setPersistedState((prev) => ({
-      ...prev,
-      lastRoomCode: code,
-    }));
-  }, []);
-
   const clearPersistedState = useCallback(() => {
     setPersistedState(defaultP2PState);
   }, []);
@@ -171,9 +198,12 @@ export function useP2PPersistence() {
 
     // Update functions - all memoized
     updateConnectionState,
+    updateConnectionType,
+    updateRoomCode,
+    updateIsSharing,
     updateSelectedMode,
     updateSharedAdapters,
-    updateLastRoomCode,
+    addToRoomHistory,
     clearPersistedState,
 
     // Helper functions - memoized

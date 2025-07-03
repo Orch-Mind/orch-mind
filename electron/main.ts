@@ -18,7 +18,7 @@ import { OllamaServiceFacade } from "../src/components/context/deepgram/services
 import { initAutoUpdater } from "./autoUpdater";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { setupLoRATrainingHandlers } from "./handlers/loraTrainingHandler";
-import setupP2PHandlers, { cleanupP2P } from "./handlers/p2pShareHandler";
+import { cleanupP2P, setupP2PHandlers } from "./handlers/p2pShareHandler";
 import { initializeIpcHandlers } from "./ipcHandlers";
 
 import { ShortcutsHelper } from "./shortcuts";

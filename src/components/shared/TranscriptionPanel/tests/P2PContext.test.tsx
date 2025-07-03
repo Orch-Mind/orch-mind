@@ -5,18 +5,27 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { P2PProvider, useP2PContext } from "../context/P2PContext";
 
-// Mock P2P service
-jest.mock("../../../../services/p2p/P2PShareService", () => ({
-  p2pShareService: {
+// Mock the new P2P service and EventBus
+jest.mock("../../../../services/p2p/P2PService", () => ({
+  p2pService: {
     isInitialized: jest.fn(() => false),
     initialize: jest.fn(() => Promise.resolve()),
-    on: jest.fn(),
-    removeListener: jest.fn(),
-    emit: jest.fn(),
     joinGeneralRoom: jest.fn(() => Promise.resolve()),
+    joinLocalRoom: jest.fn(() => Promise.resolve()),
     joinRoom: jest.fn(() => Promise.resolve()),
+    createRoom: jest.fn(() => Promise.resolve("test-room-code")),
     leaveRoom: jest.fn(() => Promise.resolve()),
-    removeAllListeners: jest.fn(),
+    shareAdapter: jest.fn(() => Promise.resolve()),
+    unshareAdapter: jest.fn(() => Promise.resolve()),
+    destroy: jest.fn(() => Promise.resolve()),
+  },
+}));
+
+jest.mock("../../../../services/p2p/core/EventBus", () => ({
+  p2pEventBus: {
+    on: jest.fn(),
+    off: jest.fn(),
+    emit: jest.fn(),
   },
 }));
 
@@ -98,7 +107,7 @@ describe("P2PContext", () => {
   it("should handle localStorage persistence", () => {
     // Mock persisted state
     mockLocalStorage.getItem.mockImplementation((key) => {
-      if (key === "orch-p2p-state") {
+      if (key === "orch-os-p2p-state") {
         return JSON.stringify({
           lastConnectionType: "general",
           lastRoomCode: "",

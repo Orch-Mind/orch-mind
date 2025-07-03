@@ -210,6 +210,37 @@ export interface ElectronAPI {
     callback: (progress: InstallProgress) => void
   ) => () => void;
   detectHardware: () => Promise<HardwareDetectionResult>;
+
+  // P2P Methods
+  p2pInitialize: () => Promise<{ success: boolean; error?: string }>;
+  p2pJoinRoom: (topic: string) => Promise<{ success: boolean; error?: string }>;
+  p2pLeaveRoom: () => Promise<{ success: boolean; error?: string }>;
+  p2pShareAdapter: (modelName: string) => Promise<{
+    success: boolean;
+    adapterInfo?: any;
+    error?: string;
+  }>;
+  p2pUnshareAdapter: (
+    topic: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  p2pRequestAdapter: (data: {
+    topic: string;
+    fromPeer?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  p2pDestroy: () => Promise<{ success: boolean; error?: string }>;
+  p2pSendFile: (data: {
+    peerId: string;
+    filePath: string;
+    metadata: any;
+  }) => Promise<{ success: boolean; error?: string }>;
+  p2pBroadcastAdapters: (adapters: any[]) => void;
+
+  // P2P Event Listeners
+  onP2PPeersUpdated: (callback: (count: number) => void) => () => void;
+  onP2PRoomJoined: (callback: (data: any) => void) => () => void;
+  onP2PRoomLeft: (callback: () => void) => () => void;
+  onP2PAdaptersAvailable: (callback: (data: any) => void) => () => void;
+  onP2PChunkReceived: (callback: (data: any) => void) => () => void;
 }
 
 export interface DependencyStatus {

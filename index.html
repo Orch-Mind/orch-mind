@@ -15,6 +15,9 @@
   <body>
     <div id="root"></div>
     <script>
+      // Mark this as Orch-OS Electron environment for P2P detection
+      window.__ORCH_OS__ = true;
+
       // Polyfill for process to avoid "process is not defined" errors
       if (typeof window !== "undefined" && !window.process) {
         window.process = {
@@ -24,6 +27,7 @@
           platform: "browser",
           versions: {
             node: "22.16.0",
+            electron: "32.2.7", // Add Electron version for detection
           },
           nextTick: function (callback) {
             setTimeout(callback, 0);

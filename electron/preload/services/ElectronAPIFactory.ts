@@ -972,6 +972,17 @@ export class ElectronAPIFactory {
         );
       },
 
+      p2pBroadcastAdapters: async (adapters: any[]) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:broadcastAdapters", adapters),
+          {
+            component: "P2PManager",
+            operation: "broadcastAdapters",
+            severity: "low",
+          }
+        );
+      },
+
       onP2PPeersUpdated: (callback: (count: number) => void) => {
         const subscription = (_: Electron.IpcRendererEvent, count: number) => {
           try {

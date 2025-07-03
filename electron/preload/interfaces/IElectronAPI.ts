@@ -211,6 +211,9 @@ export interface IP2PShareManager {
   p2pUnshareAdapter(
     topic: string
   ): Promise<{ success: boolean; error?: string }>;
+  p2pBroadcastAdapters(
+    adapters: P2PAdapterInfo[]
+  ): Promise<{ success: boolean; error?: string }>;
   onP2PPeersUpdated(callback: (count: number) => void): () => void;
   onP2PAdaptersAvailable(
     callback: (data: { from: string; adapters: P2PAdapterInfo[] }) => void

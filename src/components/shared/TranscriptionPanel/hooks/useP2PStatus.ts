@@ -2,7 +2,8 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { useEffect, useState } from "react";
-import { p2pShareService } from "../../../../services/p2p/P2PShareService";
+import { p2pService } from "../../../../services/p2p/P2PService";
+import { p2pEventBus } from "../../../../services/p2p/core/EventBus";
 
 export interface P2PStatus {
   isConnected: boolean;
@@ -15,6 +16,7 @@ export interface P2PStatus {
 /**
  * Hook para monitorar globalmente o status da conexão P2P
  * Expõe informações simplificadas do P2P para uso em qualquer componente
+ * Atualizado para usar o novo sistema P2P modular
  */
 export const useP2PStatus = (): P2PStatus => {
   const [status, setStatus] = useState<P2PStatus>({
@@ -29,9 +31,9 @@ export const useP2PStatus = (): P2PStatus => {
     // Initialize P2P service if not already done
     const initializeIfNeeded = async () => {
       try {
-        if (!p2pShareService.isInitialized()) {
+        if (!p2pService.isInitialized()) {
           console.log("🔧 [P2P-STATUS] Initializing P2P service...");
-          await p2pShareService.initialize();
+          await p2pService.initialize();
         }
       } catch (error) {
         console.warn("🔧 [P2P-STATUS] P2P service not available:", error);
@@ -40,16 +42,16 @@ export const useP2PStatus = (): P2PStatus => {
 
     initializeIfNeeded();
 
-    // Event handlers for P2P status updates
-    const handleRoomJoined = (data: any) => {
-      console.log("🔄 [P2P-STATUS] Room joined event:", data);
+    // Event handlers for P2P status updates using EventBus
+    const handleRoomJoined = (room: any) => {
+      console.log("🔄 [P2P-STATUS] Room joined event:", room);
 
       setStatus((prev) => {
         const newStatus = {
           ...prev,
           isConnected: true,
-          roomType: data.type || "local",
-          roomCode: data.code,
+          roomType: room.type || "local",
+          roomCode: room.code,
           isLoading: false,
         };
 
@@ -96,27 +98,12 @@ export const useP2PStatus = (): P2PStatus => {
       setStatus(disconnectedStatus);
     };
 
-    const handleConnectionStarted = () => {
-      console.log("🔄 [P2P-STATUS] Connection started");
-      setStatus((prev) => ({ ...prev, isLoading: true }));
-    };
+    // Subscribe to P2P events using EventBus
+    p2pEventBus.on("room:joined", handleRoomJoined);
+    p2pEventBus.on("peers:updated", handlePeersUpdated);
+    p2pEventBus.on("room:left", handleRoomLeft);
 
-    const handleConnectionError = () => {
-      console.log("🔄 [P2P-STATUS] Connection error");
-      setStatus((prev) => ({
-        ...prev,
-        isLoading: false,
-      }));
-    };
-
-    // Subscribe to P2P events
-    p2pShareService.on("room-joined", handleRoomJoined);
-    p2pShareService.on("peers-updated", handlePeersUpdated);
-    p2pShareService.on("room-left", handleRoomLeft);
-    p2pShareService.on("connection-started", handleConnectionStarted);
-    p2pShareService.on("connection-error", handleConnectionError);
-
-    // Custom events from the ShareSettings component
+    // Custom events from the ShareSettings component (kept for backward compatibility)
     const handleP2PConnect = () => {
       console.log("🔄 [P2P-STATUS] P2P connect start event");
       setStatus((prev) => ({ ...prev, isLoading: true }));
@@ -168,16 +155,11 @@ export const useP2PStatus = (): P2PStatus => {
 
     checkPersistedState();
 
-    // Cleanup
+    // Cleanup using EventBus
     return () => {
-      p2pShareService.removeListener("room-joined", handleRoomJoined);
-      p2pShareService.removeListener("peers-updated", handlePeersUpdated);
-      p2pShareService.removeListener("room-left", handleRoomLeft);
-      p2pShareService.removeListener(
-        "connection-started",
-        handleConnectionStarted
-      );
-      p2pShareService.removeListener("connection-error", handleConnectionError);
+      p2pEventBus.off("room:joined", handleRoomJoined);
+      p2pEventBus.off("peers:updated", handlePeersUpdated);
+      p2pEventBus.off("room:left", handleRoomLeft);
 
       window.removeEventListener("p2p-connect-start", handleP2PConnect);
       window.removeEventListener(
