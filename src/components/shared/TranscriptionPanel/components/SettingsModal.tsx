@@ -4,6 +4,7 @@
 import React from "react";
 import { GeneralSettings } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
+import DownloadSettings from "./settings/DownloadSettings";
 import SettingsFooter from "./settings/SettingsFooter";
 import SettingsHeader from "./settings/SettingsHeader";
 import SettingsNavigation from "./settings/SettingsNavigation";
@@ -91,6 +92,9 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
 
           {/* Share Tab */}
           {settings.activeTab === "share" && <ShareSettings />}
+
+          {/* Download Tab */}
+          {settings.activeTab === "download" && <DownloadSettings />}
         </div>
 
         {/* Footer com botões de ação */}

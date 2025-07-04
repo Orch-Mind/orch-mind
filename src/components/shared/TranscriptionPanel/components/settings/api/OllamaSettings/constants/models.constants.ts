@@ -48,6 +48,13 @@ export const AVAILABLE_MODELS: OllamaModel[] = [
     size: "3.3GB",
     category: "main",
   },
+  {
+    id: "gemma3n:e4b",
+    name: "Gemma3n E4B",
+    description: "Gemma3n E4B's latest model with excellent tools integration",
+    size: "7.5GB",
+    category: "main",
+  },
   // Embedding models
   {
     id: "bge-m3:latest",

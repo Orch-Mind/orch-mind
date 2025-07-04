@@ -164,6 +164,14 @@ export class OllamaClient {
         family: "gemma",
         isInstalled: false,
       },
+      {
+        id: "gemma3n",
+        label: "🦙 Gemma3n Latest (Tools Support)",
+        repo: "gemma3n:e4b",
+        sizeGB: 7.5,
+        family: "gemma",
+        isInstalled: false,
+      },
     ];
 
     return verifiedModels as LocalModelMeta[];

@@ -13,6 +13,7 @@ class ModelMapper(IModelMapper):
     def __init__(self):
         self.model_mapping = {
             # Latest Unsloth optimized models - following official docs recommendations
+            "gemma3n:e4b": "muranAI/gemma-3n-E4B-it-GGUF",
             "gemma3:latest": "unsloth/gemma-3-4b-it",  # Default to 1B for efficiency
             "qwen3:latest": "unsloth/Qwen3-8B",
             "mistral:latest": "unsloth/mistral-7b-v0.3",

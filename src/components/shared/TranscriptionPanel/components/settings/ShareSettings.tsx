@@ -8,7 +8,6 @@ import "./ShareSettings/styles.css";
 import { useP2PContext } from "../../context/P2PContext";
 import {
   AdapterListComponent,
-  AvailableAdaptersComponent,
   ConnectedStatusComponent,
   SmartConnectComponent,
 } from "./ShareSettings/components";
@@ -25,16 +24,11 @@ const ShareSettings: React.FC = () => {
     reconnectToLastSession,
     persistedState,
     shouldShowReconnectPanel,
-    // Adapter state and functions now come directly from context
+    // Adapter state and functions now come directly from context (sharing only)
     sharedAdapters,
     incomingAdapters,
     toggleAdapterSharing,
-    downloadAdapter,
     clearIncomingAdapters,
-    // Download progress state and functions
-    downloadState,
-    isDownloading,
-    getProgress,
   } = useP2PContext();
 
   // SRP: Handler focado apenas em desconexão
@@ -64,7 +58,6 @@ const ShareSettings: React.FC = () => {
         sharedAdapters={sharedAdapters}
         incomingAdapters={incomingAdapters}
         onToggleSharing={toggleAdapterSharing}
-        onDownload={downloadAdapter}
         persistedState={persistedState}
         getRecentRoomCodes={
           () =>
@@ -77,9 +70,6 @@ const ShareSettings: React.FC = () => {
         reconnectToLastSession={reconnectToLastSession}
         resetP2PState={() => {}}
         shouldShowReconnectPanel={shouldShowReconnectPanel}
-        downloadState={downloadState}
-        isDownloading={isDownloading}
-        getProgress={getProgress}
       />
       <InfoFooter currentRoom={status.currentRoom} />
     </div>
@@ -258,7 +248,6 @@ const MainSharingSection: React.FC<{
   sharedAdapters: ReturnType<typeof useP2PContext>["sharedAdapters"];
   incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
   onToggleSharing: ReturnType<typeof useP2PContext>["toggleAdapterSharing"];
-  onDownload: ReturnType<typeof useP2PContext>["downloadAdapter"];
   persistedState: ReturnType<typeof useP2PContext>["persistedState"];
   getRecentRoomCodes: () => string[];
   reconnectToLastSession: ReturnType<
@@ -268,9 +257,6 @@ const MainSharingSection: React.FC<{
   shouldShowReconnectPanel: ReturnType<
     typeof useP2PContext
   >["shouldShowReconnectPanel"];
-  downloadState: ReturnType<typeof useP2PContext>["downloadState"];
-  isDownloading: ReturnType<typeof useP2PContext>["isDownloading"];
-  getProgress: ReturnType<typeof useP2PContext>["getProgress"];
 }> = ({
   currentRoom,
   isSharing,
@@ -282,15 +268,11 @@ const MainSharingSection: React.FC<{
   sharedAdapters,
   incomingAdapters,
   onToggleSharing,
-  onDownload,
   persistedState,
   getRecentRoomCodes,
   reconnectToLastSession,
   resetP2PState,
   shouldShowReconnectPanel,
-  downloadState,
-  isDownloading,
-  getProgress,
 }) => (
   <div className="flex gap-3 justify-between">
     {/* KISS: Layout flexbox com distribuição igual de espaço */}
@@ -329,18 +311,6 @@ const MainSharingSection: React.FC<{
         isSharing={isSharing}
       />
     </div>
-
-    <div className="flex-1 min-w-0">
-      <AvailableAdaptersComponent
-        adapters={incomingAdapters}
-        currentRoom={currentRoom}
-        onDownload={onDownload}
-        isSharing={isSharing}
-        downloadState={downloadState}
-        isDownloading={isDownloading}
-        getProgress={getProgress}
-      />
-    </div>
   </div>
 );
 
@@ -352,10 +322,10 @@ const InfoFooter: React.FC<{
     <p className="text-[10px] text-amber-400">
       <strong>💡 How it works:</strong>
       {currentRoom?.type === "general"
-        ? " General room connects you to the global Orch-OS community. Download adapters and merge them into powerful combinations!"
+        ? " General room connects you to the global Orch-OS community. Share your adapters with the world! Check the Download tab to discover adapters from other users."
         : currentRoom?.type === "local"
-        ? " Auto-discovery finds peers on your local network. Perfect for sharing and merging adapters within the same office or home."
-        : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to collaborate and merge adapters securely."}
+        ? " Auto-discovery finds peers on your local network. Perfect for sharing adapters within the same office or home. Use the Download tab to get adapters from nearby peers."
+        : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to collaborate securely. Visit the Download tab to get shared adapters."}
     </p>
   </div>
 );

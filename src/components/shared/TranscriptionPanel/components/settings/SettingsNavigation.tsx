@@ -170,6 +170,45 @@ const SettingsNavigation: React.FC<ExtendedSettingsNavigationProps> = ({
       >
         Share
       </button>
+
+      {/* Download Settings */}
+      <button
+        className="px-4 py-2 rounded-t-lg transition-all duration-200"
+        style={{
+          backgroundColor:
+            activeTab === "download"
+              ? "rgba(0, 250, 255, 0.15)"
+              : "rgba(0, 0, 0, 0.2)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: `1px solid ${
+            activeTab === "download"
+              ? "rgba(0, 250, 255, 0.4)"
+              : "rgba(0, 250, 255, 0.1)"
+          }`,
+          color:
+            activeTab === "download" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
+          boxShadow:
+            activeTab === "download" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
+        }}
+        onMouseEnter={(e) => {
+          if (activeTab !== "download") {
+            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
+            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
+            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (activeTab !== "download") {
+            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
+            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
+            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
+          }
+        }}
+        onClick={() => setActiveTab("download")}
+      >
+        Download
+      </button>
     </div>
   );
 };

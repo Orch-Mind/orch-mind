@@ -105,7 +105,8 @@ def main():
         """Map Ollama model names to HuggingFace model names (using latest Unsloth models)."""
         model_mapping = {
             # Latest Unsloth optimized models
-            "gemma3:latest": "unsloth/gemma-3-4b-it",
+            "gemma3:latest": "muranAI/gemma-3n-E4B-it-GGUF",
+            "gemma3n:e4b": "unsloth/gemma-3-4b-it",
             "qwen3:latest": "unsloth/Qwen3-8B",
             "mistral:latest": "unsloth/mistral-7b-v0.3",
             "mistral-nemo:latest": "unsloth/Mistral-Nemo-Instruct-2407",
