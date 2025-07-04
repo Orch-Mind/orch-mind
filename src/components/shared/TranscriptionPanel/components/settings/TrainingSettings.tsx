@@ -65,9 +65,11 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     isDeleting,
     isToggling,
     saveAdapter,
+    addDownloadedAdapter,
     deleteAdapter,
-    enableAdapter,
-    disableAdapter,
+    toggleAdapterState,
+    mergeAdapters,
+    deployAdapter,
     resetAdapters,
   } = useLoRAAdapters();
 
@@ -253,58 +255,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     hideDeleteAdapterModal();
   };
 
-  const handleEnableAdapter = async (adapterId: string) => {
-    const result = await enableAdapter(adapterId);
 
-    if (result.success) {
-      if (result.validationStatus === "verified_real_weights") {
-        setTrainingStatus(
-          `🔥 VERIFIED: Adapter ${adapterId} enabled with REAL LoRA weights! Active model: ${
-            result.activeModel || adapterId
-          }`
-        );
-      } else {
-        setTrainingStatus(
-          `⚠️ WARNING: Adapter ${adapterId} enabled but validation status unknown. Check logs for details.`
-        );
-      }
-    } else {
-      // Show detailed error based on validation status
-      const errorMsg = result.error || "Unknown error";
-
-      if (result.validationStatus === "validation_failed") {
-        setTrainingStatus(
-          `🚨 VALIDATION FAILED: ${adapterId} - Real weights not detected. No fake model created to prevent silent failure.`
-        );
-      } else if (result.validationStatus === "conversion_failed") {
-        setTrainingStatus(
-          `🔧 CONVERSION ERROR: ${adapterId} - Check dependencies (torch, transformers, peft). ${errorMsg}`
-        );
-      } else if (result.validationStatus === "safety_block") {
-        setTrainingStatus(
-          `🛡️ SAFETY PROTECTION: ${adapterId} - Real merge failed, cosmetic fallback blocked. This prevents silent failure.`
-        );
-      } else {
-        setTrainingStatus(
-          `❌ Failed to enable adapter ${adapterId}: ${errorMsg}`
-        );
-      }
-    }
-
-    setTimeout(clearStatus, 8000); // Longer timeout for detailed messages
-  };
-
-  const handleDisableAdapter = async (adapterId: string) => {
-    const result = await disableAdapter(adapterId);
-
-    if (result.success) {
-      setTrainingStatus(`Adapter ${adapterId} disabled successfully`);
-    } else {
-      setTrainingStatus(`Failed to disable adapter: ${result.error}`);
-    }
-
-    setTimeout(clearStatus, 3000);
-  };
 
   // === RENDER (Following KISS - Simple, focused layout) ===
   return (
@@ -422,8 +373,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
             isToggling={isToggling}
             isTraining={isTraining}
             onDeleteAdapter={showDeleteAdapterModal}
-            onEnableAdapter={handleEnableAdapter}
-            onDisableAdapter={handleDisableAdapter}
+
+            onMergeAdapters={mergeAdapters}
+            onDeployAdapter={deployAdapter}
           />
         </div>
       </div>

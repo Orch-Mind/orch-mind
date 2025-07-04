@@ -120,7 +120,8 @@ export interface ElectronAPI {
     conversations: TrainingConversation[];
     baseModel: string;
     outputName: string;
-    action?: "enable_real_adapter" | "disable_real_adapter";
+    action?: "deploy_adapter";
+    adapterId?: string;
   }) => Promise<{
     success: boolean;
     error?: string;
@@ -136,8 +137,70 @@ export interface ElectronAPI {
     };
   }>;
 
+  // LoRA Adapter Deployment (Unsloth-compatible)
+  deployLoRAAdapter?: (params: {
+    adapterId: string;
+    adapterName: string;
+    baseModel: string;
+    outputModelName: string;
+    deploymentType: "unsloth_gguf" | "ollama_adapter" | "merged_model";
+    adapterPath: string;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+    modelName?: string;
+    deploymentDetails?: {
+      adapterPath: string;
+      ggufPath?: string;
+      modelfilePath?: string;
+      deploymentType: string;
+      baseModel: string;
+    };
+  }>;
+
   deleteOllamaModel?: (modelName: string) => Promise<{
     success: boolean;
+    error?: string;
+  }>;
+
+  // LoRA Adapter Merging
+  mergeLoRAAdapters?: (request: {
+    adapters: Array<{
+      name: string;
+      path: string;
+      baseModel: string;
+      checksum: string;
+      weight?: number;
+    }>;
+    strategy: "arithmetic_mean" | "weighted_average" | "svd_merge";
+    outputName: string;
+    targetBaseModel: string;
+  }) => Promise<{
+    success: boolean;
+    mergedAdapterPath?: string;
+    metadata?: any;
+    error?: string;
+  }>;
+
+  listMergedAdapters?: () => Promise<{
+    success: boolean;
+    adapters: Array<{
+      name: string;
+      path: string;
+      metadata: any;
+    }>;
+    error?: string;
+  }>;
+
+  removeMergedAdapter?: (adapterName: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  shareMergedAdapter?: (adapterName: string) => Promise<{
+    success: boolean;
+    adapterInfo?: any;
+    mergedAdapterPath?: string;
     error?: string;
   }>;
 

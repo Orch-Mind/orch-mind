@@ -139,7 +139,7 @@ const MergedAdaptersList: React.FC<{
       <div className="space-y-1 max-h-24 overflow-y-auto">
         {mergedAdapters.map((adapter, index) => (
           <MergedAdapterItem
-            key={index}
+            key={`${adapter.name}-${index}`}
             adapter={adapter}
             onShare={onShareMerged}
             onRemove={onRemoveMerged}

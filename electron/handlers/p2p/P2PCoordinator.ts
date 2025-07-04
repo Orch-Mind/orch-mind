@@ -53,26 +53,57 @@ export class P2PCoordinator {
   }
 
   /**
-   * Share an adapter
+   * Share an adapter with metadata
    */
-  async shareAdapter(modelName: string): Promise<IAdapterInfo> {
-    // Find model path
-    const modelPath = await this.adapterRegistry.findModelPath(modelName);
-    if (!modelPath) {
-      throw new Error(`Model ${modelName} not found in Ollama`);
+  async shareAdapter(adapterName: string): Promise<IAdapterInfo> {
+    console.log(`[P2PCoordinator] Attempting to share adapter: ${adapterName}`);
+    
+    // Find adapter safetensors file in project directory
+    const adapterPath = await this.adapterRegistry.findModelPath(adapterName);
+    console.log(`[P2PCoordinator] AdapterRegistry.findModelPath result: ${adapterPath}`);
+    
+    if (!adapterPath) {
+      console.error(`[P2PCoordinator] Adapter not found: ${adapterName}`);
+      throw new Error(
+        `LoRA adapter ${adapterName} not found in project directory`
+      );
     }
 
-    // Calculate file info
-    const fileInfo = await this.fileTransfer.calculateFileInfo(modelPath);
+    // Get adapter metadata from registry
+    const metadata = await this.adapterRegistry.getAdapterMetadata(adapterName);
 
-    // Create adapter info
+    // Calculate file info
+    const fileInfo = await this.fileTransfer.calculateFileInfo(adapterPath);
+
+    // Create adapter info with metadata
     const topic = crypto.randomBytes(32).toString("hex");
     const adapterInfo: IAdapterInfo = {
-      name: modelName,
+      name: adapterName,
       size: fileInfo.size,
       checksum: fileInfo.checksum,
       topic,
       timestamp: Date.now(),
+      // Include metadata for P2P sharing
+      metadata: metadata
+        ? {
+            adapter_id: metadata.adapter_id,
+            base_model: metadata.base_model,
+            hf_model: metadata.hf_model,
+            created_at: metadata.created_at,
+            training_method: metadata.training_method,
+            status: metadata.status,
+            // Include file type info
+            file_type: adapterPath.endsWith(".safetensors")
+              ? "safetensors"
+              : "pytorch",
+            file_path: adapterPath,
+          }
+        : {
+            file_type: adapterPath.endsWith(".safetensors")
+              ? "safetensors"
+              : "pytorch",
+            file_path: adapterPath,
+          },
     };
 
     // Register adapter
@@ -80,6 +111,13 @@ export class P2PCoordinator {
 
     // Broadcast adapter list
     this.broadcastAdapterList();
+
+    console.log(`[P2PCoordinator] LoRA adapter ready for sharing:`, {
+      name: adapterInfo.name,
+      size: adapterInfo.size,
+      type: adapterInfo.metadata?.file_type,
+      hasMetadata: !!metadata,
+    });
 
     return adapterInfo;
   }
@@ -144,8 +182,8 @@ export class P2PCoordinator {
       this.forwardToRenderers("p2p:transfer-progress", data);
     });
 
-    this.fileTransfer.on("transfer-complete", (topic) => {
-      this.forwardToRenderers("p2p:transfer-complete", topic);
+    this.fileTransfer.on("transfer-complete", (data) => {
+      this.handleAdapterDownloadComplete(data);
     });
   }
 
@@ -166,6 +204,7 @@ export class P2PCoordinator {
           break;
 
         case "adapter-chunk":
+          this.fileTransfer.handleReceivedChunk(message.data);
           this.forwardToRenderers("p2p:chunk-received", message.data);
           break;
       }
@@ -215,6 +254,86 @@ export class P2PCoordinator {
     };
 
     this.backendManager.sendMessage(message);
+  }
+
+  /**
+   * Handle adapter download completion and save to filesystem
+   */
+  private async handleAdapterDownloadComplete(data: {
+    topic: string;
+    buffer: Buffer;
+    metadata: IAdapterInfo;
+  }): Promise<void> {
+    try {
+      await this.saveDownloadedAdapter(data.buffer, data.metadata);
+      this.forwardToRenderers("p2p:transfer-complete", data.topic);
+    } catch (error) {
+      console.error("[P2PCoordinator] Error saving downloaded adapter:", error);
+      this.forwardToRenderers("p2p:transfer-error", {
+        topic: data.topic,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  }
+
+  /**
+   * Save downloaded adapter to project filesystem
+   */
+  private async saveDownloadedAdapter(
+    buffer: Buffer,
+    metadata: IAdapterInfo
+  ): Promise<void> {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+
+    // Get project root directory (4 levels up from this file)
+    const currentDir = path.dirname(__filename);
+    const projectRoot = path.resolve(currentDir, "../../../..");
+    
+    // Create adapter directories
+    const weightsDir = path.join(projectRoot, "lora_adapters", "weights");
+    const registryDir = path.join(projectRoot, "lora_adapters", "registry");
+    
+    await fs.mkdir(weightsDir, { recursive: true });
+    await fs.mkdir(registryDir, { recursive: true });
+
+    // Create adapter directory
+    const adapterDir = path.join(weightsDir, `${metadata.name}_adapter`);
+    await fs.mkdir(adapterDir, { recursive: true });
+
+    // Determine file extension based on metadata
+    const fileExtension = metadata.metadata?.file_type === 'safetensors' ? '.safetensors' : '.bin';
+    const fileName = `adapter_model${fileExtension}`;
+    const adapterFilePath = path.join(adapterDir, fileName);
+
+    // Save adapter file
+    await fs.writeFile(adapterFilePath, buffer);
+    console.log(`[P2PCoordinator] Saved adapter file: ${adapterFilePath}`);
+
+    // Create registry metadata
+    const registryMetadata = {
+      adapter_id: metadata.metadata?.adapter_id || metadata.name,
+      adapter_name: `${metadata.name}_adapter`,
+      base_model: metadata.metadata?.base_model || "unknown",
+      hf_model: metadata.metadata?.hf_model || "unknown",
+      adapter_path: adapterDir,
+      created_at: metadata.metadata?.created_at || new Date().toISOString(),
+      downloaded_at: new Date().toISOString(),
+      enabled: false,
+      training_method: metadata.metadata?.training_method || "downloaded_p2p",
+      status: "downloaded",
+      source: "p2p",
+      file_type: metadata.metadata?.file_type || 'unknown',
+      original_size: metadata.size,
+      checksum: metadata.checksum
+    };
+
+    // Save registry file
+    const registryFilePath = path.join(registryDir, `${metadata.name}_adapter.json`);
+    await fs.writeFile(registryFilePath, JSON.stringify(registryMetadata, null, 2));
+    console.log(`[P2PCoordinator] Saved registry metadata: ${registryFilePath}`);
+
+    console.log(`[P2PCoordinator] Successfully saved downloaded adapter: ${metadata.name}`);
   }
 
   /**

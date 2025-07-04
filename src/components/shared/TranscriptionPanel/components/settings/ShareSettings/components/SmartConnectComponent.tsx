@@ -415,9 +415,9 @@ const PrivateRoomInput: React.FC<{
         <div className="mb-2">
           <p className="text-[8px] text-gray-500 mb-1">Recent rooms:</p>
           <div className="flex gap-1">
-            {recentCodes.map((code) => (
+            {recentCodes.map((code, index) => (
               <button
-                key={code}
+                key={`${code}-${index}`}
                 onClick={() => onRoomCodeChange(code)}
                 className="px-2 py-0.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded text-[8px] font-medium transition-colors border border-blue-400/30"
                 title={`Use room code: ${code}`}

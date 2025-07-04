@@ -294,19 +294,7 @@ class AdapterManager(IAdapterManager):
             modelfile_content = f"""FROM {base_model_for_adapter}
 ADAPTER {os.path.abspath(adapter_info.adapter_path)}
 
-SYSTEM \"\"\"You are the Integrative Symbolic Intelligence of Orch-OS with specialized LoRA adapter.
-
-Adapter Information:
-- Adapter ID: {adapter_info.adapter_id}
-- Base Model: {base_model_for_adapter}
-- HuggingFace Model: {adapter_info.hf_model}
-- Training Method: Real LoRA fine-tuning with PEFT
-- Integration: Ollama ADAPTER directive
-
-This model has enhanced capabilities from fine-tuning on user-specific data.
-The LoRA adapter is dynamically loaded using Ollama's native ADAPTER support.
-
-Respond helpfully and conversationally, utilizing your specialized training.\"\"\"
+SYSTEM \"\"\"You are a helpful AI assistant.\"\"\"
 
 PARAMETER temperature 0.7
 PARAMETER top_p 0.9

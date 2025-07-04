@@ -259,12 +259,7 @@ class UnslothDeploymentService:
             # Create Modelfile for base model
             modelfile_content = f"""FROM {gguf_path}
 
-SYSTEM \"\"\"You are a base model deployed from {hf_model_name}.
-
-This model was loaded from HuggingFace and converted to GGUF format for Ollama compatibility.
-You serve as a base model for LoRA adapter training and deployment.
-
-Respond helpfully and conversationally.\"\"\"
+SYSTEM \"\"\"You are a helpful AI assistant.\"\"\"
 
 PARAMETER temperature 0.7
 PARAMETER top_p 0.9

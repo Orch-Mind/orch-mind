@@ -137,48 +137,115 @@ const AdapterInfo: React.FC<{ adapter: any }> = ({ adapter }) => (
   </div>
 );
 
-// SRP: Component focused only on download functionality
+// SRP: Download button component with ownership check
 const DownloadButton: React.FC<{
   adapter: any;
   onDownload: (adapter: any) => void;
-}> = ({ adapter, onDownload }) => (
-  <button
-    onClick={() => onDownload(adapter)}
-    className="px-2 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors border border-green-400/30 text-[9px] font-medium"
-    title={`Download ${adapter.name} from ${adapter.from}`}
-  >
-    📥
-  </button>
-);
+}> = ({ adapter, onDownload }) => {
+  // Helper function to check if we own this adapter
+  const isOwnAdapter = () => {
+    // Check if adapter.from is empty, null, or matches our own identifier
+    // Own adapters typically don't have a 'from' field or have empty 'from'
+    return (
+      !adapter.from || adapter.from.trim() === "" || adapter.from === "local"
+    );
+  };
+
+  // Don't render download button for own adapters
+  if (isOwnAdapter()) {
+    return <span className="text-xs text-gray-500 px-2 py-1">Own adapter</span>;
+  }
+
+  return (
+    <button
+      onClick={() => onDownload(adapter)}
+      className="text-xs bg-cyan-600/20 text-cyan-400 px-2 py-1 rounded border border-cyan-400/30 hover:bg-cyan-600/30 transition-colors whitespace-nowrap"
+      title={`Download ${adapter.name} from ${adapter.from}`}
+    >
+      ⬇️ Download
+    </button>
+  );
+};
 
 // SRP: State when not connected
 const NotConnectedState: React.FC = () => (
-  <div className="text-center py-4">
+  <div className="text-center py-6">
+    <div className="mb-2">
+      <svg
+        className="w-8 h-8 text-gray-500 mx-auto"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+        />
+      </svg>
+    </div>
     <p className="text-gray-400 text-[10px] mb-1">Connect to see adapters</p>
-    <p className="text-gray-500 text-[9px]">Start sharing first</p>
+    <p className="text-gray-500 text-[9px]">
+      Join a room to discover shared adapters
+    </p>
   </div>
 );
 
 // SRP: State when no adapters available
 const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
   // KISS: Simple message based on room type
-  const getMessage = (): string => {
+  const getMessage = (): { title: string; subtitle: string } => {
     switch (currentRoom?.type) {
       case "local":
-        return "Check local network";
+        return {
+          title: "No local adapters found",
+          subtitle: "Check if peers on your network are sharing adapters",
+        };
       case "general":
-        return "Wait for community shares";
+        return {
+          title: "No community adapters yet",
+          subtitle: "Wait for other users to share their adapters",
+        };
       case "private":
-        return "Share room code";
+        return {
+          title: "No adapters in this room",
+          subtitle: "Share the room code with peers who have adapters",
+        };
       default:
-        return "No peers connected";
+        return {
+          title: "No adapters available",
+          subtitle: "Connect to a room to discover shared adapters",
+        };
     }
   };
 
+  const { title, subtitle } = getMessage();
+
   return (
-    <div className="text-center py-4">
-      <p className="text-gray-400 text-[10px] mb-1">No adapters yet</p>
-      <p className="text-gray-500 text-[9px]">{getMessage()}</p>
+    <div className="text-center py-6">
+      <div className="mb-2">
+        <svg
+          className="w-8 h-8 text-gray-500 mx-auto"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8V4a1 1 0 00-1-1H7a1 1 0 00-1 1v1m8 0V4.5"
+          />
+        </svg>
+      </div>
+      <p className="text-gray-400 text-[10px] mb-1">{title}</p>
+      <p className="text-gray-500 text-[9px]">{subtitle}</p>
+      {currentRoom?.peersCount === 0 && (
+        <p className="text-yellow-500 text-[8px] mt-2">
+          💡 No peers connected - invite others to join!
+        </p>
+      )}
     </div>
   );
 };

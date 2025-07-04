@@ -788,13 +788,31 @@ export class ElectronAPIFactory {
         conversations: any[];
         baseModel: string;
         outputName: string;
-        action?: "enable_real_adapter" | "disable_real_adapter";
+        action?: "deploy_adapter";
       }) => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("train-lora-adapter", params),
           {
             component: "TrainingManager",
             operation: "trainLoRAAdapter",
+            severity: "high",
+          }
+        );
+      },
+
+      deployLoRAAdapter: async (params: {
+        adapterId: string;
+        adapterName: string;
+        baseModel: string;
+        outputModelName: string;
+        deploymentType: "unsloth_gguf" | "ollama_adapter" | "merged_model";
+        adapterPath: string;
+      }) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("deploy-lora-adapter", params),
+          {
+            component: "TrainingManager",
+            operation: "deployLoRAAdapter",
             severity: "high",
           }
         );

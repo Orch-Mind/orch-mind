@@ -13,6 +13,15 @@ import type { IAdapterInfo } from "../../../src/services/p2p/core/interfaces";
  */
 export class FileTransferHandler extends EventEmitter {
   private readonly CHUNK_SIZE = 64 * 1024; // 64KB chunks
+  private downloadBuffers: Map<
+    string,
+    {
+      chunks: Buffer[];
+      metadata: IAdapterInfo;
+      totalChunks: number;
+      receivedChunks: number;
+    }
+  > = new Map();
 
   /**
    * Send file to peer in chunks using streams for large files
@@ -39,16 +48,21 @@ export class FileTransferHandler extends EventEmitter {
       let chunkIndex = 0;
 
       return new Promise((resolve, reject) => {
-        stream.on("data", async (chunk: Buffer) => {
+        stream.on("data", (chunk: string | Buffer) => {
           try {
+            // Ensure chunk is a Buffer
+            const chunkBuffer = Buffer.isBuffer(chunk)
+              ? chunk
+              : Buffer.from(chunk);
+
             // Calculate chunk checksum
-            const chunkChecksum = this.calculateChecksum(chunk);
+            const chunkChecksum = this.calculateChecksum(chunkBuffer);
 
             const message = {
               type: "adapter-chunk",
               data: {
                 topic: metadata.topic,
-                chunk: chunk.toString("base64"),
+                chunk: chunkBuffer.toString("base64"),
                 index: chunkIndex,
                 total: totalChunks,
                 checksum: chunkChecksum,
@@ -69,8 +83,10 @@ export class FileTransferHandler extends EventEmitter {
 
             chunkIndex++;
 
-            // Small delay to avoid overwhelming the peer
-            await this.delay(10);
+            // Small delay to avoid overwhelming the peer (using setTimeout instead of async delay)
+            setTimeout(() => {
+              // Continue processing - the stream will naturally pause if needed
+            }, 10);
           } catch (error) {
             stream.destroy();
             reject(error);
@@ -160,6 +176,143 @@ export class FileTransferHandler extends EventEmitter {
    */
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Handle received chunk from peer
+   */
+  handleReceivedChunk(chunkData: {
+    topic: string;
+    chunk: string;
+    index: number;
+    total: number;
+    checksum: string;
+    metadata?: IAdapterInfo;
+  }): void {
+    const { topic, chunk, index, total, checksum, metadata } = chunkData;
+
+    try {
+      // Convert base64 chunk back to buffer
+      const chunkBuffer = Buffer.from(chunk, "base64");
+
+      // Verify chunk checksum
+      const calculatedChecksum = this.calculateChecksum(chunkBuffer);
+      if (calculatedChecksum !== checksum) {
+        console.error(
+          `[FileTransfer] Chunk checksum mismatch for ${topic}:${index}`
+        );
+        this.emit("transfer-error", {
+          topic,
+          error: "Chunk checksum verification failed",
+        });
+        return;
+      }
+
+      // Initialize download buffer if first chunk
+      if (index === 0 && metadata) {
+        this.downloadBuffers.set(topic, {
+          chunks: new Array(total),
+          metadata,
+          totalChunks: total,
+          receivedChunks: 0,
+        });
+        console.log(
+          `[FileTransfer] Starting download: ${metadata.name} (${total} chunks)`
+        );
+      }
+
+      const downloadBuffer = this.downloadBuffers.get(topic);
+      if (!downloadBuffer) {
+        console.error(
+          `[FileTransfer] No download buffer found for topic: ${topic}`
+        );
+        return;
+      }
+
+      // Store chunk in correct position
+      downloadBuffer.chunks[index] = chunkBuffer;
+      downloadBuffer.receivedChunks++;
+
+      // Emit progress
+      const progress =
+        (downloadBuffer.receivedChunks / downloadBuffer.totalChunks) * 100;
+      this.emit("transfer-progress", {
+        topic,
+        progress,
+        received: downloadBuffer.receivedChunks,
+        total: downloadBuffer.totalChunks,
+      });
+
+      console.log(
+        `[FileTransfer] Received chunk ${index + 1}/${total} for ${
+          downloadBuffer.metadata.name
+        }`
+      );
+
+      // Check if download is complete
+      if (downloadBuffer.receivedChunks === downloadBuffer.totalChunks) {
+        this.completeDownload(topic);
+      }
+    } catch (error) {
+      console.error(`[FileTransfer] Error handling chunk:`, error);
+      this.emit("transfer-error", {
+        topic,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  /**
+   * Complete download and reconstruct file
+   */
+  private completeDownload(topic: string): void {
+    const downloadBuffer = this.downloadBuffers.get(topic);
+    if (!downloadBuffer) {
+      console.error(
+        `[FileTransfer] No download buffer found for topic: ${topic}`
+      );
+      return;
+    }
+
+    try {
+      // Reconstruct file from chunks
+      const completeBuffer = Buffer.concat(downloadBuffer.chunks);
+
+      // Verify complete file checksum
+      const calculatedChecksum = this.calculateChecksum(completeBuffer);
+      if (calculatedChecksum !== downloadBuffer.metadata.checksum) {
+        console.error(
+          `[FileTransfer] File checksum mismatch for ${downloadBuffer.metadata.name}`
+        );
+        this.emit("transfer-error", {
+          topic,
+          error: "File checksum verification failed",
+        });
+        return;
+      }
+
+      console.log(
+        `[FileTransfer] Download completed: ${
+          downloadBuffer.metadata.name
+        } (${this.formatFileSize(completeBuffer.length)})`
+      );
+
+      // Emit completion with buffer and metadata
+      this.emit("transfer-complete", {
+        topic,
+        buffer: completeBuffer,
+        metadata: downloadBuffer.metadata,
+      });
+
+      // Clean up
+      this.downloadBuffers.delete(topic);
+    } catch (error) {
+      console.error(`[FileTransfer] Error completing download:`, error);
+      this.emit("transfer-error", {
+        topic,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   private formatFileSize(size: number): string {

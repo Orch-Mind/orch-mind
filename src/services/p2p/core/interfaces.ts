@@ -29,6 +29,16 @@ export interface IAdapterInfo {
   checksum: string;
   topic: string;
   timestamp?: number;
+  metadata?: {
+    adapter_id?: string;
+    base_model?: string;
+    hf_model?: string;
+    created_at?: string;
+    training_method?: string;
+    status?: string;
+    file_type: 'safetensors' | 'pytorch';
+    file_path?: string;
+  };
 }
 
 // File Transfer

@@ -50,7 +50,7 @@ const AdaptersList: React.FC<AdapterListProps> = ({
   <div className="space-y-1 max-h-32 overflow-y-auto">
     {adapters.map((adapter, idx) => (
       <AdapterItem
-        key={idx}
+        key={`${adapter.name}-${idx}`}
         adapter={adapter}
         index={idx}
         currentRoom={currentRoom}

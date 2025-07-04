@@ -38,7 +38,7 @@ export interface TrainingRequest {
   conversations: TrainingConversation[];
   baseModel: string;
   outputName: string; // Unique adapter identifier generated with timestamp
-  action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
+  action?: "deploy_adapter"; // Optional action for adapter management
 }
 
 export interface TrainingProgress {

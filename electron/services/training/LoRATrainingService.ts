@@ -22,7 +22,8 @@ export interface TrainingParams {
   conversations: TrainingConversation[];
   baseModel: string;
   outputName: string; // Unique adapter identifier
-  action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
+  action?: "deploy_adapter"; // Optional action for adapter management
+  adapterId?: string; // Adapter ID for deployment
   onProgress?: (progress: number, message: string) => void; // Progress callback
 }
 
@@ -34,6 +35,8 @@ export interface TrainingResult {
     trainingExamples: number;
     modelName: string;
     trainingDuration?: number;
+    adapterId?: string;
+    baseModel?: string;
   };
 }
 
@@ -67,17 +70,171 @@ export class LoRATrainingService {
     return result;
   }
 
+  /**
+   * Deploy an existing adapter to Ollama as a new model
+   */
+  async deployAdapter(
+    adapterId: string,
+    baseModel: string,
+    outputModelName: string
+  ): Promise<TrainingResult> {
+    console.log(
+      `🚀 [LoRA Deploy] Deploying adapter ${adapterId} to model ${outputModelName}`
+    );
+
+    try {
+      // Get the path to the deployment script
+      const deployScriptPath = this.getDeploymentScriptPath();
+      console.log(
+        `📜 [LoRA Deploy] Using deployment script: ${deployScriptPath}`
+      );
+
+      // Check if deployment script exists
+      await this.validateDeploymentScript(deployScriptPath);
+
+      // Find compatible Python
+      const pythonCommand = await this.findCompatiblePython();
+      console.log(`🐍 [LoRA Deploy] Using Python: ${pythonCommand}`);
+
+      // Execute deployment script with progress tracking
+      const deployCommand = `${pythonCommand} ${JSON.stringify(
+        deployScriptPath
+      )} --adapter-id ${JSON.stringify(
+        adapterId
+      )} --base-model ${JSON.stringify(
+        baseModel
+      )} --output-model ${JSON.stringify(outputModelName)}`;
+
+      console.log(`🚀 [LoRA Deploy] Executing deployment command:`);
+      console.log(`   Command: ${deployCommand}`);
+
+      // Environment variables for proper encoding
+      const execEnv: Record<string, string> = {
+        ...process.env,
+        PYTHONIOENCODING: "utf-8:replace",
+        PYTHONLEGACYWINDOWSSTDIO: "0",
+        LANG: "en_US.UTF-8",
+        LC_ALL: "en_US.UTF-8",
+      };
+
+      // Add Windows-specific encoding fix
+      if (process.platform === "win32") {
+        execEnv.PYTHONUTF8 = "1";
+      }
+
+      const result = await this.executeDeploymentWithProgress(deployCommand, {
+        cwd: this.trainingDir,
+        env: execEnv,
+      });
+
+      console.log("[LoRA Deploy] Deployment completed successfully");
+      console.log("[LoRA Deploy] Deployment output:", result.stdout);
+
+      if (result.stderr && result.stderr.trim()) {
+        console.warn("[LoRA Deploy] Deployment warnings:", result.stderr);
+
+        // Check if stderr contains actual errors (not just warnings)
+        if (
+          result.stderr.toLowerCase().includes("error") ||
+          result.stderr.toLowerCase().includes("failed")
+        ) {
+          throw new Error(`Deployment script failed: ${result.stderr}`);
+        }
+      }
+
+      console.log(
+        `✅ [LoRA Deploy] Successfully deployed adapter to Ollama model: ${outputModelName}`
+      );
+
+      return {
+        success: true,
+        details: {
+          modelName: outputModelName,
+          adapterId: adapterId,
+          baseModel: baseModel,
+          trainingExamples: 0,
+          trainingDuration: 0,
+        },
+      };
+    } catch (error) {
+      console.error(
+        `❌ [LoRA Deploy] Error deploying adapter ${adapterId}:`,
+        error
+      );
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unknown deployment error",
+      };
+    }
+  }
+
+  /**
+   * Create Ollama model from adapter directory with Modelfile
+   */
+  private async createOllamaModel(
+    modelName: string,
+    adapterDir: string
+  ): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      console.log(`🔨 Creating Ollama model: ${modelName} from ${adapterDir}`);
+
+      const ollama = spawn("ollama", ["create", modelName, "-f", "Modelfile"], {
+        cwd: adapterDir, // Set working directory to adapter directory
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      ollama.stdout?.on("data", (data: Buffer) => {
+        const output = data.toString();
+        stdout += output;
+        console.log(`[Ollama Create] ${output.trim()}`);
+      });
+
+      ollama.stderr?.on("data", (data: Buffer) => {
+        const error = data.toString();
+        stderr += error;
+        console.error(`[Ollama Create Error] ${error.trim()}`);
+      });
+
+      ollama.on("close", (code: number) => {
+        console.log(`[Ollama Create] Process finished with code: ${code}`);
+
+        if (code === 0) {
+          console.log(`✅ Ollama model created successfully: ${modelName}`);
+          resolve({ success: true });
+        } else {
+          console.error(`❌ Failed to create Ollama model: ${modelName}`);
+          resolve({
+            success: false,
+            error: `Ollama create failed with code ${code}. Error: ${stderr}`,
+          });
+        }
+      });
+
+      ollama.on("error", (error: Error) => {
+        console.error(`❌ Error spawning ollama create:`, error);
+        resolve({
+          success: false,
+          error: `Failed to start ollama command: ${error.message}`,
+        });
+      });
+    });
+  }
+
   async trainAdapter(params: TrainingParams): Promise<TrainingResult> {
     const startTime = Date.now();
 
     try {
-      // Handle real adapter enable/disable actions
-      if (params.action === "enable_real_adapter") {
-        return await this.enableRealAdapter(params.outputName);
-      }
-
-      if (params.action === "disable_real_adapter") {
-        return await this.disableRealAdapter(params.outputName);
+      // Handle adapter deployment action
+      if (params.action === "deploy_adapter") {
+        return await this.deployAdapter(
+          params.adapterId || params.outputName,
+          params.baseModel,
+          params.outputName
+        );
       }
 
       // Validate input parameters
@@ -953,149 +1110,6 @@ For Linux:
   }
 
   /**
-   * Enable a LoRA adapter with REAL merging using the real adapter manager script
-   */
-  private async enableRealAdapter(adapterId: string): Promise<TrainingResult> {
-    console.log(`[LoRA] Enabling adapter with REAL merge: ${adapterId}`);
-
-    try {
-      // Get the path to the real adapter manager script
-      const scriptPath = this.getRealAdapterManagerPath();
-
-      // Find compatible Python
-      const pythonCommand = await this.findCompatiblePython();
-
-      // Execute the real adapter manager
-      const command = `${pythonCommand} ${JSON.stringify(
-        scriptPath
-      )} enable ${adapterId}`;
-
-      console.log(`[LoRA] Executing real adapter enable: ${command}`);
-
-      const result = await this.executeTrainingWithProgress(command, [], {
-        cwd: this.trainingDir,
-        env: {
-          ...process.env,
-          PYTHONIOENCODING: "utf-8:replace", // Force UTF-8 with replacement for unprintable chars
-          PYTHONLEGACYWINDOWSSTDIO: "0", // Use Unicode console on Windows
-          LANG: "en_US.UTF-8", // Set locale to UTF-8
-          LC_ALL: "en_US.UTF-8", // Force all locale settings to UTF-8
-        },
-      });
-
-      console.log("[LoRA] Real adapter enable output:", result.stdout);
-
-      if (result.stderr && result.stderr.trim()) {
-        console.warn("[LoRA] Real adapter enable warnings:", result.stderr);
-      }
-
-      // Parse the result to get the active model name
-      let activeModel = "";
-      try {
-        const resultJson = JSON.parse(result.stdout.trim());
-        if (resultJson.success && resultJson.active_model) {
-          activeModel = resultJson.active_model;
-        }
-      } catch (parseError) {
-        // If parsing fails, try to extract model name from output
-        const modelMatch = result.stdout.match(/Active model: ([^\s\n]+)/);
-        if (modelMatch) {
-          activeModel = modelMatch[1];
-        }
-      }
-
-      return {
-        success: true,
-        adapterPath: activeModel,
-        details: {
-          trainingExamples: 0, // Not applicable for enable
-          modelName: activeModel,
-          trainingDuration: 0,
-        },
-      };
-    } catch (error) {
-      console.error("[LoRA] Failed to enable real adapter:", error);
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-
-      return {
-        success: false,
-        error: `Failed to enable real adapter: ${errorMessage}`,
-        details: {
-          trainingExamples: 0,
-          modelName: "",
-          trainingDuration: 0,
-        },
-      };
-    }
-  }
-
-  /**
-   * Disable a LoRA adapter using the real adapter manager script
-   */
-  private async disableRealAdapter(adapterId: string): Promise<TrainingResult> {
-    console.log(`[LoRA] Disabling adapter: ${adapterId}`);
-
-    try {
-      // Get the path to the real adapter manager script
-      const scriptPath = this.getRealAdapterManagerPath();
-
-      // Find compatible Python
-      const pythonCommand = await this.findCompatiblePython();
-
-      // Execute the real adapter manager
-      const command = `${pythonCommand} ${JSON.stringify(
-        scriptPath
-      )} disable ${adapterId}`;
-
-      console.log(`[LoRA] Executing real adapter disable: ${command}`);
-
-      const result = await this.executeTrainingWithProgress(command, [], {
-        cwd: this.trainingDir,
-        env: {
-          ...process.env,
-          PYTHONIOENCODING: "utf-8:replace", // Force UTF-8 with replacement for unprintable chars
-          PYTHONLEGACYWINDOWSSTDIO: "0", // Use Unicode console on Windows
-          LANG: "en_US.UTF-8", // Set locale to UTF-8
-          LC_ALL: "en_US.UTF-8", // Force all locale settings to UTF-8
-        },
-      });
-
-      console.log("[LoRA] Real adapter disable output:", result.stdout);
-
-      if (result.stderr && result.stderr.trim()) {
-        console.warn("[LoRA] Real adapter disable warnings:", result.stderr);
-      }
-
-      return {
-        success: true,
-        adapterPath: "",
-        details: {
-          trainingExamples: 0, // Not applicable for disable
-          modelName: "",
-          trainingDuration: 0,
-        },
-      };
-    } catch (error) {
-      console.error("[LoRA] Failed to disable real adapter:", error);
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-
-      return {
-        success: false,
-        error: `Failed to disable real adapter: ${errorMessage}`,
-        details: {
-          trainingExamples: 0,
-          modelName: "",
-          trainingDuration: 0,
-        },
-      };
-    }
-  }
-
-  /**
    * Get the path to the adapter manager bridge script (replaces real_adapter_manager.py)
    */
   private getRealAdapterManagerPath(): string {
@@ -1164,38 +1178,202 @@ For Linux:
   }
 
   /**
-   * Parse command line string into command and arguments, handling quoted strings properly
+   * Get the path to the LoRA deployment script
    */
-  private parseCommandLine(commandLine: string): string[] {
-    const args: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    let quoteChar = "";
+  private getDeploymentScriptPath(): string {
+    // Try multiple possible locations for the deployment script
+    const possiblePaths = [
+      // For packaged applications (Windows/macOS/Linux) - extraResources
+      path.join(
+        process.resourcesPath || path.dirname(process.execPath),
+        "scripts",
+        "python",
+        "lora_training",
+        "convert_lora_to_gguf.py"
+      ),
+      // For development mode
+      path.join(
+        process.cwd(),
+        "scripts",
+        "python",
+        "lora_training",
+        "convert_lora_to_gguf.py"
+      ),
+      // Alternative for packaged apps in app.asar
+      path.join(
+        app.getAppPath(),
+        "scripts",
+        "python",
+        "lora_training",
+        "convert_lora_to_gguf.py"
+      ),
+      // Alternative relative path from build directory
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "scripts",
+        "python",
+        "lora_training",
+        "convert_lora_to_gguf.py"
+      ),
+    ];
 
-    for (let i = 0; i < commandLine.length; i++) {
-      const char = commandLine[i];
+    console.log(`[LoRA Deploy] Searching for deployment script...`);
+    console.log(
+      `[LoRA Deploy] process.resourcesPath: ${process.resourcesPath}`
+    );
+    console.log(`[LoRA Deploy] process.execPath: ${process.execPath}`);
+    console.log(`[LoRA Deploy] app.getAppPath(): ${app.getAppPath()}`);
+    console.log(`[LoRA Deploy] process.cwd(): ${process.cwd()}`);
+    console.log(`[LoRA Deploy] __dirname: ${__dirname}`);
 
-      if (!inQuotes && (char === '"' || char === "'")) {
-        inQuotes = true;
-        quoteChar = char;
-      } else if (inQuotes && char === quoteChar) {
-        inQuotes = false;
-        quoteChar = "";
-      } else if (!inQuotes && char === " ") {
-        if (current.trim()) {
-          args.push(current.trim());
-          current = "";
-        }
-      } else {
-        current += char;
+    for (const scriptPath of possiblePaths) {
+      try {
+        console.log(`[LoRA Deploy] Trying path: ${scriptPath}`);
+        // Synchronous check since we're in a loop
+        require("fs").accessSync(scriptPath);
+        console.log(`[LoRA Deploy] Found deployment script at: ${scriptPath}`);
+        return scriptPath;
+      } catch (error) {
+        console.log(`[LoRA Deploy] Path not found: ${scriptPath}`);
+        // Continue to next path
       }
     }
 
-    if (current.trim()) {
-      args.push(current.trim());
-    }
+    throw new Error(
+      `Deployment script not found. Tried paths: ${possiblePaths.join(", ")}`
+    );
+  }
 
-    return args;
+  /**
+   * Validate the deployment script exists and is accessible
+   */
+  private async validateDeploymentScript(scriptPath: string): Promise<void> {
+    try {
+      await fs.access(scriptPath);
+      const stats = await fs.stat(scriptPath);
+
+      if (!stats.isFile()) {
+        throw new Error("Deployment script path is not a file");
+      }
+
+      // Verify if the file has content and is a Python script
+      const content = await fs.readFile(scriptPath, "utf8");
+
+      // Check essential elements of the deployment script
+      const requiredElements = [
+        "def deploy_lora_adapter(", // Main deployment function
+        "def convert_lora_to_gguf(", // GGUF conversion function
+        "def create_ollama_modelfile(", // Modelfile creation function
+        "def create_ollama_model(", // Ollama model creation function
+        "LoRA to GGUF Converter for Orch-OS", // Script identifier
+      ];
+
+      const missingElements = requiredElements.filter(
+        (element) => !content.includes(element)
+      );
+
+      if (missingElements.length > 0) {
+        throw new Error(
+          `Deployment script missing required elements: ${missingElements.join(
+            ", "
+          )}`
+        );
+      }
+
+      // Verify if it's a valid Python script
+      if (
+        !content.includes("#!/usr/bin/env python3") &&
+        !content.includes("import")
+      ) {
+        throw new Error("Deployment script appears to be invalid or corrupted");
+      }
+
+      console.log(
+        `[LoRA Deploy] Deployment script validated: ${scriptPath} (${stats.size} bytes)`
+      );
+      console.log(`[LoRA Deploy] Script contains LoRA to GGUF deployment: ✅`);
+    } catch (error) {
+      throw new Error(`Deployment script validation failed: ${error}`);
+    }
+  }
+
+  /**
+   * Execute deployment command with progress tracking
+   */
+  private async executeDeploymentWithProgress(
+    fullCommand: string,
+    options: {
+      cwd: string;
+      env: Record<string, string>;
+    }
+  ): Promise<{ stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      console.log(`[LoRA Deploy] Starting deployment process...`);
+      console.log(`[LoRA Deploy] Working directory: ${options.cwd}`);
+      console.log(`[LoRA Deploy] Command: ${fullCommand}`);
+
+      let stdout = "";
+      let stderr = "";
+
+      // For Windows, prepend command to set console code page to UTF-8
+      let finalCommand = fullCommand;
+      if (process.platform === "win32") {
+        finalCommand = `chcp 65001 >nul && ${fullCommand}`;
+      }
+
+      const child = spawn(finalCommand, [], {
+        shell: true,
+        cwd: options.cwd,
+        env: options.env,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      // Parse output from stdout
+      child.stdout.on("data", (data: Buffer) => {
+        const output = data.toString("utf8");
+        stdout += output;
+
+        // Log deployment progress
+        const lines = output.split("\n").filter((line) => line.trim());
+        for (const line of lines) {
+          if (line.trim()) {
+            console.log(`[LoRA Deploy] ${line}`);
+          }
+        }
+      });
+
+      child.stderr.on("data", (data: Buffer) => {
+        const output = data.toString("utf8");
+        stderr += output;
+        console.warn(`[LoRA Deploy] stderr: ${output}`);
+      });
+
+      child.on("close", (code) => {
+        if (code === 0) {
+          console.log(`[LoRA Deploy] Process completed successfully`);
+          resolve({ stdout, stderr });
+        } else {
+          console.error(`[LoRA Deploy] Process failed with exit code: ${code}`);
+          reject(
+            new Error(
+              `Deployment process failed with exit code: ${code}\nSTDOUT: ${stdout}\nSTDERR: ${stderr}`
+            )
+          );
+        }
+      });
+
+      child.on("error", (error) => {
+        console.error(`[LoRA Deploy] Process error:`, error);
+        reject(
+          new Error(
+            `Failed to start deployment process: ${error.message}\nSTDOUT: ${stdout}\nSTDERR: ${stderr}`
+          )
+        );
+      });
+    });
   }
 
   private async executeTrainingWithProgress(
@@ -1311,5 +1489,40 @@ For Linux:
         clearTimeout(timeout);
       });
     });
+  }
+
+  /**
+   * Parse command line string into command and arguments, handling quoted strings properly
+   */
+  private parseCommandLine(commandLine: string): string[] {
+    const args: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    let quoteChar = "";
+
+    for (let i = 0; i < commandLine.length; i++) {
+      const char = commandLine[i];
+
+      if (!inQuotes && (char === '"' || char === "'")) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (inQuotes && char === quoteChar) {
+        inQuotes = false;
+        quoteChar = "";
+      } else if (!inQuotes && char === " ") {
+        if (current.trim()) {
+          args.push(current.trim());
+          current = "";
+        }
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) {
+      args.push(current.trim());
+    }
+
+    return args;
   }
 }

@@ -12,7 +12,10 @@ interface LoRAAdapter {
   baseModel: string;
   enabled: boolean;
   createdAt: string;
-  status: "ready" | "training" | "error";
+  status: "ready" | "training" | "error" | "downloaded" | "merged";
+  source?: "local" | "p2p"; // Indica se foi treinado localmente ou baixado via P2P
+  mergedWith?: string[]; // IDs dos adapters que foram mergeados
+  downloadedFrom?: string; // Peer de origem se baixado via P2P
 }
 
 export const useLoRAAdapters = () => {
@@ -55,6 +58,33 @@ export const useLoRAAdapters = () => {
     loadBaseModel();
   }, []);
 
+  // Listen for adapter downloads from P2P
+  useEffect(() => {
+    const handleAdapterDownloaded = (event: CustomEvent) => {
+      const { adapterId, adapterName, baseModel, downloadedFrom } =
+        event.detail;
+      console.log("[LoRA] Adapter downloaded via P2P:", {
+        adapterId,
+        adapterName,
+        downloadedFrom,
+      });
+
+      addDownloadedAdapter(adapterId, baseModel, downloadedFrom, adapterName);
+    };
+
+    window.addEventListener(
+      "adapter-downloaded",
+      handleAdapterDownloaded as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "adapter-downloaded",
+        handleAdapterDownloaded as EventListener
+      );
+    };
+  }, []);
+
   const saveAdapter = (adapterId: string, baseModel: string) => {
     try {
       const trainingHistory = loadFromStorage("orch-lora-adapters", {
@@ -73,6 +103,7 @@ export const useLoRAAdapters = () => {
           enabled: false,
           createdAt: new Date().toISOString(),
           status: "ready",
+          source: "local",
         };
 
         const updatedAdapters = [...adapters, newAdapter];
@@ -83,6 +114,49 @@ export const useLoRAAdapters = () => {
       }
     } catch (error) {
       console.error("[LoRA] Error saving adapter:", error);
+    }
+  };
+
+  const addDownloadedAdapter = (
+    adapterId: string,
+    baseModel: string,
+    downloadedFrom: string,
+    adapterName?: string
+  ) => {
+    try {
+      const trainingHistory = loadFromStorage("orch-lora-adapters", {
+        adapters: [] as LoRAAdapter[],
+      });
+      const adapters = trainingHistory.adapters || [];
+
+      // Check if adapter already exists
+      const existingAdapter = adapters.find((a) => a.id === adapterId);
+
+      if (!existingAdapter) {
+        const newAdapter: LoRAAdapter = {
+          id: adapterId,
+          name: adapterName || `${adapterId}_downloaded`,
+          baseModel: baseModel,
+          enabled: false,
+          createdAt: new Date().toISOString(),
+          status: "downloaded",
+          source: "p2p",
+          downloadedFrom: downloadedFrom,
+        };
+
+        const updatedAdapters = [...adapters, newAdapter];
+        trainingHistory.adapters = updatedAdapters;
+        saveToStorage("orch-lora-adapters", trainingHistory);
+        setAdapters(updatedAdapters);
+        console.log(
+          "[LoRA] Added downloaded adapter:",
+          adapterId,
+          "from:",
+          downloadedFrom
+        );
+      }
+    } catch (error) {
+      console.error("[LoRA] Error adding downloaded adapter:", error);
     }
   };
 
@@ -127,167 +201,252 @@ export const useLoRAAdapters = () => {
     saveToStorage("orch-lora-adapters", trainingHistory);
   };
 
-  const enableAdapter = async (
-    adapterId: string
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    activeModel?: string;
-    validationStatus?: string;
-  }> => {
+  // Simplified enable/disable for UI state only (no complex backend operations)
+  const toggleAdapterState = async (
+    adapterId: string,
+    enabled: boolean
+  ): Promise<{ success: boolean; error?: string }> => {
     setIsToggling(true);
 
     try {
-      console.log(
-        "[LoRA] Enabling adapter with REAL merge and validation:",
-        adapterId
+      // Update adapter status in localStorage
+      const updatedAdapters = adapters.map(
+        (adapter) =>
+          adapter.id === adapterId
+            ? { ...adapter, enabled }
+            : enabled
+            ? { ...adapter, enabled: false }
+            : adapter // If enabling one, disable others
       );
 
-      // Call the real adapter manager script
-      if (!window.electronAPI?.trainLoRAAdapter) {
-        console.error("[LoRA] Electron API not available");
-        return { success: false, error: "Electron API not available" };
-      }
+      setAdapters(updatedAdapters);
+      saveAdaptersToStorage(updatedAdapters);
 
-      // Use the training API to call the real adapter manager
-      const result = await window.electronAPI.trainLoRAAdapter({
-        conversations: [], // Not needed for enable
-        baseModel: "", // Not needed for enable
-        outputName: adapterId,
-        action: "enable_real_adapter",
-      });
-
-      if (result.success) {
-        // Update local state
-        const updatedAdapters = adapters.map(
-          (adapter) =>
-            adapter.id === adapterId
-              ? {
-                  ...adapter,
-                  enabled: true,
-                  lastEnabled: new Date().toISOString(),
-                }
-              : { ...adapter, enabled: false } // Disable others
-        );
-        setAdapters(updatedAdapters);
-        saveAdaptersToStorage(updatedAdapters);
-
-        // Extract active model from result details
-        const activeModel =
-          result.details?.activeModel || result.details?.adapterId;
-
-        // Check if we have validation confirmation
-        const hasValidation =
-          result.details?.validationStatus === "passed" ||
-          result.details?.hasRealWeights === true ||
-          (result.details && result.details.toString().includes("VERIFIED"));
-
-        return {
-          success: true,
-          activeModel,
-          validationStatus: hasValidation ? "verified_real_weights" : "unknown",
-        };
-      } else {
-        // Analyze error for specific failure types
-        const errorMsg = result.error || "Unknown error";
-
-        if (
-          errorMsg.includes("validation failed") ||
-          errorMsg.includes("no real weights detected")
-        ) {
-          return {
-            success: false,
-            error:
-              "🚨 VALIDATION FAILED: Adapter merge failed validation - no real weights detected. This prevents creating a fake model.",
-            validationStatus: "validation_failed",
-          };
-        } else if (errorMsg.includes("GGUF conversion failed")) {
-          return {
-            success: false,
-            error:
-              "🔧 CONVERSION FAILED: Unable to convert merged model to Ollama format. Check dependencies (torch, transformers, peft).",
-            validationStatus: "conversion_failed",
-          };
-        } else if (errorMsg.includes("no cosmetic fallback created")) {
-          return {
-            success: false,
-            error:
-              "🛡️ SAFETY CHECK: Real merge failed, cosmetic fallback was intentionally blocked to prevent silent failure.",
-            validationStatus: "safety_block",
-          };
-        } else {
-          return {
-            success: false,
-            error: `❌ Real adapter enable failed: ${errorMsg}`,
-            validationStatus: "unknown_error",
-          };
-        }
-      }
+      console.log(
+        `[LoRA] Adapter ${adapterId} ${enabled ? "enabled" : "disabled"} in UI`
+      );
+      return { success: true };
     } catch (error) {
-      console.error("[LoRA] Enable adapter error:", error);
+      console.error("[LoRA] Error toggling adapter state:", error);
       return {
         success: false,
-        error: `❌ Real adapter enable failed: ${error}`,
-        validationStatus: "exception",
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     } finally {
       setIsToggling(false);
     }
   };
 
-  const disableAdapter = async (
-    adapterId: string
-  ): Promise<{ success: boolean; error?: string }> => {
-    setIsToggling(true);
-
+  const mergeAdapters = async (
+    adapterIds: string[],
+    outputName: string,
+    strategy:
+      | "arithmetic_mean"
+      | "weighted_average"
+      | "svd_merge" = "arithmetic_mean",
+    weights?: number[]
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    mergedAdapterId?: string;
+  }> => {
     try {
-      console.log("[LoRA] Disabling adapter:", adapterId);
-
-      // Call the real adapter manager script
-      if (!window.electronAPI?.trainLoRAAdapter) {
-        console.error("[LoRA] Electron API not available");
-        return { success: false, error: "Electron API not available" };
+      if (adapterIds.length < 1) {
+        return {
+          success: false,
+          error: "Pelo menos 1 adapter é necessário",
+        };
       }
 
-      // Use the training API to call the real adapter manager
-      const result = await window.electronAPI.trainLoRAAdapter({
-        conversations: [], // Not needed for disable
-        baseModel: "", // Not needed for disable
-        outputName: adapterId,
-        action: "disable_real_adapter", // Special action for real adapter disabling
-      });
+      // Caso especial: apenas 1 adapter - deploy direto
+      if (adapterIds.length === 1) {
+        const adapterId = adapterIds[0];
+        const adapter = adapters.find((a) => a.id === adapterId);
+        if (!adapter) {
+          return { success: false, error: "Adapter não encontrado" };
+        }
+
+        // Deploy o adapter único
+        const deployResult = await deployAdapter(adapterId);
+        if (deployResult.success) {
+          return {
+            success: true,
+            mergedAdapterId: adapterId,
+          };
+        } else {
+          return {
+            success: false,
+            error: deployResult.error || "Falha no deploy do adapter único",
+          };
+        }
+      }
+
+      // Verificar se todos os adapters existem e têm o mesmo base model
+      const selectedAdapters = adapters.filter((a) =>
+        adapterIds.includes(a.id)
+      );
+      if (selectedAdapters.length !== adapterIds.length) {
+        return {
+          success: false,
+          error: "Alguns adapters selecionados não foram encontrados",
+        };
+      }
+
+      const baseModels = [...new Set(selectedAdapters.map((a) => a.baseModel))];
+      if (baseModels.length > 1) {
+        return {
+          success: false,
+          error: `Adapters têm base models incompatíveis: ${baseModels.join(
+            ", "
+          )}`,
+        };
+      }
+
+      const baseModel = baseModels[0];
+      const mergedAdapterId = `${outputName}_merged_${Date.now()}`;
+
+      // Chamar o serviço de merge via Electron API
+      if (!window.electronAPI?.mergeLoRAAdapters) {
+        return { success: false, error: "API de merge não disponível" };
+      }
+
+      const mergeRequest = {
+        adapters: selectedAdapters.map((adapter, index) => ({
+          name: adapter.name,
+          path: `/adapters/${adapter.id}`, // Path será resolvido pelo backend
+          baseModel: adapter.baseModel,
+          checksum: adapter.id, // Usar ID como checksum temporário
+          weight: weights?.[index] || 1.0,
+        })),
+        strategy,
+        outputName: mergedAdapterId,
+        targetBaseModel: baseModel,
+      };
+
+      const result = await window.electronAPI.mergeLoRAAdapters(mergeRequest);
 
       if (result.success) {
-        // Update adapter status to disabled
-        const updatedAdapters = adapters.map((adapter) =>
-          adapter.id === adapterId ? { ...adapter, enabled: false } : adapter
-        );
+        // Adicionar o adapter merged à lista
+        const mergedAdapter: LoRAAdapter = {
+          id: mergedAdapterId,
+          name: outputName,
+          baseModel: baseModel,
+          enabled: false,
+          createdAt: new Date().toISOString(),
+          status: "merged",
+          source: "local",
+          mergedWith: adapterIds,
+        };
 
-        setAdapters(updatedAdapters);
-
-        // Update localStorage
+        const updatedAdapters = [...adapters, mergedAdapter];
         const trainingHistory = loadFromStorage("orch-lora-adapters", {
           adapters: [] as LoRAAdapter[],
         });
         trainingHistory.adapters = updatedAdapters;
         saveToStorage("orch-lora-adapters", trainingHistory);
+        setAdapters(updatedAdapters);
 
-        console.log("[LoRA] Adapter disabled:", adapterId);
-        return { success: true };
+        console.log("[LoRA] Merge completed:", mergedAdapterId);
+        return { success: true, mergedAdapterId };
       } else {
-        console.error("[LoRA] Failed to disable adapter:", result.error);
+        return { success: false, error: result.error || "Falha no merge" };
+      }
+    } catch (error) {
+      console.error("[LoRA] Merge error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      };
+    }
+  };
+
+  const deployAdapter = async (
+    adapterId: string,
+    targetModel?: string
+  ): Promise<{ success: boolean; error?: string; modelName?: string }> => {
+    try {
+      const adapter = adapters.find((a) => a.id === adapterId);
+      if (!adapter) {
+        return { success: false, error: "Adapter não encontrado" };
+      }
+
+      console.log(
+        `🚀 [LoRA Deploy] Starting deployment for adapter: ${adapterId}`
+      );
+      console.log(`📋 [LoRA Deploy] Adapter details:`, {
+        name: adapter.name,
+        baseModel: adapter.baseModel,
+        status: adapter.status,
+        source: adapter.source,
+      });
+
+      // Verificar se a API de deploy está disponível
+      if (!window.electronAPI?.deployLoRAAdapter) {
+        return { success: false, error: "API de deploy não disponível" };
+      }
+
+      // Criar nome do modelo seguindo convenções do Ollama
+      const baseModelClean = adapter.baseModel.replace(":", "-");
+      const adapterNameClean = adapter.name.replace(/[^a-zA-Z0-9-_]/g, "-");
+      const deployedModelName = `${baseModelClean}-with-${adapterNameClean}:latest`;
+
+      console.log(`🎯 [LoRA Deploy] Target model name: ${deployedModelName}`);
+
+      // Preparar request de deploy seguindo o fluxo Unsloth
+      const deployRequest = {
+        adapterId: adapterId,
+        adapterName: adapter.name,
+        baseModel: adapter.baseModel,
+        outputModelName: deployedModelName,
+        deploymentType: "unsloth_gguf" as const, // Usar conversão GGUF conforme docs
+        adapterPath: `/lora_adapters/registry/${adapterId}`, // Path será resolvido pelo backend
+      };
+
+      console.log(`📤 [LoRA Deploy] Sending deploy request:`, deployRequest);
+
+      // Executar deploy via Electron API
+      const result = await window.electronAPI.deployLoRAAdapter(deployRequest);
+
+      console.log(`📥 [LoRA Deploy] Deploy result:`, result);
+
+      if (result.success) {
+        // Atualizar adapter com informações de deploy
+        const updatedAdapters = adapters.map(
+          (a) =>
+            a.id === adapterId
+              ? {
+                  ...a,
+                  enabled: true,
+                  deployedModel: deployedModelName,
+                  status: "ready" as const,
+                }
+              : { ...a, enabled: false } // Desabilitar outros adapters
+        );
+
+        setAdapters(updatedAdapters);
+        saveAdaptersToStorage(updatedAdapters);
+
+        console.log(
+          `✅ [LoRA Deploy] Successfully deployed: ${deployedModelName}`
+        );
+
+        return {
+          success: true,
+          modelName: deployedModelName,
+        };
+      } else {
+        console.error(`❌ [LoRA Deploy] Deploy failed:`, result.error);
         return {
           success: false,
-          error: result.error || "Failed to disable adapter",
+          error: result.error || "Falha no deploy do adapter",
         };
       }
     } catch (error) {
-      console.error("[LoRA] Error disabling adapter:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsToggling(false);
+      console.error(`💥 [LoRA Deploy] Deploy error for ${adapterId}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Erro no deploy",
+      };
     }
   };
 
@@ -307,9 +466,11 @@ export const useLoRAAdapters = () => {
     isDeleting,
     isToggling,
     saveAdapter,
+    addDownloadedAdapter,
     deleteAdapter,
-    enableAdapter,
-    disableAdapter,
+    toggleAdapterState,
+    mergeAdapters,
+    deployAdapter,
     resetAdapters,
     setSelectedBaseModel,
   };

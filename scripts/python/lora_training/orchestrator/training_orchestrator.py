@@ -560,18 +560,7 @@ class TrainingOrchestrator:
             # Create Modelfile for final model
             modelfile_content = f"""FROM {gguf_path}
 
-SYSTEM \"\"\"You are the Integrative Symbolic Intelligence of Orch-OS with specialized LoRA fine-tuning.
-
-Model Information:
-- Base Model: {hf_model_name}
-- Adapter ID: {config.output_name}
-- Training Method: LoRA merge (Unsloth approach)
-- Architecture: Merged model (base + adapter)
-
-This model has enhanced capabilities from fine-tuning on user-specific data.
-The LoRA adapter has been merged directly into the model weights for maximum compatibility.
-
-Respond helpfully and conversationally, utilizing your specialized training.\"\"\"
+SYSTEM \"\"\"You are a helpful AI assistant.\"\"\"
 
 # Official Gemma 3 inference settings as per Unsloth documentation
 PARAMETER temperature 1.0

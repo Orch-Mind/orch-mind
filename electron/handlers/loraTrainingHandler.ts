@@ -27,6 +27,24 @@ export function setupLoRATrainingHandlers(): void {
       });
 
       try {
+        // Handle special actions
+        if (params.action === "deploy_adapter") {
+          console.log("[IPC] Deploying adapter:", params.adapterId);
+          const result = await trainingService.deployAdapter(
+            params.adapterId!,
+            params.baseModel,
+            params.outputName
+          );
+
+          if (result.success) {
+            console.log("[IPC] Adapter deployed successfully");
+          } else {
+            console.error("[IPC] Adapter deployment failed:", result.error);
+          }
+
+          return result;
+        }
+
         // Add progress callback to send updates to renderer
         const paramsWithProgress = {
           ...params,
@@ -66,6 +84,71 @@ export function setupLoRATrainingHandlers(): void {
           success: false,
           error:
             error instanceof Error ? error.message : "Unknown error occurred",
+        };
+      }
+    }
+  );
+
+  // Handle LoRA Adapter Deployment (Unsloth-compatible)
+  ipcMain.handle(
+    "deploy-lora-adapter",
+    async (
+      event: IpcMainInvokeEvent,
+      params: {
+        adapterId: string;
+        adapterName: string;
+        baseModel: string;
+        outputModelName: string;
+        deploymentType: "unsloth_gguf" | "ollama_adapter" | "merged_model";
+        adapterPath: string;
+      }
+    ) => {
+      console.log("[IPC] Received LoRA adapter deployment request:", {
+        adapterId: params.adapterId,
+        adapterName: params.adapterName,
+        baseModel: params.baseModel,
+        outputModelName: params.outputModelName,
+        deploymentType: params.deploymentType,
+      });
+
+      try {
+        // Use the existing deployAdapter method from LoRATrainingService
+        // which already implements the Unsloth-compatible deployment flow
+        const result = await trainingService.deployAdapter(
+          params.adapterId,
+          params.baseModel,
+          params.outputModelName
+        );
+
+        if (result.success) {
+          console.log("[IPC] LoRA adapter deployed successfully:", {
+            modelName: params.outputModelName,
+            adapterId: params.adapterId,
+          });
+
+          return {
+            success: true,
+            modelName: params.outputModelName,
+            deploymentDetails: {
+              adapterPath: params.adapterPath,
+              deploymentType: params.deploymentType,
+              baseModel: params.baseModel,
+              ...result.details,
+            },
+          };
+        } else {
+          console.error("[IPC] LoRA adapter deployment failed:", result.error);
+          return {
+            success: false,
+            error: result.error || "Deployment failed",
+          };
+        }
+      } catch (error) {
+        console.error("[IPC] LoRA adapter deployment error:", error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Unknown deployment error",
         };
       }
     }
