@@ -12,20 +12,16 @@ export class ValidationService implements IValidator {
   /**
    * Calculate SHA-256 checksum of data
    */
-  async calculateChecksum(data: Buffer): Promise<string> {
-    // Use crypto for Node.js environment
+  async calculateChecksum(data: Uint8Array): Promise<string> {
+    // Use crypto for Node.js environment (convert Uint8Array to Buffer if needed)
     if (typeof window === "undefined") {
-      return crypto.createHash("sha256").update(data).digest("hex");
+      const buffer = Buffer.from(data);
+      return crypto.createHash("sha256").update(buffer).digest("hex");
     }
 
     // Use Web Crypto API for browser environment
     if (window.crypto?.subtle) {
-      // Convert Buffer to Uint8Array for Web Crypto API compatibility
-      const uint8Array = new Uint8Array(data);
-      const hashBuffer = await window.crypto.subtle.digest(
-        "SHA-256",
-        uint8Array
-      );
+      const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     }
@@ -37,7 +33,7 @@ export class ValidationService implements IValidator {
   /**
    * Validate data against expected checksum
    */
-  validateChecksum(data: Buffer, expectedChecksum: string): boolean {
+  validateChecksum(data: Uint8Array, expectedChecksum: string): boolean {
     try {
       // Synchronous validation for better performance
       const actualChecksum = this.calculateChecksumSync(data);
@@ -51,9 +47,10 @@ export class ValidationService implements IValidator {
   /**
    * Synchronous checksum calculation for validation
    */
-  private calculateChecksumSync(data: Buffer): string {
+  private calculateChecksumSync(data: Uint8Array): string {
     if (typeof window === "undefined") {
-      return crypto.createHash("sha256").update(data).digest("hex");
+      const buffer = Buffer.from(data);
+      return crypto.createHash("sha256").update(buffer).digest("hex");
     }
     throw new Error("Synchronous checksum not available in browser");
   }
@@ -61,7 +58,7 @@ export class ValidationService implements IValidator {
   /**
    * Validate chunk integrity
    */
-  validateChunk(chunkData: Buffer, expectedChecksum: string): boolean {
+  validateChunk(chunkData: Uint8Array, expectedChecksum: string): boolean {
     return this.validateChecksum(chunkData, expectedChecksum);
   }
 
@@ -69,7 +66,7 @@ export class ValidationService implements IValidator {
    * Calculate checksum for file chunks
    */
   async calculateChunkChecksums(
-    data: Buffer,
+    data: Uint8Array,
     chunkSize: number = 64 * 1024
   ): Promise<string[]> {
     const checksums: string[] = [];

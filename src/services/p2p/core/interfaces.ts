@@ -48,7 +48,7 @@ export interface IFileTransfer {
     filePath: string,
     metadata: IAdapterInfo
   ): Promise<void>;
-  receiveFile(topic: string): Promise<Buffer>;
+  receiveFile(topic: string): Promise<Uint8Array>;
   onProgress(callback: (progress: number) => void): void;
 }
 
@@ -56,14 +56,14 @@ export interface IFileTransfer {
 export interface IChunk {
   index: number;
   total: number;
-  data: Buffer;
+  data: Uint8Array;
   checksum: string;
 }
 
 // Validation
 export interface IValidator {
-  validateChecksum(data: Buffer, expectedChecksum: string): boolean;
-  calculateChecksum(data: Buffer): Promise<string>;
+  validateChecksum(data: Uint8Array, expectedChecksum: string): boolean;
+  calculateChecksum(data: Uint8Array): Promise<string>;
 }
 
 // Event Types
@@ -78,7 +78,7 @@ export interface IP2PEvents {
     adapters: IAdapterInfo[];
   }) => void;
   "transfer:progress": (topic: string, progress: number) => void;
-  "transfer:complete": (topic: string, data: Buffer) => void;
+  "transfer:complete": (topic: string, data: Uint8Array) => void;
   "transfer:error": (topic: string, error: Error) => void;
   "download:progress": (data: {
     adapterName: string;
