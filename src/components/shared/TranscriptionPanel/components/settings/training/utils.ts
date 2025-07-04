@@ -213,6 +213,37 @@ export const getProgressMessage = (progress: number): string => {
   }
 };
 
+// === SANITIZATION ===
+export const sanitizeModelName = (name: string): string => {
+  if (!name || typeof name !== "string") {
+    return "unknown";
+  }
+
+  // Convert to lowercase and normalize
+  let sanitized = name.toLowerCase().normalize("NFD");
+
+  // Replace special characters with hyphens
+  sanitized = sanitized.replace(/[^a-z0-9_-]/g, "-");
+
+  // Remove consecutive hyphens/underscores
+  sanitized = sanitized.replace(/[-_]+/g, "-");
+
+  // Remove leading/trailing hyphens
+  sanitized = sanitized.replace(/^[-_]+|[-_]+$/g, "");
+
+  // Ensure it doesn't start with a number
+  if (/^[0-9]/.test(sanitized)) {
+    sanitized = "model-" + sanitized;
+  }
+
+  // Fallback for empty strings
+  if (!sanitized) {
+    sanitized = "unknown";
+  }
+
+  return sanitized;
+};
+
 // === STORAGE HELPERS ===
 export const loadFromStorage = <T>(key: string, defaultValue: T): T => {
   try {
@@ -233,9 +264,22 @@ export const saveToStorage = <T>(key: string, value: T): void => {
 };
 
 // === DATA TRANSFORMATION ===
-export const generateOutputName = (): string => {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  return `custom-${timestamp}`;
+export const generateOutputName = (baseModel?: string): string => {
+  const timestamp = Date.now();
+
+  if (baseModel) {
+    // Extract base model name and sanitize it
+    const baseModelClean = baseModel.replace(":latest", "").replace(":", "_");
+    const sanitizedBase = sanitizeModelName(baseModelClean);
+    return `${sanitizedBase}_adapter_${timestamp}`;
+  }
+
+  // Fallback for when no base model is provided
+  const timestampStr = new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-")
+    .slice(0, 19);
+  return `custom-${timestampStr}`;
 };
 
 export const getExpectedModelName = (outputName: string): string => {

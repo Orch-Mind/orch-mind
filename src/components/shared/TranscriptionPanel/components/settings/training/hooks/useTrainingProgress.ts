@@ -63,7 +63,7 @@ export const useTrainingProgress = () => {
       setTrainingStartTime(Date.now());
       setTrainingResult(null);
 
-      // Always use master naming for incremental training
+      // Use the provided outputName from the request (generated in TrainingSettings)
       const baseModelClean = request.baseModel.replace(":latest", "");
       const expectedModelName = `${baseModelClean}-custom:latest`;
 
@@ -79,11 +79,12 @@ export const useTrainingProgress = () => {
         console.log(
           "[Training] Starting real LoRA training with progress tracking..."
         );
+        console.log(`[Training] Using adapter name: ${request.outputName}`);
 
         const result = await window.electronAPI.trainLoRAAdapter({
           conversations: trainingConversations,
           baseModel: request.baseModel,
-          outputName: "master", // Always master for incremental
+          outputName: request.outputName, // Use the generated adapter name from TrainingSettings
         });
 
         if (result?.success) {

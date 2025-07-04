@@ -21,7 +21,7 @@ export interface TrainingConversation {
 export interface TrainingParams {
   conversations: TrainingConversation[];
   baseModel: string;
-  outputName: string; // Will be ignored, always uses master
+  outputName: string; // Unique adapter identifier
   action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
   onProgress?: (progress: number, message: string) => void; // Progress callback
 }
@@ -115,26 +115,26 @@ export class LoRATrainingService {
       // Check if base model exists in Ollama
       await this.validateBaseModel(params.baseModel);
 
-      // INCREMENTAL TRAINING: Extract original base model to ensure consistency
+      // DYNAMIC ADAPTER TRAINING: Prepare adapter for dynamic attachment
       const originalBaseModel = this.extractBaseModel(params.baseModel);
       const baseModelClean = originalBaseModel.replace(":latest", "");
-      const modelName = `${baseModelClean}-custom:latest`;
+      const expectedModelName = `${baseModelClean}-custom:latest`;
 
-      console.log(`[LoRA] Incremental training logic:
-        - Input base model: ${params.baseModel}
-        - Extracted base model: ${originalBaseModel}
-        - Target custom model: ${modelName}`);
+      console.log(`[LoRA] Dynamic adapter training logic:
+        - Base model: ${params.baseModel}
+        - Adapter output: ${params.outputName}
+        - Expected model name when enabled: ${expectedModelName}
+        - Training approach: Dynamic attachment (no immediate model creation)`);
 
-      // The Python script will automatically calculate optimal steps based on content analysis
       // We pass a reasonable max_steps value that will be overridden by content-based calculation
       const datasetSize = params.conversations.length;
-      const fallbackSteps = this.calculateOptimalSteps(datasetSize, true); // Fallback if content analysis fails
+      const fallbackSteps = this.calculateOptimalSteps(datasetSize, false); // NOT incremental training
 
       console.log(`[LoRA] Starting Ollama LoRA training with content-based optimization:
         - Base model: ${params.baseModel}
         - Data: ${dataPath}
         - Training examples: ${params.conversations.length}
-        - Target model name: ${modelName}
+        - Target model name: ${expectedModelName}
         - Fallback steps: ${fallbackSteps} (will be overridden by content analysis)`);
 
       // Execute the Ollama LoRA training script
@@ -157,11 +157,18 @@ export class LoRATrainingService {
         fullCommand = `chcp 65001 >nul && ${fullCommand}`;
       }
 
+      console.log(`[LoRA] ===== DEBUGGING COMMAND CONSTRUCTION =====`);
+      console.log(`[LoRA] params.outputName: "${params.outputName}"`);
+      console.log(`[LoRA] params.baseModel: "${params.baseModel}"`);
+      console.log(`[LoRA] dataPath: "${dataPath}"`);
+      console.log(`[LoRA] scriptPath: "${scriptPath}"`);
+      console.log(`[LoRA] fallbackSteps: ${fallbackSteps}`);
       console.log(`[LoRA] Command to execute: ${fullCommand}`);
       console.log(`[LoRA] Working directory: ${this.trainingDir}`);
       console.log(
         `[LoRA] Mode: Ollama LoRA with content-based step calculation`
       );
+      console.log(`[LoRA] ===== END DEBUGGING =====`);
 
       // Environment variables for proper encoding
       const execEnv: Record<string, string> = {
@@ -198,34 +205,41 @@ export class LoRATrainingService {
         }
       }
 
-      // Verify the model was created successfully
-      await this.verifyModelCreation(modelName);
+      // NOTE: No model verification needed - LoRA adapters are attached dynamically
+      // The adapter is ready for enable/disable via the LoRA management system
+      console.log(
+        `[LoRA] Adapter training completed - ready for dynamic attachment`
+      );
+      console.log(
+        `[LoRA] Expected model name when enabled: ${expectedModelName}`
+      );
 
       const trainingDuration = Date.now() - startTime;
 
       // Log training metadata for console output (no file needed)
       const trainingMetadata = {
         baseModel: params.baseModel,
-        masterModel: modelName,
+        adapterName: params.outputName,
+        expectedModelName: expectedModelName,
         trainingDate: new Date().toISOString(),
         trainingDuration: trainingDuration,
         examples: this.countTrainingExamples(trainingData),
-        mode: "ollama_lora_content_based",
+        mode: "ollama_lora_dynamic_adapter",
         fallbackSteps: fallbackSteps,
-        note: "Steps calculated automatically based on content analysis",
+        note: "Adapter ready for dynamic attachment - model created when enabled",
       };
 
       console.log(
-        `[LoRA] Ollama LoRA training completed with metadata:`,
+        `[LoRA] Dynamic LoRA adapter training completed with metadata:`,
         trainingMetadata
       );
 
       return {
         success: true,
-        adapterPath: modelName,
+        adapterPath: params.outputName, // Return adapter name, not model name
         details: {
           trainingExamples: this.countTrainingExamples(trainingData),
-          modelName: modelName,
+          modelName: expectedModelName, // Expected name when enabled
           trainingDuration: trainingDuration,
         },
       };
@@ -694,31 +708,33 @@ EXIT CODE: ${execError.code || "N/A"}`;
   ): number {
     /**
      * Calculate optimal training steps based on LoRA best practices:
-     * - Minimum: 100-200 steps for subtle changes
-     * - Recommended: 500-1500 steps for most cases
-     * - Small dataset: 300-800 steps
-     * - Large dataset: 1000-3000+ steps
+     * - Very small datasets: 50-200 steps for fast training
+     * - Small datasets: 200-500 steps
+     * - Medium datasets: 500-1200 steps
+     * - Large datasets: 1000-2500+ steps
      */
 
     let baseSteps: number;
 
-    // Base step calculation based on dataset size (aligned with Entry Point AI best practices)
-    if (datasetSize <= 5) {
-      baseSteps = 550; // Very small dataset: 400-600 steps
+    // Base step calculation optimized for small datasets
+    if (datasetSize <= 3) {
+      baseSteps = 75; // Very tiny dataset: ultra-fast training
+    } else if (datasetSize <= 5) {
+      baseSteps = 150; // Very small dataset: fast training
     } else if (datasetSize <= 10) {
-      baseSteps = 650; // Small dataset: 300-800 steps
+      baseSteps = 300; // Small dataset
     } else if (datasetSize <= 15) {
-      baseSteps = 700; // Small-medium dataset: 500-800 steps
+      baseSteps = 400; // Small-medium dataset
     } else if (datasetSize <= 25) {
-      baseSteps = 800; // Medium-small dataset: 600-1000 steps
+      baseSteps = 500; // Medium-small dataset
     } else if (datasetSize <= 50) {
-      baseSteps = 1000; // Medium dataset: 800-1200 steps
+      baseSteps = 650; // Medium dataset
     } else if (datasetSize <= 100) {
-      baseSteps = 1300; // Medium-large dataset: 1000-1500 steps
+      baseSteps = 900; // Medium-large dataset
     } else if (datasetSize <= 200) {
-      baseSteps = 1600; // Large dataset: 1200-2000 steps
+      baseSteps = 1200; // Large dataset
     } else {
-      baseSteps = Math.min(2000 + (datasetSize - 200) * 5, 3000); // Very large dataset
+      baseSteps = Math.min(1500 + (datasetSize - 200) * 3, 2500); // Very large dataset
     }
 
     // Apply modifiers
@@ -738,18 +754,20 @@ EXIT CODE: ${execError.code || "N/A"}`;
       steps = Math.round(steps * 0.7); // Incremental needs fewer steps
     }
 
-    // Apply safety bounds
-    const minSteps = isIncremental ? 100 : 200;
-    const maxStepsPerExample = datasetSize <= 10 ? 30 : 15;
-    const maxSteps = Math.min(datasetSize * maxStepsPerExample, 5000);
+    // Apply safety bounds (more aggressive for small datasets)
+    const minSteps = isIncremental ? 50 : datasetSize <= 5 ? 50 : 100;
+    const maxStepsPerExample =
+      datasetSize <= 5 ? 25 : datasetSize <= 10 ? 20 : 15;
+    const maxSteps = Math.min(datasetSize * maxStepsPerExample, 3000);
 
     const finalSteps = Math.max(minSteps, Math.min(steps, maxSteps));
 
-    console.log(`[LoRA] Dynamic step calculation:`, {
+    console.log(`[LoRA] Optimized step calculation for small datasets:`, {
       datasetSize,
       isIncremental,
       baseSteps,
       finalSteps,
+      estimatedMinutes: Math.round((finalSteps / 50) * 10) / 10, // ~50 steps per minute
       efficiency: this.categorizeEfficiency(finalSteps),
     });
 
@@ -950,7 +968,7 @@ For Linux:
       // Execute the real adapter manager
       const command = `${pythonCommand} ${JSON.stringify(
         scriptPath
-      )} enable ${JSON.stringify(adapterId)}`;
+      )} enable ${adapterId}`;
 
       console.log(`[LoRA] Executing real adapter enable: ${command}`);
 
@@ -1029,7 +1047,7 @@ For Linux:
       // Execute the real adapter manager
       const command = `${pythonCommand} ${JSON.stringify(
         scriptPath
-      )} disable ${JSON.stringify(adapterId)}`;
+      )} disable ${adapterId}`;
 
       console.log(`[LoRA] Executing real adapter disable: ${command}`);
 

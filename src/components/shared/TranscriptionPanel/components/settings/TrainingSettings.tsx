@@ -30,6 +30,7 @@ import {
 import type { TrainingRequest } from "./training/types";
 import {
   debugConversationFormat,
+  generateOutputName,
   testValidation,
   validateTrainingData,
 } from "./training/utils";
@@ -185,12 +186,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     );
     setTimeout(() => setTrainingStatus(""), 2000);
 
-    // ADAPTER TRAINING: Create new adapter for base model
+    // ADAPTER TRAINING: Create new adapter for base model with sanitized name
     const originalBaseModel = extractBaseModel(selectedBaseModel);
-    const adapterName = `${originalBaseModel.replace(
-      ":latest",
-      ""
-    )}_adapter_${Date.now()}`;
+    const adapterName = generateOutputName(originalBaseModel);
 
     console.log("[Training] LoRA Adapter training logic:");
     console.log(`  - Base model: ${originalBaseModel}`);

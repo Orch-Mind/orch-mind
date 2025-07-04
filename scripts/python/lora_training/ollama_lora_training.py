@@ -13,33 +13,18 @@ import platform
 import argparse
 import tempfile
 import shutil
+import re
 from datetime import datetime
 from pathlib import Path
 
-def get_project_root():
-    """Get the project root directory - unified logic for both scripts."""
-    try:
-        # This script is in scripts/python/lora_training/
-        # Project root is 4 levels up: ../../../../
-        current_file = os.path.abspath(__file__)
-        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
-    except Exception:
-        # Fallback: try to find based on current working directory
-        cwd = os.getcwd()
-        # Look for characteristic files/directories that indicate project root
-        indicators = ['package.json', 'electron', 'src', '.git']
-        
-        current_dir = cwd
-        for _ in range(5):  # Don't go too far up
-            if any(os.path.exists(os.path.join(current_dir, indicator)) for indicator in indicators):
-                return current_dir
-            parent = os.path.dirname(current_dir)
-            if parent == current_dir:  # Reached filesystem root
-                break
-            current_dir = parent
-        
-        # Final fallback
-        return cwd
+# Import shared utilities
+from utils import (
+    sanitize_model_name,
+    get_project_root,
+    get_adapter_registry_dir,
+    create_sanitized_model_name,
+    validate_model_name
+)
 
 def main():
     print("🚀 Real LoRA Training for Orch-OS")
@@ -120,7 +105,7 @@ def main():
         """Map Ollama model names to HuggingFace model names (using latest Unsloth models)."""
         model_mapping = {
             # Latest Unsloth optimized models
-            "gemma3:latest": "unsloth/gemma-3-1b-it",
+            "gemma3:latest": "unsloth/gemma-3-4b-it",
             "qwen3:latest": "unsloth/Qwen3-8B",
             "mistral:latest": "unsloth/mistral-7b-v0.3",
             "mistral-nemo:latest": "unsloth/Mistral-Nemo-Instruct-2407",
@@ -141,7 +126,7 @@ def main():
         if "llama3.1" in base_name.lower():
             return "unsloth/Llama-3.1-8B-Instruct"
         elif "gemma3" in base_name.lower():
-            return "unsloth/gemma-3-1b-it"
+            return "unsloth/gemma-3-4b-it"
         elif "mistral-nemo" in base_name.lower():
             return "unsloth/Mistral-Nemo-Instruct-2407"
         elif "mistral" in base_name.lower():
@@ -229,6 +214,204 @@ def main():
             print(f"PROGRESS:{progress:.1f}:{message}")
             sys.stdout.flush()
 
+    def deploy_base_model_to_ollama(hf_model_name, ollama_model_name):
+        """Deploy the HuggingFace model to Ollama before training."""
+        print(f"\n🚀 Deploying base model to Ollama...")
+        print(f"   • HuggingFace Model: {hf_model_name}")
+        print(f"   • Target Ollama Model: {ollama_model_name}")
+        
+        # Check if model already exists in Ollama
+        try:
+            result = subprocess.run(['ollama', 'list'], capture_output=True, text=True, check=True)
+            if ollama_model_name in result.stdout:
+                print(f"✅ Model {ollama_model_name} already exists in Ollama")
+                return ollama_model_name
+        except subprocess.CalledProcessError:
+            print("⚠️ Could not check existing Ollama models")
+        
+        # Create a temporary directory for the model
+        temp_dir = tempfile.mkdtemp(prefix="ollama_deploy_")
+        
+        try:
+            print(f"📦 Loading model from HuggingFace: {hf_model_name}")
+            
+            # Load model and tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(hf_model_name, trust_remote_code=True)
+            model = AutoModelForCausalLM.from_pretrained(
+                hf_model_name,
+                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                device_map="auto" if torch.cuda.is_available() else None,
+                trust_remote_code=True,
+                load_in_8bit=False,
+            )
+            
+            # Add padding token if missing
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+                tokenizer.pad_token_id = tokenizer.eos_token_id
+            
+            print(f"💾 Saving model to temporary directory: {temp_dir}")
+            
+            # Save model and tokenizer
+            model.save_pretrained(temp_dir, safe_serialization=True)
+            tokenizer.save_pretrained(temp_dir)
+            
+            print(f"🔄 Converting to GGUF format...")
+            
+            # Convert to GGUF using llama.cpp
+            gguf_path = convert_hf_to_gguf(temp_dir, hf_model_name)
+            
+            if gguf_path:
+                print(f"🔗 Creating Ollama model: {ollama_model_name}")
+                
+                # Create Ollama Modelfile
+                modelfile_content = f"""FROM {gguf_path}
+
+SYSTEM \"\"\"You are the base model {hf_model_name} deployed to Ollama.
+
+This model was loaded from HuggingFace and converted to GGUF format for Ollama compatibility.
+You can now be used as a base for LoRA adapters.
+
+Respond helpfully and conversationally.\"\"\"
+
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.1
+"""
+                
+                modelfile_path = os.path.join(temp_dir, "Modelfile")
+                with open(modelfile_path, 'w') as f:
+                    f.write(modelfile_content)
+                
+                # Create Ollama model
+                create_result = subprocess.run([
+                    'ollama', 'create', ollama_model_name, '-f', modelfile_path
+                ], capture_output=True, text=True)
+                
+                if create_result.returncode == 0:
+                    print(f"✅ Successfully deployed {ollama_model_name} to Ollama")
+                    return ollama_model_name
+                else:
+                    print(f"❌ Failed to create Ollama model:")
+                    print(f"   • stdout: {create_result.stdout}")
+                    print(f"   • stderr: {create_result.stderr}")
+                    return None
+            else:
+                print("❌ Failed to convert model to GGUF format")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Failed to deploy model: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+            
+        finally:
+            # Clean up temporary directory
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+                print(f"🧹 Cleaned up temporary directory")
+
+    def convert_hf_to_gguf(model_dir, model_name):
+        """Convert HuggingFace model to GGUF format."""
+        print(f"🔄 Converting {model_name} to GGUF...")
+        
+        # Find llama.cpp installation
+        llama_cpp_dir = find_llama_cpp_dir()
+        if not llama_cpp_dir:
+            print("❌ llama.cpp not found. Please install it first.")
+            return None
+        
+        convert_script = os.path.join(llama_cpp_dir, "convert_hf_to_gguf.py")
+        if not os.path.exists(convert_script):
+            print(f"❌ Conversion script not found: {convert_script}")
+            return None
+        
+        # Output GGUF file
+        gguf_filename = f"{model_name.replace('/', '_')}.gguf"
+        gguf_path = os.path.join(model_dir, gguf_filename)
+        
+        try:
+            # Run conversion with optimized settings
+            convert_cmd = [
+                "python", convert_script,
+                model_dir,
+                "--outfile", gguf_path,
+                "--outtype", "f16",  # Use float16 for better compatibility
+                "--use-temp-file"    # Use temp file for large models
+            ]
+            
+            print(f"🔄 Running conversion command...")
+            print(f"   Command: {' '.join(convert_cmd)}")
+            
+            # Set environment variables for better memory management
+            env = os.environ.copy()
+            env.update({
+                "OMP_NUM_THREADS": "2",
+                "MKL_NUM_THREADS": "2",
+                "PYTHONUNBUFFERED": "1"
+            })
+            
+            result = subprocess.run(
+                convert_cmd,
+                capture_output=True,
+                text=True,
+                timeout=2400,  # 40 minutes timeout
+                env=env
+            )
+            
+            if result.returncode == 0 and os.path.exists(gguf_path):
+                file_size = os.path.getsize(gguf_path) / (1024 * 1024 * 1024)  # GB
+                print(f"✅ GGUF conversion successful!")
+                print(f"   • Output: {gguf_path}")
+                print(f"   • Size: {file_size:.2f} GB")
+                return gguf_path
+            else:
+                print(f"❌ GGUF conversion failed:")
+                print(f"   • Return code: {result.returncode}")
+                print(f"   • stdout: {result.stdout}")
+                print(f"   • stderr: {result.stderr}")
+                return None
+                
+        except subprocess.TimeoutExpired:
+            print("❌ Conversion timed out (40 minutes)")
+            return None
+        except Exception as e:
+            print(f"❌ Conversion error: {e}")
+            return None
+
+    def find_llama_cpp_dir():
+        """Find llama.cpp installation directory."""
+        # Check project root first
+        project_root = get_project_root()
+        project_llama_cpp = os.path.join(project_root, "llama.cpp")
+        
+        if os.path.exists(project_llama_cpp):
+            convert_script = os.path.join(project_llama_cpp, "convert_hf_to_gguf.py")
+            if os.path.exists(convert_script):
+                return project_llama_cpp
+        
+        # Check other common locations
+        possible_locations = [
+            "/usr/local/llama.cpp",
+            "/opt/llama.cpp",
+            "/opt/homebrew/llama.cpp",
+            os.path.expanduser("~/llama.cpp"),
+            os.path.expanduser("~/Projects/llama.cpp"),
+            os.path.expanduser("~/code/llama.cpp"),
+            os.path.expanduser("~/src/llama.cpp"),
+            "./llama.cpp"
+        ]
+        
+        for location in possible_locations:
+            if os.path.exists(location):
+                convert_script = os.path.join(location, "convert_hf_to_gguf.py")
+                if os.path.exists(convert_script):
+                    return location
+        
+        return None
+
     def train_lora_adapter(hf_model_name, training_data, output_dir, max_steps):
         """Perform actual LoRA training using PEFT."""
         print(f"\n🔧 Starting real LoRA training...")
@@ -298,6 +481,9 @@ def main():
                 tokenizer.pad_token = tokenizer.eos_token
                 tokenizer.pad_token_id = tokenizer.eos_token_id
             
+            # Ensure padding side is set correctly for causal LM
+            tokenizer.padding_side = "right"
+            
             print(f"✅ Model loaded successfully")
             report_progress(15, max_steps, "Analyzing training data quality")
             
@@ -345,14 +531,15 @@ def main():
             # Ensure we're working with strings
             texts = examples["text"] if isinstance(examples["text"], list) else [examples["text"]]
             
-            # Tokenize the texts
+            # Tokenize the texts with proper padding and truncation
             tokenized = tokenizer(
                 texts,
-                padding=False,  # Don't pad here, let data collator handle it
+                padding=True,  # Enable padding for consistent tensor shapes
                 truncation=True,
                 max_length=512,
                 return_overflowing_tokens=False,
                 add_special_tokens=True,
+                return_tensors=None,  # Keep as lists for now
             )
             
             # Add labels (copy of input_ids for causal LM)
@@ -362,23 +549,43 @@ def main():
         
         print("   • Tokenizing dataset...")
         report_progress(30, max_steps, "Tokenizing training data")
+        
+        # Debug: Print sample text before tokenization
+        print(f"   • Sample text (first example): {dataset[0]['text'][:100]}...")
+        
         tokenized_dataset = dataset.map(
             tokenize_function, 
             batched=True, 
             remove_columns=dataset.column_names  # Remove original columns
         )
         
-        # Training arguments
+        # Debug: Print tokenization info
+        print(f"   • Tokenized dataset size: {len(tokenized_dataset)}")
+        if len(tokenized_dataset) > 0:
+            sample_tokens = tokenized_dataset[0]
+            print(f"   • Sample token length: {len(sample_tokens['input_ids'])}")
+            print(f"   • Sample label length: {len(sample_tokens['labels'])}")
+            
+            # Check if all sequences have same length
+            lengths = [len(item['input_ids']) for item in tokenized_dataset]
+            print(f"   • Token lengths: {lengths}")
+            if len(set(lengths)) > 1:
+                print(f"   ⚠️ Warning: Inconsistent token lengths detected!")
+                print(f"   • Min length: {min(lengths)}, Max length: {max(lengths)}")
+            else:
+                print(f"   ✅ All sequences have consistent length: {lengths[0]}")
+        
+        # Training arguments optimized for small datasets
         training_args = TrainingArguments(
             output_dir=os.path.join(output_dir, "training_output"),
-            num_train_epochs=3,
+            num_train_epochs=1 if len(training_data) <= 5 else 2,  # Fewer epochs for tiny datasets
             max_steps=max_steps,
-            per_device_train_batch_size=1,  # Small batch for Mac
-            gradient_accumulation_steps=8,
-            warmup_steps=min(10, max_steps // 10),
-            learning_rate=2e-4,
+            per_device_train_batch_size=2 if len(training_data) <= 5 else 1,  # Larger batch for tiny datasets
+            gradient_accumulation_steps=4 if len(training_data) <= 5 else 8,  # Less accumulation for tiny datasets
+            warmup_steps=min(5, max_steps // 20),  # Minimal warmup for small datasets
+            learning_rate=3e-4 if len(training_data) <= 5 else 2e-4,  # Higher LR for tiny datasets
             fp16=False,  # Disable fp16 for Mac compatibility
-            logging_steps=max(1, max_steps // 10),
+            logging_steps=max(1, max_steps // 20),  # More frequent logging for small datasets
             optim="adamw_torch",
             weight_decay=0.01,
             lr_scheduler_type="cosine",
@@ -389,10 +596,11 @@ def main():
             remove_unused_columns=False,
         )
         
-        # Data collator
+        # Data collator with explicit padding
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer,
             mlm=False,
+            pad_to_multiple_of=8,  # Pad to multiple of 8 for efficiency
         )
         
         # Create trainer with progress callback
@@ -427,6 +635,10 @@ def main():
         print(f"\n🔧 Setting up LoRA adapter management...")
         
         try:
+            # Sanitize output_name to ensure Ollama compatibility
+            output_name_clean = sanitize_model_name(output_name)
+            print(f"🧹 Sanitized adapter name: {output_name} → {output_name_clean}")
+            
             # Create PERSISTENT adapter registry directory in the project root
             project_root = get_project_root()
             persistent_adapter_dir = os.path.join(project_root, "lora_adapters")
@@ -439,8 +651,8 @@ def main():
             print(f"📂 Persistent adapter directory: {persistent_adapter_dir}")
             print(f"📂 Registry directory: {adapter_registry_dir}")
             
-            # Copy adapter weights to persistent location
-            persistent_adapter_path = os.path.join(persistent_adapter_dir, "weights", f"{output_name}_adapter")
+            # Copy adapter weights to persistent location using sanitized name
+            persistent_adapter_path = os.path.join(persistent_adapter_dir, "weights", f"{output_name_clean}_adapter")
             
             # Copy the entire adapter directory to persistent location
             if os.path.exists(adapter_path):
@@ -452,10 +664,10 @@ def main():
                 print(f"⚠️ Warning: Adapter path not found: {adapter_path}")
                 print(f"   Creating placeholder entry in registry...")
             
-            # Create adapter info with persistent paths
+            # Create adapter info with persistent paths using sanitized names
             adapter_info = {
-                "adapter_id": output_name,
-                "adapter_name": f"{output_name}_adapter",
+                "adapter_id": output_name_clean,
+                "adapter_name": f"{output_name_clean}_adapter",
                 "base_model": base_model_name,
                 "hf_model": hf_model_name,
                 "adapter_path": persistent_adapter_path,  # Use persistent path
@@ -467,8 +679,8 @@ def main():
                 "persistent": True  # Flag to indicate this is persistent storage
             }
             
-            # Save adapter info to persistent registry
-            adapter_info_path = os.path.join(adapter_registry_dir, f"{output_name}_adapter.json")
+            # Save adapter info to persistent registry using sanitized name
+            adapter_info_path = os.path.join(adapter_registry_dir, f"{output_name_clean}_adapter.json")
             with open(adapter_info_path, 'w') as f:
                 json.dump(adapter_info, f, indent=2)
             
@@ -551,8 +763,11 @@ PARAMETER repeat_penalty 1.1
         with open(adapter_info_path, 'w') as f:
             json.dump(adapter_info, f, indent=2)
         
-        # Create active Ollama model
-        active_model_name = f"{adapter_info['base_model'].replace(':', '_')}_with_{adapter_id}"
+        # Create active Ollama model with sanitized name
+        active_model_name = create_sanitized_model_name(
+            adapter_info['base_model'], 
+            adapter_id
+        )
         
         try:
             # Create Ollama model with adapter enabled
@@ -597,8 +812,11 @@ PARAMETER repeat_penalty 1.1
         with open(adapter_info_path, 'w') as f:
             json.dump(adapter_info, f, indent=2)
         
-        # Remove active Ollama model
-        active_model_name = f"{adapter_info['base_model'].replace(':', '_')}_with_{adapter_id}"
+        # Remove active Ollama model with sanitized name
+        active_model_name = create_sanitized_model_name(
+            adapter_info['base_model'], 
+            adapter_id
+        )
         
         try:
             subprocess.run(['ollama', 'rm', active_model_name], 
@@ -720,7 +938,13 @@ PARAMETER repeat_penalty 1.1
         output_dir = os.path.join(os.path.dirname(args.data), "lora_training_output")
         os.makedirs(output_dir, exist_ok=True)
         
-        # Step 7: Train LoRA adapter
+        # Step 7: Deploy base model to Ollama (if needed)
+        base_ollama_model = deploy_base_model_to_ollama(hf_model_name, args.base_model)
+        if not base_ollama_model:
+            print("❌ Failed to deploy base model to Ollama")
+            sys.exit(1)
+        
+        # Step 8: Train LoRA adapter
         adapter_path = train_lora_adapter(hf_model_name, training_data, output_dir, optimal_steps)
         if not adapter_path:
             print("❌ Failed to train LoRA adapter")
@@ -728,7 +952,7 @@ PARAMETER repeat_penalty 1.1
         
         # Step 8: Manage LoRA adapters
         print("📝 Registering LoRA adapter in management system...")
-        adapter_info = manage_lora_adapters(hf_model_name, adapter_path, args.output, args.base_model)
+        adapter_info = manage_lora_adapters(hf_model_name, adapter_path, args.output, base_ollama_model)
         
         if adapter_info:
             print("\n" + "="*60)

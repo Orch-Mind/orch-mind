@@ -81,30 +81,33 @@ def calculate_optimal_steps(
 def calculate_base_steps(dataset_size: int) -> int:
     """Calculate base steps based on dataset size following LoRA best practices."""
     
-    if dataset_size <= 5:
-        # Very small dataset: 400-600 steps (Entry Point AI recommendation)
-        return 550
+    if dataset_size <= 3:
+        # Very tiny dataset: 50-100 steps (ultra-fast training)
+        return 75
+    elif dataset_size <= 5:
+        # Very small dataset: 100-200 steps (fast training)
+        return 150
     elif dataset_size <= 10:
-        # Small dataset: 300-800 steps
-        return 650
+        # Small dataset: 200-400 steps
+        return 300
     elif dataset_size <= 15:
-        # Small-medium dataset: 500-800 steps
-        return 700
+        # Small-medium dataset: 300-500 steps
+        return 400
     elif dataset_size <= 25:
-        # Medium-small dataset: 600-1000 steps
-        return 800
+        # Medium-small dataset: 400-600 steps
+        return 500
     elif dataset_size <= 50:
-        # Medium dataset: 800-1200 steps
-        return 1000
+        # Medium dataset: 500-800 steps
+        return 650
     elif dataset_size <= 100:
-        # Medium-large dataset: 1000-1500 steps
-        return 1300
+        # Medium-large dataset: 700-1200 steps
+        return 900
     elif dataset_size <= 200:
-        # Large dataset: 1200-2000 steps
-        return 1600
+        # Large dataset: 1000-1500 steps
+        return 1200
     else:
-        # Very large dataset: 1500-3000+ steps
-        return min(2000 + (dataset_size - 200) * 5, 3000)
+        # Very large dataset: 1200-2500+ steps
+        return min(1500 + (dataset_size - 200) * 3, 2500)
 
 def calculate_rank_modifier(lora_rank: int) -> float:
     """
@@ -144,30 +147,32 @@ def calculate_complexity_modifier(task_complexity: str) -> float:
     return complexity_map.get(task_complexity, 1.0)
 
 def apply_safety_bounds(steps: int, dataset_size: int, is_incremental: bool) -> int:
-    """Apply minimum and maximum safety bounds based on Entry Point AI recommendations."""
+    """Apply minimum and maximum safety bounds optimized for small datasets."""
     
-    # Minimum based on Entry Point AI best practices
-    if is_incremental:
-        min_steps = 100  # Incremental can be lower
+    # Minimum based on dataset size (much more aggressive for tiny datasets)
+    if dataset_size <= 3:
+        min_steps = 50 if not is_incremental else 25  # Ultra-fast for tiny datasets
+    elif dataset_size <= 5:
+        min_steps = 75 if not is_incremental else 50  # Fast for very small datasets
+    elif dataset_size <= 10:
+        min_steps = 100 if not is_incremental else 75  # Quick for small datasets
     else:
-        # For initial training, ensure minimum aligns with recommendations
-        if dataset_size <= 10:
-            min_steps = 400  # Small dataset minimum
-        elif dataset_size <= 50:
-            min_steps = 500  # Medium dataset minimum  
-        else:
-            min_steps = 800  # Large dataset minimum
+        min_steps = 200 if not is_incremental else 150  # Standard for larger datasets
     
-    # Maximum to prevent overfitting - more generous for small datasets
-    if dataset_size <= 5:
-        max_steps = 1000  # Very small datasets can have more steps per example
+    # Maximum to prevent overfitting - very generous for tiny datasets
+    if dataset_size <= 3:
+        max_steps = 200  # Cap at 200 for ultra-tiny datasets
+    elif dataset_size <= 5:
+        max_steps = 300  # Cap at 300 for very small datasets
+    elif dataset_size <= 10:
+        max_steps = 500  # Cap at 500 for small datasets
     elif dataset_size <= 20:
-        max_steps = dataset_size * 50  # Up to 50 steps per example for small datasets
+        max_steps = dataset_size * 30  # Up to 30 steps per example for small datasets
     else:
-        max_steps = dataset_size * 25  # Up to 25 steps per example for larger datasets
+        max_steps = dataset_size * 20  # Up to 20 steps per example for larger datasets
     
     # Absolute maximum
-    absolute_max = 5000
+    absolute_max = 3000
     max_steps = min(max_steps, absolute_max)
     
     return max(min_steps, min(steps, max_steps))
@@ -377,43 +382,20 @@ def calculate_content_based_steps(data_path: str, target_training_minutes: int =
     total_tokens = content_analysis["total_tokens"]
     complexity_score = content_analysis["complexity_score"]
     difficulty = content_analysis["estimated_learning_difficulty"]
+    dataset_size = content_analysis["total_messages"]
     
-    # 2. Base steps calculation using content-aware formula
-    # Rule: More complex content needs more steps per token
-    if total_tokens <= 500:
-        # Very short content: focus on quality over quantity
-        base_steps = 150 + (total_tokens * 0.8)
-    elif total_tokens <= 2000:
-        # Medium content: balanced approach
-        base_steps = 300 + (total_tokens * 0.4)
-    elif total_tokens <= 5000:
-        # Long content: efficiency focus
-        base_steps = 500 + (total_tokens * 0.2)
-    else:
-        # Very long content: prevent overfitting
-        base_steps = 800 + (total_tokens * 0.1)
+    # 2. Use our optimized step calculation for small datasets
+    optimal_result = calculate_optimal_steps(
+        dataset_size=dataset_size,
+        lora_rank=16,  # Standard rank
+        learning_rate=3e-4,  # Standard LR
+        is_incremental=False,
+        task_complexity=difficulty
+    )
     
-    # 3. Apply complexity modifiers
-    complexity_modifier = 0.7 + (complexity_score * 0.6)  # Range: 0.7-1.3
-    steps = int(base_steps * complexity_modifier)
+    final_steps = optimal_result["steps"]
     
-    # 4. Apply time-based optimization for fast training
-    # Target: 5-15 minutes training time
-    time_based_max = target_training_minutes * 50  # ~50 steps per minute on modern hardware
-    
-    if steps > time_based_max:
-        steps = time_based_max
-        time_optimized = True
-    else:
-        time_optimized = False
-    
-    # 5. Apply safety bounds for effectiveness
-    min_steps = max(100, total_tokens // 20)  # At least 100 steps, or 1 step per 20 tokens
-    max_steps = min(1000, total_tokens // 5)   # At most 1000 steps, or 1 step per 5 tokens
-    
-    final_steps = max(min_steps, min(steps, max_steps))
-    
-    # 6. Calculate training estimates
+    # 3. Calculate training estimates
     estimated_minutes = final_steps / 50  # Rough estimate: 50 steps per minute
     tokens_per_step = total_tokens / final_steps if final_steps > 0 else 0
     
@@ -421,10 +403,11 @@ def calculate_content_based_steps(data_path: str, target_training_minutes: int =
         "steps": final_steps,
         "content_analysis": content_analysis,
         "calculation_details": {
-            "base_steps": int(base_steps),
-            "complexity_modifier": complexity_modifier,
-            "time_optimized": time_optimized,
-            "tokens_per_step": round(tokens_per_step, 1)
+            "base_steps": optimal_result["base_steps"],
+            "dataset_size": dataset_size,
+            "complexity_modifier": difficulty,
+            "tokens_per_step": round(tokens_per_step, 1),
+            "modifiers": optimal_result["modifiers"]
         },
         "training_estimates": {
             "estimated_minutes": round(estimated_minutes, 1),
@@ -433,6 +416,7 @@ def calculate_content_based_steps(data_path: str, target_training_minutes: int =
         },
         "optimization_summary": f"""
 Content-Based Step Calculation:
+• Dataset size: {dataset_size} examples
 • Total tokens: {total_tokens:,}
 • Complexity: {difficulty} ({complexity_score:.2f})
 • Calculated steps: {final_steps}

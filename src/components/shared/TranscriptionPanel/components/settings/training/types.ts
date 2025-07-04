@@ -37,7 +37,7 @@ export interface ConversationStatus {
 export interface TrainingRequest {
   conversations: TrainingConversation[];
   baseModel: string;
-  outputName: string; // Will be ignored, always uses master
+  outputName: string; // Unique adapter identifier generated with timestamp
   action?: "enable_real_adapter" | "disable_real_adapter"; // Optional action for adapter management
 }
 
