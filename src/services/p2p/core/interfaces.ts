@@ -80,4 +80,10 @@ export interface IP2PEvents {
   "transfer:progress": (topic: string, progress: number) => void;
   "transfer:complete": (topic: string, data: Buffer) => void;
   "transfer:error": (topic: string, error: Error) => void;
+  "download:progress": (data: {
+    adapterName: string;
+    progress: number;
+    downloadedBytes: number;
+    totalBytes: number;
+  }) => void;
 }
