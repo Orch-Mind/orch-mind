@@ -6,6 +6,7 @@ LoRA trainer service implementation
 import os
 import sys
 import tempfile
+import json
 from typing import List, Dict, Any, Optional
 from interfaces.i_lora_trainer import ILoRATrainer
 from interfaces.i_progress_reporter import IProgressReporter
@@ -20,6 +21,119 @@ class LoRATrainer(ILoRATrainer):
         self.progress_reporter = progress_reporter
         self.training_info = {}
         self.hardware_detector = HardwareDetector()
+    
+    def count_training_examples(self, training_data: List[Dict[str, Any]]) -> int:
+        """Count valid training examples in the dataset."""
+        valid_examples = 0
+        for example in training_data:
+            # Check if example has required fields and non-empty content
+            if (isinstance(example, dict) and 
+                'instruction' in example and 
+                'output' in example and
+                example['instruction'].strip() and 
+                example['output'].strip()):
+                valid_examples += 1
+        return valid_examples
+    
+    def calculate_smart_hyperparameters(self, config: Any, num_examples: int) -> Dict[str, Any]:
+        """
+        Calculate intelligent hyperparameters based on dataset size.
+        
+        This prevents overfitting in small datasets by:
+        - Reducing training steps for small datasets
+        - Using conservative learning rates
+        - Adjusting other parameters proportionally
+        """
+        
+        print(f"\n🧠 Smart Hyperparameter Calculation")
+        print(f"📊 Dataset size: {num_examples} examples")
+        
+        # Calculate effective batch size (considering gradient accumulation)
+        effective_batch_size = config.batch_size * config.gradient_accumulation_steps
+        
+        # Determine dataset category and optimal parameters
+        if num_examples <= 5:
+            # Very small datasets (testing/debugging)
+            category = "Very Small (Testing)"
+            epochs_multiplier = 1  # Just 1 epoch
+            learning_rate = 1e-5   # Very conservative
+            warmup_ratio = 0.0     # No warmup needed
+            save_ratio = 1.0       # Save at the end
+            
+        elif num_examples <= 20:
+            # Small datasets
+            category = "Small"
+            epochs_multiplier = 2  # 2 epochs
+            learning_rate = 2e-5   # Conservative
+            warmup_ratio = 0.1     # Minimal warmup
+            save_ratio = 0.5       # Save halfway and end
+            
+        elif num_examples <= 100:
+            # Medium datasets
+            category = "Medium"
+            epochs_multiplier = 3  # 3 epochs
+            learning_rate = 5e-5   # Moderate
+            warmup_ratio = 0.1     # Standard warmup
+            save_ratio = 0.3       # Save more frequently
+            
+        else:
+            # Large datasets
+            category = "Large"
+            epochs_multiplier = None  # Use original config
+            learning_rate = config.learning_rate  # Use original
+            warmup_ratio = 0.1     # Standard warmup
+            save_ratio = 0.2       # Save frequently
+        
+        # Calculate optimal steps
+        if epochs_multiplier is not None:
+            # For small/medium datasets: calculate based on examples and epochs
+            steps_per_epoch = max(1, num_examples // effective_batch_size)
+            optimal_max_steps = steps_per_epoch * epochs_multiplier
+            optimal_max_steps = max(1, optimal_max_steps)  # At least 1 step
+        else:
+            # For large datasets: use original config
+            optimal_max_steps = config.max_steps
+        
+        # Calculate proportional parameters
+        optimal_warmup_steps = max(1, int(optimal_max_steps * warmup_ratio))
+        optimal_save_steps = max(1, int(optimal_max_steps * save_ratio))
+        optimal_logging_steps = max(1, min(10, optimal_max_steps // 4))
+        
+        # Ensure save_steps doesn't exceed max_steps
+        optimal_save_steps = min(optimal_save_steps, optimal_max_steps)
+        
+        # Prepare results
+        smart_params = {
+            'max_steps': optimal_max_steps,
+            'learning_rate': learning_rate,
+            'warmup_steps': optimal_warmup_steps,
+            'save_steps': optimal_save_steps,
+            'logging_steps': optimal_logging_steps,
+            'num_epochs': epochs_multiplier if epochs_multiplier else config.num_epochs
+        }
+        
+        # Report the decisions
+        print(f"📋 Dataset Category: {category}")
+        print(f"🎯 Optimal Configuration:")
+        print(f"   • Max Steps: {config.max_steps} → {optimal_max_steps}")
+        print(f"   • Learning Rate: {config.learning_rate} → {learning_rate}")
+        print(f"   • Warmup Steps: {config.warmup_steps} → {optimal_warmup_steps}")
+        print(f"   • Save Steps: {config.save_steps} → {optimal_save_steps}")
+        print(f"   • Logging Steps: {config.logging_steps} → {optimal_logging_steps}")
+        
+        if num_examples <= 5:
+            print(f"⚠️  Very small dataset detected!")
+            print(f"   • Using minimal training to prevent overfitting")
+            print(f"   • Model will see each example only {epochs_multiplier} time(s)")
+            print(f"   • Conservative learning rate to preserve base knowledge")
+        elif num_examples <= 20:
+            print(f"📝 Small dataset detected - using conservative approach")
+        elif num_examples <= 100:
+            print(f"📊 Medium dataset - balanced training configuration")
+        else:
+            print(f"🚀 Large dataset - using optimized configuration")
+        
+        return smart_params
     
     def validate_dependencies(self) -> bool:
         """Validate that required dependencies are available."""
@@ -53,11 +167,22 @@ class LoRATrainer(ILoRATrainer):
         return True
     
     def train(self, config: Any, training_data: List[Dict[str, Any]]) -> Optional[str]:
-        """Train LoRA adapter with memory optimization."""
+        """Train LoRA adapter with memory optimization and smart hyperparameters."""
         try:
             # Validate dependencies first
             if not self.validate_dependencies():
                 return None
+            
+            # Count training examples and calculate smart hyperparameters
+            num_examples = self.count_training_examples(training_data)
+            smart_params = self.calculate_smart_hyperparameters(config, num_examples)
+            
+            # Apply smart hyperparameters to config
+            config.max_steps = smart_params['max_steps']
+            config.learning_rate = smart_params['learning_rate']
+            config.warmup_steps = smart_params['warmup_steps']
+            config.save_steps = smart_params['save_steps']
+            config.logging_steps = smart_params['logging_steps']
             
             # Import required libraries
             import torch
