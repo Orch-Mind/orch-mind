@@ -57,11 +57,13 @@ export class P2PCoordinator {
    */
   async shareAdapter(adapterName: string): Promise<IAdapterInfo> {
     console.log(`[P2PCoordinator] Attempting to share adapter: ${adapterName}`);
-    
+
     // Find adapter safetensors file in project directory
     const adapterPath = await this.adapterRegistry.findModelPath(adapterName);
-    console.log(`[P2PCoordinator] AdapterRegistry.findModelPath result: ${adapterPath}`);
-    
+    console.log(
+      `[P2PCoordinator] AdapterRegistry.findModelPath result: ${adapterPath}`
+    );
+
     if (!adapterPath) {
       console.error(`[P2PCoordinator] Adapter not found: ${adapterName}`);
       throw new Error(
@@ -196,7 +198,16 @@ export class P2PCoordinator {
 
       switch (message.type) {
         case "adapter-list":
-          this.handleAdapterList(peerId, message.data);
+          // Extract adapters from message and pass to handleAdapterList
+          let adaptersArray: any[] = [];
+          if (Array.isArray(message.adapters)) {
+            adaptersArray = message.adapters;
+          } else if (Array.isArray(message.data)) {
+            adaptersArray = message.data;
+          } else if (Array.isArray(message)) {
+            adaptersArray = message;
+          }
+          this.handleAdapterList(peerId, adaptersArray);
           break;
 
         case "adapter-request":
@@ -216,11 +227,66 @@ export class P2PCoordinator {
   /**
    * Handle adapter list from peer
    */
-  private handleAdapterList(peerId: string, adapters: IAdapterInfo[]): void {
-    this.forwardToRenderers("p2p:adapters-available", {
-      from: peerId,
-      adapters,
+  private handleAdapterList(peerId: string, adapters: any[]): void {
+    // Validate peerId
+    if (!peerId || peerId.trim() === "") {
+      console.warn(`[P2PCoordinator] Invalid peerId received: "${peerId}"`);
+      return;
+    }
+
+    // Ensure we have a valid array
+    const adapterArray = Array.isArray(adapters) ? adapters : [];
+
+    console.log(
+      `[P2PCoordinator] Received adapter list from ${peerId}: ${adapterArray.length} adapters`
+    );
+
+    // Log detailed adapter information for debugging
+    console.log(
+      `[P2PCoordinator] Adapter details:`,
+      adapterArray.map((adapter) => ({
+        name: adapter?.name || "MISSING_NAME",
+        topic: adapter?.topic
+          ? adapter.topic.slice(0, 8) + "..."
+          : "MISSING_TOPIC",
+        size: adapter?.size || "MISSING_SIZE",
+        hasValidStructure: !!(adapter?.name && adapter?.topic),
+      }))
+    );
+
+    // Filter out invalid adapters
+    const validAdapters = adapterArray.filter((adapter) => {
+      if (!adapter || !adapter.name || !adapter.topic) {
+        console.warn(
+          `[P2PCoordinator] Filtering out invalid adapter:`,
+          adapter
+        );
+        return false;
+      }
+      return true;
     });
+
+    if (validAdapters.length !== adapterArray.length) {
+      console.warn(
+        `[P2PCoordinator] Filtered out ${
+          adapterArray.length - validAdapters.length
+        } invalid adapters`
+      );
+    }
+
+    // Always send in the expected format: {from: string, adapters: array}
+    const messageData = {
+      from: peerId,
+      adapters: validAdapters,
+    };
+
+    console.log(`[P2PCoordinator] Forwarding to renderers:`, {
+      from: peerId,
+      adapterCount: validAdapters.length,
+      adapterNames: validAdapters.map((a) => a.name),
+    });
+
+    this.forwardToRenderers("p2p:adapters-available", messageData);
   }
 
   /**
@@ -271,7 +337,7 @@ export class P2PCoordinator {
       console.error("[P2PCoordinator] Error saving downloaded adapter:", error);
       this.forwardToRenderers("p2p:transfer-error", {
         topic: data.topic,
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -289,11 +355,11 @@ export class P2PCoordinator {
     // Get project root directory (4 levels up from this file)
     const currentDir = path.dirname(__filename);
     const projectRoot = path.resolve(currentDir, "../../../..");
-    
+
     // Create adapter directories
     const weightsDir = path.join(projectRoot, "lora_adapters", "weights");
     const registryDir = path.join(projectRoot, "lora_adapters", "registry");
-    
+
     await fs.mkdir(weightsDir, { recursive: true });
     await fs.mkdir(registryDir, { recursive: true });
 
@@ -302,7 +368,8 @@ export class P2PCoordinator {
     await fs.mkdir(adapterDir, { recursive: true });
 
     // Determine file extension based on metadata
-    const fileExtension = metadata.metadata?.file_type === 'safetensors' ? '.safetensors' : '.bin';
+    const fileExtension =
+      metadata.metadata?.file_type === "safetensors" ? ".safetensors" : ".bin";
     const fileName = `adapter_model${fileExtension}`;
     const adapterFilePath = path.join(adapterDir, fileName);
 
@@ -323,23 +390,51 @@ export class P2PCoordinator {
       training_method: metadata.metadata?.training_method || "downloaded_p2p",
       status: "downloaded",
       source: "p2p",
-      file_type: metadata.metadata?.file_type || 'unknown',
+      file_type: metadata.metadata?.file_type || "unknown",
       original_size: metadata.size,
-      checksum: metadata.checksum
+      checksum: metadata.checksum,
     };
 
     // Save registry file
-    const registryFilePath = path.join(registryDir, `${metadata.name}_adapter.json`);
-    await fs.writeFile(registryFilePath, JSON.stringify(registryMetadata, null, 2));
-    console.log(`[P2PCoordinator] Saved registry metadata: ${registryFilePath}`);
+    const registryFilePath = path.join(
+      registryDir,
+      `${metadata.name}_adapter.json`
+    );
+    await fs.writeFile(
+      registryFilePath,
+      JSON.stringify(registryMetadata, null, 2)
+    );
+    console.log(
+      `[P2PCoordinator] Saved registry metadata: ${registryFilePath}`
+    );
 
-    console.log(`[P2PCoordinator] Successfully saved downloaded adapter: ${metadata.name}`);
+    console.log(
+      `[P2PCoordinator] Successfully saved downloaded adapter: ${metadata.name}`
+    );
+
+    // Notify renderer to add adapter to training tab localStorage
+    this.forwardToRenderers("p2p:adapter-saved-to-filesystem", {
+      adapterName: metadata.name,
+      metadata: registryMetadata,
+      filesystem: {
+        adapterPath: adapterDir,
+        registryPath: registryFilePath,
+      },
+    });
   }
 
   /**
    * Forward events to renderer windows
    */
   private forwardToRenderers(channel: string, data?: any): void {
+    // Debug logging for adapters-available events
+    if (channel === "p2p:adapters-available") {
+      console.log(
+        `[P2PCoordinator] Forwarding ${channel}:`,
+        JSON.stringify(data, null, 2)
+      );
+    }
+
     BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
       window.webContents.send(channel, data);
     });

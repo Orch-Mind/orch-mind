@@ -1005,6 +1005,39 @@ export class ElectronAPIFactory {
         );
       },
 
+      p2pRequestAdapter: async (data: { topic: string; fromPeer?: string }) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:requestAdapter", data),
+          {
+            component: "P2PManager",
+            operation: "requestAdapter",
+            severity: "medium",
+          }
+        );
+      },
+
+      p2pDestroy: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:destroy"),
+          {
+            component: "P2PManager",
+            operation: "destroy",
+            severity: "low",
+          }
+        );
+      },
+
+      p2pSendFile: async (data: { peerId: string; filePath: string; metadata: any }) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("p2p:sendFile", data),
+          {
+            component: "P2PManager",
+            operation: "sendFile",
+            severity: "medium",
+          }
+        );
+      },
+
       onP2PPeersUpdated: (callback: (count: number) => void) => {
         const subscription = (_: Electron.IpcRendererEvent, count: number) => {
           try {
@@ -1024,6 +1057,24 @@ export class ElectronAPIFactory {
       onP2PAdaptersAvailable: (callback: (data: any) => void) => {
         const subscription = (_: Electron.IpcRendererEvent, data: any) => {
           try {
+            // Validate data before calling callback
+            if (!data) {
+              this.logger.warn("P2P adapters available: received undefined data");
+              return;
+            }
+            
+            // Ensure data has adapters property and it's an array
+            if (!data.adapters || !Array.isArray(data.adapters)) {
+              this.logger.warn("P2P adapters available: data.adapters is not a valid array", data);
+              // Create a safe fallback with empty adapters array
+              const safeData = {
+                ...data,
+                adapters: []
+              };
+              callback(safeData);
+              return;
+            }
+            
             callback(data);
           } catch (error) {
             this.logger.error(
@@ -1037,6 +1088,70 @@ export class ElectronAPIFactory {
 
         return () => {
           ipcRenderer.removeListener("p2p:adapters-available", subscription);
+        };
+      },
+
+      onP2PRoomJoined: (callback: (data: any) => void) => {
+        const subscription = (_: Electron.IpcRendererEvent, data: any) => {
+          try {
+            callback(data);
+          } catch (error) {
+            this.logger.error("Error in P2P room joined callback", error);
+          }
+        };
+
+        ipcRenderer.on("p2p:room-joined", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("p2p:room-joined", subscription);
+        };
+      },
+
+      onP2PRoomLeft: (callback: () => void) => {
+        const subscription = (_: Electron.IpcRendererEvent) => {
+          try {
+            callback();
+          } catch (error) {
+            this.logger.error("Error in P2P room left callback", error);
+          }
+        };
+
+        ipcRenderer.on("p2p:room-left", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("p2p:room-left", subscription);
+        };
+      },
+
+      onP2PChunkReceived: (callback: (data: any) => void) => {
+        const subscription = (_: Electron.IpcRendererEvent, data: any) => {
+          try {
+            callback(data);
+          } catch (error) {
+            this.logger.error("Error in P2P chunk received callback", error);
+          }
+        };
+
+        ipcRenderer.on("p2p:chunk-received", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("p2p:chunk-received", subscription);
+        };
+      },
+
+      onP2PAdapterSavedToFilesystem: (callback: (data: any) => void) => {
+        const subscription = (_: Electron.IpcRendererEvent, data: any) => {
+          try {
+            callback(data);
+          } catch (error) {
+            this.logger.error("Error in P2P adapter saved to filesystem callback", error);
+          }
+        };
+
+        ipcRenderer.on("p2p:adapter-saved-to-filesystem", subscription);
+
+        return () => {
+          ipcRenderer.removeListener("p2p:adapter-saved-to-filesystem", subscription);
         };
       },
     };

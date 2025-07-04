@@ -103,7 +103,7 @@ export class AdapterManager {
     });
 
     p2pEventBus.emit("adapters:available", {
-      from: "peer",
+      from: peerId,
       adapters: this.getAvailableAdapters(),
     });
   }

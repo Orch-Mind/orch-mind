@@ -1,0 +1,29 @@
+services:
+  # Real Hyperswarm Peer Emulator - Uses actual P2P protocol
+  hyperswarm-peer:
+    build:
+      context: ./hyperswarm-peer
+      dockerfile: Dockerfile
+    container_name: orch-os-hyperswarm-peer
+    hostname: hyperswarm-peer
+    network_mode: host
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - PEER_ID=simple-p2p-emulator
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "orch-os.component=hyperswarm-peer-emulator"
+      - "orch-os.test=true"
+
+volumes:
+  peer_data:
+    driver: local

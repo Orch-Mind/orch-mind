@@ -57,3 +57,19 @@ export interface AvailableAdaptersProps {
   onDownload: (adapter: IncomingAdapter) => void;
   isSharing: boolean;
 }
+
+// P2P Download Progress Types
+export interface P2PDownloadProgress {
+  adapterName: string;
+  progress: number; // 0-100
+  downloadedBytes: number;
+  totalBytes: number;
+  speed?: string; // e.g., "2.5 MB/s"
+  eta?: string; // e.g., "30s", "2 min"
+  status: "downloading" | "completed" | "error" | "cancelled";
+  error?: string;
+}
+
+export interface P2PDownloadState {
+  [adapterName: string]: P2PDownloadProgress;
+}

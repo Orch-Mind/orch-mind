@@ -13,6 +13,7 @@ export class SwarmManager implements IP2PConnection {
   private discovery: any = null;
   private currentRoom: IP2PRoom | null = null;
   private peers: Map<string, any> = new Map();
+  private peersCount: number = 0;
   private isElectron: boolean;
 
   constructor() {
@@ -154,6 +155,7 @@ export class SwarmManager implements IP2PConnection {
 
     this.currentRoom = null;
     this.peers.clear();
+    this.peersCount = 0;
     p2pEventBus.emit("room:left");
   }
 
@@ -168,7 +170,7 @@ export class SwarmManager implements IP2PConnection {
    * Get current peers count
    */
   getPeersCount(): number {
-    return this.peers.size;
+    return this.peersCount;
   }
 
   /**
@@ -176,6 +178,51 @@ export class SwarmManager implements IP2PConnection {
    */
   getCurrentRoom(): IP2PRoom | null {
     return this.currentRoom;
+  }
+
+  // FIX: Centralized state update function to prevent race conditions
+  private updateRoomState(
+    roomData: Partial<IP2PRoom> | null,
+    peerCount?: number
+  ): void {
+    if (roomData === null) {
+      // Handle disconnection
+      this.currentRoom = null;
+      this.peersCount = 0;
+      p2pEventBus.emit("room:left");
+      console.log("✅ [SwarmManager] State cleared on disconnect.");
+      return;
+    }
+
+    // Update peer count if provided
+    if (peerCount !== undefined) {
+      this.peersCount = peerCount;
+    }
+
+    // Update room if it exists, otherwise create it
+    if (this.currentRoom) {
+      this.currentRoom = {
+        ...this.currentRoom,
+        ...roomData,
+        peersCount: this.peersCount,
+      };
+    } else if (roomData.topic) {
+      this.currentRoom = {
+        type: roomData.type || "private",
+        topic: roomData.topic,
+        code: roomData.code,
+        peersCount: this.peersCount,
+      };
+    }
+
+    if (this.currentRoom) {
+      p2pEventBus.emit("room:joined", this.currentRoom);
+      p2pEventBus.emit("peers:updated", this.peersCount);
+      console.log(
+        `✅ [SwarmManager] Room state updated: ${this.peersCount} peers.`,
+        this.currentRoom
+      );
+    }
   }
 
   /**
@@ -191,28 +238,22 @@ export class SwarmManager implements IP2PConnection {
 
     // Peer count updates
     (window.electronAPI as any).onP2PPeersUpdated?.((count: number) => {
-      if (this.currentRoom) {
-        this.currentRoom.peersCount = count;
-        p2pEventBus.emit("peer:connected", `peer-${count}`);
-      }
+      console.log(
+        `📡 [SwarmManager] IPC Event: p2p:peers-updated -> ${count} peers`
+      );
+      this.updateRoomState(this.currentRoom, count);
     });
 
     // Room joined
     (window.electronAPI as any).onP2PRoomJoined?.((data: any) => {
-      this.currentRoom = {
-        type: data.type || "private",
-        topic: data.topic,
-        code: data.code,
-        peersCount: 0,
-      };
-      p2pEventBus.emit("room:joined", this.currentRoom);
+      console.log(`🚪 [SwarmManager] IPC Event: p2p:room-joined`, data);
+      this.updateRoomState(data);
     });
 
     // Room left
     (window.electronAPI as any).onP2PRoomLeft?.(() => {
-      this.currentRoom = null;
-      this.peers.clear();
-      p2pEventBus.emit("room:left");
+      console.log(`🚪 [SwarmManager] IPC Event: p2p:room-left`);
+      this.updateRoomState(null);
     });
   }
 
@@ -229,6 +270,7 @@ export class SwarmManager implements IP2PConnection {
     }
 
     this.peers.clear();
+    this.peersCount = 0;
     p2pEventBus.removeAllListeners();
   }
 }

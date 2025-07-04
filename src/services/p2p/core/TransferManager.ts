@@ -46,7 +46,7 @@ export class TransferManager implements IFileTransfer {
   /**
    * Receive file from topic
    */
-  async receiveFile(topic: string): Promise<Buffer> {
+  async receiveFile(topic: string): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
       const transfer: TransferState = {
         topic,
@@ -58,11 +58,15 @@ export class TransferManager implements IFileTransfer {
 
       this.transfers.set(topic, transfer);
 
-      // Set timeout for transfer
+      // Set timeout for transfer - dynamic based on expected file size
+      // For mock downloads, we'll use a generous timeout
+      // Real transfers would use metadata.size if available
+      const timeoutMs = 300000; // 5 minutes for mock transfers
+      
       const timeout = setTimeout(() => {
         this.transfers.delete(topic);
-        reject(new Error("Transfer timeout"));
-      }, 60000); // 60 seconds timeout
+        reject(new Error(`Transfer timeout after ${timeoutMs/1000}s`));
+      }, timeoutMs);
 
       // Wait for transfer completion
       const checkComplete = () => {
@@ -165,27 +169,39 @@ export class TransferManager implements IFileTransfer {
   }
 
   /**
-   * Convert base64 string to Buffer using browser APIs
+   * Convert base64 string to Uint8Array using browser APIs
    */
-  private base64ToBuffer(base64: string): Buffer {
+  private base64ToBuffer(base64: string): Uint8Array {
     // Use browser's atob for base64 decoding
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    return Buffer.from(bytes);
+    return bytes;
   }
 
   /**
    * Assemble chunks into complete buffer
    */
-  private assembleChunks(transfer: TransferState): Buffer {
+  private assembleChunks(transfer: TransferState): Uint8Array {
     const chunks = transfer.chunks.filter((chunk) => chunk !== undefined);
     if (chunks.length !== transfer.totalChunks) {
       throw new Error("Missing chunks in transfer");
     }
-    return Buffer.concat(chunks);
+
+    // Calculate total length
+    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+
+    // Create result array and copy chunks
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    return result;
   }
 
   /**
@@ -216,7 +232,7 @@ export class TransferManager implements IFileTransfer {
 // Internal transfer state
 interface TransferState {
   topic: string;
-  chunks: Buffer[];
+  chunks: Uint8Array[];
   totalChunks: number;
   receivedChunks: number;
   metadata: IAdapterInfo | null;

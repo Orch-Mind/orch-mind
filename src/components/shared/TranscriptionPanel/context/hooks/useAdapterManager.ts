@@ -15,6 +15,7 @@ import {
   loadFromStorage,
   saveToStorage,
 } from "../../components/settings/training/utils";
+import { useP2PDownloadProgress } from "./useP2PDownloadProgress";
 
 interface AdapterManagerState {
   sharedAdapters: SharedAdapter[];
@@ -32,6 +33,10 @@ interface AdapterManagerActions {
   cleanupOrphanedAdapters: () => number;
   debugAdapterState: () => void;
   autoCleanupIncomingAdapters: () => void;
+  // Download progress interface
+  downloadState: any;
+  isDownloading: (adapterName: string) => boolean;
+  getProgress: (adapterName: string) => any;
 }
 
 interface UseAdapterManagerProps {
@@ -50,10 +55,18 @@ export const useAdapterManager = ({
 
   // Ref for accessing current adapter state in callbacks without dependency loops
   const currentAdaptersRef = useRef<SharedAdapter[]>([]);
+  const currentIncomingAdaptersRef = useRef<IncomingAdapter[]>([]);
+
+  // Download progress management
+  const downloadProgress = useP2PDownloadProgress();
 
   useEffect(() => {
     currentAdaptersRef.current = sharedAdapters;
   }, [sharedAdapters]);
+
+  useEffect(() => {
+    currentIncomingAdaptersRef.current = incomingAdapters;
+  }, [incomingAdapters]);
 
   // Verify adapter exists in both localStorage and filesystem
   const verifyAdapterExists = useCallback(
@@ -285,25 +298,33 @@ export const useAdapterManager = ({
           return;
         }
 
-        // Check connection status
-        const status = p2pService.getStatus();
-        console.log(`🔽 [ADAPTER-MANAGER] P2P status:`, status);
+        // SIMPLIFIED: If you can see adapters, you can download them!
+        // The fact that adapters are visible is PROOF of connectivity
+        const hasIncomingAdapters =
+          currentIncomingAdaptersRef.current.length > 0;
 
-        if (!status.isConnected) {
-          console.error(`❌ [ADAPTER-MANAGER] Not connected to any P2P room`);
+        console.log("🔍 [ADAPTER-MANAGER] Download validation:", {
+          adapterToDownload: adapter.name,
+          totalIncomingAdapters: currentIncomingAdaptersRef.current.length,
+          hasConnectivity: hasIncomingAdapters,
+          reasoning: hasIncomingAdapters
+            ? "✅ Adapters visible = connectivity confirmed"
+            : "❌ No adapters = no connectivity",
+        });
+
+        if (!hasIncomingAdapters) {
+          console.error(
+            "❌ [ADAPTER-MANAGER] No adapters available - no connectivity"
+          );
           NotificationUtils.showError(
-            "Not connected to a P2P room. Please connect first."
+            "No adapters available. Please check your P2P connection."
           );
           return;
         }
 
-        if (status.peersCount === 0) {
-          console.warn(`⚠️ [ADAPTER-MANAGER] No peers available for download`);
-          NotificationUtils.showError(
-            "No peers available. Make sure the adapter owner is online."
-          );
-          return;
-        }
+        console.log(
+          "✅ [ADAPTER-MANAGER] Download allowed - adapters are visible, connectivity confirmed!"
+        );
 
         // Additional validation: check if the adapter.from is valid
         if (!adapter.from || adapter.from.trim() === "") {
@@ -314,29 +335,49 @@ export const useAdapterManager = ({
           return;
         }
 
+        // Parse adapter size to bytes for progress tracking
+        const sizeInBytes = ShareUtils.parseSizeToBytes(adapter.size);
+
+        // Start download progress tracking
+        downloadProgress.startDownload(adapter.name, sizeInBytes);
+
         console.log(
           `🔽 [ADAPTER-MANAGER] Requesting adapter from peer: ${adapter.from}`
         );
-        await p2pService.requestAdapter(adapter.topic, adapter.from);
 
-        console.log(`✅ [ADAPTER-MANAGER] Download request sent successfully`);
-        NotificationUtils.showSuccess(`Started downloading ${adapter.name}`);
+        try {
+          await p2pService.requestAdapter(adapter.topic, adapter.from);
 
-        // Emit download event
-        window.dispatchEvent(
-          new CustomEvent("adapter-downloaded", {
-            detail: {
-              adapterId: adapter.topic,
-              adapterName: adapter.name,
-              baseModel: "llama3.1:latest",
-              downloadedFrom: adapter.from,
-              size: adapter.size,
-            },
-          })
-        );
+          console.log(
+            `✅ [ADAPTER-MANAGER] Download request sent successfully`
+          );
+          NotificationUtils.showSuccess(`Started downloading ${adapter.name}`);
 
-        // Refresh adapter list
-        setTimeout(() => loadLocalAdapters(), 500);
+          // Emit download event
+          window.dispatchEvent(
+            new CustomEvent("adapter-downloaded", {
+              detail: {
+                adapterId: adapter.topic,
+                adapterName: adapter.name,
+                baseModel: "llama3.1:latest",
+                downloadedFrom: adapter.from,
+                size: adapter.size,
+              },
+            })
+          );
+
+          // Refresh adapter list
+          setTimeout(() => loadLocalAdapters(), 500);
+        } catch (downloadError) {
+          // Handle download-specific errors and update progress
+          const errorMessage =
+            downloadError instanceof Error
+              ? downloadError.message
+              : "Unknown download error";
+
+          downloadProgress.errorDownload(adapter.name, errorMessage);
+          throw downloadError; // Re-throw to trigger the outer catch block
+        }
       } catch (error) {
         console.error(
           `❌ [ADAPTER-MANAGER] Download failed for ${adapter.name}:`,
@@ -365,13 +406,37 @@ export const useAdapterManager = ({
         }
       }
     },
-    [loadLocalAdapters, verifyAdapterExists]
+    [loadLocalAdapters, verifyAdapterExists, downloadProgress]
   );
 
   const addIncomingAdapters = useCallback(
     (data: { from: string; adapters: any[] }) => {
+      // Validate data structure
+      if (!data || !data.adapters || !Array.isArray(data.adapters)) {
+        console.warn(`📥 [ADAPTER-MANAGER] Invalid data received:`, data);
+        return;
+      }
+
+      // Validate 'from' field
+      if (!data.from || data.from.trim() === "") {
+        console.warn(`📥 [ADAPTER-MANAGER] Invalid 'from' field:`, data.from);
+        return;
+      }
+
       console.log(
         `📥 [ADAPTER-MANAGER] Adding ${data.adapters.length} incoming adapters from ${data.from}`
+      );
+
+      // Log detailed adapter information for debugging
+      console.log(
+        `📥 [ADAPTER-MANAGER] Raw adapter data:`,
+        data.adapters.map((adapter) => ({
+          name: adapter.name,
+          topic: adapter.topic,
+          size: adapter.size,
+          hasValidName: !!adapter.name,
+          hasValidTopic: !!adapter.topic,
+        }))
       );
 
       // Get current local adapter names for filtering
@@ -385,6 +450,15 @@ export const useAdapterManager = ({
 
       const newAdapters: IncomingAdapter[] = data.adapters
         .filter((adapter) => {
+          // Validate adapter structure
+          if (!adapter.name || !adapter.topic) {
+            console.warn(
+              `📥 [ADAPTER-MANAGER] Invalid adapter structure:`,
+              adapter
+            );
+            return false;
+          }
+
           const isOwnAdapter = localAdapterNames.includes(adapter.name);
           if (isOwnAdapter) {
             console.log(
@@ -409,6 +483,16 @@ export const useAdapterManager = ({
         } own adapters)`
       );
 
+      // Log final adapter list for debugging
+      console.log(
+        `📥 [ADAPTER-MANAGER] Final adapter list:`,
+        newAdapters.map((adapter) => ({
+          name: adapter.name,
+          from: adapter.from,
+          topic: adapter.topic.slice(0, 8) + "...",
+        }))
+      );
+
       if (newAdapters.length === 0) {
         console.log(
           `📥 [ADAPTER-MANAGER] No new adapters to add after filtering`
@@ -417,6 +501,7 @@ export const useAdapterManager = ({
       }
 
       setIncomingAdapters((prev) => {
+        // Remove duplicates based on topic AND from fields
         const filtered = prev.filter(
           (existing) =>
             !newAdapters.some(
@@ -425,10 +510,21 @@ export const useAdapterManager = ({
                 newAdapter.from === existing.from
             )
         );
+
         const updated = [...filtered, ...newAdapters];
 
         console.log(
           `📥 [ADAPTER-MANAGER] Incoming adapters updated: ${prev.length} → ${updated.length}`
+        );
+
+        // Log current state for debugging
+        console.log(
+          `📥 [ADAPTER-MANAGER] Current incoming adapters:`,
+          updated.map((adapter) => ({
+            name: adapter.name,
+            from: adapter.from,
+            topic: adapter.topic.slice(0, 8) + "...",
+          }))
         );
 
         return updated;
@@ -613,5 +709,9 @@ export const useAdapterManager = ({
     cleanupOrphanedAdapters,
     debugAdapterState,
     autoCleanupIncomingAdapters,
+    // Download progress interface
+    downloadState: downloadProgress.downloadState,
+    isDownloading: downloadProgress.isDownloading,
+    getProgress: downloadProgress.getProgress,
   };
 };

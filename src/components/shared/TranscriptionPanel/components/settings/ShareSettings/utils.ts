@@ -12,6 +12,56 @@ export class ShareUtils {
     return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
   }
 
+  // DRY: Parse formatted size string back to bytes (reverse of formatFileSize)
+  static parseSizeToBytes(sizeString: string): number {
+    if (!sizeString || typeof sizeString !== "string") {
+      console.warn(
+        `⚠️ [ShareUtils] Invalid size string: ${sizeString}, defaulting to 0`
+      );
+      return 0;
+    }
+
+    const trimmed = sizeString.trim().toUpperCase();
+
+    // Extract number and unit
+    const match = trimmed.match(/^([\d.]+)\s*([KMGT]?B)$/);
+
+    if (!match) {
+      console.warn(
+        `⚠️ [ShareUtils] Could not parse size string: ${sizeString}, defaulting to 0`
+      );
+      return 0;
+    }
+
+    const value = parseFloat(match[1]);
+    const unit = match[2];
+
+    if (isNaN(value)) {
+      console.warn(
+        `⚠️ [ShareUtils] Invalid numeric value in size string: ${sizeString}, defaulting to 0`
+      );
+      return 0;
+    }
+
+    switch (unit) {
+      case "B":
+        return Math.round(value);
+      case "KB":
+        return Math.round(value * 1024);
+      case "MB":
+        return Math.round(value * 1024 * 1024);
+      case "GB":
+        return Math.round(value * 1024 * 1024 * 1024);
+      case "TB":
+        return Math.round(value * 1024 * 1024 * 1024 * 1024);
+      default:
+        console.warn(
+          `⚠️ [ShareUtils] Unknown unit in size string: ${sizeString}, defaulting to 0`
+        );
+        return 0;
+    }
+  }
+
   // DRY: Crypto operations centralized
   static async hashString(input: string): Promise<string> {
     const crypto = window.crypto;

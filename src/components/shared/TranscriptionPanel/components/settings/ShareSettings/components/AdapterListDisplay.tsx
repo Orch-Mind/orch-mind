@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { P2PDownloadProgress } from "../types";
 import { IAdapterForMerge, IMergeStrategy } from "../utils/AdapterMergeTypes";
 
 // SRP: Component focused only on displaying available adapters
@@ -15,6 +16,10 @@ interface AdapterListDisplayProps {
   selectedStrategy: IMergeStrategy["value"];
   currentRoom?: any;
   isSharing: boolean;
+  // Download progress props
+  downloadState?: { [adapterName: string]: P2PDownloadProgress };
+  isDownloading?: (adapterName: string) => boolean;
+  getProgress?: (adapterName: string) => P2PDownloadProgress | undefined;
 }
 
 export const AdapterListDisplay: React.FC<AdapterListDisplayProps> = ({
@@ -27,6 +32,9 @@ export const AdapterListDisplay: React.FC<AdapterListDisplayProps> = ({
   selectedStrategy,
   currentRoom,
   isSharing,
+  downloadState,
+  isDownloading,
+  getProgress,
 }) => {
   if (!isSharing) {
     return <NotConnectedState />;
@@ -48,6 +56,8 @@ export const AdapterListDisplay: React.FC<AdapterListDisplayProps> = ({
           onAdapterSelection={() => onAdapterSelection(index)}
           onWeightChange={(weight) => onWeightChange(index, weight)}
           selectedStrategy={selectedStrategy}
+          isDownloading={isDownloading?.(adapter.name) || false}
+          downloadProgress={getProgress?.(adapter.name)}
         />
       ))}
     </div>
@@ -63,6 +73,8 @@ const AdapterItem: React.FC<{
   onAdapterSelection: () => void;
   onWeightChange: (weight: number) => void;
   selectedStrategy: IMergeStrategy["value"];
+  isDownloading: boolean;
+  downloadProgress?: P2PDownloadProgress;
 }> = ({
   adapter,
   onDownload,
@@ -71,6 +83,8 @@ const AdapterItem: React.FC<{
   onAdapterSelection,
   onWeightChange,
   selectedStrategy,
+  isDownloading,
+  downloadProgress,
 }) => (
   <div
     className={`p-2 bg-black/50 rounded border transition-colors ${
@@ -105,8 +119,23 @@ const AdapterItem: React.FC<{
           )}
       </div>
 
-      <DownloadButton adapter={adapter} onDownload={onDownload} />
+      {/* Show download button only if not downloading */}
+      {!isDownloading && (
+        <DownloadButton adapter={adapter} onDownload={onDownload} />
+      )}
+
+      {/* Show downloading status if downloading */}
+      {isDownloading && (
+        <span className="text-xs text-yellow-400 px-2 py-1">
+          ⬇️ Downloading...
+        </span>
+      )}
     </div>
+
+    {/* Show download progress if downloading */}
+    {isDownloading && downloadProgress && (
+      <P2PDownloadProgressComponent progress={downloadProgress} />
+    )}
   </div>
 );
 

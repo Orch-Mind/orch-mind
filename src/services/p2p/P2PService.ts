@@ -5,6 +5,7 @@ import * as crypto from "crypto";
 import { AdapterManager } from "./core/AdapterManager";
 import { p2pEventBus } from "./core/EventBus";
 import type { IAdapterInfo, IP2PRoom } from "./core/interfaces";
+import { mockPeerService } from "./core/MockPeerService";
 import { SwarmManager } from "./core/SwarmManager";
 import { TransferManager } from "./core/TransferManager";
 
@@ -36,6 +37,13 @@ export class P2PService {
 
     await this.swarmManager.initialize();
     this.setupIPCListeners();
+
+    // Start mock peer service if in development mode
+    if (mockPeerService.isActiveService()) {
+      console.log("🧪 [P2PService] Starting mock peer service for development");
+      mockPeerService.startSimulation();
+    }
+
     this.initialized = true;
   }
 
@@ -70,7 +78,16 @@ export class P2PService {
           "[P2PService] Received adapters-available from Electron:",
           data
         );
-        p2pEventBus.emit("adapters:available", data.adapters);
+        p2pEventBus.emit("adapters:available", data);
+      });
+
+      // Listen for adapter saved to filesystem (for adding to training tab)
+      (window.electronAPI as any).onP2PAdapterSavedToFilesystem?.((data: any) => {
+        console.log(
+          "[P2PService] Adapter saved to filesystem, adding to training tab:",
+          data
+        );
+        this.addDownloadedAdapterToTrainingTab(data);
       });
 
       console.log("[P2PService] IPC listeners setup complete");
@@ -141,6 +158,45 @@ export class P2PService {
   }
 
   /**
+   * Ensures the P2P service is connected before proceeding.
+   * Retries for a short duration.
+   */
+  async ensureConnection(timeout = 3000): Promise<boolean> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const status = this.getStatus();
+
+      // Consider connection confirmed if:
+      // 1. Connected and has peers, OR
+      // 2. Connected and has been connected for at least 2 seconds (for Docker peers)
+      if (status.isConnected) {
+        if (status.peersCount > 0) {
+          console.log("[P2PService] Connection confirmed with peers.", status);
+          return true;
+        }
+
+        // For Docker peers that may not be counted correctly,
+        // if we've been connected for 2+ seconds, consider it stable
+        const connectedTime = Date.now() - startTime;
+        if (connectedTime >= 2000) {
+          console.log(
+            "[P2PService] Connection confirmed (stable connection).",
+            status
+          );
+          return true;
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 500ms before retrying
+    }
+    console.warn(
+      "[P2PService] Connection could not be confirmed within the timeout.",
+      this.getStatus()
+    );
+    return false;
+  }
+
+  /**
    * Share a LoRA adapter
    */
   async shareAdapter(modelName: string): Promise<IAdapterInfo> {
@@ -171,7 +227,18 @@ export class P2PService {
   /**
    * Request adapter download
    */
-  async requestAdapter(topic: string, fromPeer?: string): Promise<Buffer> {
+  async requestAdapter(topic: string, fromPeer?: string): Promise<Uint8Array> {
+    // Check if mock service should handle this
+    if (mockPeerService.isActiveService()) {
+      const mockAdapters = mockPeerService.getMockAdapters();
+      const adapter = mockAdapters.find((a) => a.topic === topic);
+
+      if (adapter) {
+        console.log(`🧪 [P2PService] Using mock download for ${adapter.name}`);
+        return await mockPeerService.simulateAdapterDownload(adapter.name);
+      }
+    }
+
     // Request the adapter via IPC
     if (typeof window !== "undefined" && window.electronAPI) {
       await (window.electronAPI as any).p2pRequestAdapter({ topic, fromPeer });
@@ -260,6 +327,11 @@ export class P2PService {
    * Clean teardown
    */
   async destroy(): Promise<void> {
+    // Stop mock service if active
+    if (mockPeerService.isActiveService()) {
+      mockPeerService.stopSimulation();
+    }
+
     await this.swarmManager.teardown();
     this.adapterManager.cleanup();
     this.transferManager.cleanup();
@@ -302,6 +374,88 @@ export class P2PService {
   private getLocalNetworkId(): string {
     // Simple implementation - could be improved with actual network detection
     return "default-local";
+  }
+
+  /**
+   * Add downloaded adapter to training tab localStorage
+   */
+  private addDownloadedAdapterToTrainingTab(data: {
+    adapterName: string;
+    metadata: any;
+    filesystem: any;
+  }): void {
+    try {
+      console.log(`💾 [P2PService] Adding downloaded adapter to training tab: ${data.adapterName}`);
+      
+      // Load existing adapters from localStorage
+      const existingData = localStorage.getItem("orch-lora-adapters");
+      let adapterStorage = existingData ? JSON.parse(existingData) : { adapters: [] };
+      
+      // Ensure adapters array exists
+      if (!adapterStorage.adapters) {
+        adapterStorage.adapters = [];
+      }
+      
+      // Check if adapter already exists
+      const existingIndex = adapterStorage.adapters.findIndex(
+        (existing: any) => existing.id === data.adapterName || existing.name === data.adapterName
+      );
+      
+      if (existingIndex === -1) {
+        // Create new adapter entry for training tab
+        const newAdapter = {
+          id: data.adapterName,
+          name: data.adapterName,
+          baseModel: data.metadata.base_model || "llama3.1:latest",
+          enabled: false,
+          createdAt: data.metadata.created_at || new Date().toISOString(),
+          status: "downloaded",
+          source: "p2p",
+          downloadedFrom: "real-peer", // Real P2P download
+          size: data.metadata.original_size || 0,
+          checksum: data.metadata.checksum,
+          // Additional metadata from filesystem
+          adapterPath: data.filesystem.adapterPath,
+          registryPath: data.filesystem.registryPath,
+          trainingMethod: data.metadata.training_method,
+          fileType: data.metadata.file_type,
+        };
+        
+        adapterStorage.adapters.push(newAdapter);
+        
+        // Save back to localStorage
+        localStorage.setItem("orch-lora-adapters", JSON.stringify(adapterStorage));
+        
+        console.log(`✅ [P2PService] Successfully added real adapter to localStorage:`, newAdapter);
+        
+        // Dispatch events to notify training tab
+        window.dispatchEvent(
+          new CustomEvent("storage", {
+            detail: {
+              key: "orch-lora-adapters",
+              newValue: JSON.stringify(adapterStorage),
+              storageArea: localStorage,
+            },
+          })
+        );
+        
+        // Also dispatch a more specific event for immediate UI updates
+        window.dispatchEvent(
+          new CustomEvent("lora-adapter-added", {
+            detail: {
+              adapter: newAdapter,
+              source: "real-p2p-download",
+            },
+          })
+        );
+        
+      } else {
+        console.log(`ℹ️ [P2PService] Adapter ${data.adapterName} already exists in localStorage`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ [P2PService] Error adding adapter to localStorage:`, error);
+    }
   }
 }
 

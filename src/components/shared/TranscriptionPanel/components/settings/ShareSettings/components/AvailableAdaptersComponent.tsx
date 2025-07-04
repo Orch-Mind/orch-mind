@@ -8,11 +8,21 @@ import { AdapterListDisplay } from "./AdapterListDisplay";
 import { AdapterMergeSection } from "./AdapterMergeSection";
 
 // SRP: Component focused only on coordinating adapter display and merge toggle
-export const AvailableAdaptersComponent: React.FC<AvailableAdaptersProps> = ({
+export const AvailableAdaptersComponent: React.FC<
+  AvailableAdaptersProps & {
+    // Download progress props
+    downloadState?: any;
+    isDownloading?: (adapterName: string) => boolean;
+    getProgress?: (adapterName: string) => any;
+  }
+> = ({
   adapters,
   currentRoom,
   onDownload,
   isSharing,
+  downloadState,
+  isDownloading,
+  getProgress,
 }) => {
   const [showMergeSection, setShowMergeSection] = useState(false);
 
@@ -68,6 +78,9 @@ export const AvailableAdaptersComponent: React.FC<AvailableAdaptersProps> = ({
         onAdapterSelection={handleAdapterSelection}
         onWeightChange={handleWeightChange}
         selectedStrategy={selectedStrategy}
+        downloadState={downloadState}
+        isDownloading={isDownloading}
+        getProgress={getProgress}
       />
 
       {/* YAGNI: Merge section only when needed */}

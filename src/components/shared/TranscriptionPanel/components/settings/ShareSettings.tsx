@@ -31,6 +31,10 @@ const ShareSettings: React.FC = () => {
     toggleAdapterSharing,
     downloadAdapter,
     clearIncomingAdapters,
+    // Download progress state and functions
+    downloadState,
+    isDownloading,
+    getProgress,
   } = useP2PContext();
 
   // SRP: Handler focado apenas em desconexão
@@ -73,6 +77,9 @@ const ShareSettings: React.FC = () => {
         reconnectToLastSession={reconnectToLastSession}
         resetP2PState={() => {}}
         shouldShowReconnectPanel={shouldShowReconnectPanel}
+        downloadState={downloadState}
+        isDownloading={isDownloading}
+        getProgress={getProgress}
       />
       <InfoFooter currentRoom={status.currentRoom} />
     </div>
@@ -96,7 +103,11 @@ const ConnectionStats: React.FC<{
   incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
 }> = ({ currentRoom, isSharing, sharedAdapters, incomingAdapters }) => (
   <div className="grid grid-cols-2 gap-3">
-    <ConnectionStatusCard currentRoom={currentRoom} isSharing={isSharing} />
+    <ConnectionStatusCard
+      currentRoom={currentRoom}
+      isSharing={isSharing}
+      incomingAdapters={incomingAdapters}
+    />
     <SharingStatsCard
       sharedAdapters={sharedAdapters}
       incomingAdapters={incomingAdapters}
@@ -104,11 +115,28 @@ const ConnectionStats: React.FC<{
   </div>
 );
 
+// Helper function for more informative peer status
+const getPeerStatus = (
+  peersCount: number,
+  incomingAdaptersCount: number
+): string => {
+  if (peersCount > 0) {
+    return `${peersCount} peers`;
+  } else if (incomingAdaptersCount > 0) {
+    // When we receive adapters but peer count is 0, it means we have a special connection
+    // (like Docker peer) that shares data but isn't counted as a traditional peer
+    return "🔗 Connected (relay)";
+  } else {
+    return "0 peers";
+  }
+};
+
 // SRP: Card focado apenas no status de conexão
 const ConnectionStatusCard: React.FC<{
   currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
   isSharing: boolean;
-}> = ({ currentRoom, isSharing }) => (
+  incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
+}> = ({ currentRoom, isSharing, incomingAdapters }) => (
   <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20">
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
@@ -144,8 +172,17 @@ const ConnectionStatusCard: React.FC<{
         </p>
         <div
           className={`flex items-center text-[9px] ${
-            isSharing ? "text-green-400" : "text-gray-400"
+            isSharing
+              ? currentRoom?.peersCount === 0 && incomingAdapters.length > 0
+                ? "text-yellow-400" // Special connection color
+                : "text-green-400" // Normal connection color
+              : "text-gray-400"
           }`}
+          title={
+            currentRoom?.peersCount === 0 && incomingAdapters.length > 0
+              ? "Receiving data through a special peer (like Docker) that isn't counted in the peer list"
+              : undefined
+          }
         >
           <svg className="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -154,7 +191,12 @@ const ConnectionStatusCard: React.FC<{
               clipRule="evenodd"
             />
           </svg>
-          {isSharing ? `${currentRoom?.peersCount || 0} peers` : "Offline"}
+          {isSharing
+            ? getPeerStatus(
+                currentRoom?.peersCount || 0,
+                incomingAdapters.length
+              )
+            : "Offline"}
         </div>
       </div>
     </div>
@@ -226,6 +268,9 @@ const MainSharingSection: React.FC<{
   shouldShowReconnectPanel: ReturnType<
     typeof useP2PContext
   >["shouldShowReconnectPanel"];
+  downloadState: ReturnType<typeof useP2PContext>["downloadState"];
+  isDownloading: ReturnType<typeof useP2PContext>["isDownloading"];
+  getProgress: ReturnType<typeof useP2PContext>["getProgress"];
 }> = ({
   currentRoom,
   isSharing,
@@ -243,6 +288,9 @@ const MainSharingSection: React.FC<{
   reconnectToLastSession,
   resetP2PState,
   shouldShowReconnectPanel,
+  downloadState,
+  isDownloading,
+  getProgress,
 }) => (
   <div className="flex gap-3 justify-between">
     {/* KISS: Layout flexbox com distribuição igual de espaço */}
@@ -288,6 +336,9 @@ const MainSharingSection: React.FC<{
         currentRoom={currentRoom}
         onDownload={onDownload}
         isSharing={isSharing}
+        downloadState={downloadState}
+        isDownloading={isDownloading}
+        getProgress={getProgress}
       />
     </div>
   </div>

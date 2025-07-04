@@ -204,43 +204,38 @@ export class P2PConnectionService {
       return;
     }
 
-    const handleRoomJoined = (room: any) => {
-      const newRoom: P2PRoom = {
-        type: room.type || "local",
-        code: room.code,
-        peersCount: 0,
-        isActive: true,
-      };
-      this.updateStatus({
-        ...this.status,
+    const handleRoomJoined = (room: any): void => {
+      console.log(`🚪 [P2P-CONNECTION] Room joined event:`, room);
+      const newStatus: P2PGlobalStatus = {
         isConnected: true,
         isLoading: false,
-        currentRoom: newRoom,
-      });
+        currentRoom: {
+          type: room.type,
+          code: room.code,
+          peersCount: room.peersCount,
+          isActive: true,
+        },
+      };
+      this.updateStatus(newStatus);
     };
 
     const handlePeersUpdated = (count: number) => {
-      this.updateStatus({
-        ...this.status,
-        currentRoom: this.status.currentRoom
-          ? { ...this.status.currentRoom, peersCount: count }
-          : null,
-      });
-
+      console.log(`📡 [P2P-CONNECTION] Peers updated event: ${count} peers`);
+      this.status.currentRoom = this.status.currentRoom
+        ? { ...this.status.currentRoom, peersCount: count }
+        : null;
+      this.updateStatus({ ...this.status });
       this.callbacks.onPeersUpdated(count);
-
-      // Emit custom event for other components
-      window.dispatchEvent(
-        new CustomEvent("p2p-peers-updated", { detail: count })
-      );
     };
 
     const handleRoomLeft = () => {
-      this.updateStatus({
+      console.log(`🚪 [P2P-CONNECTION] Room left event`);
+      const newStatus: P2PGlobalStatus = {
         isConnected: false,
         isLoading: false,
         currentRoom: null,
-      });
+      };
+      this.updateStatus(newStatus);
     };
 
     const handleAdaptersAvailable = (data: {

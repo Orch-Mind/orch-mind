@@ -204,6 +204,11 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
       updateConnectionState(type as any, code, isSharing),
     onRestoreSharedAdapters: restoreSharedAdapters,
   });
+  // Mantém referência sempre atualizada
+  const autoReconnectRef = useRef<typeof autoReconnect | null>(null);
+  useEffect(() => {
+    autoReconnectRef.current = autoReconnect;
+  }, [autoReconnect]);
 
   // Initialize P2P service and connection service
   useEffect(() => {
@@ -221,7 +226,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
         connectionService.current = new P2PConnectionService({
           onStatusChange: setStatus,
           onPeersUpdated: (count: number) => {
-            // Additional peer update logic if needed
+            // This is now handled by onStatusChange emitting the full status
           },
           onAdaptersAvailable: adapterManager.addIncomingAdapters,
         });
@@ -302,8 +307,26 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
 
     await connectionService.current.disconnect();
     updateConnectionState(null, "", false);
-    autoReconnect.resetFlags();
-  }, [updateConnectionState, autoReconnect]);
+
+    // FIX: Directly update the status to provide immediate UI feedback
+    setStatus({
+      isConnected: false,
+      isLoading: false,
+      currentRoom: null,
+    });
+
+    // FIX: Add defensive check to prevent crash if autoReconnectRef is not ready
+    if (
+      autoReconnectRef.current &&
+      typeof autoReconnectRef.current.resetAutoReconnect === "function"
+    ) {
+      autoReconnectRef.current.resetAutoReconnect();
+    } else {
+      console.warn(
+        "[P2P-CONTEXT] Could not reset auto-reconnect flags on disconnect."
+      );
+    }
+  }, [updateConnectionState, setStatus]);
 
   // Context value with all interfaces combined
   const contextValue: P2PContextType = {
@@ -313,10 +336,13 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     disconnect,
 
     // Auto-reconnect interface
-    checkAndAutoReconnect: autoReconnect.checkAndAutoReconnect,
-    reconnectToLastSession: autoReconnect.reconnectToLastSession,
-    shouldShowReconnectPanel: autoReconnect.shouldShowReconnectPanel,
-    isAutoRestoring: autoReconnect.isAutoRestoring,
+    checkAndAutoReconnect: () =>
+      autoReconnectRef.current?.checkAndAutoReconnect?.() ?? Promise.resolve(),
+    reconnectToLastSession: () =>
+      autoReconnectRef.current?.reconnectToLastSession?.() ?? Promise.resolve(),
+    shouldShowReconnectPanel: () =>
+      autoReconnectRef.current?.shouldShowReconnectPanel?.() ?? false,
+    isAutoRestoring: autoReconnectRef.current?.isAutoRestoring ?? false,
 
     // Persistence interface
     persistedState: {
@@ -342,6 +368,18 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     onAdaptersAvailable,
     offAdaptersAvailable,
   };
+
+  // Debug exposure - only in development
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
+      (window as any).p2pContext = contextValue;
+      (window as any).p2pAdapterManager = adapterManager;
+      console.log("🔧 [P2P-CONTEXT] Debug exposure enabled: window.p2pContext");
+    }
+  }, [contextValue, adapterManager]);
 
   return (
     <P2PContext.Provider value={contextValue}>{children}</P2PContext.Provider>
