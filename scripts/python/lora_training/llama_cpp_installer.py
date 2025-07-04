@@ -12,7 +12,14 @@ import platform
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any
+
+def get_project_root() -> str:
+    """Get the project root directory (4 levels up from current file)."""
+    current_file = os.path.abspath(__file__)
+    # Go up 4 levels: lora_training -> python -> scripts -> orch-os
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+    return project_root
 
 def get_system_info() -> dict:
     """Get system information for optimal llama.cpp installation."""
@@ -40,9 +47,15 @@ def find_existing_llama_cpp() -> Optional[str]:
     """Find existing llama.cpp installation."""
     print("🔍 Searching for existing llama.cpp installation...")
     
-    # Common installation locations
+    # Get project root for absolute path checking
+    project_root = get_project_root()
+    
+    # Common installation locations (use absolute paths)
     search_paths = [
-        # Local project directory
+        # Project directory (absolute path)
+        os.path.join(project_root, "llama.cpp"),
+        
+        # Local project directory (relative paths for backward compatibility)
         "./llama.cpp",
         "../llama.cpp",
         "../../llama.cpp",
@@ -60,27 +73,32 @@ def find_existing_llama_cpp() -> Optional[str]:
     ]
     
     for path in search_paths:
-        if os.path.exists(path):
+        abs_path = os.path.abspath(path)
+        print(f"   🔍 Checking: {abs_path}")
+        
+        if os.path.exists(abs_path):
             # Check if it's a valid llama.cpp directory
             convert_scripts = [
-                os.path.join(path, "convert.py"),
-                os.path.join(path, "convert_hf_to_gguf.py"),
-                os.path.join(path, "convert-hf-to-gguf.py")
+                os.path.join(abs_path, "convert.py"),
+                os.path.join(abs_path, "convert_hf_to_gguf.py"),
+                os.path.join(abs_path, "convert-hf-to-gguf.py")
             ]
             
             # Check for main executable (CMake build)
             main_executables = [
-                os.path.join(path, "build", "bin", "llama-cli"),  # Modern name
-                os.path.join(path, "build", "bin", "main"),       # Legacy name
-                os.path.join(path, "build", "main"),              # Alternative location
-                os.path.join(path, "main")                        # Old make build
+                os.path.join(abs_path, "build", "bin", "llama-cli"),  # Modern name
+                os.path.join(abs_path, "build", "bin", "main"),       # Legacy name
+                os.path.join(abs_path, "build", "main"),              # Alternative location
+                os.path.join(abs_path, "main")                        # Old make build
             ]
             
             has_convert = any(os.path.exists(script) for script in convert_scripts)
             has_main = any(os.path.exists(exe) for exe in main_executables)
             
+            print(f"      • Convert script found: {has_convert}")
+            print(f"      • Main executable found: {has_main}")
+            
             if has_convert and has_main:
-                abs_path = os.path.abspath(path)
                 print(f"   ✅ Found llama.cpp at: {abs_path}")
                 return abs_path
     
@@ -188,27 +206,52 @@ def clone_and_build_llama_cpp(install_dir: str) -> bool:
     print(f"🔧 Building llama.cpp in: {install_dir}")
     
     try:
-        # Create installation directory
-        os.makedirs(install_dir, exist_ok=True)
-        
-        # Clone repository
-        print("   📥 Cloning llama.cpp repository...")
-        subprocess.run([
-            "git", "clone", 
-            "https://github.com/ggerganov/llama.cpp.git",
-            install_dir
-        ], check=True)
+        # Check if directory already exists and contains llama.cpp
+        if os.path.exists(install_dir):
+            # Check if it's already a valid llama.cpp directory
+            if os.path.exists(os.path.join(install_dir, "convert_hf_to_gguf.py")):
+                print("   ✅ Directory already contains llama.cpp - skipping clone")
+            else:
+                print("   🧹 Directory exists but is not llama.cpp - cleaning up...")
+                shutil.rmtree(install_dir)
+                os.makedirs(install_dir, exist_ok=True)
+                
+                # Clone repository
+                print("   📥 Cloning llama.cpp repository...")
+                subprocess.run([
+                    "git", "clone", 
+                    "https://github.com/ggerganov/llama.cpp.git",
+                    install_dir
+                ], check=True)
+        else:
+            # Create installation directory and clone
+            os.makedirs(install_dir, exist_ok=True)
+            
+            # Clone repository
+            print("   📥 Cloning llama.cpp repository...")
+            subprocess.run([
+                "git", "clone", 
+                "https://github.com/ggerganov/llama.cpp.git",
+                install_dir
+            ], check=True)
         
         # Change to llama.cpp directory
         original_cwd = os.getcwd()
         os.chdir(install_dir)
         
         try:
+            # Check if already built
+            build_dir = os.path.join(install_dir, "build")
+            llama_cli_path = os.path.join(build_dir, "bin", "llama-cli")
+            
+            if os.path.exists(llama_cli_path):
+                print("   ✅ llama.cpp already built - skipping build")
+                return True
+            
             # Build with CMake (modern llama.cpp uses CMake instead of make)
             system_info = get_system_info()
             
             print("   🔧 Creating build directory...")
-            build_dir = os.path.join(install_dir, "build")
             os.makedirs(build_dir, exist_ok=True)
             
             # Configure with CMake
@@ -280,7 +323,6 @@ def get_preferred_install_location() -> str:
     """Get the preferred installation location for llama.cpp."""
     # Try to install in project directory first
     try:
-        from real_adapter_manager import get_project_root
         project_root = get_project_root()
         install_dir = os.path.join(project_root, "llama.cpp")
         
@@ -422,6 +464,172 @@ def test_llama_cpp_installation(llama_cpp_dir: str) -> bool:
         return False
     except Exception as e:
         print(f"   ❌ Error testing main executable: {e}")
+        return False
+
+def install_llama_cpp_non_interactive() -> Optional[str]:
+    """Install llama.cpp automatically without user interaction."""
+    print("🚀 Installing llama.cpp automatically (non-interactive)...")
+    print("=" * 50)
+    
+    # First, try to find existing installation
+    existing_path = find_existing_llama_cpp()
+    if existing_path:
+        print(f"✅ Found existing llama.cpp installation: {existing_path}")
+        return existing_path
+    
+    # Get system information
+    system_info = get_system_info()
+    print(f"📊 System: {system_info['system']} {system_info['machine']}")
+    
+    if system_info["is_apple_silicon"]:
+        print("🍎 Detected Apple Silicon - will enable Metal support")
+    
+    # Check dependencies
+    if not system_info["has_git"]:
+        print("❌ Git is required but not found. Please install Git first.")
+        return None
+    
+    # Install system dependencies (non-interactive)
+    if system_info["system"] == "darwin":
+        if not install_dependencies_macos_non_interactive():
+            return None
+    elif system_info["system"] == "linux":
+        if not install_dependencies_linux_non_interactive():
+            return None
+    else:
+        print(f"⚠️ Unsupported system: {system_info['system']}")
+        print("Please install llama.cpp manually from: https://github.com/ggerganov/llama.cpp")
+        return None
+    
+    # Get installation location
+    install_dir = get_preferred_install_location()
+    print(f"📂 Installation directory: {install_dir}")
+    
+    # Clone and build
+    if clone_and_build_llama_cpp(install_dir):
+        print(f"\n🎉 llama.cpp installed successfully!")
+        print(f"📂 Location: {install_dir}")
+        return install_dir
+    else:
+        print(f"\n❌ Failed to install llama.cpp")
+        return None
+
+def install_dependencies_macos_non_interactive() -> bool:
+    """Install required dependencies on macOS without user interaction."""
+    print("📦 Installing macOS dependencies (non-interactive)...")
+    
+    try:
+        # Check if Xcode command line tools are installed
+        result = subprocess.run(
+            ["xcode-select", "--print-path"],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print("   ⚠️ Xcode command line tools not found")
+            print("   💡 Please install manually: xcode-select --install")
+            return False
+        else:
+            print("   ✅ Xcode command line tools already installed")
+        
+        # Check if Homebrew is available
+        if shutil.which("brew") is None:
+            print("   ⚠️ Homebrew not found")
+            print("   💡 Please install manually: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
+            return False
+        else:
+            print("   ✅ Homebrew already available")
+        
+        # Install cmake if not available
+        if shutil.which("cmake") is None:
+            print("   📥 Installing cmake...")
+            result = subprocess.run(
+                ["brew", "install", "cmake"], 
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                print("   ✅ cmake installed")
+            else:
+                print("   ❌ Failed to install cmake")
+                return False
+        else:
+            print("   ✅ cmake already available")
+        
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        print(f"   ❌ Failed to install dependencies: {e}")
+        return False
+
+def install_dependencies_linux_non_interactive() -> bool:
+    """Install required dependencies on Linux without user interaction."""
+    print("📦 Installing Linux dependencies (non-interactive)...")
+    
+    try:
+        # Detect package manager
+        if shutil.which("apt-get"):
+            # Debian/Ubuntu
+            print("   📥 Installing via apt-get...")
+            result1 = subprocess.run([
+                "sudo", "apt-get", "update"
+            ], capture_output=True, text=True)
+            
+            if result1.returncode != 0:
+                print("   ❌ Failed to update package list")
+                return False
+            
+            result2 = subprocess.run([
+                "sudo", "apt-get", "install", "-y",
+                "build-essential", "cmake", "git"
+            ], capture_output=True, text=True)
+            
+            if result2.returncode != 0:
+                print("   ❌ Failed to install packages")
+                return False
+            
+        elif shutil.which("yum"):
+            # RHEL/CentOS
+            print("   📥 Installing via yum...")
+            result1 = subprocess.run([
+                "sudo", "yum", "groupinstall", "-y", "Development Tools"
+            ], capture_output=True, text=True)
+            
+            if result1.returncode != 0:
+                print("   ❌ Failed to install Development Tools")
+                return False
+            
+            result2 = subprocess.run([
+                "sudo", "yum", "install", "-y", "cmake", "git"
+            ], capture_output=True, text=True)
+            
+            if result2.returncode != 0:
+                print("   ❌ Failed to install cmake and git")
+                return False
+            
+        elif shutil.which("pacman"):
+            # Arch Linux
+            print("   📥 Installing via pacman...")
+            result = subprocess.run([
+                "sudo", "pacman", "-S", "--noconfirm",
+                "base-devel", "cmake", "git"
+            ], capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print("   ❌ Failed to install packages")
+                return False
+            
+        else:
+            print("   ⚠️ Unknown package manager")
+            print("   💡 Please install manually: build-essential/equivalent, cmake, git")
+            return False
+        
+        print("   ✅ Dependencies installed")
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        print(f"   ❌ Failed to install dependencies: {e}")
         return False
 
 if __name__ == "__main__":

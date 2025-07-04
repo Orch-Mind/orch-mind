@@ -1096,7 +1096,7 @@ For Linux:
   }
 
   /**
-   * Get the path to the real adapter manager script
+   * Get the path to the adapter manager bridge script (replaces real_adapter_manager.py)
    */
   private getRealAdapterManagerPath(): string {
     // In development mode, use the source path
@@ -1106,7 +1106,7 @@ For Linux:
         "scripts",
         "python",
         "lora_training",
-        "real_adapter_manager.py"
+        "adapter_manager_bridge.py"
       );
     }
 
@@ -1118,7 +1118,7 @@ For Linux:
         "scripts",
         "python",
         "lora_training",
-        "real_adapter_manager.py"
+        "adapter_manager_bridge.py"
       ),
       // Development fallback
       path.join(
@@ -1126,7 +1126,7 @@ For Linux:
         "scripts",
         "python",
         "lora_training",
-        "real_adapter_manager.py"
+        "adapter_manager_bridge.py"
       ),
       // Alternative development path
       path.join(
@@ -1137,14 +1137,14 @@ For Linux:
         "scripts",
         "python",
         "lora_training",
-        "real_adapter_manager.py"
+        "adapter_manager_bridge.py"
       ),
     ];
 
     for (const scriptPath of possiblePaths) {
       console.log(`[LoRA] Trying path: ${scriptPath}`);
       if (fsSync.existsSync(scriptPath)) {
-        console.log(`[LoRA] Found real adapter manager at: ${scriptPath}`);
+        console.log(`[LoRA] Found adapter manager bridge at: ${scriptPath}`);
         return scriptPath;
       } else {
         console.log(`[LoRA] Path not found: ${scriptPath}`);
@@ -1157,7 +1157,7 @@ For Linux:
       "scripts",
       "python",
       "lora_training",
-      "real_adapter_manager.py"
+      "adapter_manager_bridge.py"
     );
     console.log(`[LoRA] Using default path: ${defaultPath}`);
     return defaultPath;
