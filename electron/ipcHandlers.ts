@@ -444,16 +444,18 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       console.log("🦙 [IPC] Fetching installed Ollama models...");
       const models = await ollamaClient.getInstalledModels();
 
-      // Convert to expected format
+      // Return models in their original format with numeric size
       const formattedModels = models.map((model) => ({
-        id: model.name,
         name: model.name,
-        description: `${model.details?.family || "Unknown"} model`,
-        size: `${Math.round(model.size / 1024 ** 3)}GB`,
-        category: model.name.includes("embed") ? "embedding" : "main",
+        size: model.size, // ✅ Keep as number (bytes)
+        digest: model.digest || "",
+        modified_at: model.modified_at || new Date().toISOString(),
+        details: model.details, // ✅ Keep original details object
       }));
 
-      console.log(`🦙 [IPC] Found ${formattedModels.length} installed models`);
+      console.log(
+        `🦙 [IPC] Found ${formattedModels.length} installed models with real sizes`
+      );
       return formattedModels;
     } catch (error) {
       console.error("🦙 [IPC] Error listing Ollama models:", error);

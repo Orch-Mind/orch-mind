@@ -7,6 +7,15 @@ import { DownloadInfo, OllamaModel } from "../types/ollama.types";
 import { MODEL_EVENTS, modelEvents } from "../utils/modelEvents";
 import { getInitialModels, updateModelsWithStatus } from "../utils/modelUtils";
 
+// Interface for detailed model info
+interface OllamaModelDetails {
+  name: string;
+  size: number;
+  digest: string;
+  modified_at: string;
+  details?: any;
+}
+
 /**
  * Custom hook to manage Ollama models state
  * Single Responsibility: Manage models data and operations
@@ -17,6 +26,9 @@ export const useOllamaModels = () => {
     getInitialModels()
   );
   const [installedModels, setInstalledModels] = useState<string[]>([]);
+  const [installedModelsDetails, setInstalledModelsDetails] = useState<
+    OllamaModelDetails[]
+  >([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +47,38 @@ export const useOllamaModels = () => {
       }
       setError(null);
 
-      // Note: Ollama lists models as "installed" as soon as download starts
-      // This is by design to support resuming interrupted downloads
+      // Fetch installed models (basic list for compatibility)
       const modelsFromApi = await OllamaService.fetchInstalledModels();
+
+      // Also fetch detailed model info through Electron API
+      let detailedModels: OllamaModelDetails[] = [];
+      try {
+        if (window.electronAPI?.listModels) {
+          const electronModels = await window.electronAPI.listModels();
+          console.log(
+            "📊 [useOllamaModels] Raw Electron models:",
+            electronModels
+          );
+
+          detailedModels = electronModels.map((model: any) => ({
+            name: model.name,
+            size: model.size || 0,
+            digest: model.digest || "",
+            modified_at: model.modified_at || new Date().toISOString(),
+            details: model.details,
+          }));
+        }
+      } catch (error) {
+        console.warn("Failed to get detailed model info:", error);
+      }
+
+      console.log(
+        "📊 [useOllamaModels] Processed detailed models:",
+        detailedModels
+      );
+
+      // Store detailed model information
+      setInstalledModelsDetails(detailedModels);
 
       // Merge API results with existing state to prevent UI flicker
       // This handles the race condition where the API hasn't yet registered the new model
@@ -51,6 +92,7 @@ export const useOllamaModels = () => {
         "Não foi possível conectar ao Ollama. Verifique se está rodando."
       );
       setInstalledModels([]);
+      setInstalledModelsDetails([]);
     } finally {
       if (isInitialLoad) {
         setIsLoadingModels(false);
@@ -147,16 +189,33 @@ export const useOllamaModels = () => {
     };
   });
 
-  // Add installed models that aren't in the static list
+  // Add installed models that aren't in the static list with REAL sizes
   const dynamicModels = installedModels
     .filter((modelId) => !availableModels.find((m) => m.id === modelId))
     .map((modelId) => {
       const isEmbedding = modelId.includes("embed");
+
+      // Find detailed info for this model
+      const modelDetails = installedModelsDetails.find(
+        (detail) => detail.name === modelId
+      );
+
+      // Format size from bytes to human readable
+      let formattedSize = "Unknown";
+      if (modelDetails && modelDetails.size > 0) {
+        const sizeInGB = modelDetails.size / (1024 * 1024 * 1024);
+        formattedSize = `${sizeInGB.toFixed(1)}GB`;
+      }
+
+      console.log(
+        `📊 [useOllamaModels] Dynamic model ${modelId}: ${modelDetails?.size} bytes → ${formattedSize}`
+      );
+
       return {
         id: modelId,
         name: modelId.split(":")[0], // Remove tag
         description: "Installed model",
-        size: "Unknown",
+        size: formattedSize, // ✅ Now uses REAL size!
         category: isEmbedding ? "embedding" : "main",
         isDownloaded: true,
         isDownloading: false,
