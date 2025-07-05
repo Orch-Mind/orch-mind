@@ -12,6 +12,7 @@ interface ModelListProps {
   onDownload: (modelId: string) => void;
   onCancelDownload: (modelId: string) => void;
   onRemove: (modelId: string) => void;
+  hasActiveDownloads?: boolean;
 }
 
 /**
@@ -25,6 +26,7 @@ export const ModelList: React.FC<ModelListProps> = ({
   onDownload,
   onCancelDownload,
   onRemove,
+  hasActiveDownloads = false,
 }) => {
   if (models.length === 0) return null;
 
@@ -41,6 +43,7 @@ export const ModelList: React.FC<ModelListProps> = ({
             onDownload={onDownload}
             onCancelDownload={onCancelDownload}
             onRemove={onRemove}
+            hasActiveDownloads={hasActiveDownloads}
           />
         ))}
       </div>

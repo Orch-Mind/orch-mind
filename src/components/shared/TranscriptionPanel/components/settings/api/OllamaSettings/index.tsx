@@ -12,7 +12,6 @@ import { DEFAULT_STORAGE_PATH } from "./constants/models.constants";
 
 // Hooks
 import { useModelDownload } from "./hooks/useModelDownload";
-import { useModelStatus } from "./hooks/useModelStatus";
 import { useOllamaModels } from "./hooks/useOllamaModels";
 
 // Components
@@ -89,6 +88,9 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
     [setOllamaEmbeddingModel]
   );
 
+  // Check if there are active downloads
+  const hasActiveDownloads = downloadingModels.size > 0;
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -99,7 +101,7 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
           {isRefreshing && (
             <div className="animate-spin inline-block w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full ml-2"></div>
           )}
-          {downloadingModels.size > 0 && (
+          {hasActiveDownloads && (
             <span className="text-[10px] text-yellow-400">
               ({downloadingModels.size} downloading)
             </span>
@@ -119,10 +121,10 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
             console.log("[OllamaSettings] isRefreshing:", isRefreshing);
             refreshData();
           }}
-          disabled={isRefreshing || downloadingModels.size > 0}
+          disabled={isRefreshing || hasActiveDownloads}
           className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded px-2 py-1 transition-colors disabled:opacity-50 text-xs"
           title={
-            downloadingModels.size > 0
+            hasActiveDownloads
               ? "Wait for downloads to complete"
               : "Refresh models"
           }
@@ -139,6 +141,24 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
             <div>
               <h4 className="text-red-400 font-medium text-[10px]">Erro</h4>
               <p className="text-red-400/70 text-[10px]">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Downloads Warning */}
+      {hasActiveDownloads && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+          <div className="flex items-center">
+            <div className="animate-spin w-3 h-3 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full mr-1"></div>
+            <div>
+              <h4 className="text-yellow-400 font-medium text-[10px]">
+                Download in Progress
+              </h4>
+              <p className="text-yellow-400/70 text-[10px]">
+                Other downloads and deletions are temporarily disabled to
+                prevent conflicts
+              </p>
             </div>
           </div>
         </div>
@@ -161,6 +181,7 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
         onCancelDownload={cancelDownload}
         onRemove={removeModel}
         disabled={isLoadingModels}
+        hasActiveDownloads={hasActiveDownloads}
       />
     </div>
   );

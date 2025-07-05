@@ -24,6 +24,7 @@ interface ModelRadioSelectorProps {
   disabled?: boolean;
   isMainLoading?: boolean;
   isEmbeddingLoading?: boolean;
+  hasActiveDownloads?: boolean;
 }
 
 /**
@@ -43,6 +44,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
   disabled = false,
   isMainLoading = false,
   isEmbeddingLoading = false,
+  hasActiveDownloads = false,
 }) => {
   const renderModelOption = (
     model: OllamaModel,
@@ -73,22 +75,42 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
       }
 
       if (model.isDownloaded) {
+        const isDisabled = hasActiveDownloads && !model.isDownloading;
         return (
           <button
-            onClick={(e) => handleAction(e, () => onRemove(model.id))}
-            className="p-1.5 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
-            title="Remove model"
+            onClick={(e) =>
+              !isDisabled && handleAction(e, () => onRemove(model.id))
+            }
+            disabled={isDisabled}
+            className={`p-1.5 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors ${
+              isDisabled ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            title={
+              isDisabled
+                ? "Wait for active downloads to complete"
+                : "Remove model"
+            }
           >
             <TrashIcon className="w-4 h-4" />
           </button>
         );
       }
 
+      const isDisabled = hasActiveDownloads;
       return (
         <button
-          onClick={(e) => handleAction(e, () => onDownload(model.id))}
-          className="p-1.5 rounded-md bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 transition-colors"
-          title="Download model"
+          onClick={(e) =>
+            !isDisabled && handleAction(e, () => onDownload(model.id))
+          }
+          disabled={isDisabled}
+          className={`p-1.5 rounded-md bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 transition-colors ${
+            isDisabled ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+          title={
+            isDisabled
+              ? "Wait for active downloads to complete"
+              : "Download model"
+          }
         >
           <CloudArrowDownIcon className="w-4 h-4" />
         </button>

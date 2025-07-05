@@ -85,10 +85,13 @@ export const useModelDownload = ({
         // NOVO: Verificar se QUALQUER modelo está sendo baixado
         // Isso previne downloads simultâneos que podem causar race conditions
         if (downloadingModels && downloadingModels.size > 0) {
+          const downloadingModel = Array.from(downloadingModels.keys())[0];
           console.warn(
-            `[useModelDownload] Already downloading a model. Please wait.`
+            `[useModelDownload] Cannot start download of ${modelId}. Model ${downloadingModel} is currently downloading.`
           );
-          setError?.("Already downloading a model. Please wait.");
+          setError?.(
+            `Cannot start download. Please wait for "${downloadingModel}" to finish downloading first.`
+          );
           return;
         }
 

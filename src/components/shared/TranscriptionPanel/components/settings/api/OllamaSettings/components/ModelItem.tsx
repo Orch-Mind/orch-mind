@@ -16,6 +16,7 @@ interface ModelItemProps {
   onDownload: (modelId: string) => void;
   onCancelDownload: (modelId: string) => void;
   onRemove: (modelId: string) => void;
+  hasActiveDownloads?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export const ModelItem: React.FC<ModelItemProps> = ({
   onDownload,
   onCancelDownload,
   onRemove,
+  hasActiveDownloads = false,
 }) => {
   const isDownloaded = model.isDownloaded;
   const isDownloading = model.isDownloading;
@@ -66,8 +68,17 @@ export const ModelItem: React.FC<ModelItemProps> = ({
           {isDownloaded ? (
             <button
               onClick={() => onRemove(model.id)}
-              className="bg-red-600/20 hover:bg-red-500/30 text-red-400 rounded p-1 transition-colors"
-              title="Remove Model"
+              disabled={hasActiveDownloads && !isDownloading}
+              className={`bg-red-600/20 hover:bg-red-500/30 text-red-400 rounded p-1 transition-colors ${
+                hasActiveDownloads && !isDownloading
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+              title={
+                hasActiveDownloads && !isDownloading
+                  ? "Wait for active downloads to complete"
+                  : "Remove Model"
+              }
             >
               <TrashIcon className="w-3 h-3" />
             </button>
@@ -82,8 +93,15 @@ export const ModelItem: React.FC<ModelItemProps> = ({
           ) : (
             <button
               onClick={() => onDownload(model.id)}
-              className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded p-1 transition-colors"
-              title="Download Model"
+              disabled={hasActiveDownloads}
+              className={`bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded p-1 transition-colors ${
+                hasActiveDownloads ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              title={
+                hasActiveDownloads
+                  ? "Wait for active downloads to complete"
+                  : "Download Model"
+              }
             >
               <ArrowDownTrayIcon className="w-3 h-3" />
             </button>
