@@ -6,7 +6,7 @@ import "./ShareSettings/styles.css";
 
 // SRP: Import only download-related components
 import { useP2PContext } from "../../context/P2PContext";
-import { AvailableAdaptersComponent } from "./ShareSettings/components";
+import { DownloadAdaptersList } from "./components/DownloadAdaptersList";
 
 /**
  * Download Settings Component
@@ -20,7 +20,6 @@ const DownloadSettings: React.FC = () => {
     // Download-specific state and functions
     incomingAdapters,
     downloadAdapter,
-    clearIncomingAdapters,
     // Download progress state and functions
     downloadState,
     isDownloading,
@@ -28,34 +27,33 @@ const DownloadSettings: React.FC = () => {
   } = useP2PContext();
 
   return (
-    <div className="space-y-3 max-w-7xl mx-auto">
+    <div className="space-y-4 max-w-6xl mx-auto p-4">
       <DownloadHeader />
       <ConnectionStatus
         currentRoom={status.currentRoom}
         isConnected={status.isConnected}
         incomingAdapters={incomingAdapters}
       />
-      <DownloadSection
-        currentRoom={status.currentRoom}
-        isConnected={status.isConnected}
-        incomingAdapters={incomingAdapters}
+      <DownloadAdaptersList
+        adapters={incomingAdapters}
         onDownload={downloadAdapter}
+        isConnected={status.isConnected}
+        currentRoom={status.currentRoom}
         downloadState={downloadState}
         isDownloading={isDownloading}
         getProgress={getProgress}
       />
-      <DownloadInfoFooter currentRoom={status.currentRoom} />
     </div>
   );
 };
 
 // SRP: Header component focused only on download information
 const DownloadHeader: React.FC = () => (
-  <div className="text-center mb-4">
-    <h2 className="text-lg font-semibold text-cyan-400 mb-2">
+  <div className="text-center mb-6">
+    <h2 className="text-xl font-bold text-cyan-400 mb-2">
       📥 Adapter Downloads
     </h2>
-    <p className="text-xs text-gray-400">
+    <p className="text-sm text-gray-400">
       Discover and download LoRA adapters shared by other users in your P2P
       network
     </p>
@@ -70,11 +68,26 @@ const ConnectionStatus: React.FC<{
 }> = ({ currentRoom, isConnected, incomingAdapters }) => {
   if (!isConnected) {
     return (
-      <div className="bg-yellow-900/20 border border-yellow-400/30 rounded-md p-3 text-center">
-        <p className="text-yellow-400 text-sm">
-          🔌 Not connected to P2P network
-        </p>
-        <p className="text-yellow-300 text-xs mt-1">
+      <div className="bg-yellow-900/20 border border-yellow-400/30 rounded-lg p-4 text-center">
+        <div className="flex items-center justify-center mb-2">
+          <svg
+            className="w-6 h-6 text-yellow-400 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+          <p className="text-yellow-400 font-medium">
+            Not connected to P2P network
+          </p>
+        </div>
+        <p className="text-yellow-300 text-sm">
           Go to the Share tab to connect and discover adapters
         </p>
       </div>
@@ -82,103 +95,36 @@ const ConnectionStatus: React.FC<{
   }
 
   return (
-    <div className="bg-green-900/20 border border-green-400/30 rounded-md p-3 text-center">
-      <p className="text-green-400 text-sm">
-        ✅ Connected to{" "}
-        {currentRoom?.type === "general"
-          ? "Community"
-          : currentRoom?.type === "local"
-          ? "Local Network"
-          : `Room ${currentRoom?.code}`}
-      </p>
-      <p className="text-green-300 text-xs mt-1">
+    <div className="bg-green-900/20 border border-green-400/30 rounded-lg p-4 text-center">
+      <div className="flex items-center justify-center mb-2">
+        <svg
+          className="w-6 h-6 text-green-400 mr-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <p className="text-green-400 font-medium">
+          Connected to{" "}
+          {currentRoom?.type === "general"
+            ? "Community"
+            : currentRoom?.type === "local"
+            ? "Local Network"
+            : `Room ${currentRoom?.code}`}
+        </p>
+      </div>
+      <p className="text-green-300 text-sm">
         {incomingAdapters.length} adapter
         {incomingAdapters.length !== 1 ? "s" : ""} available for download
       </p>
     </div>
   );
 };
-
-// SRP: Main download section component
-const DownloadSection: React.FC<{
-  currentRoom: any;
-  isConnected: boolean;
-  incomingAdapters: any[];
-  onDownload: (adapter: any) => void;
-  downloadState: any;
-  isDownloading: (adapterName: string) => boolean;
-  getProgress: (adapterName: string) => any;
-}> = ({
-  currentRoom,
-  isConnected,
-  incomingAdapters,
-  onDownload,
-  downloadState,
-  isDownloading,
-  getProgress,
-}) => (
-  <div className="bg-black/20 backdrop-blur-sm rounded-md p-4 border border-cyan-400/20">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-sm font-semibold text-cyan-400">
-        🎁 Available Adapters
-      </h3>
-      <span className="text-xs text-gray-400">
-        {incomingAdapters.length} available
-      </span>
-    </div>
-
-    <AvailableAdaptersComponent
-      adapters={incomingAdapters}
-      currentRoom={currentRoom}
-      onDownload={onDownload}
-      isSharing={isConnected}
-      downloadState={downloadState}
-      isDownloading={isDownloading}
-      getProgress={getProgress}
-    />
-  </div>
-);
-
-// SRP: Info footer component for download context
-const DownloadInfoFooter: React.FC<{ currentRoom: any }> = ({
-  currentRoom,
-}) => (
-  <div className="bg-black/10 backdrop-blur-sm rounded-md p-3 border border-cyan-400/10">
-    <h4 className="text-xs font-medium text-cyan-300 mb-2">
-      ℹ️ Download Information
-    </h4>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-400">
-      <div>
-        <span className="text-cyan-400">•</span> Adapters are downloaded
-        directly from peers
-      </div>
-      <div>
-        <span className="text-cyan-400">•</span> Progress is shown in real-time
-      </div>
-      <div>
-        <span className="text-cyan-400">•</span> Downloaded adapters appear in
-        Training tab
-      </div>
-      <div>
-        <span className="text-cyan-400">•</span> All downloads include integrity
-        verification
-      </div>
-    </div>
-    {currentRoom && (
-      <div className="mt-2 pt-2 border-t border-cyan-400/20">
-        <p className="text-xs text-gray-500">
-          Current room:{" "}
-          <span className="text-cyan-400">
-            {currentRoom.type === "general"
-              ? "Community Network"
-              : currentRoom.type === "local"
-              ? "Local Network"
-              : `Private Room ${currentRoom.code}`}
-          </span>
-        </p>
-      </div>
-    )}
-  </div>
-);
 
 export default DownloadSettings;

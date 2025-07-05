@@ -47,6 +47,7 @@ export interface MergeResult {
 export class LoRAMergeService {
   private readonly mergeDir: string;
   private readonly pythonScriptPath: string;
+  private readonly adapterRegistry: any;
 
   constructor() {
     const projectRoot = this.getProjectRoot();
@@ -59,9 +60,180 @@ export class LoRAMergeService {
       "merge_lora.py"
     );
 
+    // Import AdapterRegistry for path resolution with fallback
+    try {
+      // Try different possible paths for AdapterRegistry
+      let AdapterRegistry;
+      try {
+        // Development path
+        AdapterRegistry =
+          require("../../handlers/p2p/AdapterRegistry").AdapterRegistry;
+      } catch {
+        try {
+          // Build path - try absolute from project root
+          const registryPath = path.join(
+            __dirname,
+            "..",
+            "..",
+            "handlers",
+            "p2p",
+            "AdapterRegistry"
+          );
+          AdapterRegistry = require(registryPath).AdapterRegistry;
+        } catch {
+          // Fallback - create a minimal adapter registry
+          console.warn(
+            "[LoRAMergeService] AdapterRegistry not found, using fallback implementation"
+          );
+          AdapterRegistry = this.createFallbackAdapterRegistry();
+        }
+      }
+      this.adapterRegistry = new AdapterRegistry();
+    } catch (error) {
+      console.warn(
+        "[LoRAMergeService] Failed to initialize AdapterRegistry:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+      const FallbackRegistry = this.createFallbackAdapterRegistry();
+      this.adapterRegistry = new FallbackRegistry();
+    }
+
     console.log(`[LoRAMergeService] Using project root: ${projectRoot}`);
     console.log(`[LoRAMergeService] Merge directory: ${this.mergeDir}`);
     console.log(`[LoRAMergeService] Python script: ${this.pythonScriptPath}`);
+  }
+
+  /**
+   * Create a fallback adapter registry when the real one is not available
+   */
+  private createFallbackAdapterRegistry() {
+    return class FallbackAdapterRegistry {
+      async findModelPath(adapterName: string): Promise<string | null> {
+        console.warn(
+          `[FallbackAdapterRegistry] Attempting to find path for: ${adapterName}`
+        );
+
+        // Try to find adapter in common locations
+        const projectRoot = process.cwd();
+
+        // Remove _adapter suffix if present for directory search
+        const cleanAdapterName = adapterName.replace(/_adapter$/, "");
+
+        // CRITICAL FIX: Handle the exact naming pattern found in filesystem
+        // System saves as: "gemma3-adapter-1751636717504_adapter" (hyphens + _adapter suffix)
+        // Frontend sends: "gemma3_adapter_1751636717504_adapter" (underscores + _adapter suffix)
+
+        const possiblePaths = [
+          // 1. Direct name match (frontend format with underscores)
+          path.join(projectRoot, "lora_adapters", "weights", adapterName),
+          path.join(projectRoot, "lora_adapters", "registry", adapterName),
+
+          // 2. CRITICAL: Convert underscore to hyphen pattern (filesystem format)
+          // "gemma3_adapter_1751636717504_adapter" → "gemma3-adapter-1751636717504_adapter"
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "weights",
+            adapterName.replace(/_/g, "-")
+          ),
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "registry",
+            adapterName.replace(/_/g, "-")
+          ),
+
+          // 3. Clean name variations (without _adapter suffix)
+          path.join(projectRoot, "lora_adapters", "weights", cleanAdapterName),
+          path.join(projectRoot, "lora_adapters", "registry", cleanAdapterName),
+
+          // 4. Clean name with hyphens (most likely match)
+          // "gemma3_adapter_1751636717504" → "gemma3-adapter-1751636717504_adapter"
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "weights",
+            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
+          ),
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "registry",
+            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
+          ),
+
+          // 5. Clean name with hyphens (without suffix)
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "weights",
+            cleanAdapterName.replace(/_/g, "-")
+          ),
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "registry",
+            cleanAdapterName.replace(/_/g, "-")
+          ),
+
+          // 6. Add _adapter suffix to clean names
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "weights",
+            `${cleanAdapterName}_adapter`
+          ),
+          path.join(
+            projectRoot,
+            "lora_adapters",
+            "registry",
+            `${cleanAdapterName}_adapter`
+          ),
+        ];
+
+        console.log(
+          `[FallbackAdapterRegistry] Searching in ${possiblePaths.length} possible locations for: ${adapterName}`
+        );
+        console.log(
+          `[FallbackAdapterRegistry] Clean name: ${cleanAdapterName}`
+        );
+
+        for (const adapterDir of possiblePaths) {
+          try {
+            // Check for different adapter file types
+            const possibleFiles = [
+              path.join(adapterDir, "adapter_model.safetensors"),
+              path.join(adapterDir, "adapter_model.bin"),
+              path.join(adapterDir, "pytorch_adapter.bin"),
+              path.join(adapterDir, "adapter_model.pt"),
+            ];
+
+            for (const filePath of possibleFiles) {
+              try {
+                await fs.access(filePath);
+                console.log(
+                  `[FallbackAdapterRegistry] Found adapter at: ${filePath}`
+                );
+                return filePath;
+              } catch {
+                // Continue to next file
+              }
+            }
+          } catch {
+            // Continue to next directory
+          }
+        }
+
+        console.warn(
+          `[FallbackAdapterRegistry] Adapter not found: ${adapterName}`
+        );
+        console.warn(
+          `[FallbackAdapterRegistry] Searched directories:`,
+          possiblePaths.slice(0, 5).map((p) => path.basename(p))
+        );
+        return null;
+      }
+    };
   }
 
   /**
@@ -112,7 +284,7 @@ export class LoRAMergeService {
    */
   private async validateAdaptersForMerge(
     adapters: MergeRequest["adapters"]
-  ): Promise<void> {
+  ): Promise<MergeRequest["adapters"]> {
     if (adapters.length < 2) {
       throw new Error("Pelo menos 2 adapters são necessários para fusão");
     }
@@ -132,22 +304,48 @@ export class LoRAMergeService {
       );
     }
 
-    // Verificar se todos os adapters existem
+    // Resolver caminhos reais dos adapters usando AdapterRegistry
+    const resolvedAdapters = [];
     for (const adapter of adapters) {
-      const configPath = path.join(adapter.path, "adapter_config.json");
+      console.log(
+        `🔍 [LoRAMergeService] Resolving path for adapter: ${adapter.name}`
+      );
+
+      // Use AdapterRegistry to find the real adapter path
+      const adapterPath = await this.adapterRegistry.findModelPath(
+        adapter.name
+      );
+
+      if (!adapterPath) {
+        throw new Error(`Adapter não encontrado: ${adapter.name}`);
+      }
+
+      // Get the directory containing the adapter
+      const adapterDir = path.dirname(adapterPath);
+
+      // Verify adapter_config.json exists in the directory
+      const configPath = path.join(adapterDir, "adapter_config.json");
       try {
         await fs.access(configPath);
-        console.log(`✅ Adapter validated: ${adapter.name}`);
+        console.log(`✅ Adapter validated: ${adapter.name} at ${adapterDir}`);
+
+        // Update adapter with resolved path
+        resolvedAdapters.push({
+          ...adapter,
+          path: adapterDir,
+        });
       } catch (error) {
         throw new Error(
-          `Adapter não encontrado: ${adapter.name} em ${adapter.path}`
+          `Adapter configuration not found: ${adapter.name} (missing adapter_config.json)`
         );
       }
     }
 
     console.log(
-      `🔍 All ${adapters.length} adapters validated for base model: ${baseModel}`
+      `🔍 All ${resolvedAdapters.length} adapters validated for base model: ${baseModel}`
     );
+
+    return resolvedAdapters;
   }
 
   /**
@@ -185,8 +383,16 @@ export class LoRAMergeService {
     console.log(`🔄 Starting LoRA adapter merge: ${request.outputName}`);
 
     try {
-      // Validar adapters
-      await this.validateAdaptersForMerge(request.adapters);
+      // Validar adapters e resolver caminhos
+      const resolvedAdapters = await this.validateAdaptersForMerge(
+        request.adapters
+      );
+
+      // Update request with resolved paths
+      const resolvedRequest = {
+        ...request,
+        adapters: resolvedAdapters,
+      };
 
       // Criar diretório de saída
       await fs.mkdir(this.mergeDir, { recursive: true });
@@ -195,7 +401,10 @@ export class LoRAMergeService {
       await fs.mkdir(outputPath, { recursive: true });
 
       // Criar arquivo de configuração
-      const configPath = await this.createMergeConfig(request, outputPath);
+      const configPath = await this.createMergeConfig(
+        resolvedRequest,
+        outputPath
+      );
 
       // Executar script Python
       console.log(`🐍 Executing merge script with config: ${configPath}`);
@@ -214,17 +423,17 @@ export class LoRAMergeService {
 
       // Criar metadados de fusão
       const metadata: AdapterMergeMetadata = {
-        sourceAdapters: request.adapters.map((adapter) => ({
+        sourceAdapters: resolvedRequest.adapters.map((adapter) => ({
           id: crypto.randomBytes(16).toString("hex"),
           name: adapter.name,
           baseModel: adapter.baseModel,
           checksum: adapter.checksum,
           timestamp: new Date().toISOString(),
         })),
-        mergeStrategy: request.strategy,
+        mergeStrategy: resolvedRequest.strategy,
         mergeTimestamp: new Date().toISOString(),
         mergedBy: "Orch-OS",
-        targetBaseModel: request.targetBaseModel,
+        targetBaseModel: resolvedRequest.targetBaseModel,
         mergedAdapterPath: outputPath,
         mergedChecksum,
       };
@@ -232,6 +441,14 @@ export class LoRAMergeService {
       // Salvar metadados
       const metadataPath = path.join(outputPath, "orch_merge_metadata.json");
       await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+      // CRITICAL FIX: Register merged adapter in the main adapter system
+      // This allows the deploy system to find the merged adapter
+      await this.registerMergedAdapterInMainSystem(
+        request.outputName,
+        outputPath,
+        metadata
+      );
 
       console.log(`✅ LoRA merge completed: ${request.outputName}`);
       console.log(`📁 Output path: ${outputPath}`);
@@ -309,6 +526,118 @@ export class LoRAMergeService {
   private async calculateFileChecksum(filePath: string): Promise<string> {
     const fileBuffer = await fs.readFile(filePath);
     return crypto.createHash("sha256").update(fileBuffer).digest("hex");
+  }
+
+  /**
+   * Register merged adapter in the main adapter system for deployment
+   */
+  private async registerMergedAdapterInMainSystem(
+    adapterName: string,
+    mergedPath: string,
+    metadata: AdapterMergeMetadata
+  ): Promise<void> {
+    try {
+      const projectRoot = this.getProjectRoot();
+
+      // Create main adapter system directories
+      const weightsDir = path.join(projectRoot, "lora_adapters", "weights");
+      const registryDir = path.join(projectRoot, "lora_adapters", "registry");
+
+      await fs.mkdir(weightsDir, { recursive: true });
+      await fs.mkdir(registryDir, { recursive: true });
+
+      // Create symlink or copy merged adapter to weights directory
+      const targetWeightsDir = path.join(weightsDir, `${adapterName}_adapter`);
+
+      // SECURITY FIX: Always copy instead of symlink to avoid "insecure path" errors
+      // Symlinks can create relative paths that Ollama considers insecure
+      try {
+        // Check if target already exists and remove it
+        try {
+          await fs.access(targetWeightsDir);
+          await fs.rm(targetWeightsDir, { recursive: true, force: true });
+          console.log(
+            `🗑️ Removed existing adapter directory: ${targetWeightsDir}`
+          );
+        } catch {
+          // Directory doesn't exist, which is fine
+        }
+
+        // Always copy to ensure absolute paths and avoid symlink security issues
+        await this.copyDirectory(mergedPath, targetWeightsDir);
+        console.log(
+          `📁 Copied merged adapter: ${mergedPath} → ${targetWeightsDir}`
+        );
+        console.log(
+          `🔒 Using direct copy to avoid Ollama "insecure path" errors`
+        );
+      } catch (error) {
+        console.error(`❌ Failed to copy merged adapter:`, error);
+        throw error;
+      }
+
+      // Create registry metadata for the merged adapter
+      const registryMetadata = {
+        adapter_id: adapterName,
+        adapter_name: `${adapterName}_adapter`,
+        base_model: metadata.targetBaseModel,
+        hf_model: metadata.targetBaseModel,
+        adapter_path: targetWeightsDir,
+        created_at: metadata.mergeTimestamp,
+        enabled: false,
+        training_method: "merged",
+        status: "ready",
+        file_type: "safetensors",
+
+        // Merge-specific metadata
+        source: "merged",
+        merge_strategy: metadata.mergeStrategy,
+        source_adapters: metadata.sourceAdapters.map((a) => a.name),
+        merged_by: metadata.mergedBy,
+        merged_checksum: metadata.mergedChecksum,
+      };
+
+      // Save registry file
+      const registryFilePath = path.join(
+        registryDir,
+        `${adapterName}_adapter.json`
+      );
+      await fs.writeFile(
+        registryFilePath,
+        JSON.stringify(registryMetadata, null, 2)
+      );
+
+      console.log(
+        `📋 Registered merged adapter in main system: ${registryFilePath}`
+      );
+      console.log(`🎯 Deploy system can now find: ${adapterName}_adapter`);
+    } catch (error) {
+      console.error(
+        `❌ Failed to register merged adapter in main system:`,
+        error
+      );
+      // Don't throw - merge was successful, just registration failed
+    }
+  }
+
+  /**
+   * Copy directory recursively (fallback for symlink)
+   */
+  private async copyDirectory(src: string, dest: string): Promise<void> {
+    await fs.mkdir(dest, { recursive: true });
+
+    const entries = await fs.readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      if (entry.isDirectory()) {
+        await this.copyDirectory(srcPath, destPath);
+      } else {
+        await fs.copyFile(srcPath, destPath);
+      }
+    }
   }
 
   /**

@@ -786,14 +786,6 @@ IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the 
       }
 
       // Fallback: try to determine from common base models
-      const commonBaseModels = [
-        "llama3.1:latest",
-        "llama3.1:8b",
-        "mistral:latest",
-        "mistral:7b",
-        "qwen3:latest",
-        "qwen3:7b",
-      ];
 
       // Check which base models are available in Ollama
       // For now, return the most common one as fallback

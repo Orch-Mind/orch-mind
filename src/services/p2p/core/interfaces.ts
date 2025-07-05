@@ -28,6 +28,7 @@ export interface IAdapterInfo {
   size: number;
   checksum: string;
   topic: string;
+  from?: string;
   timestamp?: number;
   metadata?: {
     adapter_id?: string;
@@ -36,7 +37,7 @@ export interface IAdapterInfo {
     created_at?: string;
     training_method?: string;
     status?: string;
-    file_type: 'safetensors' | 'pytorch';
+    file_type: "safetensors" | "pytorch";
     file_path?: string;
   };
 }

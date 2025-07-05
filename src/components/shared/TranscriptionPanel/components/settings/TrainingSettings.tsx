@@ -15,7 +15,6 @@
 
 import React from "react";
 import {
-  AdaptersList,
   ConversationSelector,
   TrainingControls,
   TrainingModals,
@@ -59,19 +58,8 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     setTrainingStatus,
   } = useTrainingProgress();
 
-  const {
-    adapters,
-    selectedBaseModel,
-    isDeleting,
-    isToggling,
-    saveAdapter,
-    addDownloadedAdapter,
-    deleteAdapter,
-    toggleAdapterState,
-    mergeAdapters,
-    deployAdapter,
-    resetAdapters,
-  } = useLoRAAdapters();
+  const { adapters, selectedBaseModel, saveAdapter, resetAdapters } =
+    useLoRAAdapters();
 
   const {
     modalState,
@@ -240,23 +228,6 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     hideResetModal();
   };
 
-  const handleDeleteAdapter = async () => {
-    const result = await deleteAdapter(modalState.adapterToDelete);
-
-    if (result.success) {
-      setTrainingStatus(
-        `Adapter ${modalState.adapterToDelete} deleted successfully`
-      );
-    } else {
-      setTrainingStatus(`Error deleting adapter: ${result.error}`);
-    }
-
-    setTimeout(clearStatus, 5000);
-    hideDeleteAdapterModal();
-  };
-
-
-
   // === RENDER (Following KISS - Simple, focused layout) ===
   return (
     <div className="space-y-3 max-w-7xl mx-auto">
@@ -322,10 +293,10 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
         </div>
       </div>
 
-      {/* Main Training Section */}
-      <div className="grid grid-cols-12 gap-3">
-        {/* Conversation Selection */}
-        <div className="col-span-6">
+      {/* Main Training Section - Using flexbox for equal height cards */}
+      <div className="flex gap-3 items-stretch">
+        {/* Conversation Selection - Flexible width */}
+        <div className="flex-1 min-w-0">
           <ConversationSelector
             conversations={conversations}
             selectedCount={selectedConversations.size}
@@ -335,26 +306,28 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
           />
         </div>
 
-        {/* Training Controls */}
-        <div className="col-span-3">
-          <TrainingControls
-            isTraining={isTraining}
-            trainingProgress={trainingProgress}
-            trainingStatus={trainingStatus}
-            selectedCount={selectedConversations.size}
-            validPairs={totalValidPairs}
-            trainingDetails={trainingResult?.details || null}
-            onStartTraining={handleTraining}
-          />
+        {/* Training Controls - Fixed width, full height */}
+        <div className="w-80 flex flex-col space-y-2">
+          <div className="flex-1">
+            <TrainingControls
+              isTraining={isTraining}
+              trainingProgress={trainingProgress}
+              trainingStatus={trainingStatus}
+              selectedCount={selectedConversations.size}
+              validPairs={totalValidPairs}
+              trainingDetails={trainingResult?.details || null}
+              onStartTraining={handleTraining}
+            />
+          </div>
 
           {/* Management Actions */}
-          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-yellow-400/20 mt-2">
+          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-yellow-400/20">
             <h3 className="text-xs font-semibold text-yellow-400 mb-2">
               Management
             </h3>
             <button
               onClick={showResetModal}
-              disabled={isTraining || isDeleting}
+              disabled={isTraining}
               className="w-full px-2 py-1.5 bg-yellow-600/20 border border-yellow-400/40 text-yellow-300 rounded hover:bg-yellow-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-medium"
             >
               Reset Training Data
@@ -363,20 +336,6 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
               Clear history only
             </p>
           </div>
-        </div>
-
-        {/* LoRA Adapters */}
-        <div className="col-span-3">
-          <AdaptersList
-            adapters={adapters}
-            isDeleting={isDeleting}
-            isToggling={isToggling}
-            isTraining={isTraining}
-            onDeleteAdapter={showDeleteAdapterModal}
-
-            onMergeAdapters={mergeAdapters}
-            onDeployAdapter={deployAdapter}
-          />
         </div>
       </div>
 
@@ -437,9 +396,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
         modalState={modalState}
         adapterName={adapterName}
         trainingDetails={trainingResult?.details || null}
-        isDeleting={isDeleting}
+        isDeleting={false}
         onResetTraining={handleResetTraining}
-        onDeleteAdapter={handleDeleteAdapter}
+        onDeleteAdapter={() => {}}
         onHideSuccessModal={hideSuccessModal}
         onHideResetModal={hideResetModal}
         onHideDeleteModal={hideDeleteAdapterModal}

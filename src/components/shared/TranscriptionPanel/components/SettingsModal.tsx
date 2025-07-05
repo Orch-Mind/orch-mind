@@ -4,6 +4,7 @@
 import React from "react";
 import { GeneralSettings } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
+import DeploySettings from "./settings/DeploySettings";
 import DownloadSettings from "./settings/DownloadSettings";
 import SettingsFooter from "./settings/SettingsFooter";
 import SettingsHeader from "./settings/SettingsHeader";
@@ -33,9 +34,9 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10 px-4">
       <div
-        className="rounded-2xl p-6 w-full max-w-2xl relative overflow-hidden"
+        className="rounded-2xl p-6 w-full max-w-4xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
         style={{
           background:
             "linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
@@ -56,7 +57,7 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
         {/* Navegação */}
         <SettingsNavigation
           activeTab={settings.activeTab}
-          setActiveTab={settings.setActiveTab}
+          onTabChange={settings.setActiveTab}
         />
 
         {/* Conteúdo das abas */}
@@ -95,6 +96,9 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
 
           {/* Download Tab */}
           {settings.activeTab === "download" && <DownloadSettings />}
+
+          {/* Deploy Tab */}
+          {settings.activeTab === "deploy" && <DeploySettings />}
         </div>
 
         {/* Footer com botões de ação */}

@@ -93,10 +93,7 @@ export class ModelValidationService {
     try {
       // Models that support tools/function calling (filtered by user)
       const recommendedModels = [
-        { name: "qwen3:latest", minRam: 4 },
-        { name: "llama3.1:latest", minRam: 4 },
-        { name: "mistral-nemo:latest", minRam: 4 },
-        { name: "mistral:latest", minRam: 4 },
+        { name: "gemma3n:latest", minRam: 4 },
         { name: "gemma3:latest", minRam: 4 },
       ];
 

@@ -19,10 +19,6 @@ import { LoggingUtils } from "../../utils/LoggingUtils";
 export const SUPPORTED_OLLAMA_EMBEDDING_MODELS = [
   // Modelos de embedding populares no Ollama
   "bge-m3:latest", // Modelo multilíngue avançado com dense + sparse + multi-vector
-  "nomic-embed-text:latest", // Modelo padrão para embeddings de texto
-  "mxbai-embed-large:latest", // Modelo de alta qualidade
-  "all-minilm:latest", // Modelo compacto e eficiente
-  "snowflake-arctic-embed:latest", // Modelo Arctic da Snowflake
 ];
 
 /**
@@ -82,7 +78,7 @@ export class OllamaEmbeddingService implements IEmbeddingService {
 
       // Delegate to the Ollama service with the selected model
       const model = this.getEmbeddingModel();
-      return await this.ollamaService.createEmbedding(text.trim(), model);
+      return await this.ollamaService.createEmbedding(text.trim());
     } catch (error) {
       LoggingUtils.logError("Error creating embedding", error);
       return [];
@@ -121,8 +117,7 @@ export class OllamaEmbeddingService implements IEmbeddingService {
       if (this.ollamaService.createEmbeddings) {
         // Use the batch API if available
         return await this.ollamaService.createEmbeddings(
-          texts.map((text) => text.trim()),
-          model
+          texts.map((text) => text.trim())
         );
       } else {
         // Fallback: process embeddings one by one
@@ -130,8 +125,7 @@ export class OllamaEmbeddingService implements IEmbeddingService {
           texts.map(async (text) => {
             try {
               return await this.ollamaService.createEmbedding(
-                text.trim(),
-                model
+                text.trim()
               );
             } catch (err) {
               LoggingUtils.logError(

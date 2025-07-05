@@ -206,10 +206,30 @@ def main():
         # Create output directory
         os.makedirs(output_path, exist_ok=True)
         
-        # Save merged weights
-        merged_weights_path = os.path.join(output_path, "adapter_model.bin")
-        torch.save(merged_weights, merged_weights_path)
-        print(f"💾 Saved merged weights to: {merged_weights_path}")
+        # Save merged weights in both formats for maximum compatibility
+        # 1. PyTorch format (.bin) - traditional format
+        merged_weights_path_bin = os.path.join(output_path, "adapter_model.bin")
+        torch.save(merged_weights, merged_weights_path_bin)
+        print(f"💾 Saved merged weights (PyTorch): {merged_weights_path_bin}")
+        
+        # 2. SafeTensors format (.safetensors) - required by Ollama
+        merged_weights_path_safetensors = os.path.join(output_path, "adapter_model.safetensors")
+        try:
+            from safetensors.torch import save_file
+            save_file(merged_weights, merged_weights_path_safetensors)
+            print(f"💾 Saved merged weights (SafeTensors): {merged_weights_path_safetensors}")
+        except ImportError:
+            print("⚠️ SafeTensors not available, installing...")
+            import subprocess
+            import sys
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "safetensors"])
+            from safetensors.torch import save_file
+            save_file(merged_weights, merged_weights_path_safetensors)
+            print(f"💾 Saved merged weights (SafeTensors): {merged_weights_path_safetensors}")
+        except Exception as e:
+            print(f"⚠️ Failed to save SafeTensors format: {e}")
+            print("   • PyTorch format (.bin) is still available")
+            print("   • Some Ollama versions may require SafeTensors format")
         
         # Create adapter config (copy from first adapter and modify)
         first_adapter_config_path = os.path.join(adapters_config[0]["path"], "adapter_config.json")

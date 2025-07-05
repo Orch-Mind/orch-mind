@@ -353,7 +353,7 @@ PARAMETER repeat_penalty 1.1
                 break
         
         # Also check base model name for Unsloth patterns
-        unsloth_base_patterns = ['gemma3:', 'qwen3:', 'mistral:', 'mistral-nemo:', 'llama3.1:', 'llama3:']
+        unsloth_base_patterns = ['gemma3:', 'gemma3n:']
         for pattern in unsloth_base_patterns:
             if pattern in base_model:
                 is_unsloth_model = True

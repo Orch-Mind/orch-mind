@@ -48,7 +48,7 @@ export const AdapterListDisplay: React.FC<AdapterListDisplayProps> = ({
     <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
       {adapters.map((adapter, index) => (
         <AdapterItem
-          key={`${adapter.topic}-${adapter.from}-${index}`}
+          key={adapter.name || `adapter-${index}`}
           adapter={adapter}
           onDownload={onDownload}
           showMergeSection={showMergeSection}
@@ -275,6 +275,31 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
           💡 No peers connected - invite others to join!
         </p>
       )}
+    </div>
+  );
+};
+
+// SRP: Component focused only on download progress display
+const P2PDownloadProgressComponent: React.FC<{
+  progress: P2PDownloadProgress;
+}> = ({ progress }) => {
+  const percentage = progress?.progress || 0;
+  const status = progress?.status || "downloading";
+
+  return (
+    <div className="mt-2 space-y-1">
+      {/* Progress bar */}
+      <div className="w-full bg-gray-700 rounded-full h-1">
+        <div
+          className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1 rounded-full transition-all duration-300"
+          style={{ width: `${Math.min(percentage, 100)}%` }}
+        />
+      </div>
+      {/* Progress text */}
+      <div className="flex justify-between text-[8px] text-gray-400">
+        <span>{status}</span>
+        <span>{percentage.toFixed(1)}%</span>
+      </div>
     </div>
   );
 };

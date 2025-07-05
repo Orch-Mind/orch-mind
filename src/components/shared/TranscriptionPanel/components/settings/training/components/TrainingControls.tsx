@@ -27,28 +27,30 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
   const canStartTraining = !isTraining && selectedCount > 0;
 
   return (
-    <div className="space-y-2">
+    <div className="h-full flex flex-col">
       {/* Training Action */}
-      <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
+      <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full flex flex-col">
         <h3 className="text-xs font-semibold text-cyan-400 mb-2">
           Training Control
         </h3>
 
-        {isTraining ? (
-          <TrainingProgressDisplay
-            progress={trainingProgress}
-            status={trainingStatus}
-            selectedCount={selectedCount}
-            trainingDetails={trainingDetails}
-          />
-        ) : (
-          <TrainingReadyDisplay
-            selectedCount={selectedCount}
-            validPairs={validPairs}
-            canStartTraining={canStartTraining}
-            onStartTraining={onStartTraining}
-          />
-        )}
+        <div className="flex-1 flex flex-col justify-center">
+          {isTraining ? (
+            <TrainingProgressDisplay
+              progress={trainingProgress}
+              status={trainingStatus}
+              selectedCount={selectedCount}
+              trainingDetails={trainingDetails}
+            />
+          ) : (
+            <TrainingReadyDisplay
+              selectedCount={selectedCount}
+              validPairs={validPairs}
+              canStartTraining={canStartTraining}
+              onStartTraining={onStartTraining}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

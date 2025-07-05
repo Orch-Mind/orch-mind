@@ -359,6 +359,10 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     toggleAdapterSharing: adapterManager.toggleAdapterSharing,
     downloadAdapter: adapterManager.downloadAdapter,
     clearIncomingAdapters: adapterManager.clearIncomingAdapters,
+    // Download progress interface
+    downloadState: adapterManager.downloadState,
+    isDownloading: adapterManager.isDownloading,
+    getProgress: adapterManager.getProgress,
 
     // Adapter sync interface
     syncLocalStorageWithFilesystem: adapterManager.syncWithFilesystem,

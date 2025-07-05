@@ -125,30 +125,6 @@ export class OllamaClient {
     // These models support tools/function calling as requested by user
     const verifiedModels = [
       {
-        id: "qwen3",
-        label: "🧠 Qwen3 Latest (Thinking)",
-        repo: "qwen3:latest",
-        sizeGB: 5.2,
-        family: "qwen",
-        isInstalled: false,
-      },
-      {
-        id: "llama3.1",
-        label: "🦙 Llama 3.1 Latest (Tools Support)",
-        repo: "llama3.1:latest",
-        sizeGB: 4.9,
-        family: "llama",
-        isInstalled: false,
-      },
-      {
-        id: "mistral-nemo",
-        label: "🦙 Mistral Nemo Latest (Tools Support)",
-        repo: "mistral-nemo:latest",
-        sizeGB: 7.1,
-        family: "mistral",
-        isInstalled: false,
-      },
-      {
         id: "mistral",
         label: "🦙 Mistral Latest (Tools Support)",
         repo: "mistral:latest",
@@ -167,7 +143,7 @@ export class OllamaClient {
       {
         id: "gemma3n",
         label: "🦙 Gemma3n Latest (Tools Support)",
-        repo: "gemma3n:e4b",
+        repo: "gemma3n:latest",
         sizeGB: 7.5,
         family: "gemma",
         isInstalled: false,

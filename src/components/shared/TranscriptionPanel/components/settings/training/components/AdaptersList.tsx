@@ -130,6 +130,21 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
       return;
     }
 
+    // Validar se adapters selecionados têm o mesmo baseModel
+    const selectedAdapters = adapters.filter((a) =>
+      selectedForMerge.includes(a.id)
+    );
+    const baseModels = [...new Set(selectedAdapters.map((a) => a.baseModel))];
+
+    if (baseModels.length > 1) {
+      alert(
+        `❌ Cannot merge adapters with different base models: ${baseModels.join(
+          ", "
+        )}\nPlease select adapters with the same base model.`
+      );
+      return;
+    }
+
     setIsMerging(true);
     try {
       const result = await onMergeAdapters(
@@ -181,12 +196,28 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     }
   };
 
-  // Filtrar adapters que podem ser mergeados (downloaded ou ready, mesmo baseModel)
+  // Filtrar adapters que podem ser mergeados (downloaded, ready ou merged, mesmo baseModel)
   const mergeableAdapters = adapters.filter(
-    (a) => (a.status === "downloaded" || a.status === "ready") && !a.enabled
+    (a) =>
+      a.status === "downloaded" || a.status === "ready" || a.status === "merged"
   );
 
-  const canShowMerge = mergeableAdapters.length >= 1 && onMergeAdapters;
+  // Agrupar por baseModel para validação de compatibilidade
+  const adaptersByBaseModel = mergeableAdapters.reduce((acc, adapter) => {
+    const baseModel = adapter.baseModel;
+    if (!acc[baseModel]) {
+      acc[baseModel] = [];
+    }
+    acc[baseModel].push(adapter);
+    return acc;
+  }, {} as Record<string, typeof mergeableAdapters>);
+
+  // Verificar se há adapters compatíveis para merge (mesmo baseModel)
+  const hasCompatibleAdapters = Object.values(adaptersByBaseModel).some(
+    (group) => group.length >= 1
+  );
+
+  const canShowMerge = hasCompatibleAdapters && onMergeAdapters;
 
   // Verificar se adapter pode ser deployado
   const canDeploy = (adapter: LoRAAdapter) => {
@@ -200,49 +231,38 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
   };
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-purple-400/20">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-purple-400">LoRA Adapters</h3>
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
+          <h3 className="text-lg font-semibold text-cyan-400">LoRA Adapters</h3>
+          <span className="bg-cyan-600/20 text-cyan-300 px-2 py-1 rounded-full text-xs font-medium">
+            {adapters.length}
+          </span>
+        </div>
         <div className="flex items-center space-x-2">
           {canShowMerge && (
             <button
               onClick={() => setShowMergeSection(!showMergeSection)}
-              className={`px-2 py-1 border rounded transition-colors text-[9px] font-medium ${
+              className={`px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center space-x-2 ${
                 showMergeSection
                   ? "bg-purple-600/40 border-purple-400/60 text-purple-200"
                   : "bg-purple-600/20 border-purple-400/40 text-purple-300 hover:bg-purple-600/30"
               }`}
               title="Toggle merge mode"
             >
-              🔗 Merge
+              <span className="text-base">🔗</span>
+              <span>Merge</span>
             </button>
           )}
-          <div className="flex items-center space-x-1">
-            <span className="text-[9px] text-purple-300">
-              {adapters.length}
-            </span>
-            <svg
-              className="w-3 h-3 text-purple-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
+          <div className="text-xs text-gray-400">Deploy • Merge • Manage</div>
         </div>
       </div>
 
       {/* Merge Section */}
       {showMergeSection && (
-        <div className="mb-3 p-3 bg-purple-900/10 border border-purple-400/20 rounded">
+        <div className="mb-3 p-3 bg-purple-900/20 border border-purple-400/30 rounded-lg">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-semibold text-purple-400">
+            <h4 className="text-sm font-semibold text-purple-400">
               🔗 Merge Adapters ({selectedForMerge.length} selected)
             </h4>
             <button
@@ -264,7 +284,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   value={mergeOutputName}
                   onChange={(e) => setMergeOutputName(e.target.value)}
                   placeholder="merged_adapter_name"
-                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-400 focus:border-purple-400 focus:outline-none"
+                  className="w-full px-2 py-1 bg-slate-800/50 border border-slate-600/50 rounded text-xs text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
                 />
               </div>
               <div>
@@ -272,7 +292,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   value={mergeStrategy}
                   onChange={(e) => setMergeStrategy(e.target.value as any)}
                   title="Select merge strategy"
-                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:border-purple-400 focus:outline-none"
+                  className="w-full px-2 py-1 bg-slate-800/50 border border-slate-600/50 rounded text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
                   <option value="svd_merge">SVD Merge (Best)</option>
                   <option value="arithmetic_mean">Arithmetic Mean</option>
@@ -289,16 +309,25 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   !mergeOutputName.trim() ||
                   isMerging
                 }
-                className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-purple-600/80 text-white rounded-lg text-sm font-medium hover:bg-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                {isMerging
-                  ? selectedForMerge.length === 1
-                    ? "Deploying..."
-                    : "Merging..."
-                  : selectedForMerge.length === 1
-                  ? "Deploy"
-                  : "Merge"}{" "}
-                ({selectedForMerge.length})
+                <span className="text-base">
+                  {isMerging
+                    ? "⏳"
+                    : selectedForMerge.length === 1
+                    ? "🚀"
+                    : "🔗"}
+                </span>
+                <span>
+                  {isMerging
+                    ? selectedForMerge.length === 1
+                      ? "Deploying..."
+                      : "Merging..."
+                    : selectedForMerge.length === 1
+                    ? "Deploy"
+                    : "Merge"}{" "}
+                  ({selectedForMerge.length})
+                </span>
               </button>
             </div>
           </div>
@@ -308,9 +337,9 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
       <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
         {adapters.length === 0 ? (
           <div className="text-center py-4">
-            <div className="w-8 h-8 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
+            <div className="w-8 h-8 bg-cyan-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
               <svg
-                className="w-4 h-4 text-purple-400"
+                className="w-4 h-4 text-cyan-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -323,8 +352,8 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                 />
               </svg>
             </div>
-            <p className="text-[10px] text-gray-400 mb-1">No adapters yet</p>
-            <p className="text-[8px] text-gray-500">
+            <p className="text-xs text-gray-400 mb-1">No adapters yet</p>
+            <p className="text-xs text-gray-500">
               Train conversations or download from P2P to create LoRA adapters
             </p>
           </div>
@@ -332,10 +361,10 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
           adapters.map((adapter) => (
             <div
               key={adapter.id}
-              className={`bg-slate-800/40 rounded-sm p-2 border transition-colors ${
+              className={`bg-gradient-to-r from-slate-800/40 to-slate-900/40 backdrop-blur-sm rounded-lg p-3 border transition-colors ${
                 showMergeSection && selectedForMerge.includes(adapter.id)
                   ? "border-purple-400/50 bg-purple-900/20"
-                  : "border-slate-600/20 hover:border-purple-400/30"
+                  : "border-cyan-400/20 hover:border-cyan-400/40"
               }`}
             >
               {/* Adapter Header */}
@@ -379,16 +408,23 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   </div>
                 </div>
 
-                <div className="flex space-x-1 ml-1">
+                <div className="flex space-x-2 ml-2">
                   {/* Deploy Button */}
                   {canDeploy(adapter) && (
                     <button
                       onClick={() => handleDeployAdapter(adapter.id)}
                       disabled={deployingAdapters.has(adapter.id) || isTraining}
-                      className="px-1.5 py-0.5 bg-green-600/20 border border-green-400/40 text-green-300 rounded hover:bg-green-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[8px] font-medium"
+                      className="px-3 py-1.5 bg-green-600/30 border border-green-400/50 text-green-300 rounded-lg hover:bg-green-600/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium min-w-[60px] flex items-center justify-center"
                       title="Deploy adapter to Ollama model"
                     >
-                      {deployingAdapters.has(adapter.id) ? "⏳" : "🚀"}
+                      {deployingAdapters.has(adapter.id) ? (
+                        <span className="text-sm">⏳</span>
+                      ) : (
+                        <span className="flex items-center space-x-1">
+                          <span className="text-sm">🚀</span>
+                          <span>Deploy</span>
+                        </span>
+                      )}
                     </button>
                   )}
 
@@ -396,10 +432,13 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   <button
                     onClick={() => onDeleteAdapter(adapter.id)}
                     disabled={isDeleting || isTraining}
-                    className="px-1.5 py-0.5 bg-red-600/20 border border-red-400/40 text-red-300 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[8px] font-medium"
+                    className="px-3 py-1.5 bg-red-600/30 border border-red-400/50 text-red-300 rounded-lg hover:bg-red-600/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium min-w-[60px] flex items-center justify-center"
                     title="Delete adapter"
                   >
-                    Del
+                    <span className="flex items-center space-x-1">
+                      <span className="text-sm">🗑️</span>
+                      <span>Delete</span>
+                    </span>
                   </button>
                 </div>
               </div>
@@ -439,12 +478,31 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
       </div>
 
       {/* Footer Info */}
-      <div className="mt-2 pt-2 border-t border-purple-400/20">
-        <p className="text-[8px] text-gray-500 text-center">
-          {showMergeSection
-            ? "Select adapters above and configure merge settings"
-            : "🚀 Deploy creates Ollama model with LoRA adapter • 🔗 Merge combines multiple adapters"}
-        </p>
+      <div className="mt-3 pt-2 border-t border-cyan-400/20">
+        {showMergeSection && hasCompatibleAdapters ? (
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500 text-center">
+              Select adapters with the same base model to merge
+            </p>
+            {Object.entries(adaptersByBaseModel).map(
+              ([baseModel, compatibleAdapters]) => (
+                <p
+                  key={baseModel}
+                  className="text-xs text-cyan-400 text-center"
+                >
+                  📋 {baseModel}: {compatibleAdapters.length} compatible adapter
+                  {compatibleAdapters.length !== 1 ? "s" : ""}
+                </p>
+              )
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 text-center">
+            {showMergeSection
+              ? "Select adapters above and configure merge settings"
+              : "🚀 Deploy creates Ollama model with LoRA adapter • 🔗 Merge combines multiple adapters"}
+          </p>
+        )}
       </div>
     </div>
   );

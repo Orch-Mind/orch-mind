@@ -59,6 +59,10 @@ export interface IP2PAdapterManagement {
   toggleAdapterSharing: (index: number) => Promise<void>;
   downloadAdapter: (adapter: IncomingAdapter) => Promise<void>;
   clearIncomingAdapters: () => void;
+  // Download progress interface
+  downloadState: any;
+  isDownloading: (adapterName: string) => boolean;
+  getProgress: (adapterName: string) => any;
 }
 
 /**

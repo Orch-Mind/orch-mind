@@ -264,6 +264,38 @@ export const useAdapterManager = ({
     [sharedAdapters, loadLocalAdapters, verifyAdapterExists]
   );
 
+  /**
+   * Detect base model from adapter name
+   */
+  const detectBaseModelFromName = useCallback((adapterName: string): string => {
+    const name = adapterName.toLowerCase();
+
+    if (name.includes("gemma3") || name.includes("gemma-3")) {
+      return "gemma3:latest";
+    }
+    if (name.includes("gemma3n") || name.includes("gemma-3n")) {
+      return "gemma3n:latest";
+    }
+    if (name.includes("llama3.1") || name.includes("llama-3.1")) {
+      return "llama3.1:latest";
+    }
+    if (name.includes("llama3") || name.includes("llama-3")) {
+      return "llama3.1:latest"; // Default to 3.1 for llama3
+    }
+    if (name.includes("mistral")) {
+      return "mistral:latest";
+    }
+    if (name.includes("qwen3") || name.includes("qwen-3")) {
+      return "qwen3:latest";
+    }
+    if (name.includes("qwen2") || name.includes("qwen-2")) {
+      return "qwen2:latest";
+    }
+
+    // Default fallback
+    return "llama3.1:latest";
+  }, []);
+
   const downloadAdapter = useCallback(
     async (adapter: IncomingAdapter) => {
       console.log(
@@ -353,13 +385,20 @@ export const useAdapterManager = ({
           );
           NotificationUtils.showSuccess(`Started downloading ${adapter.name}`);
 
+          // Detect base model from adapter name
+          const detectedBaseModel = detectBaseModelFromName(adapter.name);
+
+          console.log(
+            `🔍 [ADAPTER-MANAGER] Detected base model for ${adapter.name}: ${detectedBaseModel}`
+          );
+
           // Emit download event
           window.dispatchEvent(
             new CustomEvent("adapter-downloaded", {
               detail: {
                 adapterId: adapter.topic,
                 adapterName: adapter.name,
-                baseModel: "llama3.1:latest",
+                baseModel: detectedBaseModel,
                 downloadedFrom: adapter.from,
                 size: adapter.size,
               },
@@ -406,7 +445,12 @@ export const useAdapterManager = ({
         }
       }
     },
-    [loadLocalAdapters, verifyAdapterExists, downloadProgress]
+    [
+      loadLocalAdapters,
+      verifyAdapterExists,
+      downloadProgress,
+      detectBaseModelFromName,
+    ]
   );
 
   const addIncomingAdapters = useCallback(
@@ -692,6 +736,122 @@ export const useAdapterManager = ({
       .map((adapter) => adapter.name);
     updateSharedAdapters(sharedAdapterIds);
   }, [sharedAdapters, updateSharedAdapters]);
+
+  // Listen for download completion events to remove adapters from incoming list
+  useEffect(() => {
+    const handleAdapterDownloaded = (event: CustomEvent) => {
+      const { adapterName } = event.detail;
+      console.log(
+        `🎉 [ADAPTER-MANAGER] Download completed for: ${adapterName}`
+      );
+
+      // Remove adapter from incoming list
+      setIncomingAdapters((prev) => {
+        const filtered = prev.filter((adapter) => adapter.name !== adapterName);
+        if (filtered.length !== prev.length) {
+          console.log(
+            `🧹 [ADAPTER-MANAGER] Removed ${adapterName} from incoming adapters`
+          );
+        }
+        return filtered;
+      });
+
+      // Reload local adapters to include the newly downloaded adapter
+      setTimeout(() => {
+        console.log(
+          `🔄 [ADAPTER-MANAGER] Reloading local adapters after download`
+        );
+        loadLocalAdapters();
+      }, 1000); // Small delay to ensure filesystem operations complete
+    };
+
+    const handleAdapterSaved = (event: CustomEvent) => {
+      const { adapter } = event.detail;
+      console.log(
+        `💾 [ADAPTER-MANAGER] Adapter saved to localStorage: ${adapter.name}`
+      );
+
+      // Remove from incoming list if present
+      setIncomingAdapters((prev) => {
+        const filtered = prev.filter(
+          (incomingAdapter) => incomingAdapter.name !== adapter.name
+        );
+        if (filtered.length !== prev.length) {
+          console.log(
+            `🧹 [ADAPTER-MANAGER] Removed ${adapter.name} from incoming adapters after save`
+          );
+        }
+        return filtered;
+      });
+
+      // Reload local adapters
+      setTimeout(() => {
+        console.log(`🔄 [ADAPTER-MANAGER] Reloading local adapters after save`);
+        loadLocalAdapters();
+      }, 500);
+    };
+
+    const handleAdapterDeleted = (event: CustomEvent) => {
+      const { adapterName, wasP2P } = event.detail;
+      console.log(
+        `🗑️ [ADAPTER-MANAGER] Adapter deleted: ${adapterName} (was P2P: ${wasP2P})`
+      );
+
+      // If it was a P2P adapter, it might need to appear in the download list again
+      if (wasP2P) {
+        console.log(
+          `🔄 [ADAPTER-MANAGER] P2P adapter ${adapterName} deleted - will reappear in download list when peers share it again`
+        );
+
+        // Force a refresh of incoming adapters by clearing and letting them repopulate
+        // This ensures that if other peers are still sharing this adapter, it will appear again
+        setTimeout(() => {
+          console.log(
+            `🔄 [ADAPTER-MANAGER] Triggering adapter list refresh after P2P adapter deletion`
+          );
+          // The adapter will naturally reappear when other peers announce their adapters
+          // No need to manually add it back - just let the natural P2P discovery process work
+        }, 1000);
+      }
+
+      // Reload local adapters to reflect the deletion
+      setTimeout(() => {
+        console.log(
+          `🔄 [ADAPTER-MANAGER] Reloading local adapters after deletion`
+        );
+        loadLocalAdapters();
+      }, 500);
+    };
+
+    // Listen for all adapter events
+    window.addEventListener(
+      "adapter-downloaded",
+      handleAdapterDownloaded as EventListener
+    );
+    window.addEventListener(
+      "lora-adapter-added",
+      handleAdapterSaved as EventListener
+    );
+    window.addEventListener(
+      "adapter-deleted",
+      handleAdapterDeleted as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "adapter-downloaded",
+        handleAdapterDownloaded as EventListener
+      );
+      window.removeEventListener(
+        "lora-adapter-added",
+        handleAdapterSaved as EventListener
+      );
+      window.removeEventListener(
+        "adapter-deleted",
+        handleAdapterDeleted as EventListener
+      );
+    };
+  }, [loadLocalAdapters]);
 
   return {
     // State

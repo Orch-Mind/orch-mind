@@ -2,213 +2,83 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
-import { SettingsNavigationProps } from "./types";
 
-/**
- * Apenas estendendo o tipo SettingsNavigationProps para futuros parâmetros
- */
-interface ExtendedSettingsNavigationProps extends SettingsNavigationProps {}
+interface SettingsNavigationProps {
+  activeTab:
+    | "general"
+    | "advanced"
+    | "training"
+    | "share"
+    | "download"
+    | "deploy";
+  onTabChange: (
+    tab: "general" | "advanced" | "training" | "share" | "download" | "deploy"
+  ) => void;
+}
 
-/**
- * Componente para a navegação entre as abas do modal de configurações
- * Simbolicamente representa o cortex de navegação entre contextos neurais de configuração
- */
-const SettingsNavigation: React.FC<ExtendedSettingsNavigationProps> = ({
+const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
   activeTab,
-  setActiveTab,
+  onTabChange,
 }) => {
+  const tabs = [
+    { id: "general" as const, label: "General", icon: "⚙️" },
+    { id: "advanced" as const, label: "Advanced", icon: "🔧" },
+    { id: "training" as const, label: "Training", icon: "🎯" },
+    { id: "share" as const, label: "Share", icon: "🔗" },
+    { id: "download" as const, label: "Download", icon: "📥" },
+    { id: "deploy" as const, label: "Deploy", icon: "🚀" },
+  ];
+
   return (
-    <div className="flex space-x-2 mb-6 border-b border-cyan-400/30 pb-2">
-      <button
-        className="px-4 py-2 rounded-t-lg transition-all duration-200"
-        style={{
-          backgroundColor:
-            activeTab === "general"
-              ? "rgba(0, 250, 255, 0.15)"
-              : "rgba(0, 0, 0, 0.2)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          border: `1px solid ${
-            activeTab === "general"
-              ? "rgba(0, 250, 255, 0.4)"
-              : "rgba(0, 250, 255, 0.1)"
-          }`,
-          color: activeTab === "general" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
-          boxShadow:
-            activeTab === "general" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
-        }}
-        onMouseEnter={(e) => {
-          if (activeTab !== "general") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (activeTab !== "general") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
-          }
-        }}
-        onClick={() => setActiveTab("general")}
-      >
-        General
-      </button>
+    <div className="mb-6">
+      {/* Tab Navigation with improved aesthetics */}
+      <div className="flex flex-wrap gap-1 bg-gradient-to-r from-slate-900/60 to-gray-900/60 backdrop-blur-sm rounded-xl p-1.5 border border-cyan-400/10 justify-center">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`group relative flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 min-w-[100px] justify-center ${
+              activeTab === tab.id
+                ? "bg-gradient-to-r from-cyan-600/40 to-blue-600/40 text-cyan-200 border border-cyan-400/50 shadow-lg shadow-cyan-500/20"
+                : "text-gray-400 hover:text-cyan-300 hover:bg-gradient-to-r hover:from-slate-800/50 hover:to-gray-800/50 border border-transparent hover:border-cyan-400/20"
+            }`}
+          >
+            {/* Icon with glow effect for active tab */}
+            <span
+              className={`text-base transition-all duration-200 ${
+                activeTab === tab.id
+                  ? "drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]"
+                  : "group-hover:drop-shadow-[0_0_4px_rgba(34,211,238,0.3)]"
+              }`}
+            >
+              {tab.icon}
+            </span>
 
-      <button
-        className="px-4 py-2 rounded-t-lg transition-all duration-200 flex items-center gap-1"
-        style={{
-          backgroundColor:
-            activeTab === "advanced"
-              ? "rgba(0, 250, 255, 0.15)"
-              : "rgba(0, 0, 0, 0.2)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          border: `1px solid ${
-            activeTab === "advanced"
-              ? "rgba(0, 250, 255, 0.4)"
-              : "rgba(0, 250, 255, 0.1)"
-          }`,
-          color:
-            activeTab === "advanced" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
-          boxShadow:
-            activeTab === "advanced" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
-        }}
-        onMouseEnter={(e) => {
-          if (activeTab !== "advanced") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (activeTab !== "advanced") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
-          }
-        }}
-        onClick={() => setActiveTab("advanced")}
-      >
-        Advanced
-      </button>
+            {/* Label */}
+            <span className="font-medium tracking-wide">{tab.label}</span>
 
-      {/* Training Settings */}
-      <button
-        className="px-4 py-2 rounded-t-lg transition-all duration-200"
-        style={{
-          backgroundColor:
-            activeTab === "training"
-              ? "rgba(0, 250, 255, 0.15)"
-              : "rgba(0, 0, 0, 0.2)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          border: `1px solid ${
-            activeTab === "training"
-              ? "rgba(0, 250, 255, 0.4)"
-              : "rgba(0, 250, 255, 0.1)"
-          }`,
-          color:
-            activeTab === "training" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
-          boxShadow:
-            activeTab === "training" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
-        }}
-        onMouseEnter={(e) => {
-          if (activeTab !== "training") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (activeTab !== "training") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
-          }
-        }}
-        onClick={() => setActiveTab("training")}
-      >
-        Training
-      </button>
+            {/* Active indicator */}
+            {activeTab === tab.id && (
+              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full"></div>
+            )}
+          </button>
+        ))}
+      </div>
 
-      {/* Share Settings */}
-      <button
-        className="px-4 py-2 rounded-t-lg transition-all duration-200"
-        style={{
-          backgroundColor:
-            activeTab === "share"
-              ? "rgba(0, 250, 255, 0.15)"
-              : "rgba(0, 0, 0, 0.2)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          border: `1px solid ${
-            activeTab === "share"
-              ? "rgba(0, 250, 255, 0.4)"
-              : "rgba(0, 250, 255, 0.1)"
-          }`,
-          color: activeTab === "share" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
-          boxShadow:
-            activeTab === "share" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
-        }}
-        onMouseEnter={(e) => {
-          if (activeTab !== "share") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (activeTab !== "share") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
-          }
-        }}
-        onClick={() => setActiveTab("share")}
-      >
-        Share
-      </button>
-
-      {/* Download Settings */}
-      <button
-        className="px-4 py-2 rounded-t-lg transition-all duration-200"
-        style={{
-          backgroundColor:
-            activeTab === "download"
-              ? "rgba(0, 250, 255, 0.15)"
-              : "rgba(0, 0, 0, 0.2)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          border: `1px solid ${
-            activeTab === "download"
-              ? "rgba(0, 250, 255, 0.4)"
-              : "rgba(0, 250, 255, 0.1)"
-          }`,
-          color:
-            activeTab === "download" ? "#00faff" : "rgba(0, 250, 255, 0.6)",
-          boxShadow:
-            activeTab === "download" ? "0 0 15px rgba(0, 250, 255, 0.2)" : "",
-        }}
-        onMouseEnter={(e) => {
-          if (activeTab !== "download") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.3)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.9)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (activeTab !== "download") {
-            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
-            e.currentTarget.style.borderColor = "rgba(0, 250, 255, 0.1)";
-            e.currentTarget.style.color = "rgba(0, 250, 255, 0.6)";
-          }
-        }}
-        onClick={() => setActiveTab("download")}
-      >
-        Download
-      </button>
+      {/* Optional: Tab description */}
+      <div className="mt-2 text-center">
+        <p className="text-xs text-gray-500">
+          {activeTab === "general" &&
+            "Basic application settings and preferences"}
+          {activeTab === "advanced" &&
+            "Advanced configuration and API settings"}
+          {activeTab === "training" &&
+            "LoRA training configuration and data management"}
+          {activeTab === "share" && "P2P sharing and network settings"}
+          {activeTab === "download" && "Download adapters from the P2P network"}
+          {activeTab === "deploy" && "Deploy and manage your LoRA adapters"}
+        </p>
+      </div>
     </div>
   );
 };

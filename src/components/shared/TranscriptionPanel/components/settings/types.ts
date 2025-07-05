@@ -29,7 +29,8 @@ export type TabType =
   | "advanced"
   | "training"
   | "share"
-  | "download";
+  | "download"
+  | "deploy";
 
 export type OpenSectionType =
   | "pinecone"

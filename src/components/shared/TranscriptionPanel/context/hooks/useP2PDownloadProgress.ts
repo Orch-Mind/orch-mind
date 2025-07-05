@@ -17,6 +17,9 @@ export const useP2PDownloadProgress = () => {
   const [downloadState, setDownloadState] = useState<P2PDownloadState>({});
   const downloadTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
+  // Store start times separately to avoid closure issues
+  const startTimes = useRef<Map<string, number>>(new Map());
+
   // Calculate download speed based on progress changes
   const calculateSpeed = useCallback(
     (
@@ -50,6 +53,9 @@ export const useP2PDownloadProgress = () => {
 
       const remainingBytes = totalBytes - downloadedBytes;
       const bytesPerSecond = (downloadedBytes * 1000) / timeElapsed;
+
+      if (bytesPerSecond === 0) return "∞";
+
       const remainingSeconds = remainingBytes / bytesPerSecond;
 
       if (remainingSeconds > 3600) {
@@ -68,6 +74,9 @@ export const useP2PDownloadProgress = () => {
     (adapterName: string, totalBytes: number) => {
       const startTime = Date.now();
 
+      // Store start time in ref
+      startTimes.current.set(adapterName, startTime);
+
       setDownloadState((prev) => ({
         ...prev,
         [adapterName]: {
@@ -81,14 +90,11 @@ export const useP2PDownloadProgress = () => {
         },
       }));
 
-      // Store start time for speed/ETA calculations
-      (downloadState as any)[`${adapterName}_startTime`] = startTime;
-
       console.log(
         `📥 [P2P-PROGRESS] Started tracking download: ${adapterName} (${totalBytes} bytes)`
       );
     },
-    [downloadState]
+    [] // Remove downloadState dependency to fix closure issue
   );
 
   // Update download progress
@@ -101,8 +107,7 @@ export const useP2PDownloadProgress = () => {
     }) => {
       const { adapterName, progress, downloadedBytes, totalBytes } = data;
       const currentTime = Date.now();
-      const startTime =
-        (downloadState as any)[`${adapterName}_startTime`] || currentTime;
+      const startTime = startTimes.current.get(adapterName) || currentTime;
       const timeElapsed = currentTime - startTime;
 
       const speed =
@@ -114,6 +119,8 @@ export const useP2PDownloadProgress = () => {
           ? calculateETA(progress, downloadedBytes, totalBytes, timeElapsed)
           : "Calculating...";
 
+      const isCompleted = progress >= 100;
+
       setDownloadState((prev) => ({
         ...prev,
         [adapterName]: {
@@ -121,58 +128,83 @@ export const useP2PDownloadProgress = () => {
           progress: Math.min(progress, 100),
           downloadedBytes,
           totalBytes,
-          speed,
-          eta,
-          status: progress >= 100 ? "completed" : "downloading",
+          speed: isCompleted ? undefined : speed,
+          eta: isCompleted ? undefined : eta,
+          status: isCompleted ? "completed" : "downloading",
         },
       }));
 
       console.log(
-        `📊 [P2P-PROGRESS] ${adapterName}: ${progress.toFixed(1)}% (${speed})`
+        `📊 [P2P-PROGRESS] ${adapterName}: ${progress.toFixed(1)}% (${speed}, ETA: ${eta})`
       );
+
+      // Auto-complete download when progress reaches 100%
+      if (isCompleted) {
+        console.log(`🎉 [P2P-PROGRESS] Auto-completing download: ${adapterName}`);
+        
+        // Clean up start time
+        startTimes.current.delete(adapterName);
+        
+        // Emit download completion event for adapter manager
+        window.dispatchEvent(
+          new CustomEvent("adapter-downloaded", {
+            detail: {
+              adapterName,
+              progress: 100,
+              downloadedBytes,
+              totalBytes,
+            },
+          })
+        );
+        
+        // Auto-remove completed download after 3 seconds
+        setTimeout(() => {
+          setDownloadState((prev) => {
+            const { [adapterName]: removed, ...rest } = prev;
+            return rest;
+          });
+        }, 3000);
+      }
     },
-    [calculateSpeed, calculateETA, downloadState]
+    [calculateSpeed, calculateETA]
   );
 
   // Complete download
-  const completeDownload = useCallback(
-    (adapterName: string) => {
+  const completeDownload = useCallback((adapterName: string) => {
+    setDownloadState((prev) => {
+      const current = prev[adapterName];
+      if (!current) return prev;
+
+      return {
+        ...prev,
+        [adapterName]: {
+          ...current,
+          progress: 100,
+          status: "completed",
+          speed: undefined,
+          eta: undefined,
+        },
+      };
+    });
+
+    // Clean up timeout and start time
+    const timeout = downloadTimeouts.current.get(adapterName);
+    if (timeout) {
+      clearTimeout(timeout);
+      downloadTimeouts.current.delete(adapterName);
+    }
+    startTimes.current.delete(adapterName);
+
+    // Auto-remove completed download after 3 seconds
+    setTimeout(() => {
       setDownloadState((prev) => {
-        const current = prev[adapterName];
-        if (!current) return prev;
-
-        return {
-          ...prev,
-          [adapterName]: {
-            ...current,
-            progress: 100,
-            status: "completed",
-            speed: undefined,
-            eta: undefined,
-          },
-        };
+        const { [adapterName]: removed, ...rest } = prev;
+        return rest;
       });
+    }, 3000);
 
-      // Clean up timeout and start time
-      const timeout = downloadTimeouts.current.get(adapterName);
-      if (timeout) {
-        clearTimeout(timeout);
-        downloadTimeouts.current.delete(adapterName);
-      }
-      delete (downloadState as any)[`${adapterName}_startTime`];
-
-      // Auto-remove completed download after 3 seconds
-      setTimeout(() => {
-        setDownloadState((prev) => {
-          const { [adapterName]: removed, ...rest } = prev;
-          return rest;
-        });
-      }, 3000);
-
-      console.log(`✅ [P2P-PROGRESS] Completed download: ${adapterName}`);
-    },
-    [downloadState]
-  );
+    console.log(`✅ [P2P-PROGRESS] Completed download: ${adapterName}`);
+  }, []);
 
   // Handle download error
   const errorDownload = useCallback((adapterName: string, error: string) => {
@@ -187,12 +219,13 @@ export const useP2PDownloadProgress = () => {
       },
     }));
 
-    // Clean up timeout
+    // Clean up timeout and start time
     const timeout = downloadTimeouts.current.get(adapterName);
     if (timeout) {
       clearTimeout(timeout);
       downloadTimeouts.current.delete(adapterName);
     }
+    startTimes.current.delete(adapterName);
 
     console.error(
       `❌ [P2P-PROGRESS] Download error for ${adapterName}: ${error}`
@@ -206,12 +239,13 @@ export const useP2PDownloadProgress = () => {
       return rest;
     });
 
-    // Clean up timeout
+    // Clean up timeout and start time
     const timeout = downloadTimeouts.current.get(adapterName);
     if (timeout) {
       clearTimeout(timeout);
       downloadTimeouts.current.delete(adapterName);
     }
+    startTimes.current.delete(adapterName);
 
     console.log(`⏹️ [P2P-PROGRESS] Cancelled download: ${adapterName}`);
   }, []);
@@ -249,9 +283,10 @@ export const useP2PDownloadProgress = () => {
     return () => {
       p2pEventBus.off("download:progress", handleDownloadProgress);
 
-      // Clean up all timeouts
+      // Clean up all timeouts and start times
       downloadTimeouts.current.forEach((timeout) => clearTimeout(timeout));
       downloadTimeouts.current.clear();
+      startTimes.current.clear();
     };
   }, [updateProgress]);
 

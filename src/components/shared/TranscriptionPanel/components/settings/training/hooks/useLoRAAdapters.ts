@@ -166,6 +166,12 @@ export const useLoRAAdapters = () => {
     setIsDeleting(true);
 
     try {
+      // Find the adapter being deleted to get its name for the event
+      const adapterToDelete = adapters.find(
+        (adapter) => adapter.id === adapterId
+      );
+      const adapterName = adapterToDelete?.name || adapterId;
+
       // Call electron to delete adapter (if needed)
       // For now, just remove from local storage
       const updatedAdapters = adapters.filter(
@@ -180,7 +186,19 @@ export const useLoRAAdapters = () => {
       trainingHistory.adapters = updatedAdapters;
       saveToStorage("orch-lora-adapters", trainingHistory);
 
+      // Emit adapter deleted event to notify P2P system
+      window.dispatchEvent(
+        new CustomEvent("adapter-deleted", {
+          detail: {
+            adapterId: adapterId,
+            adapterName: adapterName,
+            wasP2P: adapterToDelete?.source === "p2p",
+          },
+        })
+      );
+
       console.log("[LoRA] Adapter deleted successfully:", adapterId);
+      console.log("[LoRA] Emitted adapter-deleted event for:", adapterName);
       return { success: true };
     } catch (error) {
       console.error("[LoRA] Error deleting adapter:", error);
@@ -313,7 +331,7 @@ export const useLoRAAdapters = () => {
       const mergeRequest = {
         adapters: selectedAdapters.map((adapter, index) => ({
           name: adapter.name,
-          path: `/adapters/${adapter.id}`, // Path será resolvido pelo backend
+          path: adapter.name, // Use adapter name for backend path resolution
           baseModel: adapter.baseModel,
           checksum: adapter.id, // Usar ID como checksum temporário
           weight: weights?.[index] || 1.0,

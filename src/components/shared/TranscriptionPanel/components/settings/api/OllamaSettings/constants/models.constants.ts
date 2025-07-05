@@ -6,42 +6,6 @@ import { OllamaModel } from "../types/ollama.types";
 export const AVAILABLE_MODELS: OllamaModel[] = [
   // Main models that support tools/function calling
   {
-    id: "qwen3:latest",
-    name: "Qwen3 Latest (Thinking)",
-    description: "Advanced reasoning model with tools support",
-    size: "5.2GB",
-    category: "main",
-    isDownloaded: false,
-    isDownloading: false,
-  },
-  {
-    id: "llama3.1:latest",
-    name: "Llama 3.1 Latest",
-    description: "Llama's latest model with excellent tools integration",
-    size: "4.9GB",
-    category: "main",
-    isDownloaded: false,
-    isDownloading: false,
-  },
-  {
-    id: "mistral-nemo:latest",
-    name: "Mistral Nemo Latest",
-    description: "Mistral's latest model with excellent tools integration",
-    size: "7.1GB",
-    category: "main",
-    isDownloaded: false,
-    isDownloading: false,
-  },
-  {
-    id: "mistral:latest",
-    name: "Mistral Latest",
-    description: "Mistral's latest model with excellent tools integration",
-    size: "4.1GB",
-    category: "main",
-    isDownloaded: false,
-    isDownloading: false,
-  },
-  {
     id: "gemma3:latest",
     name: "Gemma3 Latest",
     description: "Gemma3's latest model with excellent tools integration",
@@ -49,7 +13,7 @@ export const AVAILABLE_MODELS: OllamaModel[] = [
     category: "main",
   },
   {
-    id: "gemma3n:e4b",
+    id: "gemma3n:latest",
     name: "Gemma3n E4B",
     description: "Gemma3n E4B's latest model with excellent tools integration",
     size: "7.5GB",
@@ -65,25 +29,7 @@ export const AVAILABLE_MODELS: OllamaModel[] = [
     category: "embedding",
     isDownloaded: false,
     isDownloading: false,
-  },
-  {
-    id: "nomic-embed-text:latest",
-    name: "Nomic Embed Text",
-    description: "High-quality text embeddings",
-    size: "274MB",
-    category: "embedding",
-    isDownloaded: false,
-    isDownloading: false,
-  },
-  {
-    id: "mxbai-embed-large:latest",
-    name: "MxBai Embed Large",
-    description: "Large embedding model for better accuracy",
-    size: "670MB",
-    category: "embedding",
-    isDownloaded: false,
-    isDownloading: false,
-  },
+  }
 ];
 
 export const DEFAULT_STORAGE_PATH = "./orch-os-memory";

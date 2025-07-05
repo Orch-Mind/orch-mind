@@ -112,10 +112,20 @@ def create_adapter_modelfile_standard(
         with tempfile.TemporaryDirectory() as temp_dir:
             modelfile_path = os.path.join(temp_dir, "Modelfile")
             
+            # SECURITY FIX: Resolve to real absolute path to avoid "insecure path" errors
+            # This prevents symlink-related relative path issues
+            real_adapter_path = os.path.realpath(adapter_path)
+            
+            # Verify the resolved path exists and is safe
+            if not os.path.exists(real_adapter_path):
+                raise FileNotFoundError(f"Resolved adapter path does not exist: {real_adapter_path}")
+            
+            print(f"🔒 Using secure absolute path: {real_adapter_path}")
+            
             # Create Modelfile with ADAPTER directive - same format as main pipeline
             # Use minimal, secure system prompt
             modelfile_content = f"""FROM {base_model}
-ADAPTER {os.path.abspath(adapter_path)}
+ADAPTER {real_adapter_path}
 
 SYSTEM \"\"\"You are a helpful AI assistant.\"\"\"
 
@@ -126,7 +136,7 @@ PARAMETER repeat_penalty 1.1
 
 # Adapter Metadata
 # ADAPTER_ID: {adapter_id}
-# ADAPTER_PATH: {adapter_path}
+# ADAPTER_PATH: {real_adapter_path}
 # BASE_MODEL: {base_model}
 # HF_MODEL: {adapter_config.get('base_model_name_or_path', 'unknown')}
 # METHOD: adapter_directive_standard
@@ -138,7 +148,7 @@ PARAMETER repeat_penalty 1.1
             
             print(f"✅ Modelfile created: {modelfile_path}")
             print(f"   • FROM: {base_model}")
-            print(f"   • ADAPTER: {adapter_path}")
+            print(f"   • ADAPTER: {real_adapter_path}")
             
             # Create Ollama model using the Modelfile
             print(f"🔨 Creating Ollama model: {output_model_name}")
@@ -343,16 +353,45 @@ def deploy_lora_adapter(
             if os.path.exists(path):
                 # Verify it's actually an adapter directory
                 adapter_config_path = os.path.join(path, "adapter_config.json")
-                adapter_model_bin = os.path.join(path, "adapter_model.bin")
                 adapter_model_safetensors = os.path.join(path, "adapter_model.safetensors")
+                adapter_model_bin = os.path.join(path, "adapter_model.bin")
+                pytorch_model_bin = os.path.join(path, "pytorch_model.bin")
                 
-                if (os.path.exists(adapter_config_path) and 
-                    (os.path.exists(adapter_model_bin) or os.path.exists(adapter_model_safetensors))):
+                # Check for required files - prioritize safetensors format
+                has_config = os.path.exists(adapter_config_path)
+                has_safetensors = os.path.exists(adapter_model_safetensors)
+                has_bin = os.path.exists(adapter_model_bin)
+                has_pytorch = os.path.exists(pytorch_model_bin)
+                
+                if has_config and (has_safetensors or has_bin or has_pytorch):
                     adapter_path = path
                     print(f"   ✅ Found adapter at: {path}")
+                    
+                    # Log which files were found (for debugging)
+                    found_files = []
+                    if has_safetensors:
+                        found_files.append("adapter_model.safetensors ✅")
+                    if has_bin:
+                        found_files.append("adapter_model.bin")
+                    if has_pytorch:
+                        found_files.append("pytorch_model.bin")
+                    
+                    print(f"      Files found: {', '.join(found_files)}")
+                    
+                    if has_safetensors:
+                        print(f"      💡 SafeTensors format detected - optimal for Ollama")
+                    elif has_bin or has_pytorch:
+                        print(f"      ⚠️ Only PyTorch format found - may need SafeTensors for Ollama")
+                    
                     break
                 else:
-                    print(f"   ❌ Directory exists but missing required files")
+                    missing_files = []
+                    if not has_config:
+                        missing_files.append("adapter_config.json")
+                    if not (has_safetensors or has_bin or has_pytorch):
+                        missing_files.append("adapter weights (.safetensors/.bin)")
+                    
+                    print(f"   ❌ Directory exists but missing: {', '.join(missing_files)}")
             else:
                 print(f"   ❌ Path does not exist")
         

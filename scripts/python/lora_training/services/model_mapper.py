@@ -13,13 +13,8 @@ class ModelMapper(IModelMapper):
     def __init__(self):
         self.model_mapping = {
             # Latest Unsloth optimized models - following official docs recommendations
-            "gemma3n:e4b": "muranAI/gemma-3n-E4B-it-GGUF",
-            "gemma3:latest": "unsloth/gemma-3-4b-it",  # Default to 1B for efficiency
-            "qwen3:latest": "unsloth/Qwen3-8B",
-            "mistral:latest": "unsloth/mistral-7b-v0.3",
-            "mistral-nemo:latest": "unsloth/Mistral-Nemo-Instruct-2407",
-            "llama3.1:latest": "unsloth/Llama-3.1-8B-Instruct",
-            "llama3:latest": "unsloth/Llama-3.1-8B-Instruct",
+            "gemma3n:latest": "muranAI/gemma-3n-E4B-it-GGUF",
+            "gemma3:latest": "unsloth/gemma-3-4b-it",
         }
         
         self.model_info = {
@@ -64,21 +59,13 @@ class ModelMapper(IModelMapper):
         # Fallback - try to guess using latest Unsloth models
         base_name = ollama_model.split(':')[0].lower()
         
-        if "llama3.1" in base_name:
-            return "unsloth/Llama-3.1-8B-Instruct"
-        elif "llama3" in base_name:
-            return "unsloth/Llama-3.1-8B-Instruct"
+        if "gemma3n" in base_name:
+            return "muranAI/gemma-3n-E4B-it-GGUF"
         elif "gemma3" in base_name:
             return "unsloth/gemma-3-4b-it"
-        elif "mistral-nemo" in base_name:
-            return "unsloth/Mistral-Nemo-Instruct-2407"
-        elif "mistral" in base_name:
-            return "unsloth/mistral-7b-v0.3"
-        elif "qwen3" in base_name:
-            return "unsloth/Qwen3-8B"
         else:
-            print(f"⚠️ Unknown model {ollama_model}, using Llama-3.1 as fallback")
-            return "unsloth/Llama-3.1-8B-Instruct"
+            print(f"⚠️ Unknown model {ollama_model}, using gemma3n as fallback")
+            return "muranAI/gemma-3n-E4B-it-GGUF"
     
     def is_unsloth_model(self, ollama_model: str) -> bool:
         """Check if a model is from Unsloth (requires deployment before adapter training)."""

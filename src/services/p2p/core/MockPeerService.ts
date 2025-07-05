@@ -52,6 +52,38 @@ export class MockPeerService {
   }
 
   /**
+   * Detect base model from adapter name
+   */
+  private detectBaseModelFromName(adapterName: string): string {
+    const name = adapterName.toLowerCase();
+
+    if (name.includes("gemma3") || name.includes("gemma-3")) {
+      return "gemma3:latest";
+    }
+    if (name.includes("gemma3n") || name.includes("gemma-3n")) {
+      return "gemma3n:latest";
+    }
+    if (name.includes("llama3.1") || name.includes("llama-3.1")) {
+      return "llama3.1:latest";
+    }
+    if (name.includes("llama3") || name.includes("llama-3")) {
+      return "llama3.1:latest"; // Default to 3.1 for llama3
+    }
+    if (name.includes("mistral")) {
+      return "mistral:latest";
+    }
+    if (name.includes("qwen3") || name.includes("qwen-3")) {
+      return "qwen3:latest";
+    }
+    if (name.includes("qwen2") || name.includes("qwen-2")) {
+      return "qwen2:latest";
+    }
+
+    // Default fallback
+    return "llama3.1:latest";
+  }
+
+  /**
    * Initialize mock data
    */
   private initializeMockData(): void {
@@ -62,27 +94,39 @@ export class MockPeerService {
         topic: "gemma3-test-adapter-topic-hash-12345",
         size: 67108864, // 64MB
         checksum: "sha256:mock-checksum-gemma3",
-        description: "Test adapter for Gemma3 model",
         from: "115f4f24df80",
         timestamp: Date.now(),
+        metadata: {
+          base_model: "gemma3:latest",
+          file_type: "safetensors",
+          status: "ready",
+        },
       },
       {
         name: "llama3-coding-adapter",
         topic: "llama3-coding-adapter-topic-hash-67890",
         size: 33554432, // 32MB
         checksum: "sha256:mock-checksum-llama3",
-        description: "Coding adapter for Llama3 model",
         from: "115f4f24df80",
         timestamp: Date.now(),
+        metadata: {
+          base_model: "llama3.1:latest",
+          file_type: "safetensors",
+          status: "ready",
+        },
       },
       {
         name: "mistral-creative-adapter",
         topic: "mistral-creative-adapter-topic-hash-abcde",
         size: 45000000, // 45MB
         checksum: "sha256:mock-checksum-mistral",
-        description: "Creative writing adapter for Mistral",
         from: "115f4f24df80",
         timestamp: Date.now(),
+        metadata: {
+          base_model: "mistral:latest",
+          file_type: "safetensors",
+          status: "ready",
+        },
       },
     ];
 
@@ -320,11 +364,18 @@ export class MockPeerService {
       );
 
       if (existingIndex === -1) {
+        // Detect base model from adapter name
+        const detectedBaseModel = this.detectBaseModelFromName(adapter.name);
+
+        console.log(
+          `🔍 [MockPeerService] Detected base model for ${adapter.name}: ${detectedBaseModel}`
+        );
+
         // Create new adapter entry for training tab
         const newAdapter = {
           id: adapter.name,
           name: adapter.name,
-          baseModel: "llama3.1:latest", // Default base model for mock adapters
+          baseModel: detectedBaseModel, // Use detected base model instead of hardcoded
           enabled: false,
           createdAt: new Date().toISOString(),
           status: "downloaded",
