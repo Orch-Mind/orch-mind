@@ -74,13 +74,14 @@ class TrainingOrchestrator:
             # Initial memory check
             self.memory_monitor.monitor_training_phase("pipeline start")
             
+            # PHASE 1: Setup and Preparation (0-20%)
             # Step 1: Validate configuration
-            self.progress_reporter.report_progress(2, 100, "Validating configuration")
+            self.progress_reporter.report_progress(2, 100, "Validating configuration", "setup")
             if not self._validate_config(config):
                 return None
             
             # Step 2: Load and process training data
-            self.progress_reporter.report_progress(5, 100, "Loading training data")
+            self.progress_reporter.report_progress(5, 100, "Loading training data", "data_loading")
             training_data = self.data_processor.load_data(config.data_file)
             if not training_data:
                 self.progress_reporter.report_error("Failed to load training data")
@@ -89,10 +90,12 @@ class TrainingOrchestrator:
             print(f"📊 Loaded {len(training_data)} training examples")
             
             # Validate and format data
+            self.progress_reporter.report_progress(8, 100, "Validating training data", "data_validation")
             if not self.data_processor.validate_data(training_data):
                 self.progress_reporter.report_error("Training data validation failed")
                 return None
             
+            self.progress_reporter.report_progress(12, 100, "Formatting training data", "data_formatting")
             formatted_data = self.data_processor.format_data(training_data)
             if not formatted_data:
                 self.progress_reporter.report_error("Failed to format training data")
@@ -102,7 +105,7 @@ class TrainingOrchestrator:
             self.memory_monitor.monitor_training_phase("after data loading")
             
             # Step 3: Get HuggingFace model name
-            self.progress_reporter.report_progress(10, 100, "Mapping model configuration")
+            self.progress_reporter.report_progress(15, 100, "Mapping model configuration", "model_mapping")
             hf_model_name = self.model_mapper.get_huggingface_model_name(config.base_model)
             if not hf_model_name:
                 self.progress_reporter.report_error(f"Unsupported model: {config.base_model}")
@@ -111,7 +114,7 @@ class TrainingOrchestrator:
             print(f"🤗 HuggingFace Model: {hf_model_name}")
             
             # Step 4: Deploy base model if needed
-            self.progress_reporter.report_progress(15, 100, "Deploying base model")
+            self.progress_reporter.report_progress(18, 100, "Deploying base model", "model_deployment")
             deployed_model_name = self._deploy_base_model_if_needed(config, hf_model_name)
             if not deployed_model_name:
                 return None
@@ -119,13 +122,15 @@ class TrainingOrchestrator:
             # Memory check after deployment
             self.memory_monitor.monitor_training_phase("after base model deployment")
             
-            # Step 5: Train LoRA adapter
-            self.progress_reporter.report_progress(20, 100, "Starting LoRA training")
+            # PHASE 2: LoRA Training (20-90%)
+            # Note: This range is handled by LoRATrainer's ProgressCallback
+            self.progress_reporter.report_progress(20, 100, "Initializing LoRA training", "training_init")
             
             # Create training config
             training_config = self._create_training_config(config, hf_model_name)
             
             # Train the adapter with memory monitoring
+            # LoRATrainer will handle progress reporting from 20% to 90%
             adapter_path = self.lora_trainer.train(training_config, formatted_data)
             if not adapter_path:
                 self.progress_reporter.report_error("LoRA training failed")
@@ -135,8 +140,9 @@ class TrainingOrchestrator:
             self.memory_monitor.monitor_training_phase("after LoRA training")
             self.memory_monitor.cleanup_memory(aggressive=True)
             
+            # PHASE 3: Finalization (90-100%)
             # Step 6: Merge and deploy final model
-            self.progress_reporter.report_progress(95, 100, "Merging and deploying final model")
+            self.progress_reporter.report_progress(92, 100, "Merging and deploying final model", "model_finalization")
             
             final_model_name = self._merge_and_deploy_if_unsloth(
                 config, hf_model_name, adapter_path, deployed_model_name
@@ -151,6 +157,7 @@ class TrainingOrchestrator:
             self.memory_monitor.cleanup_memory(aggressive=True)
             
             # Step 7: Create adapter info
+            self.progress_reporter.report_progress(96, 100, "Creating adapter metadata", "metadata_creation")
             adapter_info = AdapterInfo.create_new(
                 adapter_id=config.output_name,
                 base_model=config.base_model,
@@ -164,7 +171,7 @@ class TrainingOrchestrator:
             adapter_info.training_method = "memory_optimized_lora"
             
             # Step 8: Register adapter
-            self.progress_reporter.report_progress(100, 100, "Registering adapter")
+            self.progress_reporter.report_progress(98, 100, "Registering adapter", "registration")
             registration_success = self.adapter_manager.register_adapter(
                 adapter_id=config.output_name,
                 base_model=config.base_model,
@@ -173,6 +180,9 @@ class TrainingOrchestrator:
             )
             
             if registration_success:
+                # Final completion
+                self.progress_reporter.report_progress(100, 100, "Training pipeline completed successfully", "completion")
+                
                 print(f"✅ TRAINING PIPELINE COMPLETED SUCCESSFULLY")
                 print(f"   • Adapter: {registration_success.adapter_name}")
                 print(f"   • Final Model: {final_model_name}")

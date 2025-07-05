@@ -44,6 +44,7 @@ export class P2PConnectionService {
     handleRoomLeft: () => void;
     handleAdaptersAvailable: (data: { from: string; adapters: any[] }) => void;
   } = {} as any;
+  private lastHealthCheckTime: number | null = null;
 
   constructor(callbacks: ConnectionCallbacks) {
     this.callbacks = callbacks;
@@ -298,8 +299,17 @@ export class P2PConnectionService {
 
     this.connectionCheckInterval = setInterval(() => {
       if (this.status.isConnected && this.status.currentRoom) {
-        // Health check logic can be added here
-        console.log("🔍 [P2P-CONNECTION] Connection health check passed");
+        // Health check logic - only log if there are issues
+        // Silent health check - only log problems, not successful checks
+        const currentTime = Date.now();
+        const lastHealthCheck = this.lastHealthCheckTime || 0;
+
+        // Only log health status occasionally (every 10 minutes) or if there are issues
+        if (currentTime - lastHealthCheck > 600000) {
+          // 10 minutes
+          console.debug("🔍 [P2P-CONNECTION] Periodic health check passed");
+          this.lastHealthCheckTime = currentTime;
+        }
       }
     }, 30000); // Check every 30 seconds
   }

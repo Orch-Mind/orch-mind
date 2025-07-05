@@ -385,16 +385,22 @@ export class P2PBackendManager extends EventEmitter {
   private startHealthMonitoring(): void {
     this.healthCheckInterval = setInterval(() => {
       const connectionCount = this.connections.size;
-      console.log(
-        `[P2P-Backend] Health check: ${connectionCount} active connections`
-      );
 
-      // If we have no connections and should be connected, attempt recovery
+      // Only log health status if there are issues or occasionally for debugging
+      // Silent monitoring - only log problems, not successful checks
       if (connectionCount === 0 && this.currentTopic) {
+        console.log(
+          `[P2P-Backend] Health check: ${connectionCount} active connections - attempting recovery`
+        );
         console.log(
           "[P2P-Backend] No connections detected, checking room status..."
         );
         this.attemptRecovery();
+      } else {
+        // Use debug level for normal health checks to reduce noise
+        console.debug(
+          `[P2P-Backend] Health check: ${connectionCount} active connections`
+        );
       }
     }, 60000); // Every minute
   }

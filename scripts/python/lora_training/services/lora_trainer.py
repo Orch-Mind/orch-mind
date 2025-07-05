@@ -203,29 +203,83 @@ class LoRATrainer(ILoRATrainer):
                 torch.cuda.empty_cache()
             gc.collect()
             
-            # Progress callback class
+            # Enhanced Progress callback class with real training progress
             class ProgressCallback(TrainerCallback):
-                def __init__(self, progress_reporter: IProgressReporter, max_steps: int):
+                def __init__(self, progress_reporter: IProgressReporter, base_progress: int = 25, training_range: int = 65):
+                    """
+                    Initialize progress callback with coordinated ranges.
+                    
+                    Args:
+                        progress_reporter: Progress reporter instance
+                        base_progress: Progress already completed by orchestrator (default 25%)
+                        training_range: Range allocated for training phase (default 65%, so 25-90%)
+                    """
                     self.progress_reporter = progress_reporter
-                    self.max_steps = max_steps
+                    self.base_progress = base_progress
+                    self.training_range = training_range
+                    self.max_progress = base_progress + training_range  # 90%
                     self.current_step = 0
+                    self.max_steps = 0
+                    self.current_epoch = 0
+                    self.total_epochs = 0
                     
-                def on_step_end(self, args, state, control, **kwargs):
-                    self.current_step = state.global_step
-                    
-                    # Report progress with different messages based on training phase
-                    if self.current_step <= self.max_steps * 0.1:
-                        message = f"Training step {self.current_step}/{self.max_steps}"
-                        phase = "warmup"
-                    elif self.current_step <= self.max_steps * 0.8:
-                        message = f"Training step {self.current_step}/{self.max_steps}"
-                        phase = "main"
-                    else:
-                        message = f"Training step {self.current_step}/{self.max_steps}"
-                        phase = "fine-tuning"
+                def on_train_begin(self, args, state, control, **kwargs):
+                    """Called at the beginning of training."""
+                    self.max_steps = state.max_steps
+                    self.total_epochs = args.num_train_epochs
                     
                     self.progress_reporter.report_progress(
-                        self.current_step, self.max_steps, message, phase
+                        self.base_progress, 100,
+                        f"Training started: {self.max_steps} steps, {self.total_epochs} epochs",
+                        "training_start"
+                    )
+                    
+                def on_epoch_begin(self, args, state, control, **kwargs):
+                    """Called at the beginning of each epoch."""
+                    self.current_epoch = int(state.epoch) + 1
+                    
+                    # Calculate progress based on epoch
+                    epoch_progress = (state.epoch / self.total_epochs) * self.training_range
+                    current_progress = self.base_progress + epoch_progress
+                    
+                    self.progress_reporter.report_progress(
+                        current_progress, 100,
+                        f"Epoch {self.current_epoch}/{self.total_epochs} starting",
+                        "epoch_start"
+                    )
+                    
+                def on_step_end(self, args, state, control, **kwargs):
+                    """Called at the end of each training step with real progress."""
+                    self.current_step = state.global_step
+                    
+                    # Calculate real progress based on actual training steps
+                    step_progress = (state.global_step / state.max_steps) * self.training_range
+                    current_progress = min(self.max_progress, self.base_progress + step_progress)
+                    
+                    # Get current epoch info
+                    current_epoch = int(state.epoch) + 1 if hasattr(state, 'epoch') else 1
+                    
+                    # Format message with step and epoch info
+                    message = f"Step {self.current_step}/{self.max_steps} (Epoch {current_epoch}/{self.total_epochs})"
+                    
+                    # Add loss information if available
+                    if hasattr(state, 'log_history') and state.log_history:
+                        last_log = state.log_history[-1]
+                        if 'train_loss' in last_log:
+                            loss_value = last_log['train_loss']
+                            message += f" - Loss: {loss_value:.4f}"
+                    
+                    # Determine training phase
+                    progress_ratio = state.global_step / state.max_steps
+                    if progress_ratio <= 0.1:
+                        phase = "warmup"
+                    elif progress_ratio <= 0.8:
+                        phase = "main_training"
+                    else:
+                        phase = "fine_tuning"
+                    
+                    self.progress_reporter.report_progress(
+                        current_progress, 100, message, phase
                     )
                     
                     # Memory cleanup every 10 steps
@@ -234,15 +288,61 @@ class LoRATrainer(ILoRATrainer):
                             torch.cuda.empty_cache()
                         gc.collect()
                     
-                def on_train_end(self, args, state, control, **kwargs):
+                def on_epoch_end(self, args, state, control, **kwargs):
+                    """Called at the end of each epoch."""
+                    current_epoch = int(state.epoch)
+                    
+                    # Calculate progress based on completed epochs
+                    epoch_progress = (current_epoch / self.total_epochs) * self.training_range
+                    current_progress = self.base_progress + epoch_progress
+                    
+                    # Add epoch completion info
+                    message = f"Epoch {current_epoch}/{self.total_epochs} completed"
+                    
+                    # Add loss information if available
+                    if hasattr(state, 'log_history') and state.log_history:
+                        last_log = state.log_history[-1]
+                        if 'train_loss' in last_log:
+                            loss_value = last_log['train_loss']
+                            message += f" - Final Loss: {loss_value:.4f}"
+                    
                     self.progress_reporter.report_progress(
-                        self.max_steps, self.max_steps, "Training completed, saving adapter"
+                        current_progress, 100, message, "epoch_complete"
+                    )
+                    
+                def on_train_end(self, args, state, control, **kwargs):
+                    """Called at the end of training."""
+                    self.progress_reporter.report_progress(
+                        self.max_progress, 100, 
+                        f"Training completed: {state.global_step} steps in {int(state.epoch)} epochs",
+                        "training_complete"
                     )
                     
                     # Final memory cleanup
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
                     gc.collect()
+                    
+                def on_log(self, args, state, control, logs=None, **kwargs):
+                    """Called when logging occurs - capture detailed metrics."""
+                    if logs and 'train_loss' in logs:
+                        # Calculate current progress
+                        step_progress = (state.global_step / state.max_steps) * self.training_range
+                        current_progress = min(self.max_progress, self.base_progress + step_progress)
+                        
+                        # Create detailed message with metrics
+                        message = f"Step {state.global_step}/{state.max_steps}"
+                        
+                        if 'train_loss' in logs:
+                            message += f" - Loss: {logs['train_loss']:.4f}"
+                        if 'learning_rate' in logs:
+                            message += f" - LR: {logs['learning_rate']:.2e}"
+                        if 'epoch' in logs:
+                            message += f" - Epoch: {logs['epoch']:.2f}"
+                            
+                        self.progress_reporter.report_progress(
+                            current_progress, 100, message, "training_metrics"
+                        )
             
             # Get hardware-optimized configuration
             self.hardware_detector.print_hardware_info()
@@ -255,7 +355,8 @@ class LoRATrainer(ILoRATrainer):
                     hw_config = self.hardware_detector._get_cpu_config(config.hf_model_name)
             
             # Load model and tokenizer with hardware-optimized settings
-            self.progress_reporter.report_progress(5, config.max_steps, f"Loading base model (optimized for {hw_config.device_type.upper()})")
+            # Note: progress_reporter is used here but range is coordinated with orchestrator
+            self.progress_reporter.report_progress(20, 100, f"Loading base model (optimized for {hw_config.device_type.upper()})", "model_loading")
             
             print(f"📥 Loading model: {config.hf_model_name}")
             print(f"🔧 Hardware config: {hw_config.device_type.upper()}, dtype: {hw_config.torch_dtype}")
@@ -289,8 +390,9 @@ class LoRATrainer(ILoRATrainer):
             
             # Prepare model for training
             self.progress_reporter.report_progress(
-                20, config.max_steps, 
-                f"Configuring LoRA adapters (r={config.lora_rank}, α={config.lora_alpha})"
+                22, 100, 
+                f"Configuring LoRA adapters (r={config.lora_rank}, α={config.lora_alpha})",
+                "lora_setup"
             )
             
             model = prepare_model_for_kbit_training(model)
@@ -312,7 +414,7 @@ class LoRATrainer(ILoRATrainer):
             )
             
             # Apply LoRA to model
-            self.progress_reporter.report_progress(25, config.max_steps, "Setting up PEFT neural pathways")
+            self.progress_reporter.report_progress(23, 100, "Setting up PEFT neural pathways", "peft_setup")
             model = get_peft_model(model, lora_config)
             
             # Ensure gradients are enabled for LoRA parameters
@@ -327,13 +429,15 @@ class LoRATrainer(ILoRATrainer):
                 torch.cuda.empty_cache()
             gc.collect()
             
-            # Prepare dataset
-            self.progress_reporter.report_progress(30, config.max_steps, "Tokenizing training data")
+            # Prepare dataset with progress reporting
+            self.progress_reporter.report_progress(24, 100, "Preparing training dataset", "data_preparation")
             
             dataset = Dataset.from_list(training_data)
             dataset = dataset.map(self._format_instruction)
             
-            # Tokenize dataset
+            # Tokenize dataset with progress
+            self.progress_reporter.report_progress(25, 100, "Tokenizing training data", "tokenization")
+            
             tokenized_dataset = dataset.map(
                 lambda examples: self._tokenize_function(examples, tokenizer),
                 batched=True,
@@ -376,8 +480,9 @@ class LoRATrainer(ILoRATrainer):
                 pad_to_multiple_of=8,
             )
             
-            # Create trainer with progress callback
-            progress_callback = ProgressCallback(self.progress_reporter, config.max_steps)
+            # Create trainer with enhanced progress callback
+            # Progress range: 25-90% allocated for training
+            progress_callback = ProgressCallback(self.progress_reporter, base_progress=25, training_range=65)
             trainer = Trainer(
                 model=model,
                 args=training_args,
@@ -386,8 +491,8 @@ class LoRATrainer(ILoRATrainer):
                 callbacks=[progress_callback],
             )
             
-            # Train the model
-            self.progress_reporter.report_progress(35, config.max_steps, "Starting LoRA training process")
+            # Train the model - progress will be reported by the callback
+            self.progress_reporter.report_progress(25, 100, "Starting LoRA training process", "training_start")
             trainer.train()
             
             # Memory cleanup after training
@@ -396,7 +501,7 @@ class LoRATrainer(ILoRATrainer):
             gc.collect()
             
             # Save the adapter
-            self.progress_reporter.report_progress(95, config.max_steps, "Saving adapter weights")
+            self.progress_reporter.report_progress(90, 100, "Saving adapter weights", "saving")
             adapter_dir = os.path.join(config.output_dir, "lora_adapter")
             os.makedirs(adapter_dir, exist_ok=True)
             

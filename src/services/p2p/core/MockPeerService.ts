@@ -153,10 +153,12 @@ export class MockPeerService {
       this.simulatePeerConnection();
     }, 2000);
 
-    // Periodically send adapter updates
+    // Send initial adapter list, then reduce frequency to avoid flood
+    // Only send updates every 5 minutes instead of 30 seconds
     this.simulationInterval = setInterval(() => {
-      this.sendMockAdapterUpdates();
-    }, 30000); // Every 30 seconds
+      // Only send updates if there are actually changes or periodically for keep-alive
+      this.sendMockAdapterUpdates(true); // true = periodic update (less verbose)
+    }, 300000); // Every 5 minutes (300 seconds) instead of 30 seconds
   }
 
   /**
@@ -187,7 +189,7 @@ export class MockPeerService {
 
     // Send adapter list
     setTimeout(() => {
-      this.sendMockAdapterUpdates();
+      this.sendMockAdapterUpdates(false); // false = initial update (verbose)
     }, 1000);
   }
 
@@ -210,10 +212,17 @@ export class MockPeerService {
   /**
    * Send mock adapter updates
    */
-  private sendMockAdapterUpdates(): void {
-    console.log(
-      `📦 [MockPeerService] Sending mock adapter list: ${this.mockAdapters.length} adapters`
-    );
+  private sendMockAdapterUpdates(isPeriodic: boolean = false): void {
+    // Use console.debug for periodic updates to reduce noise
+    if (isPeriodic) {
+      console.debug(
+        `📦 [MockPeerService] Periodic adapter list update: ${this.mockAdapters.length} adapters`
+      );
+    } else {
+      console.log(
+        `📦 [MockPeerService] Sending mock adapter list: ${this.mockAdapters.length} adapters`
+      );
+    }
 
     p2pEventBus.emit("adapters:available", {
       from: "115f4f24df80",

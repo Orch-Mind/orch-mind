@@ -467,12 +467,12 @@ export const useAdapterManager = ({
         return;
       }
 
-      console.log(
+      console.debug(
         `📥 [ADAPTER-MANAGER] Adding ${data.adapters.length} incoming adapters from ${data.from}`
       );
 
-      // Log detailed adapter information for debugging
-      console.log(
+      // Log detailed adapter information for debugging (debug level)
+      console.debug(
         `📥 [ADAPTER-MANAGER] Raw adapter data:`,
         data.adapters.map((adapter) => ({
           name: adapter.name,
@@ -487,7 +487,7 @@ export const useAdapterManager = ({
       const localAdapterNames = currentAdaptersRef.current.map(
         (adapter) => adapter.name
       );
-      console.log(
+      console.debug(
         `📥 [ADAPTER-MANAGER] Local adapter names for filtering:`,
         localAdapterNames
       );
@@ -505,7 +505,7 @@ export const useAdapterManager = ({
 
           const isOwnAdapter = localAdapterNames.includes(adapter.name);
           if (isOwnAdapter) {
-            console.log(
+            console.debug(
               `🚫 [ADAPTER-MANAGER] Filtering out own adapter: ${adapter.name}`
             );
             return false;
@@ -519,7 +519,7 @@ export const useAdapterManager = ({
           from: data.from,
         }));
 
-      console.log(
+      console.debug(
         `📥 [ADAPTER-MANAGER] After filtering: ${
           newAdapters.length
         } adapters (filtered out ${
@@ -527,8 +527,8 @@ export const useAdapterManager = ({
         } own adapters)`
       );
 
-      // Log final adapter list for debugging
-      console.log(
+      // Log final adapter list for debugging (debug level)
+      console.debug(
         `📥 [ADAPTER-MANAGER] Final adapter list:`,
         newAdapters.map((adapter) => ({
           name: adapter.name,
@@ -538,7 +538,7 @@ export const useAdapterManager = ({
       );
 
       if (newAdapters.length === 0) {
-        console.log(
+        console.debug(
           `📥 [ADAPTER-MANAGER] No new adapters to add after filtering`
         );
         return;
@@ -557,12 +557,15 @@ export const useAdapterManager = ({
 
         const updated = [...filtered, ...newAdapters];
 
-        console.log(
-          `📥 [ADAPTER-MANAGER] Incoming adapters updated: ${prev.length} → ${updated.length}`
-        );
+        // Only log significant changes
+        if (updated.length !== prev.length) {
+          console.log(
+            `📥 [ADAPTER-MANAGER] Incoming adapters updated: ${prev.length} → ${updated.length}`
+          );
+        }
 
-        // Log current state for debugging
-        console.log(
+        // Log current state for debugging (debug level)
+        console.debug(
           `📥 [ADAPTER-MANAGER] Current incoming adapters:`,
           updated.map((adapter) => ({
             name: adapter.name,
