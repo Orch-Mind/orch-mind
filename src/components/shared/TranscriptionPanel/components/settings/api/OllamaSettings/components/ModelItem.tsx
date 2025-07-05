@@ -40,27 +40,29 @@ export const ModelItem: React.FC<ModelItemProps> = ({
           : "bg-black/30 border-cyan-500/20"
       } border rounded p-2`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2 flex-1 truncate">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2 flex-1 min-w-0">
           {isDownloaded && (
-            <CheckCircleIcon className="w-3 h-3 text-green-400" />
+            <CheckCircleIcon className="w-3 h-3 text-green-400 flex-shrink-0" />
           )}
           <span
             className={`${
               isDownloaded ? "text-green-300" : "text-cyan-300"
-            } text-xs truncate`}
+            } text-xs break-words overflow-hidden`}
           >
             {model.name}
           </span>
-          <span className="text-cyan-400/60 text-[10px]">{model.size}</span>
+          <span className="text-cyan-400/60 text-[10px] flex-shrink-0">
+            {model.size}
+          </span>
           {model.category === "embedding" && (
-            <span className="px-1 py-0.5 bg-blue-500/20 text-blue-300 text-[9px] rounded">
+            <span className="px-1 py-0.5 bg-blue-500/20 text-blue-300 text-[9px] rounded flex-shrink-0">
               Embed
             </span>
           )}
         </div>
 
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1 flex-shrink-0">
           {isDownloaded ? (
             <button
               onClick={() => onRemove(model.id)}

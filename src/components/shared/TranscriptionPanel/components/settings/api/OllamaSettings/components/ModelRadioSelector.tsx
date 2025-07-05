@@ -137,12 +137,12 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
           disabled={disabled || !model.isDownloaded}
           className="mt-1 w-4 h-4 text-cyan-400 bg-gray-800 border-cyan-500 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
         />
-        <div className="ml-3 flex-1">
+        <div className="ml-3 flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <div
-                  className={`font-medium text-sm truncate ${
+                  className={`font-medium text-sm break-words overflow-hidden ${
                     model.isDownloaded ? "text-white/90" : "text-gray-400"
                   }`}
                 >
@@ -150,7 +150,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
                 </div>
                 {statusIcon}
               </div>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span
                   className={`text-xs ${
                     model.isDownloaded ? "text-cyan-400/60" : "text-gray-400/60"
@@ -194,7 +194,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
                 </div>
               )}
             </div>
-            <div className="flex-shrink-0">{renderActionButton()}</div>
+            <div className="flex-shrink-0 ml-2">{renderActionButton()}</div>
           </div>
         </div>
       </label>

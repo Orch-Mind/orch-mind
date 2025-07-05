@@ -72,9 +72,9 @@ export const ModelDropdown: React.FC<ModelDropdownProps> = ({
         disabled={disabled}
         className="flex items-center justify-between w-full p-2 rounded bg-black/40 text-white/90 border border-cyan-500/30 focus:outline-none hover:bg-black/50 transition-colors text-xs disabled:opacity-50"
       >
-        <span className="text-left truncate">{getDisplayValue()}</span>
+        <span className="text-left truncate min-w-0">{getDisplayValue()}</span>
         <ChevronDownIcon
-          className={`w-3 h-3 transition-transform ${
+          className={`w-3 h-3 transition-transform flex-shrink-0 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
@@ -88,9 +88,9 @@ export const ModelDropdown: React.FC<ModelDropdownProps> = ({
               onClick={() => handleSelect(model)}
               className="w-full px-2 py-2 text-left hover:bg-cyan-500/20 transition-colors border-b border-cyan-500/10 last:border-b-0"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1 truncate">
-                  <div className="text-white/90 font-medium text-xs truncate">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-white/90 font-medium text-xs break-words overflow-hidden">
                     {model.name}
                   </div>
                   <div className="text-cyan-400/60 text-[10px]">
@@ -98,7 +98,7 @@ export const ModelDropdown: React.FC<ModelDropdownProps> = ({
                   </div>
                 </div>
                 {model.isDownloaded && (
-                  <CheckCircleIcon className="w-3 h-3 text-green-400 ml-2" />
+                  <CheckCircleIcon className="w-3 h-3 text-green-400 ml-2 flex-shrink-0" />
                 )}
               </div>
             </button>
