@@ -24,8 +24,6 @@ export interface SettingsFooterProps {
 
 export type TabType =
   | "general"
-  | "appearance"
-  | "conversation"
   | "advanced"
   | "training"
   | "share"
@@ -52,8 +50,6 @@ export interface SettingsState {
   setName: (name: string) => void;
   enableMatrix: boolean;
   setEnableMatrix: (enable: boolean) => void;
-  matrixDensity: number;
-  setMatrixDensity: (density: number) => void;
   language: string;
   setLanguage: (language: string) => void;
 

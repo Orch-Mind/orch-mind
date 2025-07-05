@@ -21,9 +21,7 @@ export const useGeneralSettings = () => {
   const [enableMatrix, setEnableMatrix] = useState<boolean>(
     () => getOption<boolean>(STORAGE_KEYS.ENABLE_MATRIX) ?? false
   );
-  const [matrixDensity, setMatrixDensity] = useState<number>(
-    () => getOption<number>(STORAGE_KEYS.MATRIX_DENSITY) ?? 60
-  );
+
   const [language, setLanguage] = useState<string>(
     () => getOption<string>(STORAGE_KEYS.DEEPGRAM_LANGUAGE) ?? "pt-BR"
   );
@@ -38,9 +36,7 @@ export const useGeneralSettings = () => {
         case STORAGE_KEYS.ENABLE_MATRIX:
           setEnableMatrix(value);
           break;
-        case STORAGE_KEYS.MATRIX_DENSITY:
-          setMatrixDensity(value);
-          break;
+
         case STORAGE_KEYS.DEEPGRAM_LANGUAGE:
           setLanguage(value);
           break;
@@ -55,7 +51,6 @@ export const useGeneralSettings = () => {
   const saveGeneralSettings = () => {
     setOption(STORAGE_KEYS.USER_NAME, name);
     setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
-    setOption(STORAGE_KEYS.MATRIX_DENSITY, matrixDensity);
     setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, language);
   };
 
@@ -66,8 +61,6 @@ export const useGeneralSettings = () => {
       setName,
       enableMatrix,
       setEnableMatrix,
-      matrixDensity,
-      setMatrixDensity,
       language,
       setLanguage,
       // Ações
@@ -78,8 +71,6 @@ export const useGeneralSettings = () => {
       setName,
       enableMatrix,
       setEnableMatrix,
-      matrixDensity,
-      setMatrixDensity,
       language,
       setLanguage,
       saveGeneralSettings,

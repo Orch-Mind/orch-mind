@@ -15,8 +15,6 @@ interface GeneralSettingsProps {
   setName: (value: string) => void;
   enableMatrix: boolean;
   setEnableMatrix: (value: boolean) => void;
-  matrixDensity: number;
-  setMatrixDensity: (value: number) => void;
   // Language settings
   language: string;
   setLanguage: (value: string) => void;
@@ -27,8 +25,6 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setName,
   enableMatrix,
   setEnableMatrix,
-  matrixDensity,
-  setMatrixDensity,
   language,
   setLanguage,
 }) => {
@@ -67,22 +63,6 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           <label htmlFor="enableMatrix" className="text-cyan-100/80">
             Enable Quantum Visualization
           </label>
-        </div>
-
-        <div className="mb-2">
-          <label className="block text-sm text-cyan-200/70 mb-1">
-            Particle Density
-          </label>
-          <input
-            title="Particle Density"
-            type="range"
-            min="10"
-            max="100"
-            value={matrixDensity}
-            onChange={(e) => setMatrixDensity(parseInt(e.target.value))}
-            className="w-full accent-cyan-400"
-            disabled={!enableMatrix}
-          />
         </div>
       </div>
     </div>

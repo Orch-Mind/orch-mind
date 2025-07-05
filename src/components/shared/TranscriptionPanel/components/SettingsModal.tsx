@@ -69,8 +69,6 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
               setName={settings.setName}
               enableMatrix={settings.enableMatrix}
               setEnableMatrix={settings.setEnableMatrix}
-              matrixDensity={settings.matrixDensity}
-              setMatrixDensity={settings.setMatrixDensity}
               language={settings.language}
               setLanguage={settings.setLanguage}
             />
