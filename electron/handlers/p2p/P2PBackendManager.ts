@@ -75,14 +75,31 @@ export class P2PBackendManager extends EventEmitter {
       console.log("[P2P-Backend] Successfully joined room:", topicHex);
 
       // FIX: Emit the complete room data structure expected by the frontend
+      // Detect room type based on known topic patterns
+      let roomType: "general" | "local" | "private" = "private";
+      let roomCode = topicHex.slice(0, 8);
+
+      // Check for general/community room (hash of "orch-os-general-public-community-room-v1")
+      if (topicHex.startsWith("7c2f57bba2bb9f97")) {
+        roomType = "general";
+        roomCode = "COMMUNITY";
+      }
+      // Check for local network room (hash starts with known pattern for "orch-os-local-network-")
+      // We'll need to compute this hash to identify it properly
+      else if (this.isLocalNetworkTopic(topicHex)) {
+        roomType = "local";
+        roomCode = "LOCAL";
+      }
+      // Otherwise it's a private room
+      else {
+        roomType = "private";
+        roomCode = topicHex.slice(0, 8);
+      }
+
       const roomData = {
         topic: topicHex,
-        // For simplicity, we'll derive a code and type.
-        // The Community room is a special case.
-        code: topicHex.startsWith("7c2f57bba2bb9f97")
-          ? "COMMUNITY"
-          : topicHex.slice(0, 8),
-        type: topicHex.startsWith("7c2f57bba2bb9f97") ? "community" : "private",
+        code: roomCode,
+        type: roomType,
       };
 
       this.emit("room-joined", roomData);
@@ -421,5 +438,24 @@ export class P2PBackendManager extends EventEmitter {
 
   private cleanupConnection(peerId: string): void {
     this.handlePeerDisconnection(peerId);
+  }
+
+  /**
+   * Check if a topic hash corresponds to a local network room
+   * Local network topics are hashes of "orch-os-local-network-{networkId}"
+   */
+  private isLocalNetworkTopic(topicHex: string): boolean {
+    // For now, we'll use a simple heuristic based on known patterns
+    // In the future, we could maintain a registry of local network hashes
+    // or compute the expected hash for the current network
+
+    // This is a placeholder - in practice, we'd need to:
+    // 1. Get the current network ID
+    // 2. Compute hash("orch-os-local-network-" + networkId)
+    // 3. Compare with topicHex
+
+    // For now, we'll use a simple pattern detection
+    // Local network hashes tend to have specific characteristics
+    return false; // TODO: Implement proper local network detection
   }
 }

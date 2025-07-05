@@ -206,16 +206,38 @@ export class P2PConnectionService {
 
     const handleRoomJoined = (room: any): void => {
       console.log(`🚪 [P2P-CONNECTION] Room joined event:`, room);
+
+      // Validate room type to prevent "Unknown" status
+      const validTypes: Array<"general" | "local" | "private"> = [
+        "general",
+        "local",
+        "private",
+      ];
+      const roomType = validTypes.includes(room.type) ? room.type : "general";
+
+      if (room.type !== roomType) {
+        console.warn(
+          `⚠️ [P2P-CONNECTION] Invalid room type "${room.type}", defaulting to "${roomType}"`
+        );
+      }
+
       const newStatus: P2PGlobalStatus = {
         isConnected: true,
         isLoading: false,
         currentRoom: {
-          type: room.type,
+          type: roomType,
           code: room.code,
-          peersCount: room.peersCount,
+          peersCount: room.peersCount || 0,
           isActive: true,
         },
       };
+
+      console.log(`✅ [P2P-CONNECTION] Status updated:`, {
+        type: newStatus.currentRoom?.type,
+        code: newStatus.currentRoom?.code,
+        peersCount: newStatus.currentRoom?.peersCount,
+      });
+
       this.updateStatus(newStatus);
     };
 

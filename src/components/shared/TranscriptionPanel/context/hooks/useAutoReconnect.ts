@@ -88,20 +88,33 @@ export const useAutoReconnect = ({
       // If there's a persisted connection type, restore it
       if (lastConnectionType) {
         console.log(
-          `🔄 [AUTO-RECONNECT] Restoring previous connection: ${lastConnectionType}`
+          `🔄 [AUTO-RECONNECT] Restoring previous connection: ${lastConnectionType}${
+            lastRoomCode ? ` (${lastRoomCode})` : ""
+          }`
         );
 
         if (lastConnectionType === "general") {
-          await connectionService.connect("general");
+          await connectionService.connect("general", undefined, true);
         } else if (lastConnectionType === "local") {
-          await connectionService.connect("local");
+          await connectionService.connect("local", undefined, true);
+        } else if (lastConnectionType === "private") {
+          await connectionService.connect(
+            "private",
+            lastRoomCode || undefined,
+            true
+          );
+        } else {
+          console.warn(
+            `🔄 [AUTO-RECONNECT] Unknown connection type: ${lastConnectionType}, defaulting to Community`
+          );
+          await connectionService.connect("general", undefined, true);
         }
       } else {
         // Default to Community room if no previous connection
         console.log(
           "🔄 [AUTO-RECONNECT] No previous connection found, connecting to Community"
         );
-        await connectionService.connect("general");
+        await connectionService.connect("general", undefined, true);
       }
 
       console.log(
