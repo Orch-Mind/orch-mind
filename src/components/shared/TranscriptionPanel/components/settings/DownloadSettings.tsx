@@ -27,13 +27,8 @@ const DownloadSettings: React.FC = () => {
   } = useP2PContext();
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto p-4">
+    <div className="space-y-3 max-w-6xl mx-auto p-3">
       <DownloadHeader />
-      <ConnectionStatus
-        currentRoom={status.currentRoom}
-        isConnected={status.isConnected}
-        incomingAdapters={incomingAdapters}
-      />
       <DownloadAdaptersList
         adapters={incomingAdapters}
         onDownload={downloadAdapter}
@@ -47,20 +42,20 @@ const DownloadSettings: React.FC = () => {
   );
 };
 
-// SRP: Header component focused only on download information
+// SRP: Header component focused only on download information - Compact
 const DownloadHeader: React.FC = () => (
-  <div className="text-center mb-6">
-    <h2 className="text-xl font-bold text-cyan-400 mb-2">
+  <div className="text-center mb-4">
+    <h2 className="text-lg font-bold text-cyan-400 mb-1">
       📥 Adapter Downloads
     </h2>
-    <p className="text-sm text-gray-400">
+    <p className="text-xs text-gray-400">
       Discover and download LoRA adapters shared by other users in your P2P
       network
     </p>
   </div>
 );
 
-// SRP: Connection status component focused on download context
+// SRP: Connection status component focused on download context - Compact
 const ConnectionStatus: React.FC<{
   currentRoom: any;
   isConnected: boolean;
@@ -68,10 +63,10 @@ const ConnectionStatus: React.FC<{
 }> = ({ currentRoom, isConnected, incomingAdapters }) => {
   if (!isConnected) {
     return (
-      <div className="bg-yellow-900/20 border border-yellow-400/30 rounded-lg p-4 text-center">
-        <div className="flex items-center justify-center mb-2">
+      <div className="bg-yellow-900/20 border border-yellow-400/30 rounded-lg p-3 text-center">
+        <div className="flex items-center justify-center mb-1">
           <svg
-            className="w-6 h-6 text-yellow-400 mr-2"
+            className="w-5 h-5 text-yellow-400 mr-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -83,11 +78,11 @@ const ConnectionStatus: React.FC<{
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
             />
           </svg>
-          <p className="text-yellow-400 font-medium">
+          <p className="text-yellow-400 font-medium text-sm">
             Not connected to P2P network
           </p>
         </div>
-        <p className="text-yellow-300 text-sm">
+        <p className="text-yellow-300 text-xs">
           Go to the Share tab to connect and discover adapters
         </p>
       </div>
@@ -95,10 +90,10 @@ const ConnectionStatus: React.FC<{
   }
 
   return (
-    <div className="bg-green-900/20 border border-green-400/30 rounded-lg p-4 text-center">
-      <div className="flex items-center justify-center mb-2">
+    <div className="bg-green-900/20 border border-green-400/30 rounded-lg p-3 text-center">
+      <div className="flex items-center justify-center mb-1">
         <svg
-          className="w-6 h-6 text-green-400 mr-2"
+          className="w-5 h-5 text-green-400 mr-2"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -110,7 +105,7 @@ const ConnectionStatus: React.FC<{
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <p className="text-green-400 font-medium">
+        <p className="text-green-400 font-medium text-sm">
           Connected to{" "}
           {currentRoom?.type === "general"
             ? "Community"
@@ -119,7 +114,7 @@ const ConnectionStatus: React.FC<{
             : `Room ${currentRoom?.code}`}
         </p>
       </div>
-      <p className="text-green-300 text-sm">
+      <p className="text-green-300 text-xs">
         {incomingAdapters.length} adapter
         {incomingAdapters.length !== 1 ? "s" : ""} available for download
       </p>

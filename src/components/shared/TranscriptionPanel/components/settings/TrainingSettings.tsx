@@ -87,7 +87,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     selectedConversations: selectedConversations.size,
     totalMessages: trainingStats.totalMessages,
     validPairs: totalValidPairs,
-    lastTraining: undefined, // Could be enhanced to track last training time
+    processedConversations: trainingStats.processedConversations,
+    pendingConversations: trainingStats.pendingConversations,
+    lastTraining: undefined, // Now handled internally by TrainingStats
   };
 
   // === UTILITY FUNCTIONS (Following DRY) ===
@@ -220,11 +222,13 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
   };
 
   const handleResetTraining = () => {
-    resetTrainingData();
+    // Only reset adapters, NOT conversations
     resetAdapters();
     localStorage.removeItem("orch-training-status");
-    setTrainingStatus("Training data reset successfully");
-    setTimeout(clearStatus, 3000);
+    setTrainingStatus(
+      `${adapters.length} LoRA adapters deleted successfully. Conversations preserved.`
+    );
+    setTimeout(clearStatus, 4000);
     hideResetModal();
   };
 
@@ -238,21 +242,181 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
         </h2>
       </div>
 
-      {/* Stats + Current Model */}
+      {/* Stats + Current Model - 50/50 layout */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Statistics */}
+        {/* Statistics - 50% width */}
         <TrainingStats
           stats={trainingStatsData}
           adaptersCount={adapters.length}
         />
 
-        {/* Current Model Status */}
-        <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-slate-500/20 rounded-sm flex items-center justify-center">
+        {/* Right column - 50% width, Base Model on top, Management below */}
+        <div className="grid grid-cols-1 gap-3">
+          {/* Current Model Status - Full width in right section */}
+          <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20 h-32 overflow-hidden">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-slate-500/20 rounded-sm flex items-center justify-center">
+                  <svg
+                    className="w-3 h-3 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    Base Model
+                  </h3>
+                  <p className="text-slate-400 text-[9px]">
+                    Active for training
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-mono text-cyan-400 truncate max-w-32">
+                  {selectedBaseModel || "None"}
+                </p>
+                <div className="flex items-center text-green-400 text-[9px]">
+                  <svg
+                    className="w-2 h-2 mr-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {selectedBaseModel ? "Active" : "Not Set"}
+                </div>
+              </div>
+            </div>
+
+            {/* Content area - constrained to remaining height */}
+            <div className="h-16 flex flex-col justify-between">
+              {selectedBaseModel ? (
+                <div className="space-y-1 h-full overflow-hidden">
+                  {/* Model Details - compact */}
+                  <div className="bg-slate-500/10 rounded p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-slate-300 font-medium text-xs">
+                        Details
+                      </span>
+                      <span className="text-green-400 text-[9px] flex items-center">
+                        <svg
+                          className="w-2.5 h-2.5 mr-1"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Downloaded
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[9px] mt-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 font-medium">Size:</span>
+                        <span className="text-slate-300 font-semibold">
+                          {selectedBaseModel.includes("7b")
+                            ? "~4GB"
+                            : selectedBaseModel.includes("3b")
+                            ? "~2GB"
+                            : selectedBaseModel.includes("1b")
+                            ? "~1GB"
+                            : "~4GB"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 font-medium">Type:</span>
+                        <span className="text-slate-300 font-semibold">
+                          Chat
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center flex items-center justify-center h-full">
+                  <div className="text-gray-500 text-xs">
+                    <svg
+                      className="w-6 h-6 mx-auto mb-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
+                    </svg>
+                    <p className="text-[9px]">Configure in General settings</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Management Actions - Below Base Model */}
+          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-yellow-400/20 h-16">
+            <div className="flex items-center justify-between h-full">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-yellow-500/20 rounded-sm flex items-center justify-center">
+                  <svg
+                    className="w-3 h-3 text-yellow-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-yellow-400">
+                    Management
+                  </h3>
+                  <p className="text-yellow-300/60 text-[8px]">
+                    LoRA Adapters Control
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={showResetModal}
+                disabled={isTraining || adapters.length === 0}
+                className="px-3 py-1.5 bg-red-600/20 border border-red-400/40 text-red-300 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-medium flex items-center space-x-1"
+                title={
+                  adapters.length === 0
+                    ? "No adapters to delete"
+                    : "Delete all LoRA adapters"
+                }
+              >
                 <svg
-                  className="w-3 h-3 text-slate-400"
+                  className="w-3 h-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -261,42 +425,20 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold text-white">Base Model</h3>
-                <p className="text-slate-400 text-[9px]">Active for training</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-mono text-cyan-400 truncate max-w-32">
-                {selectedBaseModel || "None"}
-              </p>
-              <div className="flex items-center text-green-400 text-[9px]">
-                <svg
-                  className="w-2 h-2 mr-1"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                {selectedBaseModel ? "Active" : "Not Set"}
-              </div>
+                <span>Delete Adapters</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Training Section - Using flexbox for equal height cards */}
+      {/* Main Training Section - 50/50 split with proper height */}
       <div className="flex gap-3 items-stretch">
-        {/* Conversation Selection - Flexible width */}
-        <div className="flex-1 min-w-0">
+        {/* Conversation Selection - 50% width */}
+        <div className="flex-1">
           <ConversationSelector
             conversations={conversations}
             selectedCount={selectedConversations.size}
@@ -306,36 +448,17 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
           />
         </div>
 
-        {/* Training Controls - Fixed width, full height */}
-        <div className="w-80 flex flex-col space-y-2">
-          <div className="flex-1">
-            <TrainingControls
-              isTraining={isTraining}
-              trainingProgress={trainingProgress}
-              trainingStatus={trainingStatus}
-              selectedCount={selectedConversations.size}
-              validPairs={totalValidPairs}
-              trainingDetails={trainingResult?.details || null}
-              onStartTraining={handleTraining}
-            />
-          </div>
-
-          {/* Management Actions */}
-          <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-yellow-400/20">
-            <h3 className="text-xs font-semibold text-yellow-400 mb-2">
-              Management
-            </h3>
-            <button
-              onClick={showResetModal}
-              disabled={isTraining}
-              className="w-full px-2 py-1.5 bg-yellow-600/20 border border-yellow-400/40 text-yellow-300 rounded hover:bg-yellow-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-medium"
-            >
-              Reset Training Data
-            </button>
-            <p className="text-[8px] text-gray-500 text-center mt-1">
-              Clear history only
-            </p>
-          </div>
+        {/* Training Controls - 50% width */}
+        <div className="flex-1">
+          <TrainingControls
+            isTraining={isTraining}
+            trainingProgress={trainingProgress}
+            trainingStatus={trainingStatus}
+            selectedCount={selectedConversations.size}
+            validPairs={totalValidPairs}
+            trainingDetails={trainingResult?.details || null}
+            onStartTraining={handleTraining}
+          />
         </div>
       </div>
 

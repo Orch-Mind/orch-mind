@@ -25,7 +25,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
 
   if (conversations.length === 0) {
     return (
-      <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full">
+      <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20">
         <div className="flex justify-between items-center mb-2">
           <div>
             <h3 className="text-sm font-semibold text-cyan-400">
@@ -37,9 +37,9 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
           </div>
         </div>
 
-        <div className="text-center py-4">
+        <div className="text-center py-3">
           <svg
-            className="w-8 h-8 text-gray-500 mx-auto mb-1"
+            className="w-6 h-6 text-gray-500 mx-auto mb-1"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -63,7 +63,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
   }
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full">
+    <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20 h-52">
       <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className="text-sm font-semibold text-cyan-400">
@@ -82,7 +82,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
         </button>
       </div>
 
-      <div className="space-y-1 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+      <div className="space-y-1 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
         {conversations.map((conv) => (
           <ConversationItem
             key={conv.id}

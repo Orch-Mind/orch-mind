@@ -144,11 +144,11 @@ interface ResetModalProps {
 
 const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center">
-    <div className="bg-gray-900 border border-yellow-400/30 rounded-lg p-6 max-w-md mx-4">
+    <div className="bg-gray-900 border border-red-400/30 rounded-lg p-6 max-w-md mx-4">
       <div className="text-center">
-        <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg
-            className="w-8 h-8 text-yellow-400"
+            className="w-8 h-8 text-red-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -157,27 +157,29 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
             />
           </svg>
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          Reset Training Data?
+          Delete All LoRA Adapters?
         </h3>
         <p className="text-gray-300 mb-4">
-          This will clear all training history and reset conversation processing
-          status.
+          This will permanently delete all your LoRA adapters. Your
+          conversations will be preserved.
         </p>
 
-        <div className="mb-4 p-3 bg-yellow-900/20 rounded-lg text-sm text-yellow-200">
+        <div className="mb-4 p-3 bg-red-900/20 rounded-lg text-sm text-red-200">
           <p className="font-medium mb-1">This action will:</p>
           <ul className="text-left space-y-1">
-            <li>• Clear all conversation processing status</li>
-            <li>• Remove training history from localStorage</li>
-            <li>• Reset LoRA adapters list</li>
+            <li>• Delete all LoRA adapters from localStorage</li>
+            <li>• Clear training status history</li>
             <li>
-              • <strong>NOT</strong> delete actual adapters from disk
+              • <strong>PRESERVE</strong> all conversations and chat history
+            </li>
+            <li>
+              • <strong>NOT</strong> delete actual adapter files from disk
             </li>
           </ul>
         </div>
@@ -191,9 +193,9 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-semibold"
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
           >
-            Reset Training Data
+            Delete Adapters
           </button>
         </div>
       </div>

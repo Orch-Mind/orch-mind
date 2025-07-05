@@ -37,12 +37,12 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
   }
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-6 border border-cyan-400/20">
-      {/* Header Section */}
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-cyan-400 flex items-center">
+    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-3 border border-cyan-400/20">
+      {/* Header Section with Connection Status */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
           <svg
-            className="w-5 h-5 mr-2"
+            className="w-4 h-4 text-green-400 connection-status"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -51,18 +51,26 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          Available Adapters
-        </h3>
-        <span className="text-sm text-gray-400 bg-cyan-900/20 px-3 py-1 rounded-full">
-          {adapters.length} available
+          <h3 className="text-sm font-semibold text-green-400">
+            Connected to{" "}
+            {currentRoom?.type === "general"
+              ? "Community"
+              : currentRoom?.type === "local"
+              ? "Local Network"
+              : `Room ${currentRoom?.code}`}
+          </h3>
+        </div>
+        <span className="text-xs text-gray-400 bg-cyan-900/20 px-2 py-0.5 rounded-full">
+          {adapters.length} adapter{adapters.length !== 1 ? "s" : ""} available
+          for download
         </span>
       </div>
 
-      {/* Adapters List - Vertical Layout */}
-      <div className="space-y-3">
+      {/* Adapters List - Limited to 3 visible with scroll */}
+      <div className="space-y-2 max-h-[240px] overflow-y-auto custom-scrollbar">
         {adapters.map((adapter, index) => (
           <AdapterListItem
             key={adapter.name || `adapter-${index}`}
@@ -73,11 +81,33 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
           />
         ))}
       </div>
+
+      {/* Scroll indicator when there are more than 3 adapters */}
+      {adapters.length > 3 && (
+        <div className="text-center mt-2">
+          <p className="text-xs text-gray-500 flex items-center justify-center">
+            <svg
+              className="w-3 h-3 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+              />
+            </svg>
+            Scroll to see more adapters
+          </p>
+        </div>
+      )}
     </div>
   );
 };
 
-// Individual adapter list item component
+// Individual adapter list item component - Compact version with animations
 const AdapterListItem: React.FC<{
   adapter: any;
   onDownload: (adapter: any) => void;
@@ -89,15 +119,15 @@ const AdapterListItem: React.FC<{
     !adapter.from || adapter.from.trim() === "" || adapter.from === "local";
 
   return (
-    <div className="bg-black/40 rounded-lg p-4 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-200">
+    <div className="adapter-item bg-black/40 rounded-md p-2.5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-200">
       <div className="flex items-center justify-between">
-        {/* Adapter Info */}
+        {/* Adapter Info - Compact */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center mb-2">
-            <h4 className="text-white font-medium text-base mr-3 truncate">
+          <div className="flex items-center justify-between">
+            <h4 className="text-white font-medium text-sm truncate mr-2">
               {adapter.name}
             </h4>
-            <div className="flex items-center text-xs text-gray-400 space-x-3">
+            <div className="flex items-center text-xs text-gray-400 space-x-2 flex-shrink-0">
               <span className="flex items-center">
                 <svg
                   className="w-3 h-3 mr-1"
@@ -133,18 +163,18 @@ const AdapterListItem: React.FC<{
             </div>
           </div>
 
-          {/* Download Progress */}
+          {/* Download Progress - Compact */}
           {isDownloading && downloadProgress && (
             <DownloadProgressIndicator progress={downloadProgress} />
           )}
         </div>
 
-        {/* Action Button */}
-        <div className="ml-4 flex-shrink-0">
+        {/* Action Button - Compact */}
+        <div className="ml-3 flex-shrink-0">
           {isOwnAdapter ? (
-            <span className="text-xs text-gray-500 flex items-center px-3 py-2">
+            <span className="text-xs text-gray-500 flex items-center px-2 py-1">
               <svg
-                className="w-4 h-4 mr-1"
+                className="w-3 h-3 mr-1"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -156,12 +186,12 @@ const AdapterListItem: React.FC<{
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              Own adapter
+              Own
             </span>
           ) : isDownloading ? (
-            <span className="text-xs text-yellow-400 flex items-center px-3 py-2">
+            <span className="text-xs text-yellow-400 flex items-center px-2 py-1">
               <svg
-                className="w-4 h-4 mr-1 animate-spin"
+                className="w-3 h-3 mr-1 animate-spin"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -178,11 +208,11 @@ const AdapterListItem: React.FC<{
           ) : (
             <button
               onClick={() => onDownload(adapter)}
-              className="bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 px-4 py-2 rounded-md border border-cyan-400/30 hover:border-cyan-400/50 transition-all duration-200 text-sm font-medium flex items-center"
+              className="download-btn bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 px-3 py-1.5 rounded border border-cyan-400/30 hover:border-cyan-400/50 transition-all duration-200 text-xs font-medium flex items-center"
               title={`Download ${adapter.name} from ${adapter.from}`}
             >
               <svg
-                className="w-4 h-4 mr-2"
+                className="w-3 h-3 mr-1"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -203,7 +233,7 @@ const AdapterListItem: React.FC<{
   );
 };
 
-// Download progress indicator component
+// Download progress indicator component - Compact version with animations
 const DownloadProgressIndicator: React.FC<{ progress: any }> = ({
   progress,
 }) => {
@@ -224,17 +254,17 @@ const DownloadProgressIndicator: React.FC<{ progress: any }> = ({
   };
 
   return (
-    <div className="mt-3 space-y-2 p-2 bg-black/30 rounded border border-cyan-400/20">
-      {/* Progress bar */}
-      <div className="w-full bg-gray-700 rounded-full h-2">
+    <div className="mt-2 space-y-1 p-1.5 bg-black/30 rounded border border-cyan-400/20">
+      {/* Progress bar - Compact with animation */}
+      <div className="w-full bg-gray-700 rounded-full h-1.5">
         <div
-          className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+          className="progress-bar bg-gradient-to-r from-purple-500 to-blue-500 h-1.5 rounded-full transition-all duration-300"
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
 
-      {/* Progress info */}
-      <div className="flex justify-between text-[10px] text-gray-400">
+      {/* Progress info - Compact */}
+      <div className="flex justify-between text-[9px] text-gray-400">
         <span>
           {percentage.toFixed(1)}%{speed && ` • ${speed}`}
         </span>
@@ -247,12 +277,12 @@ const DownloadProgressIndicator: React.FC<{ progress: any }> = ({
   );
 };
 
-// State when not connected
+// State when not connected - Compact version
 const NotConnectedState: React.FC = () => (
-  <div className="bg-black/20 backdrop-blur-sm rounded-lg p-8 border border-cyan-400/20 text-center">
-    <div className="mb-4">
+  <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-cyan-400/20 text-center">
+    <div className="mb-3">
       <svg
-        className="w-12 h-12 text-gray-500 mx-auto"
+        className="w-8 h-8 text-gray-500 mx-auto"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -265,17 +295,15 @@ const NotConnectedState: React.FC = () => (
         />
       </svg>
     </div>
-    <h3 className="text-lg font-medium text-gray-400 mb-2">Not Connected</h3>
-    <p className="text-sm text-gray-500 mb-4">
-      Connect to a P2P network to discover and download adapters
+    <h3 className="text-base font-medium text-gray-400 mb-1">Not Connected</h3>
+    <p className="text-sm text-gray-500 mb-2">
+      Connect to a P2P network to discover adapters
     </p>
-    <p className="text-xs text-gray-600">
-      Go to the Share tab to join a room and start discovering adapters
-    </p>
+    <p className="text-xs text-gray-600">Go to the Share tab to join a room</p>
   </div>
 );
 
-// State when no adapters available
+// State when no adapters available - Compact version
 const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
   const getMessage = (): {
     title: string;
@@ -285,29 +313,27 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
     switch (currentRoom?.type) {
       case "local":
         return {
-          title: "No Local Adapters Found",
-          subtitle: "No adapters are being shared on your local network",
-          suggestion: "Make sure peers on your network are sharing adapters",
+          title: "No Local Adapters",
+          subtitle: "No adapters shared on your local network",
+          suggestion: "Make sure peers are sharing adapters",
         };
       case "general":
         return {
-          title: "No Community Adapters Yet",
+          title: "No Community Adapters",
           subtitle: "The community hasn't shared any adapters yet",
           suggestion: "Check back later or try a different room",
         };
       case "private":
         return {
-          title: "No Adapters in This Room",
-          subtitle: "This private room doesn't have any shared adapters",
-          suggestion:
-            "Share the room code with peers who have adapters to share",
+          title: "No Adapters in Room",
+          subtitle: "This private room has no shared adapters",
+          suggestion: "Share the room code with peers who have adapters",
         };
       default:
         return {
           title: "No Adapters Available",
           subtitle: "No adapters found in the current room",
-          suggestion:
-            "Try connecting to a different room or wait for peers to share",
+          suggestion: "Try connecting to a different room",
         };
     }
   };
@@ -315,10 +341,10 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
   const { title, subtitle, suggestion } = getMessage();
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-8 border border-cyan-400/20 text-center">
-      <div className="mb-4">
+    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-cyan-400/20 text-center">
+      <div className="mb-3">
         <svg
-          className="w-12 h-12 text-gray-500 mx-auto"
+          className="w-8 h-8 text-gray-500 mx-auto"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -331,14 +357,14 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
           />
         </svg>
       </div>
-      <h3 className="text-lg font-medium text-gray-400 mb-2">{title}</h3>
-      <p className="text-sm text-gray-500 mb-4">{subtitle}</p>
+      <h3 className="text-base font-medium text-gray-400 mb-1">{title}</h3>
+      <p className="text-sm text-gray-500 mb-2">{subtitle}</p>
       <p className="text-xs text-gray-600">{suggestion}</p>
       {currentRoom?.peersCount === 0 && (
-        <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-400/30 rounded-md">
+        <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-400/30 rounded">
           <p className="text-yellow-400 text-xs flex items-center justify-center">
             <svg
-              className="w-4 h-4 mr-1"
+              className="w-3 h-3 mr-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -350,7 +376,7 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            No peers connected - invite others to join!
+            No peers connected - invite others!
           </p>
         </div>
       )}
