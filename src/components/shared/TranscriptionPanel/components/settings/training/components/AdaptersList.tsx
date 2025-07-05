@@ -12,6 +12,7 @@ interface LoRAAdapter {
   mergedWith?: string[];
   downloadedFrom?: string;
   deployedModel?: string; // Nome do modelo deployado no Ollama
+  displayName?: string;
 }
 
 interface AdaptersListProps {
@@ -91,7 +92,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
           adapter.downloadedFrom ? ` from ${adapter.downloadedFrom}` : ""
         }`;
       case "merged":
-        return `Merged (${adapter.mergedWith?.length || 0} sources)`;
+        return `Merged from ${adapter.mergedWith?.length || 0} adapters`;
       default:
         // Remove "Enabled/Disabled" text - will show only date
         return "";
@@ -388,11 +389,18 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                         {getStatusIcon(adapter)}
                       </span>
                       <h4 className="text-[10px] font-medium text-white truncate">
-                        {adapter.name}
+                        {adapter.status === "merged" && adapter.displayName
+                          ? adapter.displayName
+                          : adapter.name}
                       </h4>
                       {adapter.source === "p2p" && (
                         <span className="text-[8px] bg-cyan-600/20 text-cyan-300 px-1 rounded">
                           P2P
+                        </span>
+                      )}
+                      {adapter.status === "merged" && (
+                        <span className="text-[8px] bg-purple-600/20 text-purple-300 px-1 rounded">
+                          MERGED
                         </span>
                       )}
                     </div>
@@ -403,6 +411,12 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                     {adapter.deployedModel && (
                       <p className="text-[8px] text-green-400 truncate">
                         📦 {adapter.deployedModel}
+                      </p>
+                    )}
+                    {/* Merged Adapter Filesystem Name */}
+                    {adapter.status === "merged" && adapter.displayName && (
+                      <p className="text-[8px] text-purple-400 truncate">
+                        🗂️ {adapter.name}
                       </p>
                     )}
                   </div>

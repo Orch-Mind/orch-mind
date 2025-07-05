@@ -16,6 +16,7 @@ interface LoRAAdapter {
   source?: "local" | "p2p"; // Indica se foi treinado localmente ou baixado via P2P
   mergedWith?: string[]; // IDs dos adapters que foram mergeados
   downloadedFrom?: string; // Peer de origem se baixado via P2P
+  displayName?: string; // Added for the new merge function
 }
 
 export const useLoRAAdapters = () => {
@@ -341,19 +342,34 @@ export const useLoRAAdapters = () => {
         targetBaseModel: baseModel,
       };
 
+      console.log(`🔗 [LoRA Merge] Starting merge with request:`, mergeRequest);
+
       const result = await window.electronAPI.mergeLoRAAdapters(mergeRequest);
 
       if (result.success) {
-        // Adicionar o adapter merged à lista
+        // CRITICAL FIX: Use the correct adapter name that matches filesystem
+        // The LoRAMergeService registers merged adapters with "_adapter" suffix in filesystem
+        // We need to use this same name in localStorage for Share tab to find it
+        const filesystemAdapterName = `${mergedAdapterId}_adapter`;
+
+        console.log(`✅ [LoRA Merge] Merge completed successfully`);
+        console.log(
+          `📁 [LoRA Merge] Filesystem adapter name: ${filesystemAdapterName}`
+        );
+        console.log(`🔗 [LoRA Merge] Original output name: ${outputName}`);
+
+        // Adicionar o adapter merged à lista usando o nome correto do filesystem
         const mergedAdapter: LoRAAdapter = {
-          id: mergedAdapterId,
-          name: outputName,
+          id: filesystemAdapterName, // Use filesystem name as ID
+          name: filesystemAdapterName, // Use filesystem name to match AdapterRegistry
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),
           status: "merged",
           source: "local",
           mergedWith: adapterIds,
+          // Store original output name for UI display
+          displayName: outputName,
         };
 
         const updatedAdapters = [...adapters, mergedAdapter];
@@ -364,9 +380,38 @@ export const useLoRAAdapters = () => {
         saveToStorage("orch-lora-adapters", trainingHistory);
         setAdapters(updatedAdapters);
 
-        console.log("[LoRA] Merge completed:", mergedAdapterId);
-        return { success: true, mergedAdapterId };
+        console.log(`📋 [LoRA Merge] Added merged adapter to localStorage:`, {
+          id: mergedAdapter.id,
+          name: mergedAdapter.name,
+          displayName: mergedAdapter.displayName,
+          baseModel: mergedAdapter.baseModel,
+          status: mergedAdapter.status,
+        });
+
+        // Emit event to notify Share tab about new merged adapter
+        window.dispatchEvent(
+          new CustomEvent("adapter-merged", {
+            detail: {
+              adapterId: filesystemAdapterName,
+              adapterName: filesystemAdapterName,
+              displayName: outputName,
+              baseModel: baseModel,
+              source: "local-merge",
+              mergedWith: adapterIds,
+            },
+          })
+        );
+
+        console.log(
+          `📡 [LoRA Merge] Emitted adapter-merged event for Share tab`
+        );
+
+        return {
+          success: true,
+          mergedAdapterId: filesystemAdapterName, // Return filesystem name for consistency
+        };
       } else {
+        console.error(`❌ [LoRA Merge] Merge failed:`, result.error);
         return { success: false, error: result.error || "Falha no merge" };
       }
     } catch (error) {

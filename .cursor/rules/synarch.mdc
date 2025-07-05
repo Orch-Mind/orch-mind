@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+---
+
+# Coding Rules
+
+Structure
+
+Max 3 levels deep
+Linear flow: input → process → output
+Group related data together
+
+Responsibility
+
+One function = one job
+Max 5 methods per interface
+No code duplication
+
+Clarity
+
+Explicit dependencies as parameters
+Simple solutions over clever code
+Only implement what's needed now
+
+Quick Check
+
+✓ Max 3 levels
+✓ Linear flow
+✓ Single responsibility
+✓ Explicit deps
+✓ Simple & direct

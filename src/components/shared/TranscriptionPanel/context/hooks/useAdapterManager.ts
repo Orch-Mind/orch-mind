@@ -130,6 +130,17 @@ export const useAdapterManager = ({
       adapters: [] as any[],
     });
 
+    console.log(
+      `📦 [ADAPTER-MANAGER] Raw adapters from localStorage:`,
+      loraAdapters.adapters.map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        status: a.status,
+        source: a.source,
+        displayName: a.displayName,
+      }))
+    );
+
     const adapters: SharedAdapter[] = loraAdapters.adapters.map(
       (adapter: any) => {
         const adapterName = adapter.name || adapter.id;
@@ -151,6 +162,17 @@ export const useAdapterManager = ({
         console.log(
           `🔄 [ADAPTER-MANAGER] Adapter ${adapterName} shared state: ${sharedState} (persistence: ${isSharedFromPersistence}, current: ${isSharedFromCurrent})`
         );
+
+        // Log merged adapters specifically
+        if (adapter.status === "merged") {
+          console.log(`🔗 [ADAPTER-MANAGER] Merged adapter detected:`, {
+            id: adapter.id,
+            name: adapter.name,
+            displayName: adapter.displayName,
+            mergedWith: adapter.mergedWith,
+            sharedState: sharedState,
+          });
+        }
 
         return {
           name: adapterName,
@@ -176,10 +198,20 @@ export const useAdapterManager = ({
       updateSharedAdapters(validSharedIds);
     }
 
+    // Count different adapter types for summary
+    const adapterTypeCounts = {
+      total: adapters.length,
+      shared: adapters.filter((a) => a.shared).length,
+      merged: loraAdapters.adapters.filter((a: any) => a.status === "merged")
+        .length,
+      p2p: loraAdapters.adapters.filter((a: any) => a.source === "p2p").length,
+      local: loraAdapters.adapters.filter((a: any) => a.source === "local")
+        .length,
+    };
+
     console.log(
-      `🔄 [ADAPTER-MANAGER] Loaded ${adapters.length} adapters (${
-        adapters.filter((a) => a.shared).length
-      } shared)`
+      `🔄 [ADAPTER-MANAGER] Loaded adapters summary:`,
+      adapterTypeCounts
     );
     setSharedAdapters(adapters);
   }, [persistedSharedIds, updateSharedAdapters]);
@@ -852,6 +884,35 @@ export const useAdapterManager = ({
       window.removeEventListener(
         "adapter-deleted",
         handleAdapterDeleted as EventListener
+      );
+    };
+  }, [loadLocalAdapters]);
+
+  // Listen for new merged adapters from Deploy tab
+  useEffect(() => {
+    const handleAdapterMerged = (event: CustomEvent) => {
+      const { adapterName, displayName, source } = event.detail;
+      console.log(
+        `🔗 [ADAPTER-MANAGER] New merged adapter detected: ${adapterName} (display: ${displayName})`
+      );
+
+      // Reload local adapters to include the newly merged adapter
+      setTimeout(() => {
+        console.log(`🔄 [ADAPTER-MANAGER] Reloading adapters after merge`);
+        loadLocalAdapters();
+      }, 1000);
+    };
+
+    // Listen for merged adapters event
+    window.addEventListener(
+      "adapter-merged",
+      handleAdapterMerged as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "adapter-merged",
+        handleAdapterMerged as EventListener
       );
     };
   }, [loadLocalAdapters]);
