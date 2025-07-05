@@ -19,7 +19,7 @@ export const useGeneralSettings = () => {
   // Estado neural-simbólico para opções gerais
   const [name, setName] = useState<string>(() => getUserName() || "User");
   const [enableMatrix, setEnableMatrix] = useState<boolean>(
-    () => getOption<boolean>(STORAGE_KEYS.ENABLE_MATRIX) ?? true
+    () => getOption<boolean>(STORAGE_KEYS.ENABLE_MATRIX) ?? false
   );
   const [matrixDensity, setMatrixDensity] = useState<number>(
     () => getOption<number>(STORAGE_KEYS.MATRIX_DENSITY) ?? 60
