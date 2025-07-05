@@ -28,7 +28,9 @@ const ConnectionStatus: React.FC<{
 }> = ({ currentRoom }) => (
   <div className="p-3 bg-green-500/10 rounded border border-green-400/30">
     <ConnectionHeader currentRoom={currentRoom} />
-    {currentRoom.code && <ShareCodeSection code={currentRoom.code} />}
+    {currentRoom.code && currentRoom.type === "private" && (
+      <ShareCodeSection code={currentRoom.code} />
+    )}
   </div>
 );
 

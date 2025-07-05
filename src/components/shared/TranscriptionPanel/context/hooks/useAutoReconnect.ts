@@ -129,7 +129,7 @@ export const useAutoReconnect = ({
       isAutoRestoring.current = false;
       NotificationUtils.setSilentMode(false);
     }
-  }, [connectionService, lastConnectionType, isAutoRestoring]);
+  }, [connectionService, lastConnectionType, lastRoomCode]);
 
   const reconnectToLastSession = useCallback(async () => {
     if (lastConnectionType && connectionService) {

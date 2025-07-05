@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -278,14 +279,15 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     if (
       isConnectionServiceReady &&
       connectionService.current &&
-      persistedState.lastConnectionType
+      persistedState.lastConnectionType &&
+      autoReconnectRef.current
     ) {
       console.log(
         "🔄 [P2P-CONTEXT] Connection service ready, attempting auto-reconnect..."
       );
-      autoReconnect.checkAndAutoReconnect();
+      autoReconnectRef.current.checkAndAutoReconnect();
     }
-  }, [isConnectionServiceReady, autoReconnect]);
+  }, [isConnectionServiceReady, persistedState.lastConnectionType]);
 
   // Connection wrapper functions
   const connect = useCallback(
@@ -328,8 +330,8 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [updateConnectionState, setStatus]);
 
-  // Context value with all interfaces combined
-  const contextValue: P2PContextType = {
+  // Context value with all interfaces combined - memoized to prevent unnecessary re-renders
+  const contextValue: P2PContextType = useMemo(() => ({
     // Connection interface
     status,
     connect,
@@ -371,9 +373,30 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     // Events interface
     onAdaptersAvailable,
     offAdaptersAvailable,
-  };
+  }), [
+    status,
+    connect,
+    disconnect,
+    persistedState,
+    updateSharedAdapters,
+    updateSelectedMode,
+    clearPersistedState,
+    adapterManager.sharedAdapters,
+    adapterManager.incomingAdapters,
+    adapterManager.loadLocalAdapters,
+    adapterManager.toggleAdapterSharing,
+    adapterManager.downloadAdapter,
+    adapterManager.clearIncomingAdapters,
+    adapterManager.downloadState,
+    adapterManager.isDownloading,
+    adapterManager.getProgress,
+    adapterManager.syncWithFilesystem,
+    adapterManager.cleanupOrphanedAdapters,
+    onAdaptersAvailable,
+    offAdaptersAvailable,
+  ]);
 
-  // Debug exposure - only in development
+  // Debug exposure - only in development (run once)
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
@@ -382,6 +405,17 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
       (window as any).p2pContext = contextValue;
       (window as any).p2pAdapterManager = adapterManager;
       console.log("🔧 [P2P-CONTEXT] Debug exposure enabled: window.p2pContext");
+    }
+  }, []); // Empty dependency array - run only once
+
+  // Update debug references when context changes (without logging)
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
+      (window as any).p2pContext = contextValue;
+      (window as any).p2pAdapterManager = adapterManager;
     }
   }, [contextValue, adapterManager]);
 
