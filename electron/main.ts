@@ -21,6 +21,7 @@ import { setupLoRATrainingHandlers } from "./handlers/loraTrainingHandler";
 import { cleanupP2P, setupP2PHandlers } from "./handlers/p2pShareHandler";
 import { initializeIpcHandlers } from "./ipcHandlers";
 
+import { WebSearchHandler } from "./handlers/webSearchHandler";
 import { ShortcutsHelper } from "./shortcuts";
 
 dotenv.config();
@@ -717,6 +718,9 @@ async function initializeApp() {
 
     setupP2PHandlers();
     console.log("✅ P2P handlers initialized");
+
+    WebSearchHandler.initialize();
+    console.log("✅ WebSearchHandler initialized");
 
     await createWindow();
     console.log("✅ Window created");

@@ -18,6 +18,12 @@ import { ITranscriptionStorageService } from "../../interfaces/transcription/ITr
 import { ISpeakerIdentificationService } from "../../interfaces/utils/ISpeakerIdentificationService";
 import { IUIUpdateService } from "../../interfaces/utils/IUIUpdateService";
 
+// Web search service
+import {
+  WebSearchService,
+  IUIUpdateService as WebUIUpdateService,
+} from "../web/WebSearchService";
+
 // Neural processors (reusing for conversation management)
 import { SessionManager, TranscriptionExtractor } from "./processors";
 
@@ -41,6 +47,7 @@ export class SimplePromptProcessor {
   // Reused processors for conversation management
   private transcriptionExtractor!: TranscriptionExtractor;
   private sessionManager!: SessionManager;
+  private webSearchService!: WebSearchService;
 
   constructor(
     private storageService: ITranscriptionStorageService,
@@ -51,6 +58,10 @@ export class SimplePromptProcessor {
   ) {
     this.currentLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR";
     this._initializeProcessors();
+
+    // Create UI adapter for web search service
+    const uiAdapter = new UIServiceAdapter(this.uiService);
+    this.webSearchService = new WebSearchService(this.llmService, uiAdapter);
   }
 
   /**
@@ -354,12 +365,55 @@ export class SimplePromptProcessor {
         );
       }
 
-      // STEP 2: Build enhanced system prompt with context
+      // STEP 2: Check if web search would be helpful and perform search
+      let webContext = "";
+      try {
+        const webSearchDecision = await this.webSearchService.shouldSearchWeb(
+          prompt
+        );
+
+        if (webSearchDecision.shouldSearch) {
+          LoggingUtils.logInfo("🌐 [SIMPLE_MODE] Performing web search...");
+          this.showProcessingStatus("Searching the web");
+
+          // Perform web search using LLM-generated queries
+          const webResults = await this.webSearchService.searchWeb(
+            webSearchDecision.searchQueries,
+            {
+              maxResults: 3,
+              safeSearch: true,
+            }
+          );
+
+          if (webResults && webResults.length > 0) {
+            // Use LLM to process and format the search results
+            webContext = await this.webSearchService.processSearchResults(
+              webResults,
+              prompt
+            );
+            LoggingUtils.logInfo(
+              `✅ Found ${webResults.length} relevant web results`
+            );
+          }
+        } else {
+          LoggingUtils.logInfo(
+            `ℹ️ [SIMPLE_MODE] Web search not needed: ${webSearchDecision.reasoning}`
+          );
+        }
+      } catch (webError) {
+        LoggingUtils.logWarning(
+          "⚠️ Error performing web search, proceeding without it: " +
+            (webError instanceof Error ? webError.message : String(webError))
+        );
+      }
+
+      // STEP 3: Build enhanced system prompt with context
       LoggingUtils.logInfo("📝 [SIMPLE_MODE] Building prompt...");
       this.showProcessingStatus("Building prompt");
 
       const baseSystemPrompt = buildSimpleSystemPrompt(this.currentLanguage);
-      const enhancedSystemPrompt = baseSystemPrompt + memoryContext;
+      const enhancedSystemPrompt =
+        baseSystemPrompt + memoryContext + webContext;
 
       const userPrompt = buildSimpleUserPrompt(
         prompt,
@@ -367,7 +421,7 @@ export class SimplePromptProcessor {
         this.currentLanguage
       );
 
-      // STEP 3: Get conversation history
+      // STEP 4: Get conversation history
       const conversationHistory = this.memoryService.getConversationHistory();
 
       // Prepare messages for completion (format compatible with IOpenAIService)
@@ -380,7 +434,7 @@ export class SimplePromptProcessor {
         { role: "user", content: userPrompt, speaker: "user" },
       ];
 
-      // STEP 4: Generate response with streaming
+      // STEP 5: Generate response with streaming
       LoggingUtils.logInfo("🎯 [SIMPLE_MODE] Generating response...");
       this.showProcessingStatus("Generating response");
 
@@ -427,7 +481,7 @@ export class SimplePromptProcessor {
       // Use accumulated response if available, otherwise use the returned response
       const finalResponse = accumulatedResponse || response.responseText || "";
 
-      // STEP 5: Save interaction to memory and conversation history
+      // STEP 6: Save interaction to memory and conversation history
       LoggingUtils.logInfo("💾 [SIMPLE_MODE] Saving interaction...");
 
       try {
@@ -564,5 +618,31 @@ export class SimplePromptProcessor {
     this.clearProcessingStatus();
     this.transcriptionExtractor.reset();
     this.sessionManager.resetSession();
+  }
+}
+
+/**
+ * UI Service adapter that combines both UI service interfaces
+ */
+class UIServiceAdapter implements WebUIUpdateService {
+  constructor(private originalUIService: IUIUpdateService) {}
+
+  updateProcessingStatus(message: string): void {
+    // Use the processing status animation from SimplePromptProcessor
+    if (
+      typeof window !== "undefined" &&
+      (window as any).__updateProcessingStatus
+    ) {
+      (window as any).__updateProcessingStatus(message);
+    }
+  }
+
+  notifyWebSearchStep(step: string, details?: string): void {
+    // Notify web search step via the existing UI service
+    const statusMessage = details ? `${step}: ${details}` : step;
+    this.updateProcessingStatus(statusMessage);
+
+    // Also log for debugging
+    LoggingUtils.logInfo(`🔍 [WEB_SEARCH_UI] ${statusMessage}`);
   }
 }

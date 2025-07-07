@@ -313,6 +313,27 @@ export interface ILoRAMergeManager {
   }>;
 }
 
+// Web Search Types & Interface
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  source?: string;
+}
+
+export interface WebSearchOptions {
+  maxResults?: number;
+  safeSearch?: boolean;
+  timeRange?: "any" | "day" | "week" | "month" | "year";
+}
+
+export interface IWebSearchManager {
+  webSearch(
+    queries: string[],
+    options?: WebSearchOptions
+  ): Promise<WebSearchResult[]>;
+}
+
 // Complete Electron API Interface
 export interface IElectronAPI
   extends IWindowManager,
@@ -324,7 +345,8 @@ export interface IElectronAPI
     IDuckDBCommander,
     IOllamaManager,
     IP2PShareManager,
-    ILoRAMergeManager {
+    ILoRAMergeManager,
+    IWebSearchManager {
   // Legacy support for existing vector databases
   queryPinecone(
     embedding: number[],

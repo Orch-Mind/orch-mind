@@ -157,7 +157,14 @@
       "main": "dist-electron/main.js"
     }
   },
-  "keywords": ["electron", "desktop", "ai", "llm", "neural", "symbolic-intelligence"],
+  "keywords": [
+    "electron",
+    "desktop",
+    "ai",
+    "llm",
+    "neural",
+    "symbolic-intelligence"
+  ],
   "author": "Guilherme Ferrari Brescia",
   "license": "MIT",
   "engines": {
@@ -191,6 +198,7 @@
     "clsx": "^2.1.1",
     "connect-history-api-fallback": "^2.0.0",
     "dotenv": "^16.5.0",
+    "duck-duck-scrape": "^2.2.7",
     "electron-log": "^5.4.0",
     "electron-store": "^10.0.1",
     "electron-updater": "^6.6.2",

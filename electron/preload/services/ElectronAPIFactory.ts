@@ -98,6 +98,9 @@ export class ElectronAPIFactory {
       // Legacy Vector Database Support
       ...this.createLegacyVectorDatabaseAPI(),
 
+      // Web Search Management
+      ...this.createWebSearchManager(),
+
       // Dependency Management
       ...this.createDependencyManager(),
 
@@ -1027,7 +1030,11 @@ export class ElectronAPIFactory {
         );
       },
 
-      p2pSendFile: async (data: { peerId: string; filePath: string; metadata: any }) => {
+      p2pSendFile: async (data: {
+        peerId: string;
+        filePath: string;
+        metadata: any;
+      }) => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("p2p:sendFile", data),
           {
@@ -1059,22 +1066,27 @@ export class ElectronAPIFactory {
           try {
             // Validate data before calling callback
             if (!data) {
-              this.logger.warn("P2P adapters available: received undefined data");
+              this.logger.warn(
+                "P2P adapters available: received undefined data"
+              );
               return;
             }
-            
+
             // Ensure data has adapters property and it's an array
             if (!data.adapters || !Array.isArray(data.adapters)) {
-              this.logger.warn("P2P adapters available: data.adapters is not a valid array", data);
+              this.logger.warn(
+                "P2P adapters available: data.adapters is not a valid array",
+                data
+              );
               // Create a safe fallback with empty adapters array
               const safeData = {
                 ...data,
-                adapters: []
+                adapters: [],
               };
               callback(safeData);
               return;
             }
-            
+
             callback(data);
           } catch (error) {
             this.logger.error(
@@ -1144,14 +1156,20 @@ export class ElectronAPIFactory {
           try {
             callback(data);
           } catch (error) {
-            this.logger.error("Error in P2P adapter saved to filesystem callback", error);
+            this.logger.error(
+              "Error in P2P adapter saved to filesystem callback",
+              error
+            );
           }
         };
 
         ipcRenderer.on("p2p:adapter-saved-to-filesystem", subscription);
 
         return () => {
-          ipcRenderer.removeListener("p2p:adapter-saved-to-filesystem", subscription);
+          ipcRenderer.removeListener(
+            "p2p:adapter-saved-to-filesystem",
+            subscription
+          );
         };
       },
     };
@@ -1201,6 +1219,47 @@ export class ElectronAPIFactory {
           {
             component: "LoRAMergeManager",
             operation: "shareMergedAdapter",
+            severity: "medium",
+          }
+        );
+      },
+    };
+  }
+
+  /**
+   * Create Web Search Management service methods
+   */
+  private createWebSearchManager() {
+    return {
+      webSearch: async (
+        queries: string[],
+        options: {
+          maxResults?: number;
+          safeSearch?: boolean;
+          timeRange?: "any" | "day" | "week" | "month" | "year";
+        } = {}
+      ) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(
+              `🔍 [API] Web search request: ${queries.length} queries`
+            );
+
+            const results = await ipcRenderer.invoke(
+              "web-search",
+              queries,
+              options
+            );
+
+            this.logger.debug(
+              `✅ [API] Web search completed: ${results.length} results`
+            );
+
+            return results;
+          },
+          {
+            component: "WebSearchManager",
+            operation: "webSearch",
             severity: "medium",
           }
         );
