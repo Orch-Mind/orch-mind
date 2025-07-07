@@ -34,6 +34,8 @@ export const STORAGE_KEYS = {
   // ===== Configurações visuais/interface =====
   // Matriz quântica e efeitos
   ENABLE_MATRIX: "enableMatrix",
+  QUANTUM_PROCESSING_ENABLED: "quantumProcessingEnabled",
+  QUANTUM_VISUALIZATION_ENABLED: "quantumVisualizationEnabled",
 
   // Estilo e tema
   DARK_MODE: "darkMode",

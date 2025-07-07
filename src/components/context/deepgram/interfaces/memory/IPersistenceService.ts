@@ -16,12 +16,24 @@ export interface IPersistenceService {
     speakerTranscriptions: SpeakerTranscription[],
     primaryUserSpeaker: string
   ): Promise<void>;
-  
+
+  /**
+   * Saves interaction directly to long-term memory bypassing buffer system
+   * Used for immediate persistence of chat messages and simple interactions
+   */
+  saveDirectInteraction(
+    question: string,
+    answer: string,
+    speakerTranscriptions: SpeakerTranscription[],
+    primaryUserSpeaker: string,
+    forceSave?: boolean
+  ): Promise<void>;
+
   /**
    * Checks if the persistence service is available
    */
   isAvailable(): boolean;
-  
+
   /**
    * Creates a vector entry for the persistence store
    */
@@ -34,10 +46,21 @@ export interface IPersistenceService {
   /**
    * Salva vetores no Pinecone
    */
-  saveToPinecone(vectors: Array<{ id: string, values: number[], metadata: Record<string, unknown> }>): Promise<void>;
+  saveToPinecone(
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata: Record<string, unknown>;
+    }>
+  ): Promise<void>;
 
   /**
    * Queries the memory store
    */
-  queryMemory(embedding: number[], topK?: number, keywords?: string[], filters?: Record<string, unknown>): Promise<string>;
-} 
+  queryMemory(
+    embedding: number[],
+    topK?: number,
+    keywords?: string[],
+    filters?: Record<string, unknown>
+  ): Promise<string>;
+}

@@ -21,6 +21,7 @@ import { DefaultNeuralIntegrationService } from "../symbolic-cortex/integration/
 import { INeuralIntegrationService } from "../symbolic-cortex/integration/INeuralIntegrationService";
 import { LoggingUtils } from "../utils/LoggingUtils";
 import { MemoryService } from "./memory/MemoryService";
+import { SimplePromptProcessor } from "./transcription/SimplePromptProcessor";
 import { TranscriptionPromptProcessor } from "./transcription/TranscriptionPromptProcessor";
 import { TranscriptionStorageService } from "./transcription/TranscriptionStorageService";
 import { SpeakerIdentificationService } from "./utils/SpeakerIdentificationService";
@@ -58,14 +59,26 @@ export class DeepgramTranscriptionService
    * @returns true if a prompt is currently being processed, false otherwise
    */
   public isProcessingPromptRequest(): boolean {
-    return this.transcriptionPromptProcessor.isProcessingPromptRequest();
+    return (
+      this.transcriptionPromptProcessor.isProcessingPromptRequest() ||
+      this.simplePromptProcessor.isProcessingPromptRequest()
+    );
+  }
+
+  /**
+   * Checks if quantum processing is enabled
+   * @returns true if quantum processing is enabled, false otherwise
+   */
+  private isQuantumProcessingEnabled(): boolean {
+    return getOption(STORAGE_KEYS.QUANTUM_PROCESSING_ENABLED) === true;
   }
 
   // Neural integration service
   private neuralIntegrationService: INeuralIntegrationService;
 
-  // Transcription prompt processor
+  // Transcription prompt processors
   private transcriptionPromptProcessor: TranscriptionPromptProcessor;
+  private simplePromptProcessor: SimplePromptProcessor;
 
   constructor(
     setTexts: UIUpdater,
@@ -87,7 +100,7 @@ export class DeepgramTranscriptionService
       this.llmService
     );
 
-    // Initialize the transcription prompt processor
+    // Initialize the transcription prompt processors
     this.transcriptionPromptProcessor = new TranscriptionPromptProcessor(
       this.storageService,
       this.memoryService,
@@ -95,6 +108,15 @@ export class DeepgramTranscriptionService
       this.uiService,
       this.speakerService,
       this.neuralIntegrationService
+    );
+
+    // Initialize the simple prompt processor for when quantum processing is disabled
+    this.simplePromptProcessor = new SimplePromptProcessor(
+      this.storageService,
+      this.memoryService,
+      this.llmService,
+      this.uiService,
+      this.speakerService
     );
 
     // Set reference back to this service in the storage service to enable auto-triggering
@@ -187,6 +209,7 @@ export class DeepgramTranscriptionService
   setProcessingLanguage(language: string): void {
     this.currentLanguage = language;
     this.transcriptionPromptProcessor.setLanguage(language);
+    this.simplePromptProcessor.setLanguage(language);
     LoggingUtils.logInfo(`Processing language updated to: ${language}`);
   }
 
@@ -198,8 +221,8 @@ export class DeepgramTranscriptionService
   }
 
   /**
-   * Processes the transcription using the appropriate AI service based on current mode
-   * Automatically selects between Ollama (advanced mode) and HuggingFace (basic mode)
+   * Processes the transcription using the appropriate processor based on quantum processing setting
+   * Uses TranscriptionPromptProcessor for quantum processing or SimplePromptProcessor for direct processing
    * @param temporaryContext Optional additional context
    * @param conversationMessages Optional conversation messages from chat (including summaries)
    */
@@ -207,22 +230,35 @@ export class DeepgramTranscriptionService
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
+    const useQuantumProcessing = this.isQuantumProcessingEnabled();
+
     console.log("🚀 [DEEPGRAM_SERVICE] sendTranscriptionPrompt called:", {
       temporaryContext,
       hasContext: !!temporaryContext,
       hasConversationMessages: !!conversationMessages,
       messageCount: conversationMessages?.length || 0,
+      quantumProcessingEnabled: useQuantumProcessing,
       timestamp: new Date().toISOString(),
     });
 
     try {
-        LoggingUtils.logInfo("🧠 Using Ollama service (Advanced mode)");
+      if (useQuantumProcessing) {
+        LoggingUtils.logInfo("🧠 Using Quantum Processing (Neural mode)");
         console.log("📤 [DEEPGRAM_SERVICE] Calling processWithOpenAI");
         await this.transcriptionPromptProcessor.processWithOpenAI(
           temporaryContext,
           conversationMessages
         );
         console.log("✅ [DEEPGRAM_SERVICE] processWithOpenAI completed");
+      } else {
+        LoggingUtils.logInfo("⚡ Using Simple Processing (Direct mode)");
+        console.log("📤 [DEEPGRAM_SERVICE] Calling processTranscription");
+        await this.simplePromptProcessor.processTranscription(
+          temporaryContext,
+          conversationMessages
+        );
+        console.log("✅ [DEEPGRAM_SERVICE] processTranscription completed");
+      }
     } catch (error) {
       console.error(
         "❌ [DEEPGRAM_SERVICE] Error in sendTranscriptionPrompt:",
@@ -234,6 +270,7 @@ export class DeepgramTranscriptionService
 
   /**
    * Processes a direct message from chat interface
+   * Uses the appropriate processor based on quantum processing setting
    * @param message The message from chat input
    * @param temporaryContext Optional additional context
    * @param conversationMessages Optional conversation messages from chat (including summaries)
@@ -243,20 +280,31 @@ export class DeepgramTranscriptionService
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
+    const useQuantumProcessing = this.isQuantumProcessingEnabled();
+
     console.log("💬 [DEEPGRAM_SERVICE] sendDirectMessage called:", {
       message: message.substring(0, 50),
       hasContext: !!temporaryContext,
       hasConversationMessages: !!conversationMessages,
       messageCount: conversationMessages?.length || 0,
+      quantumProcessingEnabled: useQuantumProcessing,
       timestamp: new Date().toISOString(),
     });
 
     try {
-      await this.transcriptionPromptProcessor.processDirectMessage(
-        message,
-        temporaryContext,
-        conversationMessages
-      );
+      if (useQuantumProcessing) {
+        await this.transcriptionPromptProcessor.processDirectMessage(
+          message,
+          temporaryContext,
+          conversationMessages
+        );
+      } else {
+        await this.simplePromptProcessor.processDirectMessage(
+          message,
+          temporaryContext,
+          conversationMessages
+        );
+      }
       console.log("✅ [DEEPGRAM_SERVICE] sendDirectMessage completed");
     } catch (error) {
       console.error("❌ [DEEPGRAM_SERVICE] Error in sendDirectMessage:", error);
@@ -331,6 +379,7 @@ export class DeepgramTranscriptionService
     LoggingUtils.logInfo("Resetting transcription state");
     this.clearTranscriptionData();
     this.transcriptionPromptProcessor.reset();
+    this.simplePromptProcessor.reset();
   }
 
   isConnected(): boolean {

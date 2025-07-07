@@ -112,7 +112,7 @@ export class OllamaCollapseStrategyService implements ICollapseStrategyService {
       // Ensure we have a valid service instance
       const validService = await this.ensureValidService();
       // Get model info
-      const model = getOption(STORAGE_KEYS.OLLAMA_MODEL) ?? "qwen3:latest";
+      const model = getOption(STORAGE_KEYS.OLLAMA_MODEL) ?? "gemma3:latest";
 
       // Get the decideCollapseStrategy schema from the registry
       const collapseStrategySchema = FunctionSchemaRegistry.getInstance().get(

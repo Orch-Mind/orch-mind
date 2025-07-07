@@ -54,6 +54,19 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   // Hook para acessar as configurações beta, incluindo quantumVisualization
   const { quantumVisualization } = useBetaSettings();
 
+  // Force re-render when quantum visualization changes - debug state
+  const [visualizationRenderKey, setVisualizationRenderKey] = useState(0);
+
+  // Debug and force re-render when quantumVisualization changes
+  useEffect(() => {
+    console.log(
+      "🌌 [TRANSCRIPTION_PANEL] Quantum Visualization changed:",
+      quantumVisualization
+    );
+    // Force re-render by changing a dummy state (following LogRocket best practices)
+    setVisualizationRenderKey((prev) => prev + 1);
+  }, [quantumVisualization]);
+
   // Chat History Hook
   const chatHistory = useChatHistory();
 
@@ -366,6 +379,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
         {/* Main Chat Dashboard Layout */}
         <div
+          key={`dashboard-${visualizationRenderKey}`}
           className={`orchos-quantum-dashboard with-sidebar ${
             !quantumVisualization ? "single-column" : ""
           } ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}
@@ -436,10 +450,11 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           {/* Lógica corrigida: quantumVisualization = true mostra, false esconde */}
           {quantumVisualization && (
             <div
-              key="quantum-visualization-zone"
+              key={`quantum-visualization-zone-${visualizationRenderKey}`}
               className="quantum-visualization-zone"
             >
               <QuantumVisualizationContainer
+                key={`quantum-viz-${visualizationRenderKey}`}
                 cognitionEvents={cognitionEvents}
                 height="100%"
                 width="100%"

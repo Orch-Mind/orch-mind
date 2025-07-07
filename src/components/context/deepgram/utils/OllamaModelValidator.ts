@@ -27,6 +27,6 @@ export class OllamaModelValidator {
    * Retorna o modelo padrão
    */
   static getDefaultModel(): string {
-    return "qwen3:latest";
+    return "gemma3:latest";
   }
 }

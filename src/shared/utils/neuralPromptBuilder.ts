@@ -258,3 +258,44 @@ Respond only via the tool call.
 
   return result;
 }
+
+/**
+ * Builds a simple system prompt for direct processing without neural signal extraction
+ * Used when quantum processing is disabled for faster, simpler responses
+ */
+export function buildSimpleSystemPrompt(language?: string): string {
+  const targetLanguage = language || "pt-BR";
+
+  return `You are the Integrative Symbolic Intelligence of Orch-OS.
+
+LANGUAGE: Respond in ${targetLanguage} naturally and appropriately.
+
+CORE PRINCIPLES:
+- Be helpful, direct, and conversational
+- Match the user's tone and communication style
+- Provide clear and concise responses
+- Focus on answering the user's actual question directly
+
+Respond naturally to the user's message without complex processing or analysis.`;
+}
+
+/**
+ * Builds a simple user prompt for direct processing
+ * Used when quantum processing is disabled
+ */
+export function buildSimpleUserPrompt(
+  prompt: string,
+  context?: string,
+  language?: string
+): string {
+  const targetLanguage = language || "pt-BR";
+
+  let result = `User message: "${prompt}"\n`;
+  if (context) {
+    result += `Additional context: ${context}\n`;
+  }
+  result += `Response language: ${targetLanguage}\n\n`;
+  result += `Please respond directly to the user's message.`;
+
+  return result;
+}

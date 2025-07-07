@@ -207,6 +207,33 @@ export class PineconeMemoryService implements IPersistenceService {
   }
 
   /**
+   * Saves interaction directly to long-term memory bypassing buffer system
+   * For PineconeMemoryService, this delegates to the regular saveInteraction since Pinecone doesn't use buffering
+   */
+  async saveDirectInteraction(
+    question: string,
+    answer: string,
+    speakerTranscriptions: SpeakerTranscription[],
+    primaryUserSpeaker: string,
+    forceSave: boolean = true
+  ): Promise<void> {
+    LoggingUtils.logInfo(
+      `[PINECONE-DIRECT-SAVE] Delegating to regular saveInteraction (Pinecone doesn't use buffering): question='${question.substring(
+        0,
+        50
+      )}...', answer='${answer.substring(0, 50)}...', forceSave=${forceSave}`
+    );
+
+    // For Pinecone, direct save is the same as regular save since there's no buffering
+    await this.saveInteraction(
+      question,
+      answer,
+      speakerTranscriptions,
+      primaryUserSpeaker
+    );
+  }
+
+  /**
    * Checks if the memory service is available (DuckDB only)
    */
   isAvailable(): boolean {

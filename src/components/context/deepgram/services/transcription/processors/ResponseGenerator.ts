@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { getOption, STORAGE_KEYS } from "../../../../../../services/StorageService";
 import { buildIntegrationSystemPrompt } from "../../../../../../shared/utils/neuralPromptBuilder";
 import { IMemoryService } from "../../../interfaces/memory/IMemoryService";
 import { IOpenAIService } from "../../../interfaces/openai/IOpenAIService";
@@ -56,13 +57,45 @@ export class ResponseGenerator {
     // Get the current conversation history (which is clean, without system prompts)
     const conversationHistory = this.memoryService.getConversationHistory();
 
-    // Build the dynamic system prompt using all available context
-    const systemPromptContent = buildIntegrationSystemPrompt(
-      integrationResult.neuralResults,
-      undefined, // Language can be added here if needed
-      integrationResult.strategyDecision,
-      temporaryContext
+    // QUERY EXPANDED: Retrieve additional context from memory based on the user's prompt
+    LoggingUtils.logInfo(
+      "🔍 [ResponseGenerator] Retrieving expanded context from memory..."
     );
+    let expandedMemoryContext = "";
+    try {
+      const contextResults = await this.memoryService.queryExpandedMemory(
+        prompt,
+        [], // no specific keywords for neural mode
+        8 // get top 8 relevant memories for richer context
+      );
+
+      if (contextResults && contextResults.trim().length > 0) {
+        expandedMemoryContext = `\n\nEXPANDED CONTEXT FROM MEMORY:\n${contextResults}`;
+        LoggingUtils.logInfo(
+          `✅ [ResponseGenerator] Retrieved ${contextResults.length} chars of expanded context from memory`
+        );
+      } else {
+        LoggingUtils.logInfo(
+          "ℹ️ [ResponseGenerator] No relevant expanded context found in memory"
+        );
+      }
+    } catch (memoryError) {
+      LoggingUtils.logWarning(
+        "⚠️ [ResponseGenerator] Error retrieving expanded memory context, proceeding without it: " +
+          (memoryError instanceof Error
+            ? memoryError.message
+            : String(memoryError))
+      );
+    }
+
+    // Build the dynamic system prompt using all available context (neural + expanded memory)
+    const systemPromptContent =
+      buildIntegrationSystemPrompt(
+        integrationResult.neuralResults,
+        getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE), // Language can be added here if needed
+        integrationResult.strategyDecision,
+        temporaryContext
+      ) + expandedMemoryContext; // Add expanded memory context to system prompt
 
     const systemMessage: Message = {
       role: "system",

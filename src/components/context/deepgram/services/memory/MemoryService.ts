@@ -229,6 +229,65 @@ export class MemoryService implements IMemoryService {
   }
 
   /**
+   * Saves interaction directly to long-term memory bypassing buffer system
+   * Creates synthetic speaker transcriptions for chat messages
+   * Ideal for SimplePromptProcessor and direct chat interactions
+   */
+  async saveDirectInteraction(
+    question: string,
+    answer: string,
+    primaryUserSpeaker: string,
+    forceSave: boolean = true
+  ): Promise<void> {
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] saveDirectInteraction invoked with question='${question.substring(
+        0,
+        50
+      )}...', answer='${answer.substring(
+        0,
+        50
+      )}...', primaryUserSpeaker='${primaryUserSpeaker}', forceSave=${forceSave}`
+    );
+
+    try {
+      // Create synthetic speaker transcriptions for the user's question
+      const syntheticTranscriptions: SpeakerTranscription[] = [
+        {
+          speaker: primaryUserSpeaker,
+          text: question,
+          timestamp: new Date().toISOString(),
+        },
+      ];
+
+      // Call persistence service with synthetic transcriptions and force save flag
+      await this.persistenceService.saveDirectInteraction(
+        question,
+        answer,
+        syntheticTranscriptions,
+        primaryUserSpeaker,
+        forceSave
+      );
+
+      // Add messages to conversation history
+      this.addToConversationHistory({ role: "user", content: question });
+      this.addToConversationHistory({ role: "assistant", content: answer });
+
+      LoggingUtils.logInfo(
+        `[COGNITIVE-MEMORY] saveDirectInteraction completed successfully for question='${question.substring(
+          0,
+          30
+        )}...'`
+      );
+    } catch (error) {
+      LoggingUtils.logError(
+        "[COGNITIVE-MEMORY] Error in saveDirectInteraction",
+        error
+      );
+      throw error; // Re-throw to allow caller to handle
+    }
+  }
+
+  /**
    * Adds a message to the history and manages its size (cognitive history management)
    */
   addToConversationHistory(message: Message): void {

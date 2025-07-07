@@ -154,11 +154,7 @@ export class TranscriptionPromptProcessor {
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
-    const mode = this.llmService.constructor.name.includes("HuggingFace")
-      ? "huggingface"
-      : "openai";
     await this._processDirectMessage(
-      mode,
       message,
       temporaryContext,
       conversationMessages
@@ -169,7 +165,6 @@ export class TranscriptionPromptProcessor {
    * Process a direct message from chat interface
    */
   private async _processDirectMessage(
-    mode: ProcessorMode,
     message: string,
     temporaryContext?: string,
     conversationMessages?: any[]
@@ -210,7 +205,6 @@ export class TranscriptionPromptProcessor {
 
       // Process using orchestrated pipeline
       const result = await this._executeProcessingPipeline(
-        mode,
         message,
         temporaryContext,
         conversationMessages
@@ -306,7 +300,6 @@ export class TranscriptionPromptProcessor {
 
       // Process using orchestrated pipeline
       const result = await this._executeProcessingPipeline(
-        mode,
         promptText,
         temporaryContext,
         conversationMessages
@@ -426,7 +419,6 @@ export class TranscriptionPromptProcessor {
    * Execute the full neural processing pipeline using specialized processors
    */
   private async _executeProcessingPipeline(
-    mode: ProcessorMode,
     transcriptionToSend: string,
     temporaryContext?: string,
     conversationMessages?: any[]

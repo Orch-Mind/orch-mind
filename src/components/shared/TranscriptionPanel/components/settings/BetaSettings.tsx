@@ -16,6 +16,31 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
   quantumVisualization,
   setQuantumVisualization,
 }) => {
+  const handleQuantumProcessingChange = (enabled: boolean) => {
+    setQuantumProcessing(enabled);
+    // Auto-save the setting immediately
+    setTimeout(() => {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        // Settings will be auto-saved by the useBetaSettings hook
+        console.log(
+          `🧠 Quantum Processing ${enabled ? "enabled" : "disabled"}`
+        );
+      }
+    }, 100);
+  };
+
+  const handleQuantumVisualizationChange = (enabled: boolean) => {
+    setQuantumVisualization(enabled);
+    // Auto-save the setting immediately
+    setTimeout(() => {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        // Settings will be auto-saved by the useBetaSettings hook
+        console.log(
+          `🌌 Quantum Visualization ${enabled ? "enabled" : "disabled"}`
+        );
+      }
+    }, 100);
+  };
   return (
     <div className="space-y-3">
       {/* Header - Padrão das outras abas */}
@@ -44,7 +69,9 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
               <input
                 type="checkbox"
                 checked={quantumProcessing}
-                onChange={(e) => setQuantumProcessing(e.target.checked)}
+                onChange={(e) =>
+                  handleQuantumProcessingChange(e.target.checked)
+                }
                 className="sr-only peer"
                 aria-label="Enable Quantum Processing"
               />
@@ -86,7 +113,9 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
               <input
                 type="checkbox"
                 checked={quantumVisualization}
-                onChange={(e) => setQuantumVisualization(e.target.checked)}
+                onChange={(e) =>
+                  handleQuantumVisualizationChange(e.target.checked)
+                }
                 className="sr-only peer"
                 aria-label="Enable Quantum Visualization"
               />

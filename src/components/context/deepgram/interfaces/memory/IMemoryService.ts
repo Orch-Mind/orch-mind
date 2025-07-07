@@ -4,7 +4,11 @@
 // IMemoryService.ts
 // Interface for the memory service
 
-import { Message, SpeakerMemoryResults, SpeakerTranscription } from "../transcription/TranscriptionTypes";
+import {
+  Message,
+  SpeakerMemoryResults,
+  SpeakerTranscription,
+} from "../transcription/TranscriptionTypes";
 
 export interface IMemoryService {
   /**
@@ -16,22 +20,37 @@ export interface IMemoryService {
     detectedSpeakers: Set<string>,
     temporaryContext?: string
   ): Promise<SpeakerMemoryResults>;
-  
+
   /**
    * Queries Pinecone memory based on input text
    */
-  queryPineconeMemory(inputText: string, topK?: number, keywords?: string[]): Promise<string>;
-  
+  queryPineconeMemory(
+    inputText: string,
+    topK?: number,
+    keywords?: string[]
+  ): Promise<string>;
+
   /**
    * Saves interaction in long-term memory (Pinecone)
    */
   saveToLongTermMemory(
     question: string,
     answer: string,
-    speakerTranscriptions: SpeakerTranscription[], 
+    speakerTranscriptions: SpeakerTranscription[],
     primaryUserSpeaker: string
   ): Promise<void>;
-  
+
+  /**
+   * Saves interaction directly to long-term memory bypassing buffer system
+   * Ideal for SimplePromptProcessor and chat messages that need immediate persistence
+   */
+  saveDirectInteraction(
+    question: string,
+    answer: string,
+    primaryUserSpeaker: string,
+    forceSave?: boolean
+  ): Promise<void>;
+
   /**
    * Builds messages for conversation with AI
    */
@@ -45,42 +64,42 @@ export interface IMemoryService {
     temporaryContext?: string,
     memoryResults?: SpeakerMemoryResults
   ): Message[];
-  
+
   /**
    * Adds a message to the conversation history and manages its size
    */
   addToConversationHistory(message: Message): void;
-  
+
   /**
    * Returns the current conversation history
    */
   getConversationHistory(): Message[];
-  
+
   /**
    * Activates or deactivates the simplified history mode
    */
   setSimplifiedHistoryMode(enabled: boolean): void;
-  
+
   /**
    * Clears the stored transcription data in memory
    */
   clearMemoryData(): void;
-  
+
   /**
    * Resets the snapshot tracker to clear all tracked transcription lines
    */
   resetTranscriptionSnapshot(): void;
-  
+
   /**
    * Resets just the temporary context
    */
   resetTemporaryContext(): void;
-  
+
   /**
    * Resets both the snapshot tracker and temporary context
    */
   resetAll(): void;
-  
+
   /**
    * Builds messages for sending to the model, using the real history and the neural prompt as the last user message
    */
@@ -88,15 +107,20 @@ export interface IMemoryService {
     prompt: string,
     conversationHistory: Message[]
   ): Message[];
-  
+
   /**
    * Adds context messages to the real conversation history, ensuring they precede user/assistant messages.
    */
   addContextToHistory(contextMessages: Message[]): void;
-  
+
   /**
    * Queries expanded memory in Pinecone based on query, keywords and topK.
    * Performs symbolic expansion, generates the embedding and queries Pinecone.
    */
-  queryExpandedMemory(query: string, keywords?: string[], topK?: number, filters?: Record<string, unknown>): Promise<string>;
-} 
+  queryExpandedMemory(
+    query: string,
+    keywords?: string[],
+    topK?: number,
+    filters?: Record<string, unknown>
+  ): Promise<string>;
+}

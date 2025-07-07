@@ -91,7 +91,7 @@ export class OllamaCompletionService implements ICompletionService {
 
         // Get model directly - no verification needed as all models are compatible
         const selectedModel =
-          getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:latest";
+          getOption(STORAGE_KEYS.OLLAMA_MODEL) || "gemma3:latest";
 
         // Get model-specific configuration
         const modelConfig =
@@ -664,7 +664,7 @@ IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "qwen3:latest",
+          model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "gemma3:latest",
           messages: formattedMessages,
           stream: true, // Enable streaming
           options: {

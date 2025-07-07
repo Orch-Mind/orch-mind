@@ -308,24 +308,8 @@ export const useAdapterManager = ({
     if (name.includes("gemma3n") || name.includes("gemma-3n")) {
       return "gemma3n:latest";
     }
-    if (name.includes("llama3.1") || name.includes("llama-3.1")) {
-      return "llama3.1:latest";
-    }
-    if (name.includes("llama3") || name.includes("llama-3")) {
-      return "llama3.1:latest"; // Default to 3.1 for llama3
-    }
-    if (name.includes("mistral")) {
-      return "mistral:latest";
-    }
-    if (name.includes("qwen3") || name.includes("qwen-3")) {
-      return "qwen3:latest";
-    }
-    if (name.includes("qwen2") || name.includes("qwen-2")) {
-      return "qwen2:latest";
-    }
-
     // Default fallback
-    return "llama3.1:latest";
+    return "gemma3:latest";
   }, []);
 
   const downloadAdapter = useCallback(

@@ -40,7 +40,7 @@ export const DEFAULT_OLLAMA_TOOL_CONFIG: OllamaToolConfig = {
   maxToolRetries: 3,
 
   // Modelo padrão caso nenhum esteja configurado
-  defaultModel: "qwen3:latest",
+  defaultModel: "gemma3:latest",
 
   // Configurações gerais para todos os modelos
   defaultConfig: {

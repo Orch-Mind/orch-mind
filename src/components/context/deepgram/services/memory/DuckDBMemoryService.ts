@@ -103,14 +103,23 @@ export class DuckDBMemoryService implements IPersistenceService {
         }
       }
 
+      // Enhanced logging for debugging save behavior
+      LoggingUtils.logInfo(
+        `[COGNITIVE-BUFFER] Save analysis: newTranscriptions=${
+          newTranscriptions.length
+        }, question='${question?.substring(0, 30) || "empty"}...', answer='${
+          answer?.substring(0, 30) || "empty"
+        }...', hasQuestion=${!!question?.trim()}, hasAnswer=${!!answer?.trim()}`
+      );
+
       // If there are no new transcriptions and no question or answer, do nothing (no brain update required)
       if (
         newTranscriptions.length === 0 &&
-        !question.trim() &&
-        !answer.trim()
+        (!question || !question.trim()) &&
+        (!answer || !answer.trim())
       ) {
-        LoggingUtils.logInfo(
-          `[COGNITIVE-BUFFER] No new content to add to cognitive buffer`
+        LoggingUtils.logWarning(
+          `[COGNITIVE-BUFFER] Skipping save - no new content to add to cognitive buffer (newTranscriptions=0, question=${!!question?.trim()}, answer=${!!answer?.trim()})`
         );
         return;
       }
@@ -192,6 +201,170 @@ export class DuckDBMemoryService implements IPersistenceService {
         "[COGNITIVE-BUFFER] Error processing interaction for cognitive buffer",
         error
       );
+    }
+  }
+
+  /**
+   * Saves interaction directly to long-term memory bypassing buffer system
+   * Creates immediate vector entries for both question and answer
+   * Used for SimplePromptProcessor and chat messages that need immediate persistence
+   */
+  async saveDirectInteraction(
+    question: string,
+    answer: string,
+    speakerTranscriptions: SpeakerTranscription[],
+    primaryUserSpeaker: string,
+    forceSave: boolean = true
+  ): Promise<void> {
+    if (!this.isAvailable() || !this.embeddingService.isInitialized()) {
+      LoggingUtils.logWarning(
+        "[DIRECT-SAVE] DuckDB or embedding service unavailable, skipping direct save"
+      );
+      return;
+    }
+
+    LoggingUtils.logInfo(
+      `[DIRECT-SAVE] Saving interaction directly: question='${question.substring(
+        0,
+        50
+      )}...', answer='${answer.substring(0, 50)}...', forceSave=${forceSave}`
+    );
+
+    try {
+      const now = Date.now();
+      const uuid = now.toString();
+      const duckdbEntries = [] as Array<{
+        id: string;
+        values: number[];
+        metadata: Record<string, unknown>;
+      }>;
+
+      // Always save the user's question as a separate entry
+      if (question && question.trim()) {
+        LoggingUtils.logInfo(
+          `[DIRECT-SAVE] Creating embedding for user question`
+        );
+        const questionEmbedding = await this.embeddingService.createEmbedding(
+          question
+        );
+
+        duckdbEntries.push(
+          this.createVectorEntry(`direct-question-${uuid}`, questionEmbedding, {
+            type: "user_question",
+            content: question,
+            source: "user",
+            speakerName: primaryUserSpeaker,
+            speakerGroup: primaryUserSpeaker,
+            isSpeaker: true,
+            isUser: true,
+            timestamp: new Date().toISOString(),
+            saveMethod: "direct",
+            forceSave: forceSave,
+          })
+        );
+      }
+
+      // Always save the assistant's answer as a separate entry
+      if (answer && answer.trim()) {
+        LoggingUtils.logInfo(
+          `[DIRECT-SAVE] Creating embedding for assistant answer`
+        );
+        const answerEmbedding = await this.embeddingService.createEmbedding(
+          answer
+        );
+
+        duckdbEntries.push(
+          this.createVectorEntry(`direct-answer-${uuid}`, answerEmbedding, {
+            type: "assistant_response",
+            content: answer,
+            source: "assistant",
+            speakerName: "assistant",
+            speakerGroup: "assistant",
+            isSpeaker: false,
+            isUser: false,
+            timestamp: new Date().toISOString(),
+            saveMethod: "direct",
+            forceSave: forceSave,
+            relatedQuestionId: `direct-question-${uuid}`, // Link to related question
+          })
+        );
+      }
+
+      // Save speaker transcriptions if provided (for context)
+      if (speakerTranscriptions && speakerTranscriptions.length > 0) {
+        for (const transcription of speakerTranscriptions) {
+          if (transcription.text && transcription.text.trim()) {
+            LoggingUtils.logInfo(
+              `[DIRECT-SAVE] Creating embedding for speaker transcription: ${transcription.speaker}`
+            );
+            const transcriptionEmbedding =
+              await this.embeddingService.createEmbedding(transcription.text);
+
+            duckdbEntries.push(
+              this.createVectorEntry(
+                `direct-transcription-${uuid}-${transcription.speaker}`,
+                transcriptionEmbedding,
+                {
+                  type: "speaker_transcription",
+                  content: transcription.text,
+                  source:
+                    transcription.speaker === primaryUserSpeaker
+                      ? "user"
+                      : "external",
+                  speakerName: transcription.speaker,
+                  speakerGroup:
+                    transcription.speaker === primaryUserSpeaker
+                      ? primaryUserSpeaker
+                      : "external",
+                  isSpeaker: true,
+                  isUser: transcription.speaker === primaryUserSpeaker,
+                  timestamp:
+                    transcription.timestamp || new Date().toISOString(),
+                  saveMethod: "direct",
+                  forceSave: forceSave,
+                  relatedInteractionId: `direct-${uuid}`, // Link to related interaction
+                }
+              )
+            );
+          }
+        }
+      }
+
+      // Save all entries to DuckDB immediately
+      if (duckdbEntries.length > 0) {
+        const result = await window.electronAPI?.saveToDuckDB(duckdbEntries);
+        if (result?.success) {
+          LoggingUtils.logInfo(
+            `[DIRECT-SAVE] Successfully saved ${duckdbEntries.length} entries directly to DuckDB`
+          );
+        } else {
+          // Check if error is due to Windows ARM64 incompatibility
+          if (
+            result?.error?.includes(
+              "unsupported arch 'arm64' for platform 'win32'"
+            ) ||
+            result?.error?.includes("Windows ARM64")
+          ) {
+            LoggingUtils.logInfo(
+              `[DIRECT-SAVE] DuckDB not available on Windows ARM64 - vector persistence disabled`
+            );
+          } else {
+            LoggingUtils.logError(
+              `[DIRECT-SAVE] Error saving directly to DuckDB: ${result?.error}`
+            );
+          }
+        }
+      } else {
+        LoggingUtils.logWarning(
+          `[DIRECT-SAVE] No entries to save - question and answer were empty`
+        );
+      }
+    } catch (error) {
+      LoggingUtils.logError(
+        "[DIRECT-SAVE] Error in direct save to DuckDB memory",
+        error
+      );
+      throw error; // Re-throw to allow caller to handle
     }
   }
 
