@@ -62,6 +62,9 @@ export interface ChatControlsProps {
   onToggleContext: () => void;
   canSend: boolean;
   showContext: boolean;
+  // Web Search controls
+  webSearchEnabled?: boolean;
+  onToggleWebSearch?: () => void;
   // TODO: Re-enable for future versions - Audio Settings in chat input
   // onToggleAudioSettings?: () => void;
   // showAudioSettings?: boolean;

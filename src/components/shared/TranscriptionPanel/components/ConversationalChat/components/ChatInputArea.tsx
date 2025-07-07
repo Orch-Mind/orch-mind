@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React from "react";
+import React, { useState } from "react";
+import {
+  getOption,
+  setOption,
+  STORAGE_KEYS,
+} from "../../../../../../services/StorageService";
 import { useDeepgram } from "../../../../../context";
 import { ChatState, ConversationalChatProps } from "../types/ChatTypes";
 import { ChatControls } from "./ChatControls";
@@ -50,6 +55,20 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   // showAudioSettings,
   // audioSettingsButtonRef,
 }) => {
+  // Web Search state management
+  const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(
+    () => getOption<boolean>(STORAGE_KEYS.WEB_SEARCH_ENABLED) || false
+  );
+
+  // Handler for toggling web search
+  const handleToggleWebSearch = () => {
+    const newState = !webSearchEnabled;
+    setWebSearchEnabled(newState);
+    setOption(STORAGE_KEYS.WEB_SEARCH_ENABLED, newState);
+    
+    console.log(`🌐 [Web Search] ${newState ? "Enabled" : "Disabled"}`);
+  };
+
   const canSend =
     !!(chatState.inputMessage.trim() || transcriptionText.trim()) &&
     !chatState.isProcessing;
@@ -106,6 +125,8 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               showContext={
                 chatState.showContextField || !!chatState.currentContext
               }
+              webSearchEnabled={webSearchEnabled}
+              onToggleWebSearch={handleToggleWebSearch}
               // TODO: Re-enable for future versions - Audio Settings in chat input
               // onToggleAudioSettings={onToggleAudioSettings}
               // showAudioSettings={showAudioSettings}

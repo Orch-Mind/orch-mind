@@ -76,6 +76,7 @@ export const STORAGE_KEYS = {
 
   // ===== Configurações de ferramentas (tools) =====
   TOOLS_ENABLED: "toolsEnabled", // Habilita/desabilita ferramentas no modo básico
+  WEB_SEARCH_ENABLED: "webSearchEnabled", // Habilita/desabilita busca na web
 
   // ===== Configurações de debugging =====
   DEBUG_MODE: "debugMode",
