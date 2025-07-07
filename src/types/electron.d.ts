@@ -12,6 +12,20 @@ interface TrainingConversation {
   }>;
 }
 
+// Web search interfaces
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  source?: string;
+}
+
+export interface WebSearchOptions {
+  maxResults?: number;
+  safeSearch?: boolean;
+  timeRange?: "any" | "day" | "week" | "month" | "year";
+}
+
 export interface ElectronAPI {
   // Core window methods
 
@@ -315,6 +329,12 @@ export interface ElectronAPI {
   onTrainingProgress: (
     callback: (data: { progress: number; message: string }) => void
   ) => () => void;
+
+  // Web Search Methods
+  webSearch: (
+    queries: string[],
+    options?: WebSearchOptions
+  ) => Promise<WebSearchResult[]>;
 }
 
 export interface DependencyStatus {
