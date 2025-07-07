@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useApiSettings } from "./hooks/useApiSettings";
+import { useBetaSettings } from "./hooks/useBetaSettings";
 import { useDebugSettings } from "./hooks/useDebugSettings";
 import { useGeneralSettings } from "./hooks/useGeneralSettings";
 import { useNavigationState } from "./hooks/useNavigationState";
@@ -22,7 +23,7 @@ export const useSettingsState = (
   const general = useGeneralSettings();
   const api = useApiSettings();
   const debug = useDebugSettings();
-
+  const beta = useBetaSettings();
 
   // Função unificada para salvar todas as configurações
   const saveSettings = () => {
@@ -30,6 +31,7 @@ export const useSettingsState = (
     general.saveGeneralSettings();
     api.saveApiSettings();
     debug.saveDebugSettings();
+    beta.saveBetaSettings();
   };
 
   // Combina todos os estados e funções dos hooks especializados
@@ -44,6 +46,8 @@ export const useSettingsState = (
       ...api,
       // Debug
       ...debug,
+      // Beta
+      ...beta,
 
       // Ação unificada
       saveSettings,
@@ -74,12 +78,12 @@ export const useSettingsState = (
       setPineconeIndex: () => {},
     }),
     [
-      // Dependências: todos os objetos retornados pelos hooks especializados e applicationMode
+      // Dependências: todos os objetos retornados pelos hooks especializados
       navigation,
       general,
       api,
       debug,
-
+      beta,
       saveSettings,
     ]
   );

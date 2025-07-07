@@ -4,6 +4,7 @@
 import React from "react";
 import { GeneralSettings } from "./settings";
 import ApiSettings from "./settings/ApiSettings";
+import BetaSettings from "./settings/BetaSettings";
 import DeploySettings from "./settings/DeploySettings";
 import DownloadSettings from "./settings/DownloadSettings";
 import SettingsFooter from "./settings/SettingsFooter";
@@ -67,8 +68,6 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
             <GeneralSettings
               name={settings.name}
               setName={settings.setName}
-              enableMatrix={settings.enableMatrix}
-              setEnableMatrix={settings.setEnableMatrix}
               language={settings.language}
               setLanguage={settings.setLanguage}
             />
@@ -97,6 +96,16 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
 
           {/* Deploy Tab */}
           {settings.activeTab === "deploy" && <DeploySettings />}
+
+          {/* Beta Tab */}
+          {settings.activeTab === "beta" && (
+            <BetaSettings
+              quantumProcessing={settings.quantumProcessing}
+              setQuantumProcessing={settings.setQuantumProcessing}
+              quantumVisualization={settings.quantumVisualization}
+              setQuantumVisualization={settings.setQuantumVisualization}
+            />
+          )}
         </div>
 
         {/* Footer com botões de ação */}

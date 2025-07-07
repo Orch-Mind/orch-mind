@@ -10,9 +10,17 @@ interface SettingsNavigationProps {
     | "training"
     | "share"
     | "download"
-    | "deploy";
+    | "deploy"
+    | "beta";
   onTabChange: (
-    tab: "general" | "advanced" | "training" | "share" | "download" | "deploy"
+    tab:
+      | "general"
+      | "advanced"
+      | "training"
+      | "share"
+      | "download"
+      | "deploy"
+      | "beta"
   ) => void;
 }
 
@@ -27,6 +35,7 @@ const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
     { id: "share" as const, label: "Share", icon: "🔗" },
     { id: "download" as const, label: "Download", icon: "📥" },
     { id: "deploy" as const, label: "Deploy", icon: "🚀" },
+    { id: "beta" as const, label: "Beta", icon: "🧪" },
   ];
 
   return (
@@ -77,6 +86,8 @@ const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
           {activeTab === "share" && "P2P sharing and network settings"}
           {activeTab === "download" && "Download adapters from the P2P network"}
           {activeTab === "deploy" && "Deploy and manage your LoRA adapters"}
+          {activeTab === "beta" &&
+            "Experimental features and cutting-edge technology"}
         </p>
       </div>
     </div>

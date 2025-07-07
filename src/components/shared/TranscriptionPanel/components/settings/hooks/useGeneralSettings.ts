@@ -18,9 +18,6 @@ import {
 export const useGeneralSettings = () => {
   // Estado neural-simbólico para opções gerais
   const [name, setName] = useState<string>(() => getUserName() || "User");
-  const [enableMatrix, setEnableMatrix] = useState<boolean>(
-    () => getOption<boolean>(STORAGE_KEYS.ENABLE_MATRIX) ?? false
-  );
 
   const [language, setLanguage] = useState<string>(
     () => getOption<string>(STORAGE_KEYS.DEEPGRAM_LANGUAGE) ?? "pt-BR"
@@ -33,10 +30,6 @@ export const useGeneralSettings = () => {
         case STORAGE_KEYS.USER_NAME:
           setName(value);
           break;
-        case STORAGE_KEYS.ENABLE_MATRIX:
-          setEnableMatrix(value);
-          break;
-
         case STORAGE_KEYS.DEEPGRAM_LANGUAGE:
           setLanguage(value);
           break;
@@ -50,7 +43,6 @@ export const useGeneralSettings = () => {
   // Salva as configurações gerais no storage
   const saveGeneralSettings = () => {
     setOption(STORAGE_KEYS.USER_NAME, name);
-    setOption(STORAGE_KEYS.ENABLE_MATRIX, enableMatrix);
     setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, language);
   };
 
@@ -59,21 +51,11 @@ export const useGeneralSettings = () => {
       // Valores
       name,
       setName,
-      enableMatrix,
-      setEnableMatrix,
       language,
       setLanguage,
       // Ações
       saveGeneralSettings,
     }),
-    [
-      name,
-      setName,
-      enableMatrix,
-      setEnableMatrix,
-      language,
-      setLanguage,
-      saveGeneralSettings,
-    ]
+    [name, setName, language, setLanguage, saveGeneralSettings]
   );
 };

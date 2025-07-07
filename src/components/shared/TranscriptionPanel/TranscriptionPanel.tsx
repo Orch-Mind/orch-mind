@@ -13,6 +13,7 @@ import { useChatGptImport } from "./hooks/useChatGptImport";
 import { useTranscriptionManager } from "./hooks/useTranscriptionManager";
 import { TranscriptionPanelProps } from "./types/interfaces";
 // Import para controlar a visibilidade da visualização quântica
+import { useBetaSettings } from "./components/settings/hooks/useBetaSettings";
 import { useGeneralSettings } from "./components/settings/hooks/useGeneralSettings";
 // Módulo cortical para cards simples
 // Importação dos arquivos CSS modulares - estrutura neural-simbólica
@@ -47,8 +48,11 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   const transcriptionManager = useTranscriptionManager();
   const { showToast } = useToast();
 
-  // Hook para acessar as configurações gerais, incluindo enableMatrix
-  const { enableMatrix } = useGeneralSettings();
+  // Hook para acessar as configurações gerais
+  const {} = useGeneralSettings();
+
+  // Hook para acessar as configurações beta, incluindo quantumVisualization
+  const { quantumVisualization } = useBetaSettings();
 
   // Chat History Hook
   const chatHistory = useChatHistory();
@@ -363,7 +367,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
         {/* Main Chat Dashboard Layout */}
         <div
           className={`orchos-quantum-dashboard with-sidebar ${
-            !enableMatrix ? "single-column" : ""
+            !quantumVisualization ? "single-column" : ""
           } ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}
           style={{
             flex: "1 1 auto",
@@ -429,8 +433,8 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           </button>
 
           {/* Quantum Visualization Zone - Left Panel with Golden Ratio */}
-          {/* Lógica corrigida: enableMatrix = true mostra, false esconde */}
-          {enableMatrix && (
+          {/* Lógica corrigida: quantumVisualization = true mostra, false esconde */}
+          {quantumVisualization && (
             <div
               key="quantum-visualization-zone"
               className="quantum-visualization-zone"

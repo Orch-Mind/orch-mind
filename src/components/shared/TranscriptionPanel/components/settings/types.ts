@@ -28,7 +28,8 @@ export type TabType =
   | "training"
   | "share"
   | "download"
-  | "deploy";
+  | "deploy"
+  | "beta";
 
 export type OpenSectionType =
   | "pinecone"
@@ -48,8 +49,6 @@ export interface SettingsState {
   // General
   name: string;
   setName: (name: string) => void;
-  enableMatrix: boolean;
-  setEnableMatrix: (enable: boolean) => void;
   language: string;
   setLanguage: (language: string) => void;
 
@@ -96,6 +95,12 @@ export interface SettingsState {
   setDebugMode: (enable: boolean) => void;
   logLevel: string;
   setLogLevel: (level: string) => void;
+
+  // Beta
+  quantumProcessing: boolean;
+  setQuantumProcessing: (enabled: boolean) => void;
+  quantumVisualization: boolean;
+  setQuantumVisualization: (enabled: boolean) => void;
 
   // Métodos
   saveSettings: () => void;
