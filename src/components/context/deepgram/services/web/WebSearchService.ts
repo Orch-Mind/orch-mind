@@ -63,8 +63,8 @@ export class WebSearchService {
     // Notify user about analysis step
     if (this.uiService?.notifyWebSearchStep) {
       this.uiService.notifyWebSearchStep(
-        "🧠 Analyzing query",
-        "Determining if web search would be helpful..."
+        "🧠 Analisando consulta",
+        "Determinando se busca web seria útil para sua pergunta..."
       );
     }
 
@@ -72,8 +72,8 @@ export class WebSearchService {
       // Fallback to simple keyword-based detection
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "⚡ Using fallback analysis",
-          "LLM not available, using keyword detection"
+          "⚡ Análise por palavras-chave",
+          "IA não disponível, usando detecção por palavras-chave"
         );
       }
       return this.fallbackSearchDecision(userQuery);
@@ -84,8 +84,8 @@ export class WebSearchService {
 
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "🤖 Consulting AI",
-          "AI is analyzing your question..."
+          "🤖 Consultando IA",
+          "IA está analisando sua pergunta para determinar a melhor estratégia..."
         );
       }
 
@@ -132,23 +132,29 @@ Examples:
       // Parse the JSON response
       const decision = JSON.parse(content) as WebSearchDecision;
 
-      // Notify user about the decision
+      // Notify user about the decision with more detailed feedback
       if (decision.shouldSearch && this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "✅ Search needed",
-          `AI determined: ${decision.reasoning}`
+          "✅ Busca necessária",
+          `IA determinou: ${decision.reasoning}`
         );
-        this.uiService.notifyWebSearchStep(
-          "🎯 Generated queries",
-          `Optimized search queries: ${decision.searchQueries.join(", ")}`
-        );
+
+        // Show the generated queries
+        if (decision.searchQueries && decision.searchQueries.length > 0) {
+          this.uiService.notifyWebSearchStep(
+            "🎯 Estratégia definida",
+            `Consultas otimizadas geradas: ${decision.searchQueries.length} ${
+              decision.searchQueries.length === 1 ? "consulta" : "consultas"
+            }`
+          );
+        }
       } else if (
         !decision.shouldSearch &&
         this.uiService?.notifyWebSearchStep
       ) {
         this.uiService.notifyWebSearchStep(
-          "❌ Search not needed",
-          `AI determined: ${decision.reasoning}`
+          "❌ Busca desnecessária",
+          `IA determinou: ${decision.reasoning}`
         );
       }
 
@@ -162,8 +168,8 @@ Examples:
     } catch (error) {
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "⚠️ Fallback mode",
-          "AI analysis failed, using keyword detection"
+          "⚠️ Análise alternativa",
+          "Erro na análise por IA, usando detecção por palavras-chave"
         );
       }
       LoggingUtils.logWarning(
@@ -286,20 +292,32 @@ Examples:
       return [];
     }
 
-    // Notify user about search start
-    if (this.uiService?.notifyWebSearchStep) {
-      this.uiService.notifyWebSearchStep(
-        "🔍 Starting web search",
-        `Searching with ${queries.length} optimized ${
-          queries.length === 1 ? "query" : "queries"
-        }...`
-      );
-    }
-
     try {
       LoggingUtils.logInfo(
         `🔍 [WEB_SEARCH] Starting web search with ${queries.length} queries`
       );
+
+      // Notify about search start with detailed info
+      if (this.uiService?.notifyWebSearchStep) {
+        this.uiService.notifyWebSearchStep(
+          "🔍 Iniciando busca web",
+          `Executando ${queries.length} ${
+            queries.length === 1 ? "consulta otimizada" : "consultas otimizadas"
+          }...`
+        );
+      }
+
+      // Show the queries being searched
+      if (this.uiService?.notifyWebSearchStep && queries.length > 0) {
+        const queryText =
+          queries.length === 1
+            ? `"${queries[0]}"`
+            : queries.map((q) => `"${q}"`).join(", ");
+        this.uiService.notifyWebSearchStep(
+          "🎯 Consultas geradas",
+          `Buscando por: ${queryText}`
+        );
+      }
 
       // Use IPC to perform web search in main process (no CSP restrictions)
       const results = await window.electronAPI.webSearch(queries, {
@@ -308,12 +326,23 @@ Examples:
         timeRange: options.timeRange || "any",
       });
 
-      // Notify about final results
+      // Notify about results found
       if (this.uiService?.notifyWebSearchStep) {
-        this.uiService.notifyWebSearchStep(
-          "🎯 Search complete",
-          `Found ${results.length} unique results total`
-        );
+        if (results.length > 0) {
+          this.uiService.notifyWebSearchStep(
+            "✅ Resultados encontrados",
+            `${results.length} ${
+              results.length === 1
+                ? "resultado encontrado"
+                : "resultados únicos encontrados"
+            }`
+          );
+        } else {
+          this.uiService.notifyWebSearchStep(
+            "ℹ️ Nenhum resultado",
+            "Nenhum resultado relevante encontrado para as consultas"
+          );
+        }
       }
 
       LoggingUtils.logInfo(
@@ -327,8 +356,8 @@ Examples:
 
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "❌ Search failed",
-          `Web search error: ${errorMessage}`
+          "❌ Erro na busca",
+          `Falha na busca web: ${errorMessage}`
         );
       }
 
@@ -359,6 +388,13 @@ Examples:
         "❌ [WEB_SEARCH] LLM service not available for result processing"
       );
 
+      if (this.uiService?.notifyWebSearchStep) {
+        this.uiService.notifyWebSearchStep(
+          "⚠️ Processamento básico",
+          "IA não disponível, usando formatação simples"
+        );
+      }
+
       // Return simple concatenated results without LLM processing
       return results
         .map(
@@ -370,12 +406,30 @@ Examples:
 
     if (this.uiService?.notifyWebSearchStep) {
       this.uiService.notifyWebSearchStep(
-        "🧠 Processing results",
-        "AI analyzing search results for relevant information..."
+        "🧠 Analisando resultados",
+        `IA processando ${results.length} ${
+          results.length === 1 ? "resultado" : "resultados"
+        } para extrair informações relevantes...`
       );
     }
 
     try {
+      // Show sources being processed
+      if (this.uiService?.notifyWebSearchStep) {
+        const sources = results
+          .map((r) => r.source)
+          .filter(Boolean)
+          .slice(0, 3);
+        if (sources.length > 0) {
+          this.uiService.notifyWebSearchStep(
+            "📚 Fontes analisadas",
+            `Processando informações de: ${sources.join(", ")}${
+              sources.length < results.length ? "..." : ""
+            }`
+          );
+        }
+      }
+
       // Build prompt for LLM to process and summarize results
       const processingPrompt = `Based on the following search results, provide a comprehensive and relevant summary that directly answers the user's question: "${originalQuery}"
 
@@ -417,8 +471,8 @@ Summary:`;
 
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "✅ Results processed",
-          "AI has analyzed and summarized the search results"
+          "✅ Análise concluída",
+          "IA finalizou a análise e síntese dos resultados de busca"
         );
       }
 
@@ -435,8 +489,8 @@ Summary:`;
 
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
-          "⚠️ Processing fallback",
-          "Using basic result formatting due to AI processing error"
+          "⚠️ Processamento alternativo",
+          "Erro na análise por IA, usando formatação básica dos resultados"
         );
       }
 

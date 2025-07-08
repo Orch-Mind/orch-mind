@@ -367,6 +367,7 @@ export class SimplePromptProcessor {
 
       // STEP 2: Check if web search would be helpful and perform search
       let webContext = "";
+      let isWebSearchInProgress = false;
       try {
         const webSearchDecision = await this.webSearchService.shouldSearchWeb(
           prompt
@@ -374,7 +375,8 @@ export class SimplePromptProcessor {
 
         if (webSearchDecision.shouldSearch) {
           LoggingUtils.logInfo("🌐 [SIMPLE_MODE] Performing web search...");
-          this.showProcessingStatus("Searching the web");
+          isWebSearchInProgress = true;
+          // Don't call showProcessingStatus here - let WebSearchService handle it
 
           // Perform web search using LLM-generated queries
           const webResults = await this.webSearchService.searchWeb(
@@ -395,12 +397,14 @@ export class SimplePromptProcessor {
               `✅ Found ${webResults.length} relevant web results`
             );
           }
+          isWebSearchInProgress = false;
         } else {
           LoggingUtils.logInfo(
             `ℹ️ [SIMPLE_MODE] Web search not needed: ${webSearchDecision.reasoning}`
           );
         }
       } catch (webError) {
+        isWebSearchInProgress = false;
         LoggingUtils.logWarning(
           "⚠️ Error performing web search, proceeding without it: " +
             (webError instanceof Error ? webError.message : String(webError))
@@ -409,7 +413,10 @@ export class SimplePromptProcessor {
 
       // STEP 3: Build enhanced system prompt with context
       LoggingUtils.logInfo("📝 [SIMPLE_MODE] Building prompt...");
-      this.showProcessingStatus("Building prompt");
+      // Only show processing status if web search is not in progress
+      if (!isWebSearchInProgress) {
+        this.showProcessingStatus("Building prompt");
+      }
 
       const baseSystemPrompt = buildSimpleSystemPrompt(this.currentLanguage);
       const enhancedSystemPrompt =
@@ -625,9 +632,17 @@ export class SimplePromptProcessor {
  * UI Service adapter that combines both UI service interfaces
  */
 class UIServiceAdapter implements WebUIUpdateService {
+  private isWebSearchActive: boolean = false;
+  private webSearchTimeout: NodeJS.Timeout | null = null;
+
   constructor(private originalUIService: IUIUpdateService) {}
 
   updateProcessingStatus(message: string): void {
+    // Don't update general processing status if web search is currently active
+    if (this.isWebSearchActive) {
+      return;
+    }
+
     // Use the processing status animation from SimplePromptProcessor
     if (
       typeof window !== "undefined" &&
@@ -638,9 +653,29 @@ class UIServiceAdapter implements WebUIUpdateService {
   }
 
   notifyWebSearchStep(step: string, details?: string): void {
-    // Notify web search step via the existing UI service
-    const statusMessage = details ? `${step}: ${details}` : step;
-    this.updateProcessingStatus(statusMessage);
+    // Mark web search as active
+    this.isWebSearchActive = true;
+
+    // Clear any existing timeout
+    if (this.webSearchTimeout) {
+      clearTimeout(this.webSearchTimeout);
+    }
+
+    // Format the message with more visual indicators
+    const statusMessage = details ? `🌐 ${step}: ${details}` : `🌐 ${step}`;
+
+    // Force update the processing status for web search messages
+    if (
+      typeof window !== "undefined" &&
+      (window as any).__updateProcessingStatus
+    ) {
+      (window as any).__updateProcessingStatus(statusMessage);
+    }
+
+    // Set timeout to mark web search as inactive after 2 seconds of no activity
+    this.webSearchTimeout = setTimeout(() => {
+      this.isWebSearchActive = false;
+    }, 2000);
 
     // Also log for debugging
     LoggingUtils.logInfo(`🔍 [WEB_SEARCH_UI] ${statusMessage}`);
