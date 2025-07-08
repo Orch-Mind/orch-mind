@@ -43,6 +43,7 @@ export class SimplePromptProcessor {
   private isProcessingPrompt: boolean = false;
   private currentLanguage: string;
   private processingStatusInterval: NodeJS.Timeout | null = null;
+  private isWebSearchActive: boolean = false; // Track web search state
 
   // Reused processors for conversation management
   private transcriptionExtractor!: TranscriptionExtractor;
@@ -60,7 +61,7 @@ export class SimplePromptProcessor {
     this._initializeProcessors();
 
     // Create UI adapter for web search service
-    const uiAdapter = new UIServiceAdapter(this.uiService);
+    const uiAdapter = new UIServiceAdapter(this.uiService, this);
     this.webSearchService = new WebSearchService(this.llmService, uiAdapter);
   }
 
@@ -76,8 +77,14 @@ export class SimplePromptProcessor {
 
   /**
    * Show simple processing status with animated indicator
+   * Only shows if web search is not active
    */
   private showProcessingStatus(message: string): void {
+    // Don't show status if web search is active
+    if (this.isWebSearchActive) {
+      return;
+    }
+
     // Clear any existing interval
     if (this.processingStatusInterval) {
       clearInterval(this.processingStatusInterval);
@@ -125,6 +132,13 @@ export class SimplePromptProcessor {
     ) {
       (window as any).__updateProcessingStatus("");
     }
+  }
+
+  /**
+   * Set web search active state
+   */
+  public setWebSearchActive(active: boolean): void {
+    this.isWebSearchActive = active;
   }
 
   /**
@@ -183,7 +197,6 @@ export class SimplePromptProcessor {
 
     // Show initial processing message
     this.uiService.updateUI({ aiResponse: "Processing..." });
-    this.showProcessingStatus("Processing your message");
 
     try {
       this.isProcessingPrompt = true;
@@ -239,7 +252,6 @@ export class SimplePromptProcessor {
 
     // Show initial processing message
     this.uiService.updateUI({ aiResponse: "Processing..." });
-    this.showProcessingStatus("Processing transcription");
 
     try {
       this.isProcessingPrompt = true;
@@ -333,13 +345,16 @@ export class SimplePromptProcessor {
     conversationMessages?: any[]
   ): Promise<SimpleProcessingResponse> {
     try {
-      // STEP 1: Retrieve context from DuckDB memory
-      LoggingUtils.logInfo(
-        "🔍 [SIMPLE_MODE] Retrieving context from memory..."
-      );
-      this.showProcessingStatus("Retrieving context");
+      // Track if web search was performed
+      let wasWebSearchPerformed = false;
+      let webSearchResultsCount = 0;
 
-      let memoryContext = "";
+      // STEP 1: Retrieve context from DuckDB memory (silent)
+      LoggingUtils.logInfo(
+        "🔍 [SIMPLE_MODE] Step 1: Retrieving context from memory..."
+      );
+
+      let memoryContextContent = "";
       try {
         // Search for relevant context using the prompt as query
         const contextResults = await this.memoryService.queryExpandedMemory(
@@ -349,7 +364,7 @@ export class SimplePromptProcessor {
         );
 
         if (contextResults && contextResults.trim().length > 0) {
-          memoryContext = `\n\nRELEVANT CONTEXT FROM MEMORY:\n${contextResults}`;
+          memoryContextContent = contextResults;
           LoggingUtils.logInfo(
             `✅ Retrieved ${contextResults.length} chars of context from memory`
           );
@@ -365,85 +380,165 @@ export class SimplePromptProcessor {
         );
       }
 
-      // STEP 2: Check if web search would be helpful and perform search
-      let webContext = "";
-      let isWebSearchInProgress = false;
-      try {
-        const webSearchDecision = await this.webSearchService.shouldSearchWeb(
-          prompt
-        );
+      // STEP 2: LLM decides web search strategy (only if enabled)
+      let webContextContent = "";
+      const isWebSearchEnabled =
+        getOption(STORAGE_KEYS.WEB_SEARCH_ENABLED) || false;
 
-        if (webSearchDecision.shouldSearch) {
-          LoggingUtils.logInfo("🌐 [SIMPLE_MODE] Performing web search...");
-          isWebSearchInProgress = true;
-          // Don't call showProcessingStatus here - let WebSearchService handle it
+      if (isWebSearchEnabled) {
+        try {
+          LoggingUtils.logInfo(
+            "🌐 [SIMPLE_MODE] Step 2: LLM deciding search strategy..."
+          );
+          wasWebSearchPerformed = true;
+          this.setWebSearchActive(true);
 
-          // Perform web search using LLM-generated queries
+          // Get conversation history for context-aware search strategy
+          const conversationHistory =
+            this.memoryService.getConversationHistory();
+
+          const searchStrategy =
+            await this.webSearchService.generateSearchStrategy(
+              prompt,
+              conversationHistory
+            );
+
+          LoggingUtils.logInfo(
+            `🎯 [WEB_SEARCH] Strategy: ${searchStrategy.searchQueries.length} queries, ${searchStrategy.resultsCount} results - ${searchStrategy.reasoning}`
+          );
+
+          // STEP 3: Execute queries and LLM filters results
+          LoggingUtils.logInfo(
+            "🔍 [SIMPLE_MODE] Step 3: Executing queries and filtering results..."
+          );
+
           const webResults = await this.webSearchService.searchWeb(
-            webSearchDecision.searchQueries,
+            searchStrategy.searchQueries,
             {
-              maxResults: 3,
+              maxResults: searchStrategy.resultsCount,
               safeSearch: true,
             }
           );
 
           if (webResults && webResults.length > 0) {
-            // Use LLM to process and format the search results
-            webContext = await this.webSearchService.processSearchResults(
-              webResults,
-              prompt
+            webSearchResultsCount = webResults.length;
+            // LLM processes and filters only necessary information
+            webContextContent =
+              await this.webSearchService.processSearchResults(
+                webResults,
+                prompt
+              );
+            LoggingUtils.logInfo(
+              `✅ Found and processed ${webResults.length} relevant web results`
+            );
+
+            // Debug log for web context content
+            LoggingUtils.logInfo(
+              `🔍 [WEB_CONTEXT_DEBUG] Web context content length: ${webContextContent.length} chars`
             );
             LoggingUtils.logInfo(
-              `✅ Found ${webResults.length} relevant web results`
+              `🔍 [WEB_CONTEXT_DEBUG] Web context preview: ${webContextContent.substring(
+                0,
+                300
+              )}...`
             );
+          } else {
+            LoggingUtils.logInfo("ℹ️ No web results found or empty results");
           }
-          isWebSearchInProgress = false;
-        } else {
-          LoggingUtils.logInfo(
-            `ℹ️ [SIMPLE_MODE] Web search not needed: ${webSearchDecision.reasoning}`
+
+          this.setWebSearchActive(false);
+        } catch (webError) {
+          this.setWebSearchActive(false);
+          LoggingUtils.logWarning(
+            "⚠️ Error performing web search, proceeding without it: " +
+              (webError instanceof Error ? webError.message : String(webError))
           );
         }
-      } catch (webError) {
-        isWebSearchInProgress = false;
-        LoggingUtils.logWarning(
-          "⚠️ Error performing web search, proceeding without it: " +
-            (webError instanceof Error ? webError.message : String(webError))
+      } else {
+        LoggingUtils.logInfo(
+          "🚫 [SIMPLE_MODE] Step 2: Web search disabled by user settings"
         );
       }
 
-      // STEP 3: Build enhanced system prompt with context
-      LoggingUtils.logInfo("📝 [SIMPLE_MODE] Building prompt...");
-      // Only show processing status if web search is not in progress
-      if (!isWebSearchInProgress) {
-        this.showProcessingStatus("Building prompt");
+      // STEP 4: Build message list with temporary context messages
+      LoggingUtils.logInfo(
+        "📝 [SIMPLE_MODE] Step 4: Building message list with temporary contexts..."
+      );
+
+      // Show contextual message based on what was processed
+      if (wasWebSearchPerformed && webSearchResultsCount > 0) {
+        this.showProcessingStatus(
+          `📝 Processing ${webSearchResultsCount} web sources + local memory`
+        );
+      } else if (isWebSearchEnabled) {
+        this.showProcessingStatus("📝 Preparing response with local memory");
+      } else {
+        this.showProcessingStatus("📝 Preparing response");
       }
 
-      const baseSystemPrompt = buildSimpleSystemPrompt(this.currentLanguage);
-      const enhancedSystemPrompt =
-        baseSystemPrompt + memoryContext + webContext;
+      // Clean system prompt - no context mixed in
+      const systemPrompt = buildSimpleSystemPrompt(this.currentLanguage);
 
+      // Clean user prompt - no context mixed in
       const userPrompt = buildSimpleUserPrompt(
         prompt,
         temporaryContext,
         this.currentLanguage
       );
 
-      // STEP 4: Get conversation history
+      // Get conversation history (only user/assistant messages)
       const conversationHistory = this.memoryService.getConversationHistory();
 
-      // Prepare messages for completion (format compatible with IOpenAIService)
+      LoggingUtils.logInfo(
+        `📚 [CONTEXT] Using ${conversationHistory.length} conversation messages`
+      );
+
+      // Build complete message list with temporary context messages
       const messages = [
-        { role: "system", content: enhancedSystemPrompt, speaker: "system" },
-        // Add conversation history (excluding system messages to avoid duplication)
+        { role: "system", content: systemPrompt, speaker: "system" },
+
+        // Add conversation history (clean user/assistant only)
         ...conversationHistory.filter((msg) => msg.role !== "system"),
-        // Add conversation messages from chat if provided
+
+        // Add conversation messages from chat if provided (fallback)
         ...(conversationMessages || []),
+
+        // TEMPORARY CONTEXT MESSAGES (will be removed after response)
+        ...(memoryContextContent
+          ? [
+              {
+                role: "system",
+                content: `MEMORY CONTEXT (for this response only): ${memoryContextContent}`,
+                speaker: "system",
+              },
+            ]
+          : []),
+
+        ...(webContextContent
+          ? [
+              {
+                role: "system",
+                content: `WEB SEARCH CONTEXT (for this response only): ${webContextContent}`,
+                speaker: "system",
+              },
+            ]
+          : []),
+
+        // Current user message
         { role: "user", content: userPrompt, speaker: "user" },
       ];
 
+      LoggingUtils.logInfo(
+        `📚 [CONTEXT_DEBUG] Total messages: ${messages.length} (${
+          conversationHistory.length
+        } history + ${memoryContextContent ? 1 : 0} memory + ${
+          webContextContent ? 1 : 0
+        } web + 2 system/user)`
+      );
+
       // STEP 5: Generate response with streaming
-      LoggingUtils.logInfo("🎯 [SIMPLE_MODE] Generating response...");
-      this.showProcessingStatus("Generating response");
+      LoggingUtils.logInfo("🎯 [SIMPLE_MODE] Step 5: Generating response...");
+      this.showProcessingStatus("🎯 Generating response");
 
       let firstChunkReceived = false;
       let accumulatedResponse = "";
@@ -488,17 +583,19 @@ export class SimplePromptProcessor {
       // Use accumulated response if available, otherwise use the returned response
       const finalResponse = accumulatedResponse || response.responseText || "";
 
-      // STEP 6: Save interaction to memory and conversation history
-      LoggingUtils.logInfo("💾 [SIMPLE_MODE] Saving interaction...");
+      // STEP 6: Save ONLY user/assistant interaction (NO temporary contexts)
+      LoggingUtils.logInfo(
+        "💾 [SIMPLE_MODE] Step 6: Saving clean interaction..."
+      );
 
       try {
-        // Add user message to conversation history
+        // Add ONLY the clean user message to conversation history
         this.memoryService.addToConversationHistory({
           role: "user",
-          content: prompt,
+          content: prompt, // Original prompt without any context
         });
 
-        // Add assistant response to conversation history
+        // Add ONLY the assistant response to conversation history
         this.memoryService.addToConversationHistory({
           role: "assistant",
           content: finalResponse,
@@ -506,13 +603,16 @@ export class SimplePromptProcessor {
 
         // Save to long-term memory (DuckDB) using direct save method
         await this.memoryService.saveDirectInteraction(
-          prompt,
-          finalResponse,
+          prompt, // Clean prompt
+          finalResponse, // Clean response
           this.speakerService.getPrimaryUserSpeaker(),
           true // forceSave = true for immediate persistence
         );
 
-        LoggingUtils.logInfo("✅ Interaction saved to memory successfully");
+        LoggingUtils.logInfo(
+          "✅ Clean interaction saved to memory successfully"
+        );
+        LoggingUtils.logInfo("🗑️ Temporary contexts automatically discarded");
       } catch (saveError) {
         LoggingUtils.logError(
           "❌ Error saving interaction to memory: " +
@@ -530,9 +630,9 @@ export class SimplePromptProcessor {
       // Fallback: try without streaming using callOpenAIWithFunctions
       try {
         LoggingUtils.logInfo("🔄 [SIMPLE_MODE] Attempting fallback completion");
-        this.showProcessingStatus("Retrying with fallback");
+        this.showProcessingStatus("🔄 Trying alternative method");
 
-        // Build simpler fallback messages
+        // Build clean fallback messages with conversation history
         const fallbackSystemPrompt = buildSimpleSystemPrompt(
           this.currentLanguage
         );
@@ -542,8 +642,14 @@ export class SimplePromptProcessor {
           this.currentLanguage
         );
 
+        // Include conversation history in fallback too
+        const conversationHistory = this.memoryService.getConversationHistory();
         const fallbackMessages = [
           { role: "system", content: fallbackSystemPrompt },
+          // Include recent conversation history for context
+          ...conversationHistory
+            .filter((msg) => msg.role !== "system")
+            .slice(-6), // Last 6 messages
           { role: "user", content: fallbackUserPrompt },
         ];
 
@@ -558,18 +664,18 @@ export class SimplePromptProcessor {
           fallbackResponse.choices[0]?.message?.content ||
           "Error generating response";
 
-        // Still try to save the interaction in fallback mode
+        // Still try to save the clean interaction in fallback mode
         try {
           this.memoryService.addToConversationHistory({
             role: "user",
-            content: prompt,
+            content: prompt, // Clean prompt
           });
           this.memoryService.addToConversationHistory({
             role: "assistant",
             content: fallbackContent,
           });
           await this.memoryService.saveDirectInteraction(
-            prompt,
+            prompt, // Clean prompt
             fallbackContent,
             this.speakerService.getPrimaryUserSpeaker(),
             true // forceSave = true for immediate persistence
@@ -629,25 +735,17 @@ export class SimplePromptProcessor {
 }
 
 /**
- * UI Service adapter that combines both UI service interfaces
+ * Simplified UI Service adapter
  */
 class UIServiceAdapter implements WebUIUpdateService {
-  private isWebSearchActive: boolean = false;
-  private webSearchTimeout: NodeJS.Timeout | null = null;
-  private messageQueue: Array<{ message: string; timestamp: number }> = [];
-  private isProcessingQueue: boolean = false;
-  private webSearchPhase: "idle" | "analyzing" | "searching" | "processing" =
-    "idle";
 
-  constructor(private originalUIService: IUIUpdateService) {}
+  constructor(
+    private originalUIService: IUIUpdateService,
+    private processor: SimplePromptProcessor
+  ) {}
 
   updateProcessingStatus(message: string): void {
-    // Don't update general processing status if web search is currently active
-    if (this.isWebSearchActive) {
-      return;
-    }
-
-    // Use the processing status animation from SimplePromptProcessor
+    // Forward to original UI service
     if (
       typeof window !== "undefined" &&
       (window as any).__updateProcessingStatus
@@ -656,112 +754,26 @@ class UIServiceAdapter implements WebUIUpdateService {
     }
   }
 
-  private async processMessageQueue(): Promise<void> {
-    if (this.isProcessingQueue || this.messageQueue.length === 0) {
-      return;
-    }
-
-    this.isProcessingQueue = true;
-
-    while (this.messageQueue.length > 0) {
-      const messageData = this.messageQueue.shift();
-      if (!messageData) break;
-
-      // Display the message
-      if (
-        typeof window !== "undefined" &&
-        (window as any).__updateProcessingStatus
-      ) {
-        (window as any).__updateProcessingStatus(messageData.message);
-      }
-
-      // Wait minimum time for user to read the message
-      // Longer delay for important phase transitions
-      const isPhaseTransition =
-        messageData.message.includes("✅") ||
-        messageData.message.includes("🧠") ||
-        messageData.message.includes("🔍");
-
-      const delayTime = isPhaseTransition ? 1200 : 800; // 1.2s for transitions, 0.8s for details
-
-      await new Promise((resolve) => setTimeout(resolve, delayTime));
-    }
-
-    this.isProcessingQueue = false;
-  }
-
   notifyWebSearchStep(step: string, details?: string): void {
-    // Mark web search as active and determine phase
-    this.isWebSearchActive = true;
+    // Mark web search as active
+    this.processor.setWebSearchActive(true);
 
-    if (step.includes("Analisando consulta")) this.webSearchPhase = "analyzing";
-    else if (
-      step.includes("Iniciando busca") ||
-      step.includes("Consultas geradas")
-    )
-      this.webSearchPhase = "searching";
-    else if (
-      step.includes("Analisando resultados") ||
-      step.includes("Fontes analisadas")
-    )
-      this.webSearchPhase = "processing";
+    // Format the message with visual indicators
+    const statusMessage = details ? `🌐 ${step}: ${details}` : `🌐 ${step}`;
 
-    // Clear any existing timeout
-    if (this.webSearchTimeout) {
-      clearTimeout(this.webSearchTimeout);
+    // Update UI immediately
+    if (
+      typeof window !== "undefined" &&
+      (window as any).__updateProcessingStatus
+    ) {
+      (window as any).__updateProcessingStatus(statusMessage);
     }
 
-    // Format the message with visual indicators and progress context
-    const timestamp = new Date().toLocaleTimeString();
-    const phaseIndicator = this.getPhaseIndicator();
-    const statusMessage = details
-      ? `🌐 ${step}: ${details} ${phaseIndicator}`
-      : `🌐 ${step} ${phaseIndicator}`;
+    // Reset web search state
+    this.processor.setWebSearchActive(false);
+    LoggingUtils.logInfo("🔄 [UI_ADAPTER] Web search completed");
 
-    // Add to message queue for controlled display
-    this.messageQueue.push({
-      message: statusMessage,
-      timestamp: Date.now(),
-    });
-
-    // Process queue if not already processing
-    this.processMessageQueue();
-
-    // Set intelligent timeout based on operation phase
-    const timeoutDuration = this.getTimeoutForPhase();
-    this.webSearchTimeout = setTimeout(() => {
-      this.isWebSearchActive = false;
-      this.webSearchPhase = "idle";
-      this.messageQueue = []; // Clear any remaining messages
-    }, timeoutDuration);
-
-    // Also log for debugging
+    // Log for debugging
     LoggingUtils.logInfo(`🔍 [WEB_SEARCH_UI] ${statusMessage}`);
-  }
-
-  private getPhaseIndicator(): string {
-    switch (this.webSearchPhase) {
-      case "analyzing":
-        return "📊 [1/3]";
-      case "searching":
-        return "🔍 [2/3]";
-      case "processing":
-        return "⚙️ [3/3]";
-      default:
-        return "";
-    }
-  }
-
-  private getTimeoutForPhase(): number {
-    switch (this.webSearchPhase) {
-      case "analyzing":
-        return 8000; // 8s for AI analysis
-      case "searching":
-        return 6000; // 6s for web search
-      case "processing":
-        return 10000; // 10s for result processing
-      default:
-        return 5000; // 5s default
-    }
   }
 }

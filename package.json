@@ -193,7 +193,7 @@
     "@types/react-window": "^1.8.8",
     "axios": "^1.9.0",
     "b4a": "^1.6.7",
-    "cheerio": "^1.0.0-rc.12",
+    "cheerio": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "connect-history-api-fallback": "^2.0.0",
