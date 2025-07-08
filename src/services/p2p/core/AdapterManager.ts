@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import * as crypto from "crypto";
 import { ValidationService } from "../services/ValidationService";
 import { p2pEventBus } from "./EventBus";
 import type { IAdapterInfo } from "./interfaces";
@@ -150,7 +149,10 @@ export class AdapterManager {
    * Generate unique topic
    */
   private generateTopic(): string {
-    return crypto.randomBytes(32).toString("hex");
+    // Use a simple timestamp + random number fallback
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).slice(2, 11);
+    return `${timestamp}-${random}`;
   }
 
   /**

@@ -946,6 +946,14 @@ EXIT CODE: ${execError.code || "N/A"}`;
 
     console.log(`[LoRA] Detecting Python on ${process.platform}...`);
 
+    // First, try to use the local training venv if it exists
+    console.log(`[LoRA] Checking for local training venv...`);
+    const localVenvPython = await this.checkLocalTrainingVenv();
+    if (localVenvPython) {
+      console.log(`[LoRA] ✅ Using local training venv: ${localVenvPython}`);
+      return localVenvPython;
+    }
+
     // Define platform-specific Python candidates
     let pythonCandidates: string[] = [];
 
@@ -1110,71 +1118,170 @@ For Linux:
   }
 
   /**
-   * Get the path to the adapter manager bridge script (replaces real_adapter_manager.py)
+   * Check if local training venv exists and has required dependencies
    */
-  private getRealAdapterManagerPath(): string {
-    // In development mode, use the source path
-    if (process.env.NODE_ENV === "development") {
-      return path.join(
-        process.cwd(),
-        "scripts",
-        "python",
-        "lora_training",
-        "adapter_manager_bridge.py"
-      );
+  private async checkLocalTrainingVenv(): Promise<string | null> {
+    try {
+      // Get the path to the local training venv
+      const venvPaths = [
+        // For packaged applications
+        path.join(
+          process.resourcesPath || path.dirname(process.execPath),
+          "scripts",
+          "python",
+          "lora_training",
+          "training_venv",
+          "bin",
+          "python"
+        ),
+        // For development mode
+        path.join(
+          process.cwd(),
+          "scripts",
+          "python",
+          "lora_training",
+          "training_venv",
+          "bin",
+          "python"
+        ),
+        // Windows path
+        path.join(
+          process.cwd(),
+          "scripts",
+          "python",
+          "lora_training",
+          "training_venv",
+          "Scripts",
+          "python.exe"
+        ),
+      ];
+
+      for (const venvPath of venvPaths) {
+        try {
+          console.log(`[LoRA] Checking venv path: ${venvPath}`);
+
+          // Check if the Python executable exists
+          await fs.access(venvPath);
+
+          // Check if required packages are installed in this venv
+          const { stdout } = await execAsync(
+            `"${venvPath}" -c "import psutil, torch; print(f'psutil:{psutil.__version__}, torch:{torch.__version__}')"`
+          );
+
+          if (stdout.trim()) {
+            console.log(
+              `[LoRA] ✅ Found local venv with dependencies ${stdout.trim()}: ${venvPath}`
+            );
+            return venvPath;
+          }
+        } catch (error) {
+          console.log(`[LoRA] ❌ Venv path failed: ${venvPath} - ${error}`);
+          continue;
+        }
+      }
+
+      // If no venv found, try to create/setup one
+      console.log(`[LoRA] No local venv found, attempting to create one...`);
+      return await this.setupLocalTrainingVenv();
+    } catch (error) {
+      console.log(`[LoRA] Failed to check local venv: ${error}`);
+      return null;
     }
+  }
 
-    // In production, check multiple possible locations
-    const possiblePaths = [
-      // Packaged app resources
-      path.join(
-        process.resourcesPath,
-        "scripts",
-        "python",
-        "lora_training",
-        "adapter_manager_bridge.py"
-      ),
-      // Development fallback
-      path.join(
+  /**
+   * Setup local training venv with required dependencies
+   */
+  private async setupLocalTrainingVenv(): Promise<string | null> {
+    try {
+      // Find system Python to create venv
+      const systemPython = await this.findSystemPython();
+      if (!systemPython) {
+        console.log(`[LoRA] No system Python found to create venv`);
+        return null;
+      }
+
+      // Get the venv directory path
+      const venvDir = path.join(
         process.cwd(),
         "scripts",
         "python",
         "lora_training",
-        "adapter_manager_bridge.py"
-      ),
-      // Alternative development path
-      path.join(
-        __dirname,
-        "..",
-        "..",
-        "..",
+        "training_venv"
+      );
+
+      const venvPython =
+        process.platform === "win32"
+          ? path.join(venvDir, "Scripts", "python.exe")
+          : path.join(venvDir, "bin", "python");
+
+      // Create virtual environment if it doesn't exist
+      if (!fsSync.existsSync(venvDir)) {
+        console.log(`[LoRA] Creating virtual environment at: ${venvDir}`);
+        await execAsync(`"${systemPython}" -m venv "${venvDir}"`);
+      }
+
+      // Install dependencies from requirements.txt
+      console.log(`[LoRA] Installing dependencies from requirements.txt...`);
+      const pipPath =
+        process.platform === "win32"
+          ? path.join(venvDir, "Scripts", "pip.exe")
+          : path.join(venvDir, "bin", "pip");
+
+      // Get requirements.txt path
+      const requirementsPath = path.join(
+        process.cwd(),
         "scripts",
         "python",
         "lora_training",
-        "adapter_manager_bridge.py"
-      ),
-    ];
+        "requirements.txt"
+      );
 
-    for (const scriptPath of possiblePaths) {
-      console.log(`[LoRA] Trying path: ${scriptPath}`);
-      if (fsSync.existsSync(scriptPath)) {
-        console.log(`[LoRA] Found adapter manager bridge at: ${scriptPath}`);
-        return scriptPath;
+      // Install from requirements.txt if it exists, otherwise just install psutil
+      if (fsSync.existsSync(requirementsPath)) {
+        await execAsync(`"${pipPath}" install -r "${requirementsPath}"`);
       } else {
-        console.log(`[LoRA] Path not found: ${scriptPath}`);
+        await execAsync(`"${pipPath}" install psutil`);
+      }
+
+      // Verify installation
+      const { stdout } = await execAsync(
+        `"${venvPython}" -c "import psutil, torch; print(f'psutil:{psutil.__version__}, torch:{torch.__version__}')"`
+      );
+      if (stdout.trim()) {
+        console.log(
+          `[LoRA] ✅ Successfully created venv with dependencies ${stdout.trim()}`
+        );
+        return venvPython;
+      }
+
+      return null;
+    } catch (error) {
+      console.log(`[LoRA] Failed to setup local venv: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Find system Python for venv creation
+   */
+  private async findSystemPython(): Promise<string | null> {
+    const candidates =
+      process.platform === "win32"
+        ? ["py -3.11", "py -3.10", "python", "python3"]
+        : ["python3.11", "python3.10", "python3", "python"];
+
+    for (const candidate of candidates) {
+      try {
+        const { stdout } = await execAsync(`"${candidate}" --version`);
+        if (stdout.includes("Python 3.")) {
+          return candidate;
+        }
+      } catch (error) {
+        continue;
       }
     }
-
-    // If not found, return the most likely path for better error reporting
-    const defaultPath = path.join(
-      process.cwd(),
-      "scripts",
-      "python",
-      "lora_training",
-      "adapter_manager_bridge.py"
-    );
-    console.log(`[LoRA] Using default path: ${defaultPath}`);
-    return defaultPath;
+    return null;
   }
 
   /**

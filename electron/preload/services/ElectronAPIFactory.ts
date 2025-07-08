@@ -112,6 +112,9 @@ export class ElectronAPIFactory {
 
       // LoRA Merge Manager
       ...this.createLoRAMergeManager(),
+
+      // Crypto Manager
+      ...this.createCryptoManager(),
     };
 
     this.logger.success("Neural Electron API composition completed");
@@ -1263,6 +1266,55 @@ export class ElectronAPIFactory {
             severity: "medium",
           }
         );
+      },
+    };
+  }
+
+  /**
+   * Create Crypto Manager service methods
+   */
+  private createCryptoManager() {
+    return {
+      crypto: {
+        calculateChecksum: async (data: Uint8Array) => {
+          return this.errorHandler.wrapAsync(
+            async () => {
+              return await ipcRenderer.invoke(
+                "crypto-calculate-checksum",
+                data
+              );
+            },
+            {
+              component: "CryptoManager",
+              operation: "calculateChecksum",
+              severity: "low",
+            }
+          );
+        },
+        randomBytes: async (size: number) => {
+          return this.errorHandler.wrapAsync(
+            async () => {
+              return await ipcRenderer.invoke("crypto-random-bytes", size);
+            },
+            {
+              component: "CryptoManager",
+              operation: "randomBytes",
+              severity: "low",
+            }
+          );
+        },
+        hashTopic: async (topic: string) => {
+          return this.errorHandler.wrapAsync(
+            async () => {
+              return await ipcRenderer.invoke("crypto-hash-topic", topic);
+            },
+            {
+              component: "CryptoManager",
+              operation: "hashTopic",
+              severity: "low",
+            }
+          );
+        },
       },
     };
   }

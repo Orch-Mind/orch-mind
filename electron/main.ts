@@ -797,6 +797,41 @@ ipcMain.handle("request-microphone-permission", async () => {
   return await requestMicrophonePermission();
 });
 
+// Handle crypto operations
+ipcMain.handle("crypto-calculate-checksum", async (_event, data: Uint8Array) => {
+  try {
+    const crypto = require("crypto");
+    const buffer = Buffer.from(data);
+    const hash = crypto.createHash("sha256").update(buffer).digest("hex");
+    return hash;
+  } catch (error) {
+    console.error("❌ [CRYPTO] Error calculating checksum:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("crypto-random-bytes", async (_event, size: number) => {
+  try {
+    const crypto = require("crypto");
+    const buffer = crypto.randomBytes(size);
+    return buffer.toString("hex");
+  } catch (error) {
+    console.error("❌ [CRYPTO] Error generating random bytes:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("crypto-hash-topic", async (_event, topic: string) => {
+  try {
+    const crypto = require("crypto");
+    const hash = crypto.createHash("sha256").update(topic).digest("hex");
+    return hash;
+  } catch (error) {
+    console.error("❌ [CRYPTO] Error hashing topic:", error);
+    throw error;
+  }
+});
+
 // Add new function to request microphone permissions for macOS
 async function requestMicrophonePermission(): Promise<{
   success: boolean;

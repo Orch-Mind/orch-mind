@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import * as crypto from "crypto";
 import { AdapterManager } from "./core/AdapterManager";
 import { p2pEventBus } from "./core/EventBus";
 import type { IAdapterInfo, IP2PRoom } from "./core/interfaces";
@@ -82,13 +81,15 @@ export class P2PService {
       });
 
       // Listen for adapter saved to filesystem (for adding to training tab)
-      (window.electronAPI as any).onP2PAdapterSavedToFilesystem?.((data: any) => {
-        console.log(
-          "[P2PService] Adapter saved to filesystem, adding to training tab:",
-          data
-        );
-        this.addDownloadedAdapterToTrainingTab(data);
-      });
+      (window.electronAPI as any).onP2PAdapterSavedToFilesystem?.(
+        (data: any) => {
+          console.log(
+            "[P2PService] Adapter saved to filesystem, adding to training tab:",
+            data
+          );
+          this.addDownloadedAdapterToTrainingTab(data);
+        }
+      );
 
       console.log("[P2PService] IPC listeners setup complete");
     }
@@ -364,8 +365,24 @@ export class P2PService {
    * Hash a topic string
    */
   private async hashTopic(topic: string): Promise<string> {
-    const hash = crypto.createHash("sha256").update(topic).digest();
-    return hash.toString("hex");
+    // Use Electron crypto API when available
+    if (
+      typeof window !== "undefined" &&
+      (window as any).electronAPI?.crypto?.hashTopic
+    ) {
+      return await (window as any).electronAPI.crypto.hashTopic(topic);
+    }
+
+    // Fallback for development/testing
+    if (typeof window !== "undefined" && window.crypto?.subtle) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(topic);
+      const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    throw new Error("No crypto implementation available");
   }
 
   /**
@@ -385,22 +402,27 @@ export class P2PService {
     filesystem: any;
   }): void {
     try {
-      console.log(`💾 [P2PService] Adding downloaded adapter to training tab: ${data.adapterName}`);
-      
+      console.log(
+        `💾 [P2PService] Adding downloaded adapter to training tab: ${data.adapterName}`
+      );
+
       // Load existing adapters from localStorage
       const existingData = localStorage.getItem("orch-lora-adapters");
-      let adapterStorage = existingData ? JSON.parse(existingData) : { adapters: [] };
-      
+      let adapterStorage = existingData
+        ? JSON.parse(existingData)
+        : { adapters: [] };
+
       // Ensure adapters array exists
       if (!adapterStorage.adapters) {
         adapterStorage.adapters = [];
       }
-      
+
       // Check if adapter already exists
       const existingIndex = adapterStorage.adapters.findIndex(
-        (existing: any) => existing.id === data.adapterName || existing.name === data.adapterName
+        (existing: any) =>
+          existing.id === data.adapterName || existing.name === data.adapterName
       );
-      
+
       if (existingIndex === -1) {
         // Create new adapter entry for training tab
         const newAdapter = {
@@ -420,14 +442,20 @@ export class P2PService {
           trainingMethod: data.metadata.training_method,
           fileType: data.metadata.file_type,
         };
-        
+
         adapterStorage.adapters.push(newAdapter);
-        
+
         // Save back to localStorage
-        localStorage.setItem("orch-lora-adapters", JSON.stringify(adapterStorage));
-        
-        console.log(`✅ [P2PService] Successfully added real adapter to localStorage:`, newAdapter);
-        
+        localStorage.setItem(
+          "orch-lora-adapters",
+          JSON.stringify(adapterStorage)
+        );
+
+        console.log(
+          `✅ [P2PService] Successfully added real adapter to localStorage:`,
+          newAdapter
+        );
+
         // Dispatch events to notify training tab
         window.dispatchEvent(
           new CustomEvent("storage", {
@@ -438,7 +466,7 @@ export class P2PService {
             },
           })
         );
-        
+
         // Also dispatch a more specific event for immediate UI updates
         window.dispatchEvent(
           new CustomEvent("lora-adapter-added", {
@@ -448,13 +476,16 @@ export class P2PService {
             },
           })
         );
-        
       } else {
-        console.log(`ℹ️ [P2PService] Adapter ${data.adapterName} already exists in localStorage`);
+        console.log(
+          `ℹ️ [P2PService] Adapter ${data.adapterName} already exists in localStorage`
+        );
       }
-      
     } catch (error) {
-      console.error(`❌ [P2PService] Error adding adapter to localStorage:`, error);
+      console.error(
+        `❌ [P2PService] Error adding adapter to localStorage:`,
+        error
+      );
     }
   }
 }
