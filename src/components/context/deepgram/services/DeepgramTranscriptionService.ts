@@ -406,4 +406,38 @@ export class DeepgramTranscriptionService
     this.storageService.flushTranscriptionsToUI();
     LoggingUtils.logInfo("Flushing transcriptions to UI");
   }
+
+  /**
+   * Notifies conversation change to synchronize memory service
+   * Should be called when switching between chat conversations
+   * @param conversationMessages Messages from the new conversation to sync with
+   */
+  onConversationChanged(conversationMessages?: any[]): void {
+    LoggingUtils.logInfo(
+      `[CONVERSATION_SYNC] Conversation changed notification received`
+    );
+
+    if (conversationMessages && conversationMessages.length > 0) {
+      // Sync with existing conversation
+      this.memoryService.syncConversationHistory(conversationMessages);
+      LoggingUtils.logInfo(
+        `[CONVERSATION_SYNC] Synced with ${conversationMessages.length} existing messages`
+      );
+    } else {
+      // Clear for new conversation
+      this.memoryService.clearConversationHistory();
+      LoggingUtils.logInfo(
+        "[CONVERSATION_SYNC] Cleared conversation history for new conversation"
+      );
+    }
+  }
+
+  /**
+   * Clears conversation history for a fresh start
+   * Used when creating a new conversation
+   */
+  clearConversationHistory(): void {
+    this.memoryService.clearConversationHistory();
+    LoggingUtils.logInfo("[CONVERSATION_SYNC] Conversation history cleared");
+  }
 }

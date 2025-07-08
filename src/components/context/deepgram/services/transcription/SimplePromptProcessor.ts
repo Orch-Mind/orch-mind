@@ -486,22 +486,55 @@ export class SimplePromptProcessor {
         this.currentLanguage
       );
 
-      // Get conversation history (only user/assistant messages)
-      const conversationHistory = this.memoryService.getConversationHistory();
+      // PRIORITIZE CHAT CONVERSATION MESSAGES: Use conversation messages from chat if provided,
+      // otherwise fallback to internal memory service conversation history
+      let conversationHistory: any[] = [];
 
-      LoggingUtils.logInfo(
-        `📚 [CONTEXT] Using ${conversationHistory.length} conversation messages`
-      );
+      if (conversationMessages && conversationMessages.length > 0) {
+        // Use messages from chat conversation (already formatted for this conversation)
+        conversationHistory = conversationMessages
+          .filter((msg) => msg.role !== "system" && msg.content.trim() !== "")
+          .map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          }));
+
+        LoggingUtils.logInfo(
+          `📚 [CONTEXT] Using ${conversationHistory.length} chat conversation messages (synced)`
+        );
+
+        // Sync memory service with current conversation for consistency
+        try {
+          this.memoryService.syncConversationHistory(conversationMessages);
+          LoggingUtils.logInfo(
+            "🔄 [SYNC] Memory service conversation history synchronized"
+          );
+        } catch (syncError) {
+          LoggingUtils.logWarning(
+            "⚠️ [SYNC] Could not sync memory service history: " +
+              (syncError instanceof Error
+                ? syncError.message
+                : String(syncError))
+          );
+        }
+      } else {
+        // Fallback to internal memory service conversation history
+        const internalHistory = this.memoryService.getConversationHistory();
+        conversationHistory = internalHistory.filter(
+          (msg) => msg.role !== "system"
+        );
+
+        LoggingUtils.logInfo(
+          `📚 [CONTEXT] Using ${conversationHistory.length} internal conversation messages (fallback)`
+        );
+      }
 
       // Build complete message list with temporary context messages
       const messages = [
         { role: "system", content: systemPrompt, speaker: "system" },
 
-        // Add conversation history (clean user/assistant only)
-        ...conversationHistory.filter((msg) => msg.role !== "system"),
-
-        // Add conversation messages from chat if provided (fallback)
-        ...(conversationMessages || []),
+        // Add conversation history (prioritized from chat or fallback from memory)
+        ...conversationHistory,
 
         // TEMPORARY CONTEXT MESSAGES (will be removed after response)
         ...(memoryContextContent
@@ -642,14 +675,37 @@ export class SimplePromptProcessor {
           this.currentLanguage
         );
 
-        // Include conversation history in fallback too
-        const conversationHistory = this.memoryService.getConversationHistory();
+        // Use the same conversation history logic as main execution
+        let fallbackConversationHistory: any[] = [];
+
+        if (conversationMessages && conversationMessages.length > 0) {
+          // Use messages from chat conversation for fallback too
+          fallbackConversationHistory = conversationMessages
+            .filter((msg) => msg.role !== "system" && msg.content.trim() !== "")
+            .map((msg) => ({
+              role: msg.role,
+              content: msg.content,
+            }));
+
+          LoggingUtils.logInfo(
+            `🔄 [FALLBACK] Using ${fallbackConversationHistory.length} chat conversation messages`
+          );
+        } else {
+          // Fallback to internal memory service conversation history
+          const internalHistory = this.memoryService.getConversationHistory();
+          fallbackConversationHistory = internalHistory
+            .filter((msg) => msg.role !== "system")
+            .slice(-6); // Last 6 messages for fallback
+
+          LoggingUtils.logInfo(
+            `🔄 [FALLBACK] Using ${fallbackConversationHistory.length} internal conversation messages`
+          );
+        }
+
         const fallbackMessages = [
           { role: "system", content: fallbackSystemPrompt },
-          // Include recent conversation history for context
-          ...conversationHistory
-            .filter((msg) => msg.role !== "system")
-            .slice(-6), // Last 6 messages
+          // Include conversation history based on the same priority logic
+          ...fallbackConversationHistory,
           { role: "user", content: fallbackUserPrompt },
         ];
 
@@ -738,7 +794,6 @@ export class SimplePromptProcessor {
  * Simplified UI Service adapter
  */
 class UIServiceAdapter implements WebUIUpdateService {
-
   constructor(
     private originalUIService: IUIUpdateService,
     private processor: SimplePromptProcessor

@@ -20,6 +20,11 @@ import { StreamingManager, StreamingState } from "./managers/StreamingManager";
 import "./styles/ConversationalChat.input.css";
 import "./styles/ConversationalChat.messages.css";
 import { ConversationalChatProps } from "./types/ChatTypes";
+import { useDeepgram } from "../../../../context/deepgram/DeepgramContextProvider";
+
+// Contexts e React hooks
+
+// Context hooks
 
 export interface ConversationalChatRef {
   messageProcessor: MessageProcessor | null;
@@ -124,6 +129,9 @@ const ConversationalChatComponent = React.forwardRef<
       getMessagesForProcessor,
       getSummaryStats,
     } = useConversationSync(currentConversation || null);
+
+    // Context hooks para sincronização
+    const deepgram = useDeepgram();
 
     // Sistema de mensagens
     const useConversationSystem = !!(
@@ -350,11 +358,35 @@ const ConversationalChatComponent = React.forwardRef<
         // Reset message processor state
         messageProcessorRef.current?.resetState();
 
+        // Sincroniza conversation history com a nova conversa
+        try {
+          deepgram.onConversationChanged(currentConversation.messages);
+          console.log("[CHAT] Conversation synchronized with Deepgram:", {
+            conversationId: currentId,
+            messageCount: currentConversation.messages?.length || 0,
+          });
+        } catch (error) {
+          console.error(
+            "[CHAT] Error syncing conversation with Deepgram:",
+            error
+          );
+        }
+
         console.log("[CHAT] Conversation changed, state cleared");
+      } else if (!currentConversation && previousConversationId.current) {
+        // Se não há conversa atual (ex: nova conversa), limpa o history
+        try {
+          deepgram.clearConversationHistory();
+          console.log(
+            "[CHAT] Conversation history cleared for new conversation"
+          );
+        } catch (error) {
+          console.error("[CHAT] Error clearing conversation history:", error);
+        }
       }
 
       previousConversationId.current = currentId || null;
-    }, [currentConversation?.id]); // Deps reduzidas intencionalmente
+    }, [currentConversation?.id, currentConversation?.messages, deepgram]); // Deps reduzidas intencionalmente
 
     // Processa respostas de IA
     useEffect(() => {

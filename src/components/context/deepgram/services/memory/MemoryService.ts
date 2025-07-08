@@ -302,6 +302,48 @@ export class MemoryService implements IMemoryService {
   }
 
   /**
+   * Synchronizes conversation history with chat conversation messages
+   * Used when switching between chat conversations to maintain consistency
+   */
+  syncConversationHistory(chatMessages: any[]): void {
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] Syncing conversation history with ${chatMessages.length} chat messages`
+    );
+
+    // Clear current history
+    this.historyManager.clearHistory();
+
+    // Convert and add chat messages to conversation history
+    chatMessages.forEach((msg) => {
+      const role =
+        msg.type === "user"
+          ? "user"
+          : msg.type === "assistant"
+          ? "assistant"
+          : "system";
+      this.addToConversationHistory({
+        role: role,
+        content: msg.content,
+      });
+    });
+
+    LoggingUtils.logInfo(
+      `[COGNITIVE-MEMORY] Conversation history synchronized with ${chatMessages.length} messages`
+    );
+  }
+
+  /**
+   * Clears conversation history for new chat conversation
+   * Used when creating a new conversation to start fresh
+   */
+  clearConversationHistory(): void {
+    LoggingUtils.logInfo(
+      "[COGNITIVE-MEMORY] Clearing conversation history for new conversation"
+    );
+    this.historyManager.clearHistory();
+  }
+
+  /**
    * Sets simplified history mode (cognitive compression mode)
    */
   setSimplifiedHistoryMode(enabled: boolean): void {

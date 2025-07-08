@@ -3,7 +3,9 @@
 
 import React from "react";
 import { ChatMessage } from "../hooks/usePersistentMessages";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 import "./MessageItem.css";
+import "./MarkdownRenderer.css";
 
 interface MessageItemProps {
   message: ChatMessage & { isSummary?: boolean };
@@ -159,12 +161,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             )}
 
             <div className="message-text">
-              {message.content.split("\n").map((line, index, array) => (
-                <React.Fragment key={index}>
-                  {line || "\u00A0"}
-                  {index < array.length - 1 && <br />}
-                </React.Fragment>
-              ))}
+              <MarkdownRenderer 
+                content={message.content}
+                isStreaming={false}
+              />
             </div>
 
             {isSummary && (message as any).tokenCount && (

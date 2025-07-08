@@ -76,6 +76,18 @@ export interface IMemoryService {
   getConversationHistory(): Message[];
 
   /**
+   * Synchronizes conversation history with chat conversation messages
+   * Used when switching between chat conversations to maintain consistency
+   */
+  syncConversationHistory(chatMessages: any[]): void;
+
+  /**
+   * Clears conversation history for new chat conversation
+   * Used when creating a new conversation to start fresh
+   */
+  clearConversationHistory(): void;
+
+  /**
    * Activates or deactivates the simplified history mode
    */
   setSimplifiedHistoryMode(enabled: boolean): void;

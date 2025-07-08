@@ -412,6 +412,21 @@ export const DeepgramProvider: React.FC<{ children: React.ReactNode }> = ({
       return [];
     },
 
+    // Conversation synchronization
+    onConversationChanged: (conversationMessages?: any[]) => {
+      if (deepgramTranscriptionRef.current) {
+        deepgramTranscriptionRef.current.onConversationChanged(
+          conversationMessages
+        );
+      }
+    },
+
+    clearConversationHistory: () => {
+      if (deepgramTranscriptionRef.current) {
+        deepgramTranscriptionRef.current.clearConversationHistory();
+      }
+    },
+
     // State management
     stopProcessing,
     setLanguage,

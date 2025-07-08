@@ -79,6 +79,18 @@ export interface IDeepgramContext {
    */
   clearTranscriptionData: () => void;
 
+  /**
+   * Notifies conversation change to synchronize memory service
+   * Should be called when switching between chat conversations
+   */
+  onConversationChanged: (conversationMessages?: any[]) => void;
+
+  /**
+   * Clears conversation history for a fresh start
+   * Used when creating a new conversation
+   */
+  clearConversationHistory: () => void;
+
   // Get all transcriptions with their sent status
   getAllTranscriptionsWithStatus?: () => Array<{
     text: string;
