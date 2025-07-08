@@ -1122,38 +1122,14 @@ For Linux:
    */
   private async checkLocalTrainingVenv(): Promise<string | null> {
     try {
-      // Get the path to the local training venv
+      // Get the path to the local training venv - create in writeable location
+      const venvDir = path.join(this.trainingDir, "training_venv");
+
       const venvPaths = [
-        // For packaged applications
-        path.join(
-          process.resourcesPath || path.dirname(process.execPath),
-          "scripts",
-          "python",
-          "lora_training",
-          "training_venv",
-          "bin",
-          "python"
-        ),
-        // For development mode
-        path.join(
-          process.cwd(),
-          "scripts",
-          "python",
-          "lora_training",
-          "training_venv",
-          "bin",
-          "python"
-        ),
-        // Windows path
-        path.join(
-          process.cwd(),
-          "scripts",
-          "python",
-          "lora_training",
-          "training_venv",
-          "Scripts",
-          "python.exe"
-        ),
+        // Unix-like systems (macOS, Linux)
+        path.join(venvDir, "bin", "python"),
+        // Windows
+        path.join(venvDir, "Scripts", "python.exe"),
       ];
 
       for (const venvPath of venvPaths) {
@@ -1201,14 +1177,8 @@ For Linux:
         return null;
       }
 
-      // Get the venv directory path
-      const venvDir = path.join(
-        process.cwd(),
-        "scripts",
-        "python",
-        "lora_training",
-        "training_venv"
-      );
+      // Create venv in writeable location (userData) but read requirements from resourcesPath
+      const venvDir = path.join(this.trainingDir, "training_venv");
 
       const venvPython =
         process.platform === "win32"
@@ -1228,19 +1198,40 @@ For Linux:
           ? path.join(venvDir, "Scripts", "pip.exe")
           : path.join(venvDir, "bin", "pip");
 
-      // Get requirements.txt path
-      const requirementsPath = path.join(
-        process.cwd(),
-        "scripts",
-        "python",
-        "lora_training",
-        "requirements.txt"
-      );
+      // Get requirements.txt path - read from resourcesPath in packaged apps
+      const requirementsPath = process.resourcesPath
+        ? path.join(
+            process.resourcesPath,
+            "scripts",
+            "python",
+            "lora_training",
+            "requirements.txt"
+          )
+        : path.join(
+            process.cwd(),
+            "scripts",
+            "python",
+            "lora_training",
+            "requirements.txt"
+          );
 
       // Install from requirements.txt if it exists, otherwise just install psutil
+      console.log(`[LoRA] Checking requirements.txt at: ${requirementsPath}`);
+      console.log(`[LoRA] VirtualEnv directory: ${venvDir}`);
+      console.log(`[LoRA] Pip path: ${pipPath}`);
+      console.log(`[LoRA] Python path: ${venvPython}`);
+      console.log(`[LoRA] Process resourcesPath: ${process.resourcesPath}`);
+      console.log(`[LoRA] Process cwd: ${process.cwd()}`);
+
       if (fsSync.existsSync(requirementsPath)) {
+        console.log(
+          `[LoRA] ✅ Found requirements.txt, installing all dependencies...`
+        );
         await execAsync(`"${pipPath}" install -r "${requirementsPath}"`);
       } else {
+        console.log(
+          `[LoRA] ❌ Requirements.txt not found, installing only psutil...`
+        );
         await execAsync(`"${pipPath}" install psutil`);
       }
 
