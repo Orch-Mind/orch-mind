@@ -96,13 +96,15 @@ function isRenderer(): boolean {
 /**
  * Cria e retorna um novo backend para armazenamento
  * IMPORTANTE: Não mais usa cache estático para evitar problemas com estados desatualizados
+ * CORREÇÃO: Removido require() para compatibilidade com renderer process
  */
 function getBackend() {
   // Identificar ambiente de execução
   const isInRenderer = isRenderer();
 
-  // Configurar backend apropriado para o ambiente
-  if (isInRenderer) {
+  // Para aplicações Electron, sempre usar localStorage no renderer
+  // O electron-store será usado apenas no main process quando necessário
+  if (isInRenderer || typeof window !== "undefined") {
     return {
       get: () => {
         try {
@@ -140,50 +142,31 @@ function getBackend() {
               "❌ [STORAGE] Falha na verificação: dados não foram salvos no localStorage"
             );
           }
+
+          // Se estamos em um ambiente Electron, também sincronizar com o main process via IPC
+          if (typeof window !== "undefined" && (window as any).electronAPI?.storage?.setUserSettings) {
+            try {
+              (window as any).electronAPI.storage.setUserSettings(data);
+            } catch (error) {
+              console.debug("📝 [STORAGE] IPC sync failed (expected in development):", error);
+            }
+          }
         } catch (error) {
           console.error("❌ [STORAGE] Erro ao salvar no localStorage:", error);
         }
       },
     };
   } else {
-    // Node.js/Electron main: use electron-store
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const Store = require("electron-store").default;
-      const store = new Store();
-
-      return {
-        get: () => {
-          try {
-            const data = store.get(STORAGE_KEYS.SETTINGS_ROOT, {});
-            return data;
-          } catch (error) {
-            console.error("❌ [STORAGE] Erro ao ler do electron-store:", error);
-            return {};
-          }
-        },
-        set: (data: UserSettings) => {
-          try {
-            store.set(STORAGE_KEYS.SETTINGS_ROOT, data);
-          } catch (error) {
-            console.error(
-              "❌ [STORAGE] Erro ao salvar no electron-store:",
-              error
-            );
-          }
-        },
-      };
-    } catch (error) {
-      console.error("❌ [STORAGE] Erro ao inicializar electron-store:", error);
-      // Fallback para um backend em memória caso o electron-store falhe
-      let memoryStore = {};
-      return {
-        get: () => memoryStore,
-        set: (data: UserSettings) => {
-          memoryStore = data;
-        },
-      };
-    }
+    // Node.js environment: use in-memory fallback for main process
+    // The main process should use electron-store directly, not this service
+    console.warn("⚠️ [STORAGE] Using memory fallback in Node.js environment");
+    let memoryStore = {};
+    return {
+      get: () => memoryStore,
+      set: (data: UserSettings) => {
+        memoryStore = data;
+      },
+    };
   }
 }
 

@@ -156,7 +156,72 @@ release/mac-arm64/Orch-OS.app/Contents/Resources/app.asar.unpacked/node_modules/
 release/mac-arm64/Orch-OS.app/Contents/Resources/app.asar.unpacked/node_modules/hypercore-crypto
 ```
 
-### 5. Path Resolution Issues
+### 5. ReferenceError: require is not defined (Renderer Process)
+
+**Problem**: App crashes with error in renderer process:
+```
+index-D4j7QW_O.js:7497 Uncaught ReferenceError: require is not defined
+    at index-D4j7QW_O.js:7497:860
+```
+
+**Root Cause**: 
+The `StorageService.ts` was being used in the renderer process but contained a `require("electron-store")` statement. When Vite bundles the renderer code, it includes this file, but the renderer process doesn't have access to `require` when `nodeIntegration: false` (which is correct for security).
+
+**Solution**: 
+
+#### Updated `src/services/StorageService.ts`:
+```typescript
+function getBackend() {
+  const isInRenderer = isRenderer();
+
+  // Para aplicações Electron, sempre usar localStorage no renderer
+  // O electron-store será usado apenas no main process quando necessário
+  if (isInRenderer || typeof window !== "undefined") {
+    return {
+      get: () => {
+        // Use localStorage in renderer process
+        const raw = window.localStorage.getItem(STORAGE_KEYS.SETTINGS_ROOT);
+        return raw ? JSON.parse(raw) : {};
+      },
+      set: (data: UserSettings) => {
+        // Save to localStorage in renderer process
+        window.localStorage.setItem(STORAGE_KEYS.SETTINGS_ROOT, JSON.stringify(data));
+        
+        // Optional: sync with main process via IPC if available
+        if (typeof window !== "undefined" && (window as any).electronAPI?.storage?.setUserSettings) {
+          try {
+            (window as any).electronAPI.storage.setUserSettings(data);
+          } catch (error) {
+            console.debug("📝 [STORAGE] IPC sync failed (expected in development):", error);
+          }
+        }
+      },
+    };
+  } else {
+    // Node.js environment: use in-memory fallback
+    // The main process should use electron-store directly when needed
+    let memoryStore = {};
+    return {
+      get: () => memoryStore,
+      set: (data: UserSettings) => { memoryStore = data; },
+    };
+  }
+}
+```
+
+**Key Changes**:
+1. **Removed `require("electron-store")`** from StorageService.ts
+2. **Always use localStorage in renderer** - this is the standard approach for Electron apps
+3. **Added optional IPC sync** for future main process synchronization if needed
+4. **Fallback to memory storage** in Node.js environments
+
+**Benefits**:
+- No more require() errors in renderer process
+- Proper separation between renderer and main process storage
+- Maintains compatibility with existing code
+- Follows Electron security best practices
+
+### 6. Path Resolution Issues
 **Problem**: Application couldn't find resources after installation.
 
 **Solution**: Updated path resolution in various services to use proper Windows paths.
@@ -169,7 +234,9 @@ After applying these fixes:
 4. Test installation on clean Windows system
 5. Verify all shortcuts work properly
 6. Test that P2P functionality works (no b4a errors)
-7. Test that llama.cpp installs automatically when needed
+7. Test that app starts without require errors
+8. Test that user settings persist correctly
+9. Test that llama.cpp installs automatically when needed
 
 ## Dependencies That Should Be Installed On-the-Fly
 - **llama.cpp**: Installed automatically by the app when needed
@@ -186,4 +253,11 @@ After applying these fixes:
 ## Always Include These in Electron Package
 - Core Node.js dependencies used by main process (b4a, hyperswarm, hypercore-crypto)
 - Essential Python scripts (without their virtual environments)
-- Application code and UI assets 
+- Application code and UI assets
+
+## Security Best Practices Applied
+- **nodeIntegration: false** - Renderer process doesn't have Node.js access
+- **contextIsolation: true** - Renderer and main process are properly isolated
+- **sandbox: true** - Additional security layer for renderer
+- **localStorage for renderer storage** - Standard web API, no Node.js dependencies
+- **IPC for main/renderer communication** - Secure communication channel 
