@@ -68,6 +68,9 @@ export class WebSearchService {
       );
     }
 
+    // Strategic delay to let user read the message
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
     if (!this.llmService) {
       // Fallback to simple keyword-based detection
       if (this.uiService?.notifyWebSearchStep) {
@@ -76,6 +79,7 @@ export class WebSearchService {
           "IA não disponível, usando detecção por palavras-chave"
         );
       }
+      await new Promise((resolve) => setTimeout(resolve, 800));
       return this.fallbackSearchDecision(userQuery);
     }
 
@@ -88,6 +92,9 @@ export class WebSearchService {
           "IA está analisando sua pergunta para determinar a melhor estratégia..."
         );
       }
+
+      // Let user see the AI consultation message
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       const analysisPrompt = `Analyze the following user query and determine if it would benefit from current web search results.
 
@@ -139,6 +146,9 @@ Examples:
           `IA determinou: ${decision.reasoning}`
         );
 
+        // Strategic delay before showing queries
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
         // Show the generated queries
         if (decision.searchQueries && decision.searchQueries.length > 0) {
           this.uiService.notifyWebSearchStep(
@@ -147,6 +157,9 @@ Examples:
               decision.searchQueries.length === 1 ? "consulta" : "consultas"
             }`
           );
+
+          // Brief pause before moving to search phase
+          await new Promise((resolve) => setTimeout(resolve, 800));
         }
       } else if (
         !decision.shouldSearch &&
@@ -156,6 +169,9 @@ Examples:
           "❌ Busca desnecessária",
           `IA determinou: ${decision.reasoning}`
         );
+
+        // Let user read the decision
+        await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
       LoggingUtils.logInfo(
@@ -172,6 +188,10 @@ Examples:
           "Erro na análise por IA, usando detecção por palavras-chave"
         );
       }
+
+      // Show error message briefly
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       LoggingUtils.logWarning(
         "⚠️ [WEB_SEARCH] LLM analysis failed, using fallback: " +
           (error instanceof Error ? error.message : String(error))
@@ -307,6 +327,9 @@ Examples:
         );
       }
 
+      // Let user see the start message
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       // Show the queries being searched
       if (this.uiService?.notifyWebSearchStep && queries.length > 0) {
         const queryText =
@@ -319,12 +342,18 @@ Examples:
         );
       }
 
+      // Strategic delay to let user read the queries
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Use IPC to perform web search in main process (no CSP restrictions)
       const results = await window.electronAPI.webSearch(queries, {
         maxResults: options.maxResults || this.DEFAULT_MAX_RESULTS,
         safeSearch: options.safeSearch !== false, // Default to true
         timeRange: options.timeRange || "any",
       });
+
+      // Strategic delay before showing results (simulates search time)
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       // Notify about results found
       if (this.uiService?.notifyWebSearchStep) {
@@ -345,6 +374,11 @@ Examples:
         }
       }
 
+      // Let user see the results message before proceeding
+      if (results.length > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
       LoggingUtils.logInfo(
         `✅ [WEB_SEARCH] Web search completed: ${results.length} results`
       );
@@ -360,6 +394,9 @@ Examples:
           `Falha na busca web: ${errorMessage}`
         );
       }
+
+      // Show error message for adequate time
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       LoggingUtils.logError(
         `❌ [WEB_SEARCH] Web search failed: ${errorMessage}`
@@ -395,6 +432,9 @@ Examples:
         );
       }
 
+      // Show basic processing message for adequate time
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
       // Return simple concatenated results without LLM processing
       return results
         .map(
@@ -413,6 +453,9 @@ Examples:
       );
     }
 
+    // Let user see the analysis start message
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
     try {
       // Show sources being processed
       if (this.uiService?.notifyWebSearchStep) {
@@ -429,6 +472,9 @@ Examples:
           );
         }
       }
+
+      // Strategic delay to let user see the sources
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Build prompt for LLM to process and summarize results
       const processingPrompt = `Based on the following search results, provide a comprehensive and relevant summary that directly answers the user's question: "${originalQuery}"
@@ -469,12 +515,18 @@ Summary:`;
 
       const processedContent = response.choices[0]?.message?.content || "";
 
+      // Strategic delay before showing completion
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
           "✅ Análise concluída",
           "IA finalizou a análise e síntese dos resultados de busca"
         );
       }
+
+      // Let user see the completion message
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       LoggingUtils.logInfo(
         "✅ [WEB_SEARCH] Results processed successfully by LLM"
@@ -493,6 +545,9 @@ Summary:`;
           "Erro na análise por IA, usando formatação básica dos resultados"
         );
       }
+
+      // Show error message for adequate time
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Fallback to simple concatenation
       return results

@@ -634,6 +634,10 @@ export class SimplePromptProcessor {
 class UIServiceAdapter implements WebUIUpdateService {
   private isWebSearchActive: boolean = false;
   private webSearchTimeout: NodeJS.Timeout | null = null;
+  private messageQueue: Array<{ message: string; timestamp: number }> = [];
+  private isProcessingQueue: boolean = false;
+  private webSearchPhase: "idle" | "analyzing" | "searching" | "processing" =
+    "idle";
 
   constructor(private originalUIService: IUIUpdateService) {}
 
@@ -652,32 +656,112 @@ class UIServiceAdapter implements WebUIUpdateService {
     }
   }
 
+  private async processMessageQueue(): Promise<void> {
+    if (this.isProcessingQueue || this.messageQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessingQueue = true;
+
+    while (this.messageQueue.length > 0) {
+      const messageData = this.messageQueue.shift();
+      if (!messageData) break;
+
+      // Display the message
+      if (
+        typeof window !== "undefined" &&
+        (window as any).__updateProcessingStatus
+      ) {
+        (window as any).__updateProcessingStatus(messageData.message);
+      }
+
+      // Wait minimum time for user to read the message
+      // Longer delay for important phase transitions
+      const isPhaseTransition =
+        messageData.message.includes("✅") ||
+        messageData.message.includes("🧠") ||
+        messageData.message.includes("🔍");
+
+      const delayTime = isPhaseTransition ? 1200 : 800; // 1.2s for transitions, 0.8s for details
+
+      await new Promise((resolve) => setTimeout(resolve, delayTime));
+    }
+
+    this.isProcessingQueue = false;
+  }
+
   notifyWebSearchStep(step: string, details?: string): void {
-    // Mark web search as active
+    // Mark web search as active and determine phase
     this.isWebSearchActive = true;
+
+    if (step.includes("Analisando consulta")) this.webSearchPhase = "analyzing";
+    else if (
+      step.includes("Iniciando busca") ||
+      step.includes("Consultas geradas")
+    )
+      this.webSearchPhase = "searching";
+    else if (
+      step.includes("Analisando resultados") ||
+      step.includes("Fontes analisadas")
+    )
+      this.webSearchPhase = "processing";
 
     // Clear any existing timeout
     if (this.webSearchTimeout) {
       clearTimeout(this.webSearchTimeout);
     }
 
-    // Format the message with more visual indicators
-    const statusMessage = details ? `🌐 ${step}: ${details}` : `🌐 ${step}`;
+    // Format the message with visual indicators and progress context
+    const timestamp = new Date().toLocaleTimeString();
+    const phaseIndicator = this.getPhaseIndicator();
+    const statusMessage = details
+      ? `🌐 ${step}: ${details} ${phaseIndicator}`
+      : `🌐 ${step} ${phaseIndicator}`;
 
-    // Force update the processing status for web search messages
-    if (
-      typeof window !== "undefined" &&
-      (window as any).__updateProcessingStatus
-    ) {
-      (window as any).__updateProcessingStatus(statusMessage);
-    }
+    // Add to message queue for controlled display
+    this.messageQueue.push({
+      message: statusMessage,
+      timestamp: Date.now(),
+    });
 
-    // Set timeout to mark web search as inactive after 2 seconds of no activity
+    // Process queue if not already processing
+    this.processMessageQueue();
+
+    // Set intelligent timeout based on operation phase
+    const timeoutDuration = this.getTimeoutForPhase();
     this.webSearchTimeout = setTimeout(() => {
       this.isWebSearchActive = false;
-    }, 2000);
+      this.webSearchPhase = "idle";
+      this.messageQueue = []; // Clear any remaining messages
+    }, timeoutDuration);
 
     // Also log for debugging
     LoggingUtils.logInfo(`🔍 [WEB_SEARCH_UI] ${statusMessage}`);
+  }
+
+  private getPhaseIndicator(): string {
+    switch (this.webSearchPhase) {
+      case "analyzing":
+        return "📊 [1/3]";
+      case "searching":
+        return "🔍 [2/3]";
+      case "processing":
+        return "⚙️ [3/3]";
+      default:
+        return "";
+    }
+  }
+
+  private getTimeoutForPhase(): number {
+    switch (this.webSearchPhase) {
+      case "analyzing":
+        return 8000; // 8s for AI analysis
+      case "searching":
+        return 6000; // 6s for web search
+      case "processing":
+        return 10000; // 10s for result processing
+      default:
+        return 5000; // 5s default
+    }
   }
 }
