@@ -622,17 +622,28 @@ export class SimplePromptProcessor {
       );
 
       try {
-        // Add ONLY the clean user message to conversation history
-        this.memoryService.addToConversationHistory({
-          role: "user",
-          content: prompt, // Original prompt without any context
-        });
+        // ONLY ADD TO CONVERSATION HISTORY IF WE DIDN'T SYNC WITH CHAT MESSAGES
+        // If we synchronized with chat conversation, the messages are already there
+        if (!conversationMessages || conversationMessages.length === 0) {
+          // Only add messages if we used fallback (internal memory service history)
+          this.memoryService.addToConversationHistory({
+            role: "user",
+            content: prompt, // Original prompt without any context
+          });
 
-        // Add ONLY the assistant response to conversation history
-        this.memoryService.addToConversationHistory({
-          role: "assistant",
-          content: finalResponse,
-        });
+          this.memoryService.addToConversationHistory({
+            role: "assistant",
+            content: finalResponse,
+          });
+
+          LoggingUtils.logInfo(
+            "✅ Messages added to internal conversation history (fallback mode)"
+          );
+        } else {
+          LoggingUtils.logInfo(
+            "ℹ️ Skipped adding to conversation history - already synced with chat messages"
+          );
+        }
 
         // Save to long-term memory (DuckDB) using direct save method
         await this.memoryService.saveDirectInteraction(
@@ -722,14 +733,28 @@ export class SimplePromptProcessor {
 
         // Still try to save the clean interaction in fallback mode
         try {
-          this.memoryService.addToConversationHistory({
-            role: "user",
-            content: prompt, // Clean prompt
-          });
-          this.memoryService.addToConversationHistory({
-            role: "assistant",
-            content: fallbackContent,
-          });
+          // ONLY ADD TO CONVERSATION HISTORY IF WE DIDN'T SYNC WITH CHAT MESSAGES
+          // If we synchronized with chat conversation, the messages are already there
+          if (!conversationMessages || conversationMessages.length === 0) {
+            // Only add messages if we used fallback (internal memory service history)
+            this.memoryService.addToConversationHistory({
+              role: "user",
+              content: prompt, // Clean prompt
+            });
+            this.memoryService.addToConversationHistory({
+              role: "assistant",
+              content: fallbackContent,
+            });
+
+            LoggingUtils.logInfo(
+              "✅ [FALLBACK] Messages added to internal conversation history"
+            );
+          } else {
+            LoggingUtils.logInfo(
+              "ℹ️ [FALLBACK] Skipped adding to conversation history - already synced with chat messages"
+            );
+          }
+
           await this.memoryService.saveDirectInteraction(
             prompt, // Clean prompt
             fallbackContent,
