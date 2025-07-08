@@ -8,26 +8,44 @@ dist
 **/.vscode
 **/.idea
 **/package-lock.json.env
+
+# Python virtual environments (CRITICAL: These are huge!)
+venv/
+.venv/
 scripts/python/lora_training/training_venv
+**/venv/**
+**/training_venv/**
+
+# Python cache files
 scripts/python/lora_training/data
 scripts/python/lora_training/__pycache__/*
 scripts/python/lora_training/training_modules/__pycache__/*
-scripts/python/lora_training/adapters
-scripts/python/lora_training/lora_adapter
-scripts/python/lora_training/Modelfile*
-scripts/python/lora_training/lora_training_output
 scripts/python/lora_training/interfaces/__pycache__
 scripts/python/lora_training/services/__pycache__
 scripts/python/lora_training/orchestrator/__pycache__
 scripts/python/lora_training/models/__pycache__
-.VSCodeCounter
+**/__pycache__/**
+**/*.pyc
+**/.pytest_cache/**
+
+# LoRA adapters and training outputs (CRITICAL: These are multi-GB!)
+scripts/python/lora_training/adapters
+scripts/python/lora_training/lora_adapter
+scripts/python/lora_training/Modelfile*
+scripts/python/lora_training/lora_training_output
+lora_training_output/
+scripts/lora_adapters
+lora_adapters/
+adapters/
+lora_adapter/
+**/training_output/**
+
+# llama.cpp installations (should be installed on-the-fly)
 llama.cpp/**
 **/llama.cpp
-lora_training_output
-scripts/lora_adapters
-lora_adapters
-adapters
-lora_adapter
+
+# IDE and development
+.VSCodeCounter
 out/
 
 # Debug and log files

@@ -44,7 +44,25 @@
       "dist-electron/**/*",
       "package.json",
       "electron/**/*",
-      "scripts/**/*"
+      "scripts/**/*",
+      "node_modules/b4a/**/*",
+      "node_modules/hyperswarm/**/*", 
+      "node_modules/hypercore-crypto/**/*",
+      "!**/.git/**",
+      "!**/llama.cpp/**",
+      "!**/venv/**",
+      "!**/training_venv/**",
+      "!**/__pycache__/**",
+      "!**/.pytest_cache/**",
+      "!**/lora_adapters/**",
+      "!**/adapters/**",
+      "!**/lora_adapter/**",
+      "!**/lora_training_output/**",
+      "!**/training_output/**",
+      "!**/*.pyc",
+      "!**/.DS_Store",
+      "!**/coverage/**",
+      "!**/test-adapters/**"
     ],
     "directories": {
       "output": "release",
@@ -53,6 +71,7 @@
     "asar": true,
     "compression": "maximum",
     "generateUpdatesFilesForAllChannels": true,
+    "nodeGypRebuild": false,
     "mac": {
       "target": [
         {
@@ -79,7 +98,10 @@
         ]
       },
       "asarUnpack": [
-        "**/*.node"
+        "**/*.node",
+        "**/b4a/**",
+        "**/hyperswarm/**",
+        "**/hypercore-crypto/**"
       ]
     },
     "pkg": {
@@ -105,15 +127,32 @@
       ],
       "icon": "assets/icons/win/icon.ico",
       "artifactName": "Orch-OS-${productName}-Windows-${version}.${ext}",
+      "executableName": "Orch-OS",
+      "legalTrademarks": "Orch-OS",
+      "requestedExecutionLevel": "asInvoker",
       "protocols": {
         "name": "orch-os-protocol",
         "schemes": [
           "orch-os"
         ]
-      }
+      },
+      "fileAssociations": [{
+        "ext": "orchos",
+        "name": "Orch-OS File",
+        "description": "Orch-OS File",
+        "role": "Editor"
+      }]
     },
     "nsis": {
-      "include": "build/install-dependencies.nsh"
+      "include": "build/install-dependencies.nsh",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Orch-OS",
+      "runAfterFinish": true,
+      "perMachine": false,
+      "allowElevation": true
     },
     "linux": {
       "target": [
@@ -149,8 +188,24 @@
         "from": "scripts/python",
         "to": "scripts/python",
         "filter": [
-          "**/*"
+          "**/*",
+          "!**/__pycache__/**",
+          "!**/*.pyc",
+          "!**/venv/**",
+          "!**/training_venv/**",
+          "!**/.pytest_cache/**",
+          "!**/lora_training_output/**",
+          "!**/training_output/**",
+          "!**/adapters/**",
+          "!**/lora_adapters/**",
+          "!**/lora_adapter/**",
+          "!**/data/**",
+          "!**/llama.cpp/**"
         ]
+      },
+      {
+        "from": "build/launch-orch-os.bat",
+        "to": "launch-orch-os.bat"
       }
     ],
     "extraMetadata": {
