@@ -90,10 +90,11 @@ export const useAdapterManager = ({
         }
 
         // 2. Check if adapter exists in Electron filesystem
-        if (typeof window !== "undefined") {
+        if (typeof window !== "undefined" && window.electronAPI) {
           try {
-            // Use the existing P2P share API to verify adapter existence
-            const result = await (window.electronAPI as any).p2pShareAdapter(
+            // Use the dedicated check adapter exists API
+            const result = await (window.electronAPI as any).invoke(
+              "p2p:checkAdapterExists",
               adapterName
             );
             const existsInFilesystem = result.success;

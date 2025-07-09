@@ -133,7 +133,17 @@ export class P2PCoordinator {
   }
 
   /**
-   * Request an adapter from a peer
+   * Check if an adapter exists in the filesystem
+   */
+  async checkAdapterExists(adapterName: string): Promise<string | null> {
+    console.log(
+      `[P2PCoordinator] Checking existence of adapter: ${adapterName}`
+    );
+    return await this.adapterRegistry.findModelPath(adapterName);
+  }
+
+  /**
+   * Request adapter download
    */
   async requestAdapter(data: {
     topic: string;

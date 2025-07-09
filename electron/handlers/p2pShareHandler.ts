@@ -100,6 +100,34 @@ export function setupP2PHandlers(): void {
     }
   );
 
+  // Check if adapter exists
+  ipcMain.handle(
+    "p2p:checkAdapterExists",
+    async (_event, adapterName: string) => {
+      try {
+        if (!p2pCoordinator) {
+          // If P2P is not initialized, we can still check for adapter existence
+          const { AdapterRegistry } = require("./p2p/AdapterRegistry");
+          const registry = new AdapterRegistry();
+          const adapterPath = await registry.findModelPath(adapterName);
+          return { success: adapterPath !== null };
+        }
+
+        // Use the coordinator's registry if available
+        const adapterPath = await p2pCoordinator.checkAdapterExists(
+          adapterName
+        );
+        return { success: adapterPath !== null };
+      } catch (error) {
+        console.error(
+          `[P2P] Error checking adapter existence for ${adapterName}:`,
+          error
+        );
+        return { success: false, error: (error as Error).message };
+      }
+    }
+  );
+
   // Broadcast adapters (for local UI updates)
   ipcMain.handle("p2p:broadcastAdapters", async (_event, adapters: any[]) => {
     try {
