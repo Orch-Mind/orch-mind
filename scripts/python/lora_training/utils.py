@@ -48,10 +48,11 @@ def sanitize_model_name(name: str) -> str:
             sanitized = sanitized.replace(accented, plain)
     
     # Replace spaces and special characters with hyphens
+    # Keep underscores and hyphens as they are
     sanitized = re.sub(r'[^a-z0-9_-]', '-', sanitized)
     
-    # Remove multiple consecutive hyphens/underscores
-    sanitized = re.sub(r'[-_]+', '-', sanitized)
+    # Remove multiple consecutive hyphens only (not underscores)
+    sanitized = re.sub(r'-{2,}', '-', sanitized)
     
     # Remove leading/trailing hyphens/underscores
     sanitized = sanitized.strip('-_')
