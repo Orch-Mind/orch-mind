@@ -101,6 +101,84 @@ class UnslothDeploymentService:
         
         return True
     
+    def _ensure_conversion_dependencies(self) -> bool:
+        """Ensure that GGUF conversion dependencies are available with robust error handling."""
+        dependencies = [
+            ("sentencepiece", ">=0.1.99"),
+            ("protobuf", ">=3.20.0")
+        ]
+        
+        for package, version in dependencies:
+            try:
+                if package == "protobuf":
+                    import google.protobuf
+                    print(f"   ✓ {package} (google.protobuf)")
+                else:
+                    __import__(package)
+                    print(f"   ✓ {package}")
+            except ImportError:
+                print(f"   ❌ {package} not found - installing...")
+                
+                # Try to install the missing dependency
+                success = self._install_conversion_dependency(package, version)
+                if not success:
+                    print(f"❌ Failed to install {package}")
+                    return False
+                
+                # Verify installation
+                try:
+                    if package == "protobuf":
+                        import google.protobuf
+                    else:
+                        __import__(package)
+                    print(f"   ✅ {package} installed and verified")
+                except ImportError:
+                    print(f"❌ {package} installation verification failed")
+                    return False
+        
+        print("✅ All conversion dependencies available")
+        return True
+    
+    def _install_conversion_dependency(self, package: str, version: str) -> bool:
+        """Install a single conversion dependency with error handling."""
+        try:
+            package_spec = f"{package}{version}"
+            print(f"   📦 Installing {package_spec}...")
+            
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install", 
+                package_spec, "--quiet", "--no-cache-dir"
+            ], capture_output=True, text=True, timeout=300)
+            
+            if result.returncode == 0:
+                print(f"   ✅ {package} installed successfully")
+                return True
+            else:
+                print(f"   ❌ {package} installation failed:")
+                print(f"      stdout: {result.stdout}")
+                print(f"      stderr: {result.stderr}")
+                
+                # Try force reinstall as fallback
+                print(f"   🔄 Attempting force reinstall of {package}...")
+                result2 = subprocess.run([
+                    sys.executable, "-m", "pip", "install", 
+                    package_spec, "--force-reinstall", "--quiet"
+                ], capture_output=True, text=True, timeout=300)
+                
+                if result2.returncode == 0:
+                    print(f"   ✅ {package} force reinstall successful")
+                    return True
+                else:
+                    print(f"   ❌ {package} force reinstall also failed")
+                    return False
+                    
+        except subprocess.TimeoutExpired:
+            print(f"   ❌ {package} installation timed out")
+            return False
+        except Exception as e:
+            print(f"   ❌ {package} installation error: {e}")
+            return False
+    
     def _load_and_save_model(self, hf_model_name: str, output_dir: str) -> Optional[str]:
         """Load HuggingFace model and save it locally."""
         print(f"📦 Loading model: {hf_model_name}")
@@ -147,6 +225,13 @@ class UnslothDeploymentService:
     def _convert_to_gguf(self, model_path: str, output_dir: str) -> Optional[str]:
         """Convert model to GGUF format."""
         print("🔄 Converting to GGUF format...")
+        
+        # Ensure conversion dependencies are installed with robust error handling
+        print("📦 Checking conversion dependencies...")
+        deps_installed = self._ensure_conversion_dependencies()
+        if not deps_installed:
+            print("❌ Failed to install conversion dependencies")
+            return None
         
         # Find llama.cpp (with automatic installation)
         llama_cpp_dir = self._find_llama_cpp()

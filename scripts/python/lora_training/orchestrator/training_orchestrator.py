@@ -426,19 +426,101 @@ class TrainingOrchestrator:
                 # Memory check after merge
                 self.memory_monitor.monitor_training_phase("after merge operation")
                 
-                # Save merged model with memory optimization
-                print(f"   • Saving merged model with safe serialization...")
+                # Save merged model with memory optimization and proper tokenizer handling
+                print(f"   • Saving merged model with complete tokenizer files...")
+                
+                # Save the merged model
                 try:
-                    # Use save_model to handle shared tensors correctly
-                    merged_model.save_model(temp_dir)
-                except AttributeError:
-                    # Fallback to save_pretrained without safe_serialization
+                    # Save model with safe serialization disabled to avoid shared tensor issues
                     merged_model.save_pretrained(
                         temp_dir, 
                         safe_serialization=False,  # Disable to avoid shared tensor issues
                         max_shard_size="2GB"
                     )
-                tokenizer.save_pretrained(temp_dir)
+                    print(f"   ✓ Model weights saved")
+                except Exception as e:
+                    print(f"   ⚠️ Error saving model: {e}")
+                    return None
+                
+                # Save tokenizer with all required files
+                try:
+                    tokenizer.save_pretrained(temp_dir)
+                    print(f"   ✓ Standard tokenizer files saved")
+                except Exception as e:
+                    print(f"   ⚠️ Error saving tokenizer: {e}")
+                    return None
+                
+                # CRITICAL: For Gemma models, ensure tokenizer.model file is copied
+                # This file is essential for GGUF conversion
+                model_name_lower = hf_model_name.lower()
+                if "gemma" in model_name_lower:
+                    print(f"   • Gemma model detected - ensuring tokenizer.model is available...")
+                    
+                    # Try to copy tokenizer.model from the original model cache
+                    try:
+                        import shutil
+                        from transformers.utils import cached_file
+                        
+                        # Find the tokenizer.model in the original model
+                        try:
+                            tokenizer_model_path = cached_file(
+                                hf_model_name, 
+                                "tokenizer.model", 
+                                cache_dir=None,  # Use default cache
+                                force_download=False,
+                                resume_download=True
+                            )
+                            
+                            if tokenizer_model_path and os.path.exists(tokenizer_model_path):
+                                target_tokenizer_model = os.path.join(temp_dir, "tokenizer.model")
+                                shutil.copy2(tokenizer_model_path, target_tokenizer_model)
+                                print(f"   ✓ tokenizer.model copied from cache: {tokenizer_model_path}")
+                            else:
+                                print(f"   ⚠️ tokenizer.model not found in cache")
+                                
+                        except Exception as cache_e:
+                            print(f"   ⚠️ Could not find tokenizer.model in cache: {cache_e}")
+                            
+                            # Alternative: try to download directly from HF
+                            try:
+                                print(f"   • Attempting direct download of tokenizer.model...")
+                                tokenizer_fresh = AutoTokenizer.from_pretrained(
+                                    hf_model_name, 
+                                    trust_remote_code=True,
+                                    force_download=True,
+                                    local_files_only=False
+                                )
+                                tokenizer_fresh.save_pretrained(temp_dir, legacy_format=True)
+                                print(f"   ✓ tokenizer.model downloaded and saved")
+                                
+                            except Exception as download_e:
+                                print(f"   ⚠️ Direct download failed: {download_e}")
+                                
+                                # Final fallback: check if we can continue without it
+                                print(f"   ⚠️ tokenizer.model not available - conversion may fail")
+                                print(f"   💡 This may still work if GGUF converter can use tokenizer.json instead")
+                    
+                    except Exception as e:
+                        print(f"   ⚠️ Error ensuring tokenizer.model: {e}")
+                
+                # Verify that essential tokenizer files exist
+                essential_files = ['tokenizer.json', 'tokenizer_config.json']
+                optional_files = ['tokenizer.model', 'special_tokens_map.json']
+                
+                print(f"   • Verifying tokenizer files...")
+                for file_name in essential_files:
+                    file_path = os.path.join(temp_dir, file_name)
+                    if os.path.exists(file_path):
+                        print(f"   ✓ {file_name} present")
+                    else:
+                        print(f"   ❌ {file_name} missing (essential)")
+                        
+                for file_name in optional_files:
+                    file_path = os.path.join(temp_dir, file_name)
+                    if os.path.exists(file_path):
+                        print(f"   ✓ {file_name} present")
+                    else:
+                        print(f"   ⚠️ {file_name} missing (may be needed for GGUF)")
                 
                 # Clear merged model from memory before GGUF conversion
                 del merged_model
@@ -494,8 +576,13 @@ class TrainingOrchestrator:
             self.memory_monitor.monitor_training_phase("after merge cleanup")
     
     def _convert_merged_to_gguf_optimized(self, model_path: str, hf_model_name: str) -> Optional[str]:
-        """Convert merged model to GGUF format with memory optimization."""
+        """Convert merged model to GGUF format with memory optimization and dependency validation."""
         print("🔄 Converting merged model to GGUF...")
+        
+        # CRITICAL: Ensure conversion dependencies are installed BEFORE running conversion
+        print("📦 Ensuring GGUF conversion dependencies are available...")
+        if not self._ensure_conversion_dependencies():
+            return None
         
         # Find llama.cpp (with automatic installation)
         llama_cpp_dir = self._find_llama_cpp()
@@ -522,6 +609,8 @@ class TrainingOrchestrator:
             ]
             
             print(f"   • Running GGUF conversion with memory optimization...")
+            print(f"   • Python executable: {sys.executable}")
+            print(f"   • Convert script: {convert_script}")
             
             # Set environment variables for memory optimization
             env = os.environ.copy()
@@ -553,6 +642,24 @@ class TrainingOrchestrator:
                 print(f"❌ GGUF conversion failed:")
                 print(f"   • stdout: {result.stdout}")
                 print(f"   • stderr: {result.stderr}")
+                
+                # Check if the error is related to missing dependencies
+                stderr_lower = result.stderr.lower()
+                if "sentencepiece" in stderr_lower or "protobuf" in stderr_lower:
+                    print(f"   • Detected missing dependency error - attempting recovery...")
+                    if self._force_install_conversion_dependencies():
+                        print(f"   • Dependencies installed, retrying conversion...")
+                        # Retry conversion once
+                        result_retry = subprocess.run(
+                            convert_cmd, capture_output=True, text=True, timeout=2400, env=env
+                        )
+                        if result_retry.returncode == 0 and os.path.exists(gguf_path):
+                            file_size = os.path.getsize(gguf_path) / (1024**3)
+                            print(f"✅ GGUF conversion successful on retry: {gguf_path} ({file_size:.2f}GB)")
+                            return gguf_path
+                        else:
+                            print(f"❌ Retry also failed: {result_retry.stderr}")
+                
                 return None
                 
         except subprocess.TimeoutExpired:
@@ -561,6 +668,72 @@ class TrainingOrchestrator:
         except Exception as e:
             print(f"❌ GGUF conversion error: {e}")
             return None
+    
+    def _ensure_conversion_dependencies(self) -> bool:
+        """Ensure that conversion dependencies (sentencepiece, protobuf) are installed."""
+        required_deps = {
+            'sentencepiece': 'sentencepiece>=0.1.99',
+            'protobuf': 'protobuf>=3.20.0'
+        }
+        
+        missing_deps = []
+        
+        for module_name, pip_name in required_deps.items():
+            try:
+                if module_name == 'protobuf':
+                    import google.protobuf
+                    print(f"   ✓ {module_name} available")
+                else:
+                    __import__(module_name)
+                    print(f"   ✓ {module_name} available")
+            except ImportError:
+                missing_deps.append(pip_name)
+                print(f"   ❌ {module_name} missing")
+        
+        if missing_deps:
+            print(f"📦 Installing {len(missing_deps)} conversion dependencies: {', '.join(missing_deps)}")
+            try:
+                import subprocess
+                subprocess.check_call([
+                    sys.executable, "-m", "pip", "install", "--quiet"
+                ] + missing_deps)
+                print("✅ Conversion dependencies installed successfully")
+                
+                # Verify installation
+                for module_name in required_deps.keys():
+                    try:
+                        if module_name == 'protobuf':
+                            import google.protobuf
+                        else:
+                            __import__(module_name)
+                        print(f"   ✓ {module_name} verified after installation")
+                    except ImportError:
+                        print(f"   ❌ {module_name} still not available after installation")
+                        return False
+                
+                return True
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Failed to install conversion dependencies: {e}")
+                return False
+        
+        print("✅ All conversion dependencies are available")
+        return True
+    
+    def _force_install_conversion_dependencies(self) -> bool:
+        """Force reinstall conversion dependencies with upgraded versions."""
+        print("🔧 Force installing conversion dependencies...")
+        try:
+            import subprocess
+            # Force reinstall with upgrade
+            deps = ['sentencepiece>=0.1.99', 'protobuf>=3.20.0']
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", "--upgrade", "--force-reinstall"
+            ] + deps)
+            print("✅ Conversion dependencies force-installed")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Force installation failed: {e}")
+            return False
     
     def _deploy_final_model_to_ollama(self, gguf_path: str, model_name: str, config: Any, hf_model_name: str) -> bool:
         """Deploy final merged model to Ollama."""

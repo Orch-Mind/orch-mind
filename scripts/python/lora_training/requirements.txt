@@ -1,23 +1,26 @@
-certifi
-charset-normalizer
-filelock
-fsspec
-huggingface-hub
-idna
-Jinja2
-MarkupSafe
-numpy
-packaging
-pillow>=10.0.0
-psutil
-PyYAML
-regex
-requests
-safetensors
-timm>=0.9.0
-tokenizers
+# Core dependencies for LoRA training
 torch
-tqdm
 transformers
-typing_extensions
-urllib3
+peft
+datasets
+accelerate
+bitsandbytes
+safetensors
+numpy
+tqdm
+scipy
+
+# Model conversion dependencies
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+
+# Evaluation and metrics
+scikit-learn
+
+# Training utilities
+fire
+psutil
+
+# Optional but recommended
+wandb
+tensorboard

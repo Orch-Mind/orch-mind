@@ -92,16 +92,32 @@ export const useAdapterManager = ({
         // 2. Check if adapter exists in Electron filesystem
         if (typeof window !== "undefined" && window.electronAPI) {
           try {
-            // Use the dedicated check adapter exists API
-            const result = await (window.electronAPI as any).invoke(
-              "p2p:checkAdapterExists",
-              adapterName
-            );
-            const existsInFilesystem = result.success;
-            console.log(
-              `🔍 [ADAPTER-MANAGER] Adapter ${adapterName} exists in filesystem: ${existsInFilesystem}`
-            );
-            return existsInFilesystem;
+            // CRITICAL FIX: Use the correct API interface
+            const electronAPI = (window as any).electronAPI;
+
+            if (electronAPI.p2p && electronAPI.p2p.checkAdapterExists) {
+              const result = await electronAPI.p2p.checkAdapterExists(
+                adapterName
+              );
+              const existsInFilesystem = result.exists || result.success;
+
+              console.log(
+                `🔍 [ADAPTER-MANAGER] Adapter ${adapterName} exists in filesystem: ${existsInFilesystem}`
+              );
+
+              if (result.path) {
+                console.log(
+                  `📁 [ADAPTER-MANAGER] Adapter ${adapterName} found at: ${result.path}`
+                );
+              }
+
+              return existsInFilesystem;
+            } else {
+              console.warn(
+                `⚠️ [ADAPTER-MANAGER] electronAPI.p2p.checkAdapterExists not available`
+              );
+              return existsInLocalStorage; // Fallback to localStorage check
+            }
           } catch (error) {
             console.log(
               `🔍 [ADAPTER-MANAGER] Error checking filesystem for ${adapterName}:`,

@@ -4,7 +4,10 @@
 
 import { getOption, STORAGE_KEYS } from "@services/StorageService";
 import { useEffect, useState } from "react";
-import { loadFromStorage, saveToStorage } from "../utils";
+import {
+  loadFromStorage,
+  saveToStorage,
+} from "../utils";
 
 interface LoRAAdapter {
   id: string;
@@ -99,7 +102,7 @@ export const useLoRAAdapters = () => {
       if (!existingAdapter) {
         const newAdapter: LoRAAdapter = {
           id: adapterId,
-          name: `${adapterId}_adapter`,
+          name: `${adapterId}_adapter`, // Keep _adapter suffix as it's used by backend
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),

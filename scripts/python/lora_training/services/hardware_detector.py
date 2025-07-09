@@ -21,7 +21,6 @@ class HardwareConfig:
     gradient_checkpointing: bool
     dataloader_pin_memory: bool
     dataloader_num_workers: int
-    batch_size_multiplier: float  # Multiplier for batch size based on hardware
 
 
 class HardwareDetector:
@@ -78,17 +77,38 @@ class HardwareDetector:
     
     def _get_mps_config(self, model_name: str) -> HardwareConfig:
         """Optimized configuration for Apple Silicon MPS."""
+        # Special handling for Gemma models on MPS
+        model_name_lower = model_name.lower()
+        if "gemma" in model_name_lower and self.hardware_info["mps_available"]:
+            print("\n💾 Gemma model detected - MINIMUM MEMORY MODE for MPS")
+            print("   • Aggressive quantization (Q4_K_M/Q4_K_S simulation)")
+            print("   • Maximum memory optimization")
+            print("   • Reduced batch size for minimal memory footprint")
+            
+            # Return Gemma-specific MPS configuration with minimal memory usage
+            return HardwareConfig(
+                device_type="mps",
+                device_map="mps",
+                torch_dtype="float16",  # Use float16 to save memory
+                load_in_8bit=False,     # Don't use 8-bit (not supported on MPS)
+                use_fp16_trainer=False, # MPS handles dtype at model level
+                gradient_checkpointing=False,  # DISABLED - causes gradient flow issues with Gemma
+                low_cpu_mem_usage=True,
+                dataloader_num_workers=0,  # Single worker for stability
+                dataloader_pin_memory=False  # Not needed for MPS
+            )
+        
+        # Default MPS config for other models
         return HardwareConfig(
             device_type="mps",
-            torch_dtype="float16",  # Load model in float16 for memory efficiency
-            use_fp16_trainer=False,  # CRITICAL: Don't use fp16 flag in Trainer for MPS
-            device_map=None,  # Don't use device_map with MPS, let PyTorch handle it
+            torch_dtype="float16",
+            use_fp16_trainer=False,
+            device_map=None,
             low_cpu_mem_usage=True,
-            load_in_8bit=False,  # 8-bit quantization not stable on MPS
-            gradient_checkpointing=False,  # Can cause issues with MPS gradients
-            dataloader_pin_memory=False,  # Pin memory not beneficial for MPS
-            dataloader_num_workers=0,  # Multiprocessing can cause issues on macOS
-            batch_size_multiplier=1.0,  # Standard batch size for MPS
+            load_in_8bit=False,
+            gradient_checkpointing=False,
+            dataloader_pin_memory=False,
+            dataloader_num_workers=0
         )
     
     def _get_cuda_config(self, model_name: str) -> HardwareConfig:
@@ -115,8 +135,7 @@ class HardwareDetector:
             load_in_8bit=use_8bit,
             gradient_checkpointing=True,
             dataloader_pin_memory=True,
-            dataloader_num_workers=4,
-            batch_size_multiplier=batch_multiplier,
+            dataloader_num_workers=4
         )
     
     def _get_cpu_config(self, model_name: str) -> HardwareConfig:
@@ -130,8 +149,7 @@ class HardwareDetector:
             load_in_8bit=False,
             gradient_checkpointing=True,  # Helps with memory on CPU
             dataloader_pin_memory=False,
-            dataloader_num_workers=min(4, self.hardware_info["cpu_count"]),
-            batch_size_multiplier=0.5,  # Smaller batches for CPU
+            dataloader_num_workers=min(4, self.hardware_info["cpu_count"])
         )
     
     def get_target_modules_for_model(self, model_name: str) -> List[str]:
@@ -211,8 +229,18 @@ class HardwareDetector:
     def get_recommended_batch_size(self, base_batch_size: int, model_name: str = "") -> int:
         """Get recommended batch size based on hardware."""
         config = self.get_optimal_config(model_name)
-        recommended = max(1, int(base_batch_size * config.batch_size_multiplier))
-        return recommended
+        
+        # Special handling for Gemma models
+        if "gemma" in model_name.lower() and config.device_type == "mps":
+            return 1  # Always use batch size 1 for Gemma on MPS
+        
+        # For other cases, use heuristics based on device type
+        if config.device_type == "cuda" and config.load_in_8bit:
+            return max(1, base_batch_size // 2)  # Half batch size for 8-bit
+        elif config.device_type == "cpu":
+            return max(1, base_batch_size // 2)  # Half batch size for CPU
+        else:
+            return base_batch_size  # Use default batch size
     
     def validate_mps_compatibility(self) -> bool:
         """Validate MPS compatibility and warn about potential issues."""

@@ -36,10 +36,14 @@ import { useChatHistory } from "./components/ConversationalChat/hooks/useChatHis
 // Brain visualization is now handled in a separate module
 import { P2PProvider } from "./context/P2PContext";
 
-// Import test script for development
-if (process.env.NODE_ENV === "development") {
-  import("../../../utils/test-adapter-persistence");
-}
+// Import test script for development AND production testing
+import("../../../utils/test-adapter-persistence")
+  .then(() => {
+    console.log("✅ Production test utilities loaded successfully");
+  })
+  .catch((error) => {
+    console.warn("⚠️  Failed to load test utilities:", error);
+  });
 
 const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   onClose,

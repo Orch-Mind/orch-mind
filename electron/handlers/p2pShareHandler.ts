@@ -110,20 +110,49 @@ export function setupP2PHandlers(): void {
           const { AdapterRegistry } = require("./p2p/AdapterRegistry");
           const registry = new AdapterRegistry();
           const adapterPath = await registry.findModelPath(adapterName);
-          return { success: adapterPath !== null };
+
+          console.log(
+            `[P2P-HANDLER] Adapter check result for ${adapterName}: ${
+              adapterPath ? "found" : "not found"
+            }`
+          );
+
+          return {
+            success: adapterPath !== null,
+            exists: adapterPath !== null,
+            path: adapterPath,
+            error: adapterPath ? null : "Adapter not found",
+          };
         }
 
         // Use the coordinator's registry if available
         const adapterPath = await p2pCoordinator.checkAdapterExists(
           adapterName
         );
-        return { success: adapterPath !== null };
+
+        console.log(
+          `[P2P-HANDLER] Coordinator check result for ${adapterName}: ${
+            adapterPath ? "found" : "not found"
+          }`
+        );
+
+        return {
+          success: adapterPath !== null,
+          exists: adapterPath !== null,
+          path: adapterPath,
+          error: adapterPath ? null : "Adapter not found",
+        };
       } catch (error) {
         console.error(
-          `[P2P] Error checking adapter existence for ${adapterName}:`,
+          `[P2P-HANDLER] Error checking adapter existence for ${adapterName}:`,
           error
         );
-        return { success: false, error: (error as Error).message };
+        return {
+          success: false,
+          exists: false,
+          path: null,
+          error: (error as Error).message,
+        };
       }
     }
   );

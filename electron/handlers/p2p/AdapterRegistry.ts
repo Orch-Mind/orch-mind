@@ -52,6 +52,7 @@ export class AdapterRegistry {
     const { app } = require("electron");
     const path = require("path");
     const fs = require("fs");
+    const os = require("os");
 
     console.log(`[AdapterRegistry] 🔍 DEBUG Project Root Resolution:`);
     console.log(`[AdapterRegistry]   - app.isPackaged: ${app.isPackaged}`);
@@ -67,26 +68,42 @@ export class AdapterRegistry {
       console.log(`[AdapterRegistry]   - process.resourcesPath: undefined`);
     }
 
+    // CRITICAL FIX: Add userData directory path that matches Python's get_project_root()
+    // In production, Python saves adapters to ~/Library/Application Support/Orch-OS/
+    // We need to check this location first to match Python's behavior
+    const userDataDir = path.join(
+      os.homedir(),
+      "Library",
+      "Application Support",
+      "Orch-OS"
+    );
+
     // List of potential project root directories to try
     const potentialRoots = [
-      // 1. Use process.cwd() (should work in development)
+      // 1. PRIORITY: Check userData directory first (matches Python production behavior)
+      userDataDir,
+
+      // 2. Use process.cwd() (should work in development)
       process.cwd(),
 
-      // 2. Go up from current file location (works in some Electron contexts)
+      // 3. Go up from current file location (works in some Electron contexts)
       path.resolve(__dirname, "../../../.."),
 
-      // 3. Use app.getAppPath() if available (Electron app path)
+      // 4. Use app.getAppPath() if available (Electron app path)
       app.getAppPath ? app.getAppPath() : null,
 
-      // 4. Production: use parent of resources directory
+      // 5. Production: use parent of resources directory
       process.resourcesPath ? path.resolve(process.resourcesPath, "..") : null,
 
-      // 5. Manual fallback to known project path (last resort)
+      // 6. Manual fallback to known project path (last resort)
       "/Users/guilhermeferraribrescia/orch-os",
     ].filter(Boolean) as string[];
 
     console.log(
       `[AdapterRegistry]   - Potential roots to try: ${potentialRoots.length}`
+    );
+    console.log(
+      `[AdapterRegistry]   - PRIORITY: Checking userData directory first: ${userDataDir}`
     );
 
     // Try each potential root and find the one that contains lora_adapters
@@ -121,10 +138,27 @@ export class AdapterRegistry {
       `[AdapterRegistry]   - Tried ${potentialRoots.length} candidates`
     );
     console.error(
-      `[AdapterRegistry]   - Falling back to process.cwd(): ${process.cwd()}`
+      `[AdapterRegistry]   - Falling back to userData directory: ${userDataDir}`
     );
 
-    return process.cwd();
+    // FALLBACK FIX: Create userData directory structure if it doesn't exist
+    // This ensures consistency with Python behavior
+    try {
+      const loraAdaptersPath = path.join(userDataDir, "lora_adapters");
+      fs.mkdirSync(path.join(loraAdaptersPath, "weights"), { recursive: true });
+      fs.mkdirSync(path.join(loraAdaptersPath, "registry"), {
+        recursive: true,
+      });
+      console.log(
+        `[AdapterRegistry] ✅ Created userData directory structure: ${loraAdaptersPath}`
+      );
+    } catch (error) {
+      console.error(
+        `[AdapterRegistry] Failed to create userData directory: ${error}`
+      );
+    }
+
+    return userDataDir;
   }
 
   /**

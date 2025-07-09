@@ -348,6 +348,16 @@ class LoRATrainer(ILoRATrainer):
             self.hardware_detector.print_hardware_info()
             hw_config = self.hardware_detector.get_optimal_config(config.hf_model_name)
             
+            # Special handling for Gemma models
+            model_name_lower = config.hf_model_name.lower()
+            if "gemma" in model_name_lower and hw_config.device_type == "mps":
+                print("\n💾 GEMMA MINIMAL MEMORY MODE FOR MPS:")
+                print("   • Q4_K_M quantization simulation (4-bit)")
+                print("   • Aggressive memory optimization")
+                print("   • Batch size 1 with gradient accumulation")
+                print("   • ~70% less memory than standard training")
+                print("   • Prioritizing memory efficiency over speed\n")
+            
             # Validate MPS if available
             if hw_config.device_type == "mps":
                 if not self.hardware_detector.validate_mps_compatibility():
@@ -380,6 +390,26 @@ class LoRATrainer(ILoRATrainer):
                 load_in_8bit=hw_config.load_in_8bit,
                 low_cpu_mem_usage=hw_config.low_cpu_mem_usage,
             )
+            
+            # Special post-loading handling for Gemma on MPS
+            if "gemma" in model_name_lower and hw_config.device_type == "mps":
+                print("💾 Applying Gemma minimal memory mode for MPS...")
+                
+                # Import and apply Gemma minimal memory module
+                try:
+                    from .gemma_quantization import apply_gemma_minimal_memory_mode, GemmaMinimalMemoryQuantization
+                    
+                    # Apply minimal memory mode
+                    model, _ = apply_gemma_minimal_memory_mode(model, tokenizer, config)
+                    
+                    # Create memory monitor for callbacks
+                    self.gemma_memory_helper = GemmaMinimalMemoryQuantization()
+                    
+                    print("✅ Gemma minimal memory mode activated")
+                    print("   Training will be slower but use minimal memory")
+                except ImportError as e:
+                    print(f"⚠️  Could not import Gemma quantization module: {e}")
+                    print("   Falling back to standard configuration")
             
             # Add padding token if missing
             if tokenizer.pad_token is None:
@@ -470,7 +500,9 @@ class LoRATrainer(ILoRATrainer):
                 dataloader_num_workers=hw_config.dataloader_num_workers,
                 remove_unused_columns=False,
                 dataloader_pin_memory=hw_config.dataloader_pin_memory,
-                gradient_checkpointing=hw_config.gradient_checkpointing,
+                # Only apply gradient_checkpointing if not using Gemma minimal memory mode
+                # (Gemma applies it directly to the model to avoid conflicts)
+                gradient_checkpointing=hw_config.gradient_checkpointing if "gemma" not in model_name_lower else False,
             )
             
             # Data collator
@@ -483,12 +515,22 @@ class LoRATrainer(ILoRATrainer):
             # Create trainer with enhanced progress callback
             # Progress range: 25-90% allocated for training
             progress_callback = ProgressCallback(self.progress_reporter, base_progress=25, training_range=65)
+            
+            # Build callbacks list
+            callbacks = [progress_callback]
+            
+            # Add Gemma quantization callback if needed
+            if "gemma" in model_name_lower and hw_config.device_type == "mps" and hasattr(self, 'gemma_memory_helper'):
+                memory_callback = self.gemma_memory_helper.create_memory_monitor_callback()
+                callbacks.append(memory_callback)
+                print("   • Added Gemma memory monitoring callback")
+            
             trainer = Trainer(
                 model=model,
                 args=training_args,
                 train_dataset=tokenized_dataset,
                 data_collator=data_collator,
-                callbacks=[progress_callback],
+                callbacks=callbacks,
             )
             
             # Train the model - progress will be reported by the callback

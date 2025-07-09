@@ -52,13 +52,9 @@ export class LoRAMergeService {
   constructor() {
     const projectRoot = this.getProjectRoot();
     this.mergeDir = path.join(projectRoot, "adapters", "merged");
-    this.pythonScriptPath = path.join(
-      projectRoot,
-      "scripts",
-      "python",
-      "lora_training",
-      "merge_lora.py"
-    );
+
+    // CRITICAL FIX: Use proper script path detection for production vs development
+    this.pythonScriptPath = this.getMergeScriptPath();
 
     // Import AdapterRegistry for path resolution with fallback
     try {
@@ -113,8 +109,15 @@ export class LoRAMergeService {
           `[FallbackAdapterRegistry] Attempting to find path for: ${adapterName}`
         );
 
-        // Try to find adapter in common locations
-        const projectRoot = process.cwd();
+        // CRITICAL FIX: Use userData directory first (matches Python production behavior)
+        const os = require("os");
+        const userDataDir = path.join(
+          os.homedir(),
+          "Library",
+          "Application Support",
+          "Orch-OS"
+        );
+        const projectRoot = userDataDir; // Prioritize userData directory
 
         // Remove _adapter suffix if present for directory search
         const cleanAdapterName = adapterName.replace(/_adapter$/, "");
@@ -124,67 +127,99 @@ export class LoRAMergeService {
         // Frontend sends: "gemma3_adapter_1751636717504_adapter" (underscores + _adapter suffix)
 
         const possiblePaths = [
-          // 1. Direct name match (frontend format with underscores)
-          path.join(projectRoot, "lora_adapters", "weights", adapterName),
-          path.join(projectRoot, "lora_adapters", "registry", adapterName),
+          // 1. PRIORITY: userData directory paths (matches Python production behavior)
+          path.join(userDataDir, "lora_adapters", "weights", adapterName),
+          path.join(userDataDir, "lora_adapters", "registry", adapterName),
+          path.join(
+            userDataDir,
+            "lora_adapters",
+            "weights",
+            adapterName.replace(/_/g, "-")
+          ),
+          path.join(
+            userDataDir,
+            "lora_adapters",
+            "registry",
+            adapterName.replace(/_/g, "-")
+          ),
+          path.join(
+            userDataDir,
+            "lora_adapters",
+            "weights",
+            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
+          ),
 
-          // 2. CRITICAL: Convert underscore to hyphen pattern (filesystem format)
+          // 2. Fallback: traditional project root paths
+          path.join(process.cwd(), "lora_adapters", "weights", adapterName),
+          path.join(process.cwd(), "lora_adapters", "registry", adapterName),
+
+          // 3. CRITICAL: Convert underscore to hyphen pattern (filesystem format)
           // "gemma3_adapter_1751636717504_adapter" → "gemma3-adapter-1751636717504_adapter"
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "weights",
             adapterName.replace(/_/g, "-")
           ),
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "registry",
             adapterName.replace(/_/g, "-")
           ),
 
-          // 3. Clean name variations (without _adapter suffix)
-          path.join(projectRoot, "lora_adapters", "weights", cleanAdapterName),
-          path.join(projectRoot, "lora_adapters", "registry", cleanAdapterName),
+          // 4. Clean name variations (without _adapter suffix)
+          path.join(
+            process.cwd(),
+            "lora_adapters",
+            "weights",
+            cleanAdapterName
+          ),
+          path.join(
+            process.cwd(),
+            "lora_adapters",
+            "registry",
+            cleanAdapterName
+          ),
 
-          // 4. Clean name with hyphens (most likely match)
+          // 5. Clean name with hyphens (most likely match)
           // "gemma3_adapter_1751636717504" → "gemma3-adapter-1751636717504_adapter"
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "weights",
             `${cleanAdapterName.replace(/_/g, "-")}_adapter`
           ),
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "registry",
             `${cleanAdapterName.replace(/_/g, "-")}_adapter`
           ),
 
-          // 5. Clean name with hyphens (without suffix)
+          // 6. Clean name with hyphens (without suffix)
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "weights",
             cleanAdapterName.replace(/_/g, "-")
           ),
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "registry",
             cleanAdapterName.replace(/_/g, "-")
           ),
 
-          // 6. Add _adapter suffix to clean names
+          // 7. Add _adapter suffix to clean names
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "weights",
             `${cleanAdapterName}_adapter`
           ),
           path.join(
-            projectRoot,
+            process.cwd(),
             "lora_adapters",
             "registry",
             `${cleanAdapterName}_adapter`
@@ -237,27 +272,113 @@ export class LoRAMergeService {
   }
 
   /**
+   * Get the path to the merge script (similar logic to LoRATrainingService)
+   */
+  private getMergeScriptPath(): string {
+    const { app } = require("electron");
+
+    // Try multiple possible locations for the merge script
+    const possiblePaths = [
+      // For packaged applications (Windows/macOS/Linux) - extraResources
+      path.join(
+        process.resourcesPath || path.dirname(process.execPath),
+        "scripts",
+        "python",
+        "lora_training",
+        "merge_lora.py"
+      ),
+      // For development mode
+      path.join(
+        process.cwd(),
+        "scripts",
+        "python",
+        "lora_training",
+        "merge_lora.py"
+      ),
+      // Alternative for packaged apps in app.asar
+      path.join(
+        app.getAppPath(),
+        "scripts",
+        "python",
+        "lora_training",
+        "merge_lora.py"
+      ),
+      // Alternative relative path from build directory
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "scripts",
+        "python",
+        "lora_training",
+        "merge_lora.py"
+      ),
+    ];
+
+    console.log(`[LoRAMergeService] Searching for merge script...`);
+    console.log(
+      `[LoRAMergeService] process.resourcesPath: ${process.resourcesPath}`
+    );
+    console.log(`[LoRAMergeService] process.execPath: ${process.execPath}`);
+    console.log(`[LoRAMergeService] app.getAppPath(): ${app.getAppPath()}`);
+    console.log(`[LoRAMergeService] process.cwd(): ${process.cwd()}`);
+    console.log(`[LoRAMergeService] __dirname: ${__dirname}`);
+
+    for (const scriptPath of possiblePaths) {
+      try {
+        console.log(`[LoRAMergeService] Trying path: ${scriptPath}`);
+        // Synchronous check since we're in a loop
+        require("fs").accessSync(scriptPath);
+        console.log(`[LoRAMergeService] Found merge script at: ${scriptPath}`);
+        return scriptPath;
+      } catch (error) {
+        console.log(`[LoRAMergeService] Path not found: ${scriptPath}`);
+        // Continue to next path
+      }
+    }
+
+    throw new Error(
+      `Merge script not found. Tried paths: ${possiblePaths.join(", ")}`
+    );
+  }
+
+  /**
    * Get the correct project root directory (same logic as AdapterRegistry)
    */
   private getProjectRoot(): string {
     const { app } = require("electron");
     const fs = require("fs");
+    const os = require("os");
+
+    // CRITICAL FIX: Add userData directory path that matches Python's get_project_root()
+    // In production, Python saves adapters to ~/Library/Application Support/Orch-OS/
+    // We need to check this location first to match Python's behavior
+    const userDataDir = path.join(
+      os.homedir(),
+      "Library",
+      "Application Support",
+      "Orch-OS"
+    );
 
     // List of potential project root directories to try
     const potentialRoots = [
-      // 1. Use process.cwd() (should work in development)
+      // 1. PRIORITY: Check userData directory first (matches Python production behavior)
+      userDataDir,
+
+      // 2. Use process.cwd() (should work in development)
       process.cwd(),
 
-      // 2. Go up from current file location (works in some Electron contexts)
+      // 3. Go up from current file location (works in some Electron contexts)
       path.resolve(__dirname, "../../../.."),
 
-      // 3. Use app.getAppPath() if available (Electron app path)
+      // 4. Use app.getAppPath() if available (Electron app path)
       app.getAppPath ? app.getAppPath() : null,
 
-      // 4. Production: use parent of resources directory
+      // 5. Production: use parent of resources directory
       process.resourcesPath ? path.resolve(process.resourcesPath, "..") : null,
 
-      // 5. Manual fallback to known project path (last resort)
+      // 6. Manual fallback to known project path (last resort)
       "/Users/guilhermeferraribrescia/orch-os",
     ].filter(Boolean) as string[];
 
@@ -275,8 +396,25 @@ export class LoRAMergeService {
       }
     }
 
-    // Fallback to process.cwd()
-    return process.cwd();
+    // FALLBACK FIX: Create userData directory structure if it doesn't exist
+    // This ensures consistency with Python behavior
+    try {
+      const loraAdaptersPath = path.join(userDataDir, "lora_adapters");
+      fs.mkdirSync(path.join(loraAdaptersPath, "weights"), { recursive: true });
+      fs.mkdirSync(path.join(loraAdaptersPath, "registry"), {
+        recursive: true,
+      });
+      console.log(
+        `[LoRAMergeService] ✅ Created userData directory structure: ${loraAdaptersPath}`
+      );
+    } catch (error) {
+      console.error(
+        `[LoRAMergeService] Failed to create userData directory: ${error}`
+      );
+    }
+
+    // Fallback to userData directory (matches Python behavior)
+    return userDataDir;
   }
 
   /**
@@ -476,47 +614,73 @@ export class LoRAMergeService {
     configPath: string,
     outputPath: string
   ): Promise<{ success: boolean; error?: string }> {
-    return new Promise((resolve) => {
-      const python = spawn("python3", [
-        this.pythonScriptPath,
-        "--config",
-        configPath,
-        "--output",
-        outputPath,
-      ]);
+    return new Promise(async (resolve) => {
+      try {
+        // CRITICAL FIX: Use compatible Python with dependencies like LoRATrainingService
+        const pythonCommand = await this.findCompatiblePython();
+        console.log(`🐍 [LoRAMergeService] Using Python: ${pythonCommand}`);
 
-      let output = "";
-      let errorOutput = "";
+        // CRITICAL FIX: Use proper argument handling without shell for better path support
+        console.log(`🐍 [LoRAMergeService] Command: ${pythonCommand}`);
+        console.log(`🐍 [LoRAMergeService] Script: ${this.pythonScriptPath}`);
+        console.log(`🐍 [LoRAMergeService] Config: ${configPath}`);
+        console.log(`🐍 [LoRAMergeService] Output: ${outputPath}`);
 
-      python.stdout.on("data", (data) => {
-        const message = data.toString();
-        console.log(message);
-        output += message;
-      });
+        const python = spawn(
+          pythonCommand,
+          [
+            this.pythonScriptPath,
+            "--config",
+            configPath,
+            "--output",
+            outputPath,
+          ],
+          {
+            shell: false, // Don't use shell to avoid argument parsing issues
+            cwd: this.mergeDir,
+          }
+        );
 
-      python.stderr.on("data", (data) => {
-        const error = data.toString();
-        console.error(error);
-        errorOutput += error;
-      });
+        let output = "";
+        let errorOutput = "";
 
-      python.on("close", (code) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
+        python.stdout.on("data", (data) => {
+          const message = data.toString();
+          console.log(message);
+          output += message;
+        });
+
+        python.stderr.on("data", (data) => {
+          const error = data.toString();
+          console.error(error);
+          errorOutput += error;
+        });
+
+        python.on("close", (code) => {
+          if (code === 0) {
+            resolve({ success: true });
+          } else {
+            resolve({
+              success: false,
+              error: `Script exited with code ${code}. Error: ${errorOutput}`,
+            });
+          }
+        });
+
+        python.on("error", (error) => {
           resolve({
             success: false,
-            error: `Script exited with code ${code}. Error: ${errorOutput}`,
+            error: `Failed to execute script: ${error.message}`,
           });
-        }
-      });
-
-      python.on("error", (error) => {
+        });
+      } catch (error) {
         resolve({
           success: false,
-          error: `Failed to execute script: ${error.message}`,
+          error: `Failed to find compatible Python: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         });
-      });
+      }
     });
   }
 
@@ -698,6 +862,178 @@ export class LoRAMergeService {
         `❌ Failed to remove merged adapter ${adapterName}: ${errorMessage}`
       );
       return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Find compatible Python for merge operations (same logic as LoRATrainingService)
+   */
+  private async findCompatiblePython(): Promise<string> {
+    const { promisify } = require("util");
+    const execAsync = promisify(require("child_process").exec);
+
+    const isWindows = process.platform === "win32";
+    const isMacOS = process.platform === "darwin";
+
+    console.log(
+      `[LoRAMergeService] Detecting Python on ${process.platform}...`
+    );
+
+    // First, try to use the local training venv from LoRATrainingService
+    console.log(`[LoRAMergeService] Checking for local training venv...`);
+    const localVenvPython = await this.checkLocalTrainingVenv();
+
+    if (localVenvPython) {
+      console.log(
+        `[LoRAMergeService] ✅ Using local training venv: ${localVenvPython}`
+      );
+      return localVenvPython;
+    }
+
+    // If that fails, fall back to system Python
+    console.log(
+      `[LoRAMergeService] Virtual environment not found, falling back to system Python...`
+    );
+
+    // Define platform-specific Python candidates
+    let pythonCandidates: string[] = [];
+
+    if (isWindows) {
+      pythonCandidates = [
+        "py -3.11",
+        "py -3.10",
+        "py -3.9",
+        "py -3.12",
+        "python",
+        "python3",
+        "py",
+      ];
+    } else {
+      // macOS/Linux: prioritize the Homebrew Python that has torch installed
+      pythonCandidates = [
+        "/opt/homebrew/bin/python3", // Homebrew Python (Apple Silicon) - has torch installed
+        "/usr/local/bin/python3", // Homebrew Python (Intel) - has torch installed
+        "python3", // System Python (fallback)
+        "python3.13", // Specific version
+        "python3.12",
+        "python3.11",
+        "python3.10",
+        "python3.9",
+        "python",
+      ];
+    }
+
+    console.log(
+      `[LoRAMergeService] Trying ${pythonCandidates.length} Python candidates...`
+    );
+
+    for (const pythonCmd of pythonCandidates) {
+      try {
+        console.log(`[LoRAMergeService] Testing Python: ${pythonCmd}`);
+
+        // Check if this Python version exists and get its version
+        const { stdout } = await execAsync(`${pythonCmd} --version`);
+
+        // Parse version (e.g., "Python 3.12.10")
+        const versionStr = stdout.trim().split(" ")[1];
+        const [major, minor] = versionStr.split(".").map(Number);
+
+        console.log(
+          `[LoRAMergeService] Found Python version: ${major}.${minor} (${versionStr})`
+        );
+
+        // Check if it's in the compatible range
+        if (major === 3 && minor >= 9 && minor <= 13) {
+          // CRITICAL FIX: Verify that torch is actually available in this Python
+          try {
+            const { stdout: torchCheck } = await execAsync(
+              `${pythonCmd} -c "import torch; print(f'torch-{torch.__version__}')"`
+            );
+
+            const torchVersion = torchCheck.trim();
+            console.log(
+              `[LoRAMergeService] ✅ Selected Python: ${pythonCmd} (version ${versionStr}) with ${torchVersion}`
+            );
+
+            return pythonCmd;
+          } catch (torchError) {
+            console.log(
+              `[LoRAMergeService] ❌ ${pythonCmd} (${versionStr}) missing torch: ${torchError}`
+            );
+            continue; // Try next Python candidate
+          }
+        } else {
+          console.log(
+            `[LoRAMergeService] ⚠️ ${pythonCmd} version ${versionStr} not compatible (needs 3.9-3.13)`
+          );
+        }
+      } catch (error) {
+        console.log(
+          `[LoRAMergeService] ❌ ${pythonCmd} failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+        continue;
+      }
+    }
+
+    throw new Error(
+      `No compatible Python with torch found for LoRA merge operations. ` +
+        `Please install torch in your Python environment: ` +
+        `"python3 -m pip install torch --break-system-packages" or set up the LoRA training environment.`
+    );
+  }
+
+  /**
+   * Check if local training venv exists (shared with LoRATrainingService)
+   */
+  private async checkLocalTrainingVenv(): Promise<string | null> {
+    try {
+      const { promisify } = require("util");
+      const execAsync = promisify(require("child_process").exec);
+      const fs = require("fs").promises;
+
+      // Get the path to the local training venv - same location as LoRATrainingService uses
+      const projectRoot = this.getProjectRoot();
+      const venvDir = path.join(projectRoot, "training_venv");
+
+      const venvPaths = [
+        // Unix-like systems (macOS, Linux)
+        path.join(venvDir, "bin", "python"),
+        // Windows
+        path.join(venvDir, "Scripts", "python.exe"),
+      ];
+
+      for (const venvPath of venvPaths) {
+        try {
+          console.log(`[LoRAMergeService] Checking venv path: ${venvPath}`);
+
+          // Check if the Python executable exists
+          await fs.access(venvPath);
+
+          // Check if torch is installed in this venv (required for merge operations)
+          const torchCheck = await execAsync(
+            `${venvPath} -c "import torch; print(f'torch:{torch.__version__}')"`
+          );
+
+          if (torchCheck.stdout.trim()) {
+            console.log(
+              `[LoRAMergeService] ✅ Found venv with torch: ${torchCheck.stdout.trim()}`
+            );
+            return venvPath;
+          }
+        } catch (error) {
+          console.log(
+            `[LoRAMergeService] ❌ Venv path failed: ${venvPath} - ${error}`
+          );
+          continue;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.log(`[LoRAMergeService] Failed to check local venv: ${error}`);
+      return null;
     }
   }
 }

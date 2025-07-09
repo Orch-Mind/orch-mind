@@ -934,6 +934,147 @@ export class ElectronAPIFactory {
    */
   private createP2PManager() {
     return {
+      p2p: {
+        initialize: async () => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:initialize"),
+            {
+              component: "P2PManager",
+              operation: "initialize",
+              severity: "medium",
+            }
+          );
+        },
+
+        createRoom: async () => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:createRoom"),
+            {
+              component: "P2PManager",
+              operation: "createRoom",
+              severity: "medium",
+            }
+          );
+        },
+
+        joinRoom: async (topic: string) => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:joinRoom", topic),
+            {
+              component: "P2PManager",
+              operation: "joinRoom",
+              severity: "medium",
+            }
+          );
+        },
+
+        leaveRoom: async () => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:leaveRoom"),
+            {
+              component: "P2PManager",
+              operation: "leaveRoom",
+              severity: "low",
+            }
+          );
+        },
+
+        shareAdapter: async (modelName: string) => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:shareAdapter", modelName),
+            {
+              component: "P2PManager",
+              operation: "shareAdapter",
+              severity: "medium",
+            }
+          );
+        },
+
+        unshareAdapter: async (topic: string) => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:unshareAdapter", topic),
+            {
+              component: "P2PManager",
+              operation: "unshareAdapter",
+              severity: "low",
+            }
+          );
+        },
+
+        // CRITICAL FIX: Add checkAdapterExists method
+        checkAdapterExists: async (adapterName: string) => {
+          return this.errorHandler.wrapAsync(
+            async () => {
+              const result = await ipcRenderer.invoke(
+                "p2p:checkAdapterExists",
+                adapterName
+              );
+              // Transform result to consistent format
+              return {
+                exists: result.success,
+                path: result.path || null,
+                success: result.success,
+                error: result.error || null,
+              };
+            },
+            {
+              component: "P2PManager",
+              operation: "checkAdapterExists",
+              severity: "low",
+            }
+          );
+        },
+
+        broadcastAdapters: async (adapters: any[]) => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:broadcastAdapters", adapters),
+            {
+              component: "P2PManager",
+              operation: "broadcastAdapters",
+              severity: "low",
+            }
+          );
+        },
+
+        requestAdapter: async (data: { topic: string; fromPeer?: string }) => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:requestAdapter", data),
+            {
+              component: "P2PManager",
+              operation: "requestAdapter",
+              severity: "medium",
+            }
+          );
+        },
+
+        destroy: async () => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:destroy"),
+            {
+              component: "P2PManager",
+              operation: "destroy",
+              severity: "low",
+            }
+          );
+        },
+
+        sendFile: async (data: {
+          peerId: string;
+          filePath: string;
+          metadata: any;
+        }) => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:sendFile", data),
+            {
+              component: "P2PManager",
+              operation: "sendFile",
+              severity: "medium",
+            }
+          );
+        },
+      },
+
+      // Legacy methods for backward compatibility
       p2pInitialize: async () => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("p2p:initialize"),
