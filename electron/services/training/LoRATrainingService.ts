@@ -1176,6 +1176,14 @@ For Linux:
               name: "psutil",
               command: `"${venvPath}" -c "import psutil; print(f'psutil:{psutil.__version__}')"`,
             },
+            {
+              name: "pillow",
+              command: `"${venvPath}" -c "import PIL; print(f'pillow:{PIL.__version__}')"`,
+            },
+            {
+              name: "timm",
+              command: `"${venvPath}" -c "import timm; print(f'timm:{timm.__version__}')"`,
+            },
           ];
 
           let allEssentialPackagesFound = true;
@@ -1307,7 +1315,13 @@ For Linux:
       console.log(`[LoRA] Process cwd: ${process.cwd()}`);
 
       // ROBUST INSTALLATION STRATEGY: Install essential packages first
-      const essentialPackages = ["psutil", "torch", "transformers"];
+      const essentialPackages = [
+        "psutil",
+        "torch",
+        "transformers",
+        "pillow",
+        "timm",
+      ];
 
       console.log(`[LoRA] Installing essential packages first...`);
 
@@ -1347,7 +1361,7 @@ For Linux:
           );
           try {
             await execAsync(
-              `"${pipPath}" install psutil torch transformers numpy huggingface-hub`
+              `"${pipPath}" install psutil torch transformers numpy huggingface-hub pillow timm`
             );
             console.log(
               `[LoRA] ✅ Successfully installed essential packages without version constraints`
@@ -1364,7 +1378,7 @@ For Linux:
         );
         try {
           await execAsync(
-            `"${pipPath}" install psutil torch transformers numpy huggingface-hub`
+            `"${pipPath}" install psutil torch transformers numpy huggingface-hub pillow timm`
           );
           console.log(`[LoRA] ✅ Successfully installed essential packages`);
         } catch (error) {

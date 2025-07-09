@@ -8,11 +8,13 @@ Jinja2
 MarkupSafe
 numpy
 packaging
+pillow>=10.0.0
 psutil
 PyYAML
 regex
 requests
 safetensors
+timm>=0.9.0
 tokenizers
 torch
 tqdm
