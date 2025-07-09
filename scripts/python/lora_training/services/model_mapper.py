@@ -13,7 +13,7 @@ class ModelMapper(IModelMapper):
     def __init__(self):
         self.model_mapping = {
             # Latest Unsloth optimized models - following official docs recommendations
-            "gemma3n:latest": "mlx-community/gemma-3n-E4B-it-lm-4bit",
+            "gemma3n:latest": "unsloth/gemma-3n-E4B-it",
             "gemma3:latest": "unsloth/gemma-3-4b-it",
         }
         
@@ -23,7 +23,7 @@ class ModelMapper(IModelMapper):
                 "type": "instruction-tuned",
                 "description": "Gemma 3 4B instruction-tuned model optimized by Unsloth"
             },
-            "mlx-community/gemma-3n-E4B-it-lm-4bit": {
+            "unsloth/gemma-3n-E4B-it": {
                 "size": "4B", 
                 "type": "instruction-tuned",
                 "description": "Gemma 3N 4B multilingual model"
@@ -45,12 +45,12 @@ class ModelMapper(IModelMapper):
         base_name = ollama_model.split(':')[0].lower()
         
         if "gemma3n" in base_name:
-            return "mlx-community/gemma-3n-E4B-it-lm-4bit"
+            return "unsloth/gemma-3n-E4B-it"
         elif "gemma3" in base_name:
             return "unsloth/gemma-3-4b-it"
         else:
             print(f"⚠️ Unknown model {ollama_model}, using gemma3n as fallback")
-            return "mlx-community/gemma-3n-E4B-it-lm-4bit"
+            return "unsloth/gemma-3n-E4B-it"
     
     def is_unsloth_model(self, ollama_model: str) -> bool:
         """Check if a model is from Unsloth (requires deployment before adapter training)."""
