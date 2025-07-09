@@ -13,7 +13,7 @@ class ModelMapper(IModelMapper):
     def __init__(self):
         self.model_mapping = {
             # Latest Unsloth optimized models - following official docs recommendations
-            "gemma3n:latest": "muranAI/gemma-3n-E4B-it-GGUF",
+            "gemma3n:latest": "mlx-community/gemma-3n-E4B-it-lm-4bit",
             "gemma3:latest": "unsloth/gemma-3-4b-it",
         }
         
@@ -23,26 +23,11 @@ class ModelMapper(IModelMapper):
                 "type": "instruction-tuned",
                 "description": "Gemma 3 4B instruction-tuned model optimized by Unsloth"
             },
-            "unsloth/Qwen3-8B": {
-                "size": "8B", 
-                "type": "multilingual",
-                "description": "Qwen 3 8B multilingual model in GGUF format"
-            },
-            "unsloth/mistral-7b-v0.3": {
-                "size": "7B",
-                "type": "general",
-                "description": "Mistral 7B v0.3 optimized by Unsloth"
-            },
-            "unsloth/Mistral-Nemo-Instruct-2407": {
-                "size": "12B",
+            "mlx-community/gemma-3n-E4B-it-lm-4bit": {
+                "size": "4B", 
                 "type": "instruction-tuned",
-                "description": "Mistral Nemo 12B instruction-tuned model"
+                "description": "Gemma 3N 4B multilingual model"
             },
-            "unsloth/Llama-3.1-8B-Instruct": {
-                "size": "8B",
-                "type": "instruction-tuned", 
-                "description": "Llama 3.1 8B instruction-tuned in GGUF format"
-            }
         }
     
     def get_huggingface_model_name(self, ollama_model: str) -> str:
@@ -60,12 +45,12 @@ class ModelMapper(IModelMapper):
         base_name = ollama_model.split(':')[0].lower()
         
         if "gemma3n" in base_name:
-            return "muranAI/gemma-3n-E4B-it-GGUF"
+            return "mlx-community/gemma-3n-E4B-it-lm-4bit"
         elif "gemma3" in base_name:
             return "unsloth/gemma-3-4b-it"
         else:
             print(f"⚠️ Unknown model {ollama_model}, using gemma3n as fallback")
-            return "muranAI/gemma-3n-E4B-it-GGUF"
+            return "mlx-community/gemma-3n-E4B-it-lm-4bit"
     
     def is_unsloth_model(self, ollama_model: str) -> bool:
         """Check if a model is from Unsloth (requires deployment before adapter training)."""

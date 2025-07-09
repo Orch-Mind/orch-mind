@@ -118,19 +118,32 @@ def test_ollama_availability():
     print("🦙 Testing Ollama availability...")
     
     try:
-        result = subprocess.run(['ollama', '--version'], 
-                              capture_output=True, text=True, timeout=10)
-        if result.returncode == 0:
-            print(f"  ✅ Ollama version: {result.stdout.strip()}")
+        # Use OllamaService for robust path detection
+        from services.ollama_service import OllamaService
+        ollama_service = OllamaService()
+        
+        if ollama_service.is_available():
+            print("  ✅ Ollama is available and running")
+            
+            # Try to list models
+            models = ollama_service.list_models()
+            if models:
+                print(f"  ✅ Found {len(models)} models:")
+                for model in models[:5]:  # Show first 5 models
+                    print(f"     • {model}")
+                if len(models) > 5:
+                    print(f"     ... and {len(models) - 5} more")
+            else:
+                print("  ⚠️ No models found - you may need to pull a model first")
+            
             return True
         else:
-            print(f"  ❌ Ollama command failed: {result.stderr}")
+            print("  ❌ Ollama is not available or not running")
+            print("  💡 Make sure Ollama is installed and running")
             return False
-    except subprocess.TimeoutExpired:
-        print("  ❌ Ollama command timed out")
-        return False
-    except FileNotFoundError:
-        print("  ❌ Ollama command not found")
+            
+    except Exception as e:
+        print(f"  ❌ Error testing Ollama: {e}")
         return False
 
 def test_python_version():

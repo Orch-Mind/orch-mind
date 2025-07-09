@@ -2,23 +2,28 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 """
 LoRA to GGUF Converter for Orch-OS
-Uses the same approach as the main training pipeline - works on macOS
+This script handles the deployment of LoRA adapters following the main pipeline approach.
 """
 
-import argparse
-import json
 import os
 import sys
+import json
 import tempfile
+import argparse
 import subprocess
-from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
-# Add the services directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'interfaces'))
+# Add the project root to the Python path for imports
+current_file = os.path.abspath(__file__)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+sys.path.insert(0, project_root)
 
-from utils import get_project_root
+# Import utilities and services
+from scripts.python.lora_training.utils import get_project_root
+from scripts.python.lora_training.services.ollama_service import OllamaService
+
+# Initialize Ollama service for robust path detection
+ollama_service = OllamaService()
 
 
 def convert_lora_to_gguf(adapter_path: str, output_path: str) -> bool:
@@ -150,19 +155,13 @@ PARAMETER repeat_penalty 1.1
             print(f"   • FROM: {base_model}")
             print(f"   • ADAPTER: {real_adapter_path}")
             
-            # Create Ollama model using the Modelfile
+            # Create Ollama model using the OllamaService
             print(f"🔨 Creating Ollama model: {output_model_name}")
-            print(f"🐚 Running Ollama create command:")
-            print(f"   Command: ollama create {output_model_name} -f {modelfile_path}")
             
-            result = subprocess.run(
-                ["ollama", "create", output_model_name, "-f", modelfile_path],
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minutes timeout
-            )
+            # Use OllamaService instead of direct subprocess
+            success = ollama_service.create_model(output_model_name, modelfile_path)
             
-            if result.returncode == 0:
+            if success:
                 print(f"✅ Ollama model created successfully: {output_model_name}")
                 print(f"   • You can now use: ollama run {output_model_name}")
                 
@@ -179,30 +178,13 @@ PARAMETER repeat_penalty 1.1
                     }
                 }
             else:
-                error_msg = result.stderr.strip() if result.stderr else "Unknown error"
-                print(f"❌ Failed to create Ollama model:")
-                print(f"   • Return code: {result.returncode}")
-                print(f"   • stdout: {result.stdout}")
-                print(f"   • stderr: {result.stderr}")
+                print(f"❌ Failed to create Ollama model")
+                print(f"💡 This error might indicate adapter incompatibility with Ollama")
+                print(f"   • This can happen with some model architectures")
+                print(f"   • Creating fallback base model instead...")
                 
-                # Check for specific errors
-                if "unsupported architecture" in result.stderr:
-                    print(f"💡 This error indicates adapter incompatibility with Ollama")
-                    print(f"   • This can happen with some model architectures")
-                    print(f"   • Creating fallback base model instead...")
-                    
-                    # Create fallback model
-                    return create_fallback_model(base_model, output_model_name, adapter_id, adapter_config)
-                
-                return {
-                    "success": False,
-                    "error": f"Ollama model creation failed: {error_msg}",
-                    "details": {
-                        "returncode": result.returncode,
-                        "stdout": result.stdout,
-                        "stderr": result.stderr
-                    }
-                }
+                # Create fallback model
+                return create_fallback_model(base_model, output_model_name, adapter_id, adapter_config)
                 
     except subprocess.TimeoutExpired:
         return {
@@ -260,44 +242,40 @@ PARAMETER repeat_penalty 1.1
             
             print(f"✅ Fallback Modelfile created: {modelfile_path}")
             
-            # Create Ollama model using the Modelfile
+            # Create Ollama model using the OllamaService
             print(f"🔨 Creating fallback Ollama model: {output_model_name}")
             
-            result = subprocess.run(
-                ["ollama", "create", output_model_name, "-f", modelfile_path],
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minutes timeout
-            )
+            # Use OllamaService instead of direct subprocess
+            success = ollama_service.create_model(output_model_name, modelfile_path)
             
-            if result.returncode == 0:
+            if success:
                 print(f"✅ Fallback model created successfully: {output_model_name}")
-                print(f"💡 You can use this model while we work on adapter compatibility")
+                print(f"   • You can now use: ollama run {output_model_name}")
+                print(f"⚠️  Note: This model doesn't include the LoRA adapter due to compatibility issues")
                 
                 return {
                     "success": True,
                     "modelName": output_model_name,
                     "deploymentDetails": {
-                        "deploymentType": "fallback_base",
+                        "adapterPath": adapter_id,
+                        "deploymentType": "fallback_base_model",
                         "baseModel": base_model,
-                        "strategy": "fallback_due_to_incompatibility",
-                        "method": "Base model fallback",
-                        "message": "Base model deployed as fallback due to adapter incompatibility",
-                        "originalAdapterId": adapter_id,
-                        "limitation": "Adapter not compatible with ADAPTER directive"
+                        "strategy": "fallback_without_adapter",
+                        "method": "Base model only (adapter incompatible)",
+                        "message": "Created base model without adapter due to compatibility issues"
                     }
                 }
             else:
-                error_msg = result.stderr.strip() if result.stderr else "Unknown error"
-                print(f"❌ Failed to create fallback model:")
-                print(f"   • Return code: {result.returncode}")
-                print(f"   • Error: {error_msg}")
-                
                 return {
                     "success": False,
-                    "error": f"Fallback model creation failed: {error_msg}"
+                    "error": "Failed to create even the fallback model"
                 }
                 
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "error": "Fallback model creation timed out (5 minutes)"
+        }
     except Exception as e:
         return {
             "success": False,
