@@ -97,7 +97,8 @@ export class LoRATrainingService {
       console.log(`🐍 [LoRA Deploy] Using Python: ${pythonCommand}`);
 
       // Execute deployment script with progress tracking
-      const deployCommand = `${pythonCommand} ${JSON.stringify(
+      // Properly quote the python command in case it contains spaces
+      const deployCommand = `${JSON.stringify(pythonCommand)} ${JSON.stringify(
         deployScriptPath
       )} --adapter-id ${JSON.stringify(
         adapterId
@@ -106,6 +107,8 @@ export class LoRATrainingService {
       )} --output-model ${JSON.stringify(outputModelName)}`;
 
       console.log(`🚀 [LoRA Deploy] Executing deployment command:`);
+      console.log(`   Python: "${pythonCommand}"`);
+      console.log(`   Script: "${deployScriptPath}"`);
       console.log(`   Command: ${deployCommand}`);
 
       // Environment variables for proper encoding
@@ -301,7 +304,8 @@ export class LoRATrainingService {
       const pythonCommand = await this.findCompatiblePython();
 
       // Use Ollama LoRA training with automatic content-based step calculation
-      let fullCommand = `${pythonCommand} ${JSON.stringify(
+      // Properly quote the python command in case it contains spaces
+      let fullCommand = `${JSON.stringify(pythonCommand)} ${JSON.stringify(
         scriptPath
       )} --data ${JSON.stringify(dataPath)} --base-model ${JSON.stringify(
         params.baseModel
@@ -315,6 +319,7 @@ export class LoRATrainingService {
       }
 
       console.log(`[LoRA] ===== DEBUGGING COMMAND CONSTRUCTION =====`);
+      console.log(`[LoRA] pythonCommand: "${pythonCommand}"`);
       console.log(`[LoRA] params.outputName: "${params.outputName}"`);
       console.log(`[LoRA] params.baseModel: "${params.baseModel}"`);
       console.log(`[LoRA] dataPath: "${dataPath}"`);
@@ -948,11 +953,30 @@ EXIT CODE: ${execError.code || "N/A"}`;
 
     // First, try to use the local training venv if it exists
     console.log(`[LoRA] Checking for local training venv...`);
-    const localVenvPython = await this.checkLocalTrainingVenv();
+    let localVenvPython = await this.checkLocalTrainingVenv();
+
     if (localVenvPython) {
       console.log(`[LoRA] ✅ Using local training venv: ${localVenvPython}`);
       return localVenvPython;
     }
+
+    // If that fails, try to force recreate the venv (in case it was corrupted)
+    console.log(
+      `[LoRA] Local venv not functional, attempting to force recreate...`
+    );
+    localVenvPython = await this.forceRecreateLocalTrainingVenv();
+
+    if (localVenvPython) {
+      console.log(
+        `[LoRA] ✅ Using recreated local training venv: ${localVenvPython}`
+      );
+      return localVenvPython;
+    }
+
+    // If all else fails, fall back to system Python
+    console.log(
+      `[LoRA] Virtual environment creation failed, falling back to system Python...`
+    );
 
     // Define platform-specific Python candidates
     let pythonCandidates: string[] = [];
@@ -1051,6 +1075,12 @@ EXIT CODE: ${execError.code || "N/A"}`;
           console.log(
             `[LoRA] ✅ Selected Python: ${pythonCmd} (version ${versionStr}) on ${process.platform}`
           );
+
+          // IMPORTANT: If using system Python, warn about dependency issues
+          console.log(
+            `[LoRA] ⚠️ Using system Python - dependencies may not be isolated. Consider installing packages globally if training fails.`
+          );
+
           return pythonCmd;
         } else {
           console.log(
@@ -1140,15 +1170,44 @@ For Linux:
           await fs.access(venvPath);
 
           // Check if required packages are installed in this venv
-          const { stdout } = await execAsync(
-            `"${venvPath}" -c "import psutil, torch; print(f'psutil:{psutil.__version__}, torch:{torch.__version__}')"`
-          );
+          // Start with essential packages only, don't require torch for now
+          const essentialChecks = [
+            {
+              name: "psutil",
+              command: `"${venvPath}" -c "import psutil; print(f'psutil:{psutil.__version__}')"`,
+            },
+          ];
 
-          if (stdout.trim()) {
+          let allEssentialPackagesFound = true;
+
+          for (const check of essentialChecks) {
+            try {
+              const { stdout } = await execAsync(check.command);
+              if (stdout.trim()) {
+                console.log(`[LoRA] ✅ Found ${check.name}: ${stdout.trim()}`);
+              } else {
+                console.log(
+                  `[LoRA] ❌ ${check.name} check returned empty result`
+                );
+                allEssentialPackagesFound = false;
+                break;
+              }
+            } catch (error) {
+              console.log(`[LoRA] ❌ ${check.name} check failed: ${error}`);
+              allEssentialPackagesFound = false;
+              break;
+            }
+          }
+
+          if (allEssentialPackagesFound) {
             console.log(
-              `[LoRA] ✅ Found local venv with dependencies ${stdout.trim()}: ${venvPath}`
+              `[LoRA] ✅ Found local venv with essential dependencies: ${venvPath}`
             );
             return venvPath;
+          } else {
+            console.log(
+              `[LoRA] ❌ Venv exists but missing essential packages: ${venvPath}`
+            );
           }
         } catch (error) {
           console.log(`[LoRA] ❌ Venv path failed: ${venvPath} - ${error}`);
@@ -1156,11 +1215,35 @@ For Linux:
         }
       }
 
-      // If no venv found, try to create/setup one
-      console.log(`[LoRA] No local venv found, attempting to create one...`);
+      // If no venv found or packages are missing, try to create/setup one
+      console.log(
+        `[LoRA] No functional local venv found, attempting to create/recreate one...`
+      );
       return await this.setupLocalTrainingVenv();
     } catch (error) {
       console.log(`[LoRA] Failed to check local venv: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Force recreate the local training venv (useful when dependencies are corrupted)
+   */
+  private async forceRecreateLocalTrainingVenv(): Promise<string | null> {
+    try {
+      const venvDir = path.join(this.trainingDir, "training_venv");
+
+      // Remove existing venv if it exists
+      if (fsSync.existsSync(venvDir)) {
+        console.log(`[LoRA] Removing existing venv directory: ${venvDir}`);
+        await fs.rm(venvDir, { recursive: true, force: true });
+      }
+
+      // Create new venv
+      console.log(`[LoRA] Force recreating virtual environment...`);
+      return await this.setupLocalTrainingVenv();
+    } catch (error) {
+      console.log(`[LoRA] Failed to force recreate local venv: ${error}`);
       return null;
     }
   }
@@ -1215,7 +1298,7 @@ For Linux:
             "requirements.txt"
           );
 
-      // Install from requirements.txt if it exists, otherwise just install psutil
+      // Enhanced debug logging
       console.log(`[LoRA] Checking requirements.txt at: ${requirementsPath}`);
       console.log(`[LoRA] VirtualEnv directory: ${venvDir}`);
       console.log(`[LoRA] Pip path: ${pipPath}`);
@@ -1223,27 +1306,110 @@ For Linux:
       console.log(`[LoRA] Process resourcesPath: ${process.resourcesPath}`);
       console.log(`[LoRA] Process cwd: ${process.cwd()}`);
 
-      if (fsSync.existsSync(requirementsPath)) {
-        console.log(
-          `[LoRA] ✅ Found requirements.txt, installing all dependencies...`
-        );
-        await execAsync(`"${pipPath}" install -r "${requirementsPath}"`);
-      } else {
-        console.log(
-          `[LoRA] ❌ Requirements.txt not found, installing only psutil...`
-        );
-        await execAsync(`"${pipPath}" install psutil`);
+      // ROBUST INSTALLATION STRATEGY: Install essential packages first
+      const essentialPackages = ["psutil", "torch", "transformers"];
+
+      console.log(`[LoRA] Installing essential packages first...`);
+
+      // Install essential packages one by one to ensure they work
+      for (const pkg of essentialPackages) {
+        try {
+          console.log(`[LoRA] Installing ${pkg}...`);
+          await execAsync(`"${pipPath}" install ${pkg}`);
+          console.log(`[LoRA] ✅ Successfully installed ${pkg}`);
+        } catch (error) {
+          console.log(
+            `[LoRA] ⚠️ Failed to install ${pkg}, will try with full requirements.txt`
+          );
+        }
       }
 
-      // Verify installation
-      const { stdout } = await execAsync(
-        `"${venvPython}" -c "import psutil, torch; print(f'psutil:{psutil.__version__}, torch:{torch.__version__}')"`
-      );
-      if (stdout.trim()) {
+      // Try to install from requirements.txt with fallback
+      if (fsSync.existsSync(requirementsPath)) {
         console.log(
-          `[LoRA] ✅ Successfully created venv with dependencies ${stdout.trim()}`
+          `[LoRA] ✅ Found requirements.txt, attempting to install all dependencies...`
         );
-        return venvPython;
+        try {
+          // Try to install all dependencies from requirements.txt
+          await execAsync(`"${pipPath}" install -r "${requirementsPath}"`);
+          console.log(
+            `[LoRA] ✅ Successfully installed all dependencies from requirements.txt`
+          );
+        } catch (error) {
+          console.log(
+            `[LoRA] ⚠️ Failed to install from requirements.txt, using essential packages only`
+          );
+          console.log(`[LoRA] Error: ${error}`);
+
+          // Try to install essential packages without version constraints
+          console.log(
+            `[LoRA] Installing essential packages without version constraints...`
+          );
+          try {
+            await execAsync(
+              `"${pipPath}" install psutil torch transformers numpy huggingface-hub`
+            );
+            console.log(
+              `[LoRA] ✅ Successfully installed essential packages without version constraints`
+            );
+          } catch (fallbackError) {
+            console.log(
+              `[LoRA] ❌ Failed to install essential packages: ${fallbackError}`
+            );
+          }
+        }
+      } else {
+        console.log(
+          `[LoRA] ❌ Requirements.txt not found, installing essential packages only...`
+        );
+        try {
+          await execAsync(
+            `"${pipPath}" install psutil torch transformers numpy huggingface-hub`
+          );
+          console.log(`[LoRA] ✅ Successfully installed essential packages`);
+        } catch (error) {
+          console.log(
+            `[LoRA] ❌ Failed to install essential packages: ${error}`
+          );
+        }
+      }
+
+      // Verify installation with more detailed checking
+      console.log(`[LoRA] Verifying installation...`);
+
+      try {
+        // Check psutil specifically since it's required by memory_monitor
+        const psutilCheck = await execAsync(
+          `"${venvPython}" -c "import psutil; print('psutil version:', psutil.__version__)"`
+        );
+        console.log(`[LoRA] ✅ psutil check: ${psutilCheck.stdout.trim()}`);
+      } catch (error) {
+        console.log(`[LoRA] ❌ psutil check failed: ${error}`);
+
+        // Try one more time to install psutil specifically
+        try {
+          console.log(`[LoRA] Attempting to install psutil specifically...`);
+          await execAsync(`"${pipPath}" install psutil`);
+          console.log(`[LoRA] ✅ psutil installed successfully`);
+        } catch (psutilError) {
+          console.log(`[LoRA] ❌ Failed to install psutil: ${psutilError}`);
+          return null;
+        }
+      }
+
+      // Final verification
+      try {
+        const { stdout } = await execAsync(
+          `"${venvPython}" -c "import psutil; print(f'psutil:{psutil.__version__}')"`
+        );
+        if (stdout.trim()) {
+          console.log(
+            `[LoRA] ✅ Successfully created venv with dependencies ${stdout.trim()}`
+          );
+          return venvPython;
+        }
+      } catch (error) {
+        console.log(`[LoRA] ❌ Final verification failed: ${error}`);
       }
 
       return null;
@@ -1486,26 +1652,24 @@ For Linux:
     return new Promise((resolve, reject) => {
       console.log(`[LoRA] Executing with progress: ${fullCommand}`);
 
-      // Parse the full command to extract command and arguments
-      let command: string;
-      let commandArgs: string[];
+      // Enhanced logging for debugging
+      console.log(`[LoRA] Working directory: ${options.cwd}`);
+      console.log(`[LoRA] Platform: ${process.platform}`);
 
-      if (process.platform === "win32" && fullCommand.startsWith("chcp")) {
-        // Handle Windows chcp command
-        command = "cmd";
-        commandArgs = ["/c", fullCommand];
-      } else {
-        // Parse command and arguments properly handling quoted strings
-        const parts = this.parseCommandLine(fullCommand);
-        command = parts[0];
-        commandArgs = parts.slice(1);
+      // For Windows, prepend command to set console code page to UTF-8
+      let finalCommand = fullCommand;
+      if (process.platform === "win32") {
+        finalCommand = `chcp 65001 >nul && ${fullCommand}`;
       }
 
-      const child = spawn(command, commandArgs, {
+      console.log(`[LoRA] Final command: ${finalCommand}`);
+
+      // Use shell execution to properly handle quoted paths with spaces
+      const child = spawn(finalCommand, [], {
+        shell: true, // This is key - let the shell handle parsing
         cwd: options.cwd,
         env: options.env,
         stdio: ["pipe", "pipe", "pipe"],
-        shell: process.platform === "win32",
       });
 
       let stdout = "";
@@ -1573,7 +1737,14 @@ For Linux:
 
       child.on("error", (error) => {
         console.error(`[LoRA] Process error:`, error);
-        reject(error);
+        console.error(`[LoRA] Error details:`, {
+          code: (error as any).code,
+          errno: (error as any).errno,
+          syscall: (error as any).syscall,
+          path: (error as any).path,
+          spawnargs: (error as any).spawnargs,
+        });
+        reject(new Error(`Failed to spawn training process: ${error.message}`));
       });
 
       // Set timeout

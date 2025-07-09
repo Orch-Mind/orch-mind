@@ -70,32 +70,75 @@ def sanitize_model_name(name: str) -> str:
 def get_project_root() -> str:
     """
     Get the project root directory - unified logic for all scripts.
+    For production builds, uses writable userData directory.
     
     Returns:
-        Path to the project root directory
+        Path to the project root directory (writable location)
     """
     try:
-        # This script is in scripts/python/lora_training/
-        # Project root is 4 levels up: ../../../../
+        # Check if we're running from a packaged application (read-only Resources directory)
         current_file = os.path.abspath(__file__)
-        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
-    except Exception:
-        # Fallback: try to find based on current working directory
-        cwd = os.getcwd()
-        # Look for characteristic files/directories that indicate project root
-        indicators = ['package.json', 'electron', 'src', '.git']
         
-        current_dir = cwd
-        for _ in range(5):  # Don't go too far up
-            if any(os.path.exists(os.path.join(current_dir, indicator)) for indicator in indicators):
+        # If we're in /Applications/.../Contents/Resources/, use writable userData directory
+        if '/Applications/' in current_file and '/Contents/Resources/' in current_file:
+            print("🏗️  Detected packaged application - using writable userData directory")
+            
+            # Use macOS userData directory for writable access
+            user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+            os.makedirs(user_data_dir, exist_ok=True)
+            print(f"✅ Using writable project root: {user_data_dir}")
+            return user_data_dir
+        
+        # For development mode: project root is 4 levels up from this script
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+        
+        # Verify this is writable (development mode check)
+        test_file = os.path.join(project_root, '.writable_test')
+        try:
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            print(f"✅ Using development project root: {project_root}")
+            return project_root
+        except (PermissionError, OSError):
+            print("⚠️  Development directory not writable, falling back to userData")
+            # Fall back to userData directory
+            user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+            os.makedirs(user_data_dir, exist_ok=True)
+            return user_data_dir
+            
+    except Exception as e:
+        print(f"⚠️  Error detecting project root ({e}), using userData fallback")
+        
+    # Fallback: try to find based on current working directory
+    cwd = os.getcwd()
+    # Look for characteristic files/directories that indicate project root
+    indicators = ['package.json', 'electron', 'src', '.git']
+    
+    current_dir = cwd
+    for _ in range(5):  # Don't go too far up
+        if any(os.path.exists(os.path.join(current_dir, indicator)) for indicator in indicators):
+            # Test if it's writable
+            try:
+                test_file = os.path.join(current_dir, '.writable_test')
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+                print(f"✅ Found writable project root: {current_dir}")
                 return current_dir
-            parent = os.path.dirname(current_dir)
-            if parent == current_dir:  # Reached filesystem root
+            except (PermissionError, OSError):
+                print(f"⚠️  Found project root but not writable: {current_dir}")
                 break
-            current_dir = parent
-        
-        # Final fallback
-        return cwd
+        parent = os.path.dirname(current_dir)
+        if parent == current_dir:  # Reached filesystem root
+            break
+        current_dir = parent
+    
+    # Final fallback: use userData directory
+    user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+    os.makedirs(user_data_dir, exist_ok=True)
+    print(f"✅ Using final fallback userData directory: {user_data_dir}")
+    return user_data_dir
 
 
 def get_adapter_registry_dir() -> str:

@@ -13,24 +13,37 @@ from typing import Dict, Any
 # Add the current directory to the path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from services.progress_reporter import ProgressReporter
-from services.ollama_service import OllamaService
-from services.model_mapper import ModelMapper
-from services.training_data_processor import TrainingDataProcessor
-from services.lora_trainer import LoRATrainer
-from services.adapter_manager import AdapterManager
-from services.deployment_service import SimpleDeploymentService
-from orchestrator.training_orchestrator import TrainingOrchestrator
-from models.training_config import TrainingConfig
-from typing import Dict, Any
+# Import the corrected get_project_root from utils
+from utils import get_project_root
 
+# Check for essential dependencies first
+try:
+    import psutil
+    print(f"✅ psutil imported successfully (version: {psutil.__version__})")
+except ImportError as e:
+    print(f"❌ ERROR: psutil module not found. This is required for memory monitoring.")
+    print(f"   Import error: {e}")
+    print(f"   Please ensure psutil is installed in your Python environment:")
+    print(f"   pip install psutil")
+    sys.exit(1)
 
-def get_project_root() -> str:
-    """Get the project root directory."""
-    current_dir = Path(__file__).parent
-    # Go up 4 levels: lora_training -> python -> scripts -> orch-os
-    project_root = current_dir.parent.parent.parent
-    return str(project_root)
+try:
+    from services.progress_reporter import ProgressReporter
+    from services.ollama_service import OllamaService
+    from services.model_mapper import ModelMapper
+    from services.training_data_processor import TrainingDataProcessor
+    from services.lora_trainer import LoRATrainer
+    from services.adapter_manager import AdapterManager
+    from services.deployment_service import SimpleDeploymentService
+    from orchestrator.training_orchestrator import TrainingOrchestrator
+    from models.training_config import TrainingConfig
+    print("✅ All training services imported successfully")
+except ImportError as e:
+    print(f"❌ ERROR: Failed to import training services.")
+    print(f"   Import error: {e}")
+    print(f"   Please ensure all dependencies are installed:")
+    print(f"   pip install -r requirements.txt")
+    sys.exit(1)
 
 
 def report_progress(step, total_steps, message=""):
