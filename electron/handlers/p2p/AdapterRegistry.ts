@@ -80,11 +80,11 @@ export class AdapterRegistry {
 
     // List of potential project root directories to try
     const potentialRoots = [
-      // 1. PRIORITY: Check userData directory first (matches Python production behavior)
-      userDataDir,
-
-      // 2. Use process.cwd() (should work in development)
+      // 1. PRIORITY: In development, check current working directory first
       process.cwd(),
+
+      // 2. Check userData directory (matches Python production behavior)
+      userDataDir,
 
       // 3. Go up from current file location (works in some Electron contexts)
       path.resolve(__dirname, "../../../.."),
@@ -103,7 +103,7 @@ export class AdapterRegistry {
       `[AdapterRegistry]   - Potential roots to try: ${potentialRoots.length}`
     );
     console.log(
-      `[AdapterRegistry]   - PRIORITY: Checking userData directory first: ${userDataDir}`
+      `[AdapterRegistry]   - PRIORITY: Checking current working directory first in development: ${process.cwd()}`
     );
 
     // Try each potential root and find the one that contains lora_adapters
@@ -750,9 +750,29 @@ export class AdapterRegistry {
   }
 
   /**
-   * Clear all adapters
+   * Clear all cached data and force reload
    */
   clear(): void {
     this.adapters.clear();
+    this.pathCache.clear();
+    this.preloadPromise = null;
+    console.log(`[AdapterRegistry] Cleared all cached data`);
+  }
+
+  /**
+   * Force refresh of adapter cache
+   */
+  async refreshCache(): Promise<void> {
+    console.log(`[AdapterRegistry] Forcing cache refresh...`);
+    this.pathCache.clear();
+    this.preloadPromise = null;
+
+    // Force preload with new paths
+    this.preloadPromise = this.preloadAdapterPaths().finally(() => {
+      this.preloadPromise = null;
+    });
+
+    await this.preloadPromise;
+    console.log(`[AdapterRegistry] Cache refresh completed`);
   }
 }

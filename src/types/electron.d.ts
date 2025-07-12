@@ -211,6 +211,15 @@ export interface ElectronAPI {
     error?: string;
   }>;
 
+  // Delete adapter files from filesystem
+  deleteAdapterFiles?: (adapterName: string) => Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
+    deletedFiles?: number;
+    deletedDirs?: number;
+  }>;
+
   shareMergedAdapter?: (adapterName: string) => Promise<{
     success: boolean;
     adapterInfo?: any;

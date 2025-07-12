@@ -157,6 +157,32 @@ export function setupP2PHandlers(): void {
     }
   );
 
+  // Force refresh adapter cache
+  ipcMain.handle("p2p:refreshAdapterCache", async () => {
+    try {
+      if (p2pCoordinator) {
+        // Access the adapter registry through the coordinator
+        const registry = (p2pCoordinator as any).adapterRegistry;
+        if (registry && typeof registry.refreshCache === "function") {
+          await registry.refreshCache();
+          console.log("[P2P-HANDLER] Adapter cache refreshed successfully");
+          return { success: true };
+        }
+      }
+
+      // Fallback: create new registry and refresh
+      const { AdapterRegistry } = require("./p2p/AdapterRegistry");
+      const registry = new AdapterRegistry();
+      await registry.refreshCache();
+
+      console.log("[P2P-HANDLER] Adapter cache refreshed (fallback)");
+      return { success: true };
+    } catch (error) {
+      console.error("[P2P-HANDLER] Error refreshing adapter cache:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
   // Broadcast adapters (for local UI updates)
   ipcMain.handle("p2p:broadcastAdapters", async (_event, adapters: any[]) => {
     try {

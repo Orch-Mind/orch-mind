@@ -4,10 +4,7 @@
 
 import { getOption, STORAGE_KEYS } from "@services/StorageService";
 import { useEffect, useState } from "react";
-import {
-  loadFromStorage,
-  saveToStorage,
-} from "../utils";
+import { loadFromStorage, saveToStorage } from "../utils";
 
 interface LoRAAdapter {
   id: string;
@@ -100,9 +97,16 @@ export const useLoRAAdapters = () => {
       const existingAdapter = adapters.find((a) => a.id === adapterId);
 
       if (!existingAdapter) {
+        // CRITICAL FIX: Use the exact same name that will be used in filesystem
+        // The backend expects and saves adapters with "_adapter" suffix
+        // So we need to ensure localStorage uses the same naming convention
+        const filesystemAdapterName = adapterId.endsWith("_adapter")
+          ? adapterId
+          : `${adapterId}_adapter`;
+
         const newAdapter: LoRAAdapter = {
-          id: adapterId,
-          name: `${adapterId}_adapter`, // Keep _adapter suffix as it's used by backend
+          id: adapterId, // Keep original ID for tracking
+          name: filesystemAdapterName, // Use filesystem-compatible name
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),
@@ -114,7 +118,11 @@ export const useLoRAAdapters = () => {
         trainingHistory.adapters = updatedAdapters;
         saveToStorage("orch-lora-adapters", trainingHistory);
         setAdapters(updatedAdapters);
-        console.log("[LoRA] Saved adapter:", adapterId);
+        console.log("[LoRA] Saved adapter with filesystem-compatible name:", {
+          id: adapterId,
+          name: filesystemAdapterName,
+          baseModel: baseModel,
+        });
       }
     } catch (error) {
       console.error("[LoRA] Error saving adapter:", error);
@@ -137,9 +145,25 @@ export const useLoRAAdapters = () => {
       const existingAdapter = adapters.find((a) => a.id === adapterId);
 
       if (!existingAdapter) {
+        // CRITICAL FIX: Ensure downloaded adapters also use filesystem-compatible names
+        // Use the provided adapterName if available, otherwise generate from adapterId
+        let filesystemAdapterName: string;
+
+        if (adapterName) {
+          // If adapterName is provided, ensure it has the _adapter suffix for filesystem compatibility
+          filesystemAdapterName = adapterName.endsWith("_adapter")
+            ? adapterName
+            : `${adapterName}_adapter`;
+        } else {
+          // Fallback: generate name from adapterId
+          filesystemAdapterName = adapterId.endsWith("_adapter")
+            ? adapterId
+            : `${adapterId}_downloaded_adapter`;
+        }
+
         const newAdapter: LoRAAdapter = {
-          id: adapterId,
-          name: adapterName || `${adapterId}_downloaded`,
+          id: adapterId, // Keep original ID for tracking
+          name: filesystemAdapterName, // Use filesystem-compatible name
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),
@@ -153,10 +177,13 @@ export const useLoRAAdapters = () => {
         saveToStorage("orch-lora-adapters", trainingHistory);
         setAdapters(updatedAdapters);
         console.log(
-          "[LoRA] Added downloaded adapter:",
-          adapterId,
-          "from:",
-          downloadedFrom
+          "[LoRA] Added downloaded adapter with filesystem-compatible name:",
+          {
+            id: adapterId,
+            name: filesystemAdapterName,
+            downloadedFrom: downloadedFrom,
+            baseModel: baseModel,
+          }
         );
       }
     } catch (error) {
@@ -176,8 +203,48 @@ export const useLoRAAdapters = () => {
       );
       const adapterName = adapterToDelete?.name || adapterId;
 
-      // Call electron to delete adapter (if needed)
-      // For now, just remove from local storage
+      console.log(
+        `🗑️ [LoRA Delete] Starting deletion for adapter: ${adapterId}`
+      );
+      console.log(`📋 [LoRA Delete] Adapter details:`, {
+        name: adapterName,
+        baseModel: adapterToDelete?.baseModel,
+        status: adapterToDelete?.status,
+        source: adapterToDelete?.source,
+      });
+
+      // CRITICAL FIX: Call electron backend to delete adapter files from filesystem
+      if (window.electronAPI?.deleteAdapterFiles) {
+        console.log(
+          `🔧 [LoRA Delete] Calling backend to delete files for: ${adapterName}`
+        );
+
+        const deleteResult = await window.electronAPI.deleteAdapterFiles(
+          adapterName
+        );
+
+        console.log(`📥 [LoRA Delete] Backend delete result:`, deleteResult);
+
+        if (deleteResult.success) {
+          console.log(
+            `✅ [LoRA Delete] Successfully deleted filesystem files: ${deleteResult.message}`
+          );
+          console.log(
+            `📊 [LoRA Delete] Deleted ${deleteResult.deletedDirs} directories and ${deleteResult.deletedFiles} files`
+          );
+        } else {
+          console.warn(
+            `⚠️ [LoRA Delete] Backend delete failed: ${deleteResult.error}`
+          );
+          // Continue with localStorage cleanup even if filesystem deletion fails
+        }
+      } else {
+        console.warn(
+          `⚠️ [LoRA Delete] Backend deleteAdapterFiles API not available`
+        );
+      }
+
+      // Remove from local storage (always do this regardless of filesystem deletion result)
       const updatedAdapters = adapters.filter(
         (adapter) => adapter.id !== adapterId
       );
@@ -201,11 +268,15 @@ export const useLoRAAdapters = () => {
         })
       );
 
-      console.log("[LoRA] Adapter deleted successfully:", adapterId);
-      console.log("[LoRA] Emitted adapter-deleted event for:", adapterName);
+      console.log(
+        `✅ [LoRA Delete] Adapter deleted successfully from localStorage: ${adapterId}`
+      );
+      console.log(
+        `📡 [LoRA Delete] Emitted adapter-deleted event for: ${adapterName}`
+      );
       return { success: true };
     } catch (error) {
-      console.error("[LoRA] Error deleting adapter:", error);
+      console.error(`❌ [LoRA Delete] Error deleting adapter:`, error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       return { success: false, error: errorMessage };
@@ -460,12 +531,12 @@ export const useLoRAAdapters = () => {
 
       // Preparar request de deploy seguindo o fluxo Unsloth
       const deployRequest = {
-        adapterId: adapterId,
+        adapterId: adapter.name, // CRITICAL FIX: Use adapter.name instead of adapterId for filesystem lookup
         adapterName: adapter.name,
         baseModel: adapter.baseModel,
         outputModelName: deployedModelName,
         deploymentType: "unsloth_gguf" as const, // Usar conversão GGUF conforme docs
-        adapterPath: `/lora_adapters/registry/${adapterId}`, // Path será resolvido pelo backend
+        adapterPath: `/lora_adapters/registry/${adapter.name}`, // Use adapter.name for path resolution
       };
 
       console.log(`📤 [LoRA Deploy] Sending deploy request:`, deployRequest);
@@ -526,6 +597,53 @@ export const useLoRAAdapters = () => {
     }
   };
 
+  // MIGRATION FUNCTION: Fix adapter names to be filesystem-compatible
+  const migrateAdapterNames = () => {
+    try {
+      const trainingHistory = loadFromStorage("orch-lora-adapters", {
+        adapters: [] as LoRAAdapter[],
+      });
+      const adapters = trainingHistory.adapters || [];
+
+      let migrationCount = 0;
+      const migratedAdapters = adapters.map((adapter) => {
+        // Check if adapter name needs migration (doesn't end with _adapter)
+        if (!adapter.name.endsWith("_adapter")) {
+          migrationCount++;
+          const migratedName = `${adapter.name}_adapter`;
+          console.log(
+            `[LoRA] Migrating adapter name: ${adapter.name} → ${migratedName}`
+          );
+
+          return {
+            ...adapter,
+            name: migratedName,
+          };
+        }
+        return adapter;
+      });
+
+      if (migrationCount > 0) {
+        trainingHistory.adapters = migratedAdapters;
+        saveToStorage("orch-lora-adapters", trainingHistory);
+        setAdapters(migratedAdapters);
+        console.log(
+          `[LoRA] Migration completed: ${migrationCount} adapters migrated to filesystem-compatible names`
+        );
+        return { success: true, migrated: migrationCount };
+      } else {
+        console.log("[LoRA] No adapters need migration");
+        return { success: true, migrated: 0 };
+      }
+    } catch (error) {
+      console.error("[LoRA] Error during adapter name migration:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  };
+
   return {
     adapters,
     selectedBaseModel,
@@ -538,6 +656,7 @@ export const useLoRAAdapters = () => {
     mergeAdapters,
     deployAdapter,
     resetAdapters,
+    migrateAdapterNames, // New migration function
     setSelectedBaseModel,
   };
 };

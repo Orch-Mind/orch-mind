@@ -1004,22 +1004,22 @@ export class ElectronAPIFactory {
         // CRITICAL FIX: Add checkAdapterExists method
         checkAdapterExists: async (adapterName: string) => {
           return this.errorHandler.wrapAsync(
-            async () => {
-              const result = await ipcRenderer.invoke(
-                "p2p:checkAdapterExists",
-                adapterName
-              );
-              // Transform result to consistent format
-              return {
-                exists: result.success,
-                path: result.path || null,
-                success: result.success,
-                error: result.error || null,
-              };
-            },
+            () => ipcRenderer.invoke("p2p:checkAdapterExists", adapterName),
             {
-              component: "P2PManager",
+              component: "P2PShareManager",
               operation: "checkAdapterExists",
+              severity: "medium",
+            }
+          );
+        },
+
+        // Force refresh adapter cache
+        refreshAdapterCache: async () => {
+          return this.errorHandler.wrapAsync(
+            () => ipcRenderer.invoke("p2p:refreshAdapterCache"),
+            {
+              component: "P2PShareManager",
+              operation: "refreshAdapterCache",
               severity: "low",
             }
           );
@@ -1352,6 +1352,18 @@ export class ElectronAPIFactory {
           {
             component: "LoRAMergeManager",
             operation: "removeMergedAdapter",
+            severity: "medium",
+          }
+        );
+      },
+
+      // Delete adapter files from filesystem
+      deleteAdapterFiles: async (adapterName: string) => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("delete-adapter-files", adapterName),
+          {
+            component: "LoRAMergeManager",
+            operation: "deleteAdapterFiles",
             severity: "medium",
           }
         );

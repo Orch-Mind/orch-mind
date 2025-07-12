@@ -99,15 +99,102 @@ export const useAdapterManager = ({
               const result = await electronAPI.p2p.checkAdapterExists(
                 adapterName
               );
-              const existsInFilesystem = result.exists || result.success;
+
+              console.log(
+                `🔍 [ADAPTER-MANAGER] Raw checkAdapterExists result for ${adapterName}:`,
+                result
+              );
+
+              // ENHANCED: Handle multiple naming variations if the direct check fails
+              let existsInFilesystem = result.exists || result.success;
+              let foundPath = result.path;
+
+              if (!existsInFilesystem) {
+                console.log(
+                  `🔍 [ADAPTER-MANAGER] Direct check failed, trying cache refresh for ${adapterName}`
+                );
+
+                // First, try to refresh the adapter cache
+                try {
+                  if (electronAPI.p2p && electronAPI.p2p.refreshAdapterCache) {
+                    console.log(
+                      `🔄 [ADAPTER-MANAGER] Refreshing adapter cache...`
+                    );
+                    await electronAPI.p2p.refreshAdapterCache();
+
+                    // Try the check again after cache refresh
+                    const refreshedResult =
+                      await electronAPI.p2p.checkAdapterExists(adapterName);
+
+                    if (refreshedResult.exists || refreshedResult.success) {
+                      console.log(
+                        `✅ [ADAPTER-MANAGER] Found adapter after cache refresh: ${adapterName} -> ${refreshedResult.path}`
+                      );
+                      existsInFilesystem = true;
+                      foundPath = refreshedResult.path;
+                    } else {
+                      console.log(
+                        `🔍 [ADAPTER-MANAGER] Still not found after cache refresh, trying naming variations for ${adapterName}`
+                      );
+                    }
+                  }
+                } catch (cacheError) {
+                  console.warn(
+                    `⚠️ [ADAPTER-MANAGER] Cache refresh failed:`,
+                    cacheError
+                  );
+                }
+
+                // If still not found, try naming variations
+                if (!existsInFilesystem) {
+                  console.log(
+                    `🔍 [ADAPTER-MANAGER] Trying naming variations for ${adapterName}`
+                  );
+
+                  // Try different naming variations
+                  const namingVariations = [
+                    adapterName,
+                    `${adapterName}_adapter`,
+                    adapterName.replace(/_adapter$/, ""),
+                    adapterName.replace(/_adapter$/, "") + "_adapter",
+                    // Handle underscore to hyphen conversion
+                    adapterName.replace(/_/g, "-"),
+                    adapterName.replace(/_/g, "-") + "_adapter",
+                    adapterName.replace(/_adapter$/, "").replace(/_/g, "-"),
+                    adapterName.replace(/_adapter$/, "").replace(/_/g, "-") +
+                      "_adapter",
+                  ];
+
+                  for (const variation of namingVariations) {
+                    if (variation !== adapterName) {
+                      // Skip the original name we already tried
+                      console.log(
+                        `🔍 [ADAPTER-MANAGER] Trying variation: ${variation}`
+                      );
+
+                      const variationResult =
+                        await electronAPI.p2p.checkAdapterExists(variation);
+
+                      if (variationResult.exists || variationResult.success) {
+                        console.log(
+                          `✅ [ADAPTER-MANAGER] Found adapter using variation: ${variation} -> ${variationResult.path}`
+                        );
+                        existsInFilesystem = true;
+                        foundPath = variationResult.path;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
 
               console.log(
                 `🔍 [ADAPTER-MANAGER] Adapter ${adapterName} exists in filesystem: ${existsInFilesystem}`
               );
 
-              if (result.path) {
+              if (foundPath) {
                 console.log(
-                  `📁 [ADAPTER-MANAGER] Adapter ${adapterName} found at: ${result.path}`
+                  `📁 [ADAPTER-MANAGER] Adapter ${adapterName} found at: ${foundPath}`
                 );
               }
 

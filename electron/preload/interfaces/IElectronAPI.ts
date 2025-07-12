@@ -423,4 +423,13 @@ export interface IElectronAPI
     callback: (progress: InstallProgress) => void
   ) => () => void;
   detectHardware: () => Promise<HardwareDetectionResult>;
+
+  // Delete adapter files from filesystem
+  deleteAdapterFiles(adapterName: string): Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
+    deletedFiles?: number;
+    deletedDirs?: number;
+  }>;
 }
