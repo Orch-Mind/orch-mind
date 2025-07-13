@@ -59,13 +59,8 @@ const ShareSettings: React.FC = () => {
         incomingAdapters={incomingAdapters}
         onToggleSharing={toggleAdapterSharing}
         persistedState={persistedState}
-        getRecentRoomCodes={
-          () =>
-            persistedState.roomHistory
-              ?.filter((entry) => entry.code && entry.type === "private")
-              .map((entry) => entry.code!)
-              .filter((code, index, arr) => arr.indexOf(code) === index) // Remove duplicates
-              .slice(0, 3) || [] // Last 3 unique codes
+        getRecentRoomCodes={() => 
+          persistedState.lastRoomCode ? [persistedState.lastRoomCode] : []
         }
         reconnectToLastSession={reconnectToLastSession}
         resetP2PState={() => {}}
