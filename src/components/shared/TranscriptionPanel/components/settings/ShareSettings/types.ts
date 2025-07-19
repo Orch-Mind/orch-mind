@@ -42,6 +42,7 @@ export interface ConnectionStatusProps {
   currentRoom: P2PRoom | null;
   onDisconnect: () => void;
   isLoading: boolean;
+  incomingAdapters?: IncomingAdapter[];
 }
 
 export interface AdapterListProps {

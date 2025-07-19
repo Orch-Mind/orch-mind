@@ -102,11 +102,14 @@ const ConnectionStats: React.FC<{
 
 // Helper function for more informative peer status
 const getPeerStatus = (
-  peersCount: number
+  peersCount: number,
+  incomingAdaptersCount: number = 0
 ): string => {
-  // If we have actual peer connections, show the count
-
-    return `${peersCount} peers`;
+  // Calculate total peers including special peers (like Docker) that provide incoming adapters
+  const totalPeers = peersCount + (peersCount === 0 && incomingAdaptersCount > 0 ? 1 : 0);
+  
+  // Use correct singular/plural form
+  return totalPeers === 1 ? `${totalPeers} peer` : `${totalPeers} peers`;
 };
 
 // SRP: Card focado apenas no status de conexão
@@ -171,7 +174,8 @@ const ConnectionStatusCard: React.FC<{
           </svg>
           {isSharing
             ? getPeerStatus(
-                currentRoom?.peersCount || 0
+                currentRoom?.peersCount || 0,
+                incomingAdapters.length
               )
             : "Offline"}
         </div>
@@ -285,6 +289,7 @@ const MainSharingSection: React.FC<{
             currentRoom={currentRoom}
             onDisconnect={onDisconnect}
             isLoading={isLoading}
+            incomingAdapters={incomingAdapters}
           />
         )}
       </div>

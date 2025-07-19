@@ -26,6 +26,16 @@ export class AdapterManager {
     modelName: string,
     modelPath?: string
   ): Promise<IAdapterInfo> {
+    // Check if adapter is already being shared
+    const existingAdapter = Array.from(this.sharedAdapters.values()).find(
+      adapter => adapter.name === modelName
+    );
+    
+    if (existingAdapter) {
+      console.log(`🔄 [AdapterManager] Adapter ${modelName} is already being shared with topic: ${existingAdapter.topic}`);
+      return existingAdapter;
+    }
+
     // Generate unique topic for this adapter
     const topic = this.generateTopic();
 
@@ -101,16 +111,19 @@ export class AdapterManager {
       });
     });
 
-    p2pEventBus.emit("adapters:available", {
-      from: peerId,
-      adapters: this.getAvailableAdapters(),
-    });
+    // Event emission is handled by the caller to avoid duplication
+    // p2pEventBus.emit("adapters:available", {
+    //   from: peerId,
+    //   adapters: this.getAvailableAdapters(),
+    // });
   }
 
   /**
    * Load adapters from local storage
    */
   loadLocalAdapters(modelNames: string[]): void {
+    let hasSharedAdapters = false;
+    
     modelNames.forEach((modelName) => {
       const topic = this.generateTopic();
       const adapter: IAdapterInfo = {
@@ -125,8 +138,17 @@ export class AdapterManager {
       const persistedState = this.loadPersistedState();
       if (persistedState.sharedAdapterIds?.includes(modelName)) {
         this.sharedAdapters.set(topic, adapter);
+        hasSharedAdapters = true;
+        console.log(`🔄 [AdapterManager] Loaded shared adapter: ${modelName} (topic: ${topic})`);
       }
     });
+    
+    // CRITICAL FIX: Broadcast adapters if any were loaded as shared
+    // This ensures shared adapters are propagated to the P2P network during initialization
+    if (hasSharedAdapters) {
+      console.log(`🚀 [AdapterManager] Broadcasting ${this.sharedAdapters.size} shared adapters to P2P network`);
+      this.broadcastAdapters();
+    }
   }
 
   /**
@@ -175,6 +197,12 @@ export class AdapterManager {
     if (typeof window !== "undefined" && window.electronAPI) {
       (window.electronAPI as any).onP2PAdaptersAvailable?.((data: any) => {
         this.updateAvailableAdapters(data.from, data.adapters);
+        
+        // Emit event after updating adapters to avoid duplication
+        p2pEventBus.emit("adapters:available", {
+          from: data.from,
+          adapters: this.getAvailableAdapters(),
+        });
       });
     }
   }

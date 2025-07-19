@@ -28,6 +28,13 @@ export class P2PCoordinator {
   }
 
   /**
+   * Get this peer's ID
+   */
+  private get peerId(): string {
+    return this.backendManager.getOwnPeerId();
+  }
+
+  /**
    * Initialize P2P system
    */
   async initialize(): Promise<void> {
@@ -58,6 +65,17 @@ export class P2PCoordinator {
    */
   async shareAdapter(adapterName: string): Promise<IAdapterInfo> {
     console.log(`[P2PCoordinator] Attempting to share adapter: ${adapterName}`);
+
+    // Check if adapter is already shared by this peer
+    const existingAdapters = this.adapterRegistry.getAllAdapters();
+    const existingAdapter = existingAdapters.find(
+      adapter => adapter.name === adapterName && adapter.topic === this.peerId
+    );
+    
+    if (existingAdapter) {
+      console.log(`[P2PCoordinator] Adapter ${adapterName} already shared by this peer with topic: ${existingAdapter.topic}`);
+      return existingAdapter;
+    }
 
     // Find adapter safetensors file in project directory
     const adapterPath = await this.adapterRegistry.findModelPath(adapterName);
@@ -129,8 +147,24 @@ export class P2PCoordinator {
    * Unshare an adapter
    */
   async unshareAdapter(topic: string): Promise<void> {
+    console.log(`[P2PCoordinator] Unsharing adapter with topic: ${topic}`);
+    
+    const adapter = this.adapterRegistry.getAdapter(topic);
+    if (adapter) {
+      console.log(`[P2PCoordinator] Found adapter to unshare: ${adapter.name}`);
+    } else {
+      console.warn(`[P2PCoordinator] Adapter with topic ${topic} not found in registry`);
+    }
+    
     this.adapterRegistry.unregisterAdapter(topic);
+    console.log(`[P2PCoordinator] Adapter unregistered from local registry`);
+    
+    // Get remaining adapters after unregistration
+    const remainingAdapters = this.adapterRegistry.getAllAdapters();
+    console.log(`[P2PCoordinator] Remaining adapters after unshare: ${remainingAdapters.length}`);
+    
     this.broadcastAdapterList();
+    console.log(`[P2PCoordinator] Broadcasted updated adapter list to peers`);
   }
 
   /**
@@ -196,7 +230,7 @@ export class P2PCoordinator {
       }
     });
 
-    this.backendManager.on("room-joined", (data: any) => {
+    this.backendManager.on("room-joined", (data: unknown) => {
       this.forwardToRenderers("p2p:room-joined", data);
       
       // ENHANCEMENT: Broadcast adapter list when joining a room
@@ -242,7 +276,7 @@ export class P2PCoordinator {
       switch (message.type) {
         case "adapter-list":
           // Extract adapters from message and pass to handleAdapterList
-          let adaptersArray: any[] = [];
+          let adaptersArray: IAdapterInfo[] = [];
           if (Array.isArray(message.adapters)) {
             adaptersArray = message.adapters;
           } else if (Array.isArray(message.data)) {
@@ -276,7 +310,7 @@ export class P2PCoordinator {
   /**
    * Handle adapter list from peer
    */
-  private handleAdapterList(peerId: string, adapters: any[]): void {
+  private handleAdapterList(peerId: string, adapters: IAdapterInfo[]): void {
     // Validate peerId
     if (!peerId || peerId.trim() === "") {
       console.warn(`[P2PCoordinator] Invalid peerId received: "${peerId}"`);
@@ -363,12 +397,16 @@ export class P2PCoordinator {
    */
   private broadcastAdapterList(): void {
     const adapters = this.adapterRegistry.getAllAdapters();
+    console.log(`[P2PCoordinator] Broadcasting adapter list: ${adapters.length} adapters`);
+    console.log(`[P2PCoordinator] Adapter names being broadcast:`, adapters.map(a => a.name));
+    
     const message = {
       type: "adapter-list",
       data: adapters,
     };
 
     this.backendManager.sendMessage(message);
+    console.log(`[P2PCoordinator] Adapter list message sent to all peers`);
   }
 
   /**
@@ -481,16 +519,16 @@ export class P2PCoordinator {
       layers_pattern: null,
       layers_to_transform: null,
       loftq_config: {},
-      lora_alpha: (metadata.metadata as any)?.lora_alpha || 32,
-      lora_dropout: (metadata.metadata as any)?.lora_dropout || 0.1,
+      lora_alpha: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_alpha' in metadata.metadata) ? (metadata.metadata as { lora_alpha: number }).lora_alpha : 32,
+      lora_dropout: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_dropout' in metadata.metadata) ? (metadata.metadata as { lora_dropout: number }).lora_dropout : 0.1,
       megatron_config: null,
       megatron_core: "megatron.core",
       modules_to_save: null,
       peft_type: "LORA",
-      r: (metadata.metadata as any)?.lora_rank || 16,
+      r: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_rank' in metadata.metadata) ? (metadata.metadata as { lora_rank: number }).lora_rank : 16,
       rank_pattern: {},
       revision: null,
-      target_modules: (metadata.metadata as any)?.target_modules || ["q_proj", "v_proj"],
+      target_modules: (metadata.metadata && typeof metadata.metadata === 'object' && 'target_modules' in metadata.metadata) ? (metadata.metadata as { target_modules: string[] }).target_modules : ["q_proj", "v_proj"],
       task_type: "CAUSAL_LM",
       use_dora: false,
       use_rslora: false
@@ -625,7 +663,7 @@ export class P2PCoordinator {
   /**
    * Forward events to renderer windows
    */
-  private forwardToRenderers(channel: string, data?: any): void {
+  private forwardToRenderers(channel: string, data?: unknown): void {
     // Debug logging for adapters-available events
     if (channel === "p2p:adapters-available") {
       console.log(

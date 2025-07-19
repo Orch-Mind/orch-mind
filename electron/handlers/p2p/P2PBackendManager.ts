@@ -436,6 +436,13 @@ export class P2PBackendManager extends EventEmitter {
     return this.connections.size;
   }
 
+  getOwnPeerId(): string {
+    if (!this.swarm || !this.swarm.keyPair) {
+      return "unknown";
+    }
+    return this.swarm.keyPair.publicKey.toString("hex").slice(0, 12);
+  }
+
   private emitPeersUpdate(): void {
     const connectionCount = this.connections.size;
     console.log(`[P2P-Backend] Swarm update: ${connectionCount} connections`);

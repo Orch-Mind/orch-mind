@@ -11,12 +11,13 @@ export const ConnectedStatusComponent: React.FC<ConnectionStatusProps> = ({
   currentRoom,
   onDisconnect,
   isLoading,
+  incomingAdapters = [],
 }) => {
   if (!currentRoom) return null;
 
   return (
     <div className="space-y-3">
-      <ConnectionStatus currentRoom={currentRoom} />
+      <ConnectionStatus currentRoom={currentRoom} incomingAdapters={incomingAdapters} />
       <DisconnectButton onDisconnect={onDisconnect} isLoading={isLoading} />
     </div>
   );
@@ -25,9 +26,10 @@ export const ConnectedStatusComponent: React.FC<ConnectionStatusProps> = ({
 // SRP: Componente focado apenas em mostrar status da conexão
 const ConnectionStatus: React.FC<{
   currentRoom: NonNullable<ConnectionStatusProps["currentRoom"]>;
-}> = ({ currentRoom }) => (
+  incomingAdapters: ConnectionStatusProps["incomingAdapters"];
+}> = ({ currentRoom, incomingAdapters }) => (
   <div className="p-3 bg-green-500/10 rounded border border-green-400/30">
-    <ConnectionHeader currentRoom={currentRoom} />
+    <ConnectionHeader currentRoom={currentRoom} incomingAdapters={incomingAdapters} />
     {currentRoom.code && currentRoom.type === "private" && (
       <ShareCodeSection code={currentRoom.code} />
     )}
@@ -37,7 +39,8 @@ const ConnectionStatus: React.FC<{
 // SRP: Header com ícone e nome da room
 const ConnectionHeader: React.FC<{
   currentRoom: NonNullable<ConnectionStatusProps["currentRoom"]>;
-}> = ({ currentRoom }) => (
+  incomingAdapters: ConnectionStatusProps["incomingAdapters"];
+}> = ({ currentRoom, incomingAdapters }) => (
   <div className="flex items-center justify-between mb-2">
     <div className="flex items-center gap-2">
       <span className="text-lg">
@@ -50,19 +53,34 @@ const ConnectionHeader: React.FC<{
         </p>
       </div>
     </div>
-    <PeerCount count={currentRoom.peersCount} />
+    <PeerCount 
+      count={currentRoom.peersCount} 
+      incomingAdaptersCount={incomingAdapters?.length || 0} 
+    />
   </div>
 );
 
 // SRP: Componente focado apenas em mostrar peer count
-const PeerCount: React.FC<{ count: number }> = ({ count }) => (
-  <div className="text-right">
-    <div className="flex items-center gap-1 text-green-400 text-[10px]">
-      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-      {count || 0} peers
+// Uses same inclusive logic as getPeerStatus for consistency
+const PeerCount: React.FC<{ count: number; incomingAdaptersCount?: number }> = ({ 
+  count, 
+  incomingAdaptersCount = 0 
+}) => {
+  // Calculate total peers including special peers (like Docker) that provide incoming adapters
+  const totalPeers = count + (count === 0 && incomingAdaptersCount > 0 ? 1 : 0);
+  
+  // Use correct singular/plural form
+  const peerText = totalPeers === 1 ? `${totalPeers} peer` : `${totalPeers} peers`;
+  
+  return (
+    <div className="text-right">
+      <div className="flex items-center gap-1 text-green-400 text-[10px]">
+        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        {peerText}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // SRP: Seção focada apenas em mostrar e copiar código de share
 const ShareCodeSection: React.FC<{ code: string }> = ({ code }) => {
