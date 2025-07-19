@@ -12,8 +12,20 @@ on:
         default: 'v0.0.1'
 
 jobs:
-  build-mac:
-    runs-on: macos-latest
+  publish:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win  
+          - os: ubuntu-latest
+            platform: linux
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,53 +39,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Build and publish macOS
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          npm run build
-          npm run dist:mac
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python (for native dependencies)
+        uses: actions/setup-python@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          python-version: '3.11'
           
-      - name: Install dependencies
-        run: npm ci
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install pkg-config cairo pango libpng jpeg giflib librsvg
+          
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+          
+      - name: Build application
+        run: npm run build
         
-      - name: Build and publish Windows
+      - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          npm run build
-          npm run dist:win
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Build and publish Linux
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          npm run build
-          npm run dist:linux
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run dist:${{ matrix.platform }}
