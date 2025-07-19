@@ -215,28 +215,6 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md) para diretrizes detalhadas.
 
 ---
 
-## 🚀 Roadmap
-
-### v1.1 - Q1 2024
-
-- [ ] Suporte para Gemma 3.5
-- [ ] Interface de treinamento aprimorada
-- [ ] Métricas avançadas de performance
-
-### v1.2 - Q2 2024
-
-- [ ] Suporte multi-GPU
-- [ ] Marketplace de adaptadores
-- [ ] API REST para integração
-
-### v2.0 - Q3 2024
-
-- [ ] Suporte para outros modelos base (LLaMA, Mistral)
-- [ ] Treinamento colaborativo em tempo real
-- [ ] Mobile companion app
-
----
-
 ## 📄 Licença
 
 Este projeto é licenciado sob dupla licença:
