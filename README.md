@@ -228,7 +228,6 @@ Você pode escolher qualquer uma das licenças ao usar este software.
 
 ## 📞 Suporte
 
-- **Discord**: [Comunidade Orch-Mind](https://discord.gg/orch-mind)
 - **GitHub Issues**: Para bugs e solicitações de feature
 
 ---
@@ -245,7 +244,7 @@ Orch-Mind é construído sobre os ombros de gigantes:
 
 ---
 
-*Construído com ❤️ pela comunidade de IA federada
+Construído com ❤️ pela comunidade de IA federada
 
 ---
 
