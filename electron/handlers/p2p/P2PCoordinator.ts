@@ -17,6 +17,7 @@ export class P2PCoordinator {
   private fileTransfer: FileTransferHandler;
   private adapterRegistry: AdapterRegistry;
   private initialized: boolean = false;
+  private adapterSyncInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.backendManager = new P2PBackendManager();
@@ -161,6 +162,8 @@ export class P2PCoordinator {
    * Destroy P2P system
    */
   async destroy(): Promise<void> {
+    // Stop adapter synchronization before destroying
+    this.stopAdapterSync();
     await this.backendManager.destroy();
     this.adapterRegistry.clear();
     this.initialized = false;
@@ -175,14 +178,44 @@ export class P2PCoordinator {
     // Backend manager events
     this.backendManager.on("peers-updated", (count: number) => {
       this.forwardToRenderers("p2p:peers-updated", count);
+      
+      // CRITICAL FIX: Broadcast adapter list when new peers connect
+      // This ensures that when a peer joins, they immediately see available adapters
+      // without needing to wait for manual sharing actions
+      if (count > 0) {
+        console.log(`[P2PCoordinator] New peer(s) detected (${count} total), broadcasting adapter list`);
+        // Small delay to ensure peer connection is fully established
+        setTimeout(() => {
+          // Broadcast our adapters to new peers
+          this.broadcastAdapterList();
+          
+          // Also request adapter lists from all connected peers
+          // This ensures bidirectional synchronization
+          this.requestAdapterListsFromPeers();
+        }, 1000);
+      }
     });
 
     this.backendManager.on("room-joined", (data: any) => {
       this.forwardToRenderers("p2p:room-joined", data);
+      
+      // ENHANCEMENT: Broadcast adapter list when joining a room
+      // This ensures that our adapters are immediately available to peers in the room
+      console.log("[P2PCoordinator] Joined room, broadcasting adapter list");
+      setTimeout(() => {
+        this.broadcastAdapterList();
+        this.requestAdapterListsFromPeers();
+      }, 2000); // Longer delay for room joining to ensure full connection
+      
+      // Start periodic adapter synchronization
+      this.startAdapterSync();
     });
 
     this.backendManager.on("room-left", () => {
       this.forwardToRenderers("p2p:room-left");
+      
+      // Stop periodic adapter synchronization when leaving room
+      this.stopAdapterSync();
     });
 
     this.backendManager.on("peer-message", ({ peerId, data }) => {
@@ -227,6 +260,12 @@ export class P2PCoordinator {
         case "adapter-chunk":
           this.fileTransfer.handleReceivedChunk(message.data);
           this.forwardToRenderers("p2p:chunk-received", message.data);
+          break;
+
+        case "request-adapter-list":
+          // ENHANCEMENT: Handle requests for adapter list from peers
+          console.log(`[P2PCoordinator] Peer ${peerId} requested adapter list`);
+          this.broadcastAdapterList();
           break;
       }
     } catch (error) {
@@ -330,6 +369,52 @@ export class P2PCoordinator {
     };
 
     this.backendManager.sendMessage(message);
+  }
+
+  /**
+   * Request adapter lists from all connected peers
+   * This ensures we get the latest adapter information when new connections are made
+   */
+  private requestAdapterListsFromPeers(): void {
+    try {
+      const message = {
+        type: "request-adapter-list",
+        timestamp: Date.now(),
+      };
+
+      this.backendManager.sendMessage(message);
+      console.log("[P2PCoordinator] Requested adapter lists from all connected peers");
+    } catch (error) {
+      console.error("[P2PCoordinator] Error requesting adapter lists:", error);
+    }
+  }
+
+  /**
+   * Start periodic adapter synchronization
+   * This ensures adapter lists stay synchronized even if messages are lost
+   */
+  private startAdapterSync(): void {
+    // Clear any existing interval
+    this.stopAdapterSync();
+    
+    // Sync every 30 seconds
+    this.adapterSyncInterval = setInterval(() => {
+      console.log("[P2PCoordinator] Periodic adapter sync");
+      this.broadcastAdapterList();
+    }, 30000);
+    
+    console.log("[P2PCoordinator] Started periodic adapter synchronization");
+  }
+
+  /**
+   * Stop periodic adapter synchronization
+   */
+  private stopAdapterSync(): void {
+    if (this.adapterSyncInterval) {
+      clearInterval(this.adapterSyncInterval);
+      this.adapterSyncInterval = null;
+      console.log("[P2PCoordinator] Stopped periodic adapter synchronization");
+    }
   }
 
   /**
