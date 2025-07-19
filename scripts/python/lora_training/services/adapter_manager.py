@@ -47,9 +47,9 @@ class AdapterManager(IAdapterManager):
                 if os.path.exists(persistent_adapter_path):
                     shutil.rmtree(persistent_adapter_path)
                 shutil.copytree(adapter_path, persistent_adapter_path)
-                print(f"💾 Adapter weights copied to: {persistent_adapter_path}")
+                print(f"[COPY] Adapter weights copied to: {persistent_adapter_path}")
             else:
-                print(f"⚠️ Warning: Adapter path not found: {adapter_path}")
+                print(f"[WARNING] Adapter path not found: {adapter_path}")
                 print(f"   Creating placeholder entry in registry...")
             
             # Create adapter info
@@ -68,13 +68,13 @@ class AdapterManager(IAdapterManager):
             with open(adapter_info_path, 'w') as f:
                 json.dump(adapter_info.to_dict(), f, indent=2)
             
-            print(f"✅ Adapter registered: {adapter_info.adapter_name}")
-            print(f"📂 Registry file: {adapter_info_path}")
+            print(f"[SUCCESS] Adapter registered: {adapter_info.adapter_name}")
+            print(f"[REGISTRY] Registry file: {adapter_info_path}")
             
             return adapter_info
             
         except Exception as e:
-            print(f"❌ Failed to register adapter: {e}")
+            print(f"[ERROR] Failed to register adapter: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -86,7 +86,7 @@ class AdapterManager(IAdapterManager):
             return {"success": False, "error": "Adapter not found"}
         
         try:
-            print(f"\n🚀 Enabling adapter: {adapter_id}")
+            print(f"\n[ENABLE] Enabling adapter: {adapter_id}")
             print(f"   • Base Model: {adapter_info.base_model}")
             print(f"   • HuggingFace Model: {adapter_info.hf_model}")
             
@@ -102,12 +102,12 @@ class AdapterManager(IAdapterManager):
                 
         except Exception as e:
             error_msg = f"Failed to enable adapter: {str(e)}"
-            print(f"❌ {error_msg}")
+            print(f"[ERROR] {error_msg}")
             return {"success": False, "error": error_msg}
     
     def _enable_unsloth_final_model(self, adapter_info: Any, adapter_id: str) -> Dict[str, Any]:
         """Enable Unsloth adapter by activating the final merged model."""
-        print(f"🔗 UNSLOTH MODEL: Using final merged model approach")
+        print(f"[UNSLOTH] Using final merged model approach")
         
         # The final model should have been created during training
         final_model_name = f"{adapter_id}-final"
@@ -119,9 +119,9 @@ class AdapterManager(IAdapterManager):
                 "error": f"Final merged model '{final_model_name}' not found. Please retrain the adapter using the complete Unsloth workflow."
             }
         
-        print(f"✅ Final merged model found: {final_model_name}")
-        print(f"💡 This model contains base model + LoRA adapter merged together")
-        print(f"🎯 No ADAPTER directive needed - model is ready to use directly")
+        print(f"[SUCCESS] Final merged model found: {final_model_name}")
+        print(f"[INFO] This model contains base model + LoRA adapter merged together")
+        print(f"[INFO] No ADAPTER directive needed - model is ready to use directly")
         
         # Create an alias or just return success since the model is already available
         return {
@@ -135,7 +135,7 @@ class AdapterManager(IAdapterManager):
     
     def _enable_standard_adapter(self, adapter_info: Any, adapter_id: str) -> Dict[str, Any]:
         """Enable standard adapter using ADAPTER directive."""
-        print(f"✅ STANDARD MODEL: Using ADAPTER directive approach")
+        print(f"[STANDARD] Using ADAPTER directive approach")
         
         # Create Modelfile with ADAPTER directive
         active_model_name = self._create_active_model_name(adapter_info.base_model, adapter_id)
@@ -150,7 +150,7 @@ class AdapterManager(IAdapterManager):
         )
         
         if success:
-            print(f"✅ Standard adapter enabled successfully: {active_model_name}")
+            print(f"[SUCCESS] Standard adapter enabled successfully: {active_model_name}")
             return {
                 "success": True,
                 "message": f"Standard adapter enabled successfully",
@@ -182,7 +182,7 @@ class AdapterManager(IAdapterManager):
             )
             
             self.ollama_service.remove_model(active_model_name)
-            print(f"🔌 Adapter disabled: {adapter_id}")
+            print(f"[DISABLED] Adapter disabled: {adapter_id}")
             
             return {"success": True, "adapter_id": adapter_id}
             
@@ -196,17 +196,17 @@ class AdapterManager(IAdapterManager):
             self.registry_dir, f"{adapter_id}_adapter.json"
         )
         
-        print(f"🔍 Looking for adapter: {adapter_id}")
+        print(f"[SEARCH] Looking for adapter: {adapter_id}")
         print(f"   • Trying original name: {adapter_info_path}")
         
         if os.path.exists(adapter_info_path):
             try:
                 with open(adapter_info_path, 'r') as f:
                     data = json.load(f)
-                print(f"✅ Found adapter with original name")
+                print(f"[FOUND] Found adapter with original name")
                 return AdapterInfo.from_dict(data)
             except Exception as e:
-                print(f"❌ Failed to load adapter info: {e}")
+                print(f"[ERROR] Failed to load adapter info: {e}")
         
         # Try sanitized adapter_id
         sanitized_adapter_id = sanitize_model_name(adapter_id)
@@ -222,13 +222,13 @@ class AdapterManager(IAdapterManager):
                 try:
                     with open(sanitized_adapter_info_path, 'r') as f:
                         data = json.load(f)
-                    print(f"✅ Found adapter with sanitized name")
+                    print(f"[FOUND] Found adapter with sanitized name")
                     return AdapterInfo.from_dict(data)
                 except Exception as e:
-                    print(f"❌ Failed to load sanitized adapter info: {e}")
+                    print(f"[ERROR] Failed to load sanitized adapter info: {e}")
         
         # If not found, list available adapters for debugging
-        print(f"❌ Adapter '{adapter_id}' not found in registry")
+        print(f"[ERROR] Adapter '{adapter_id}' not found in registry")
         try:
             available_files = [f for f in os.listdir(self.registry_dir) if f.endswith('_adapter.json')]
             if available_files:
@@ -273,7 +273,7 @@ class AdapterManager(IAdapterManager):
     
     def _create_adapter_modelfile(self, adapter_info: Any, active_model_name: str) -> Optional[str]:
         """Create Modelfile with ADAPTER directive following Ollama documentation."""
-        print(f"📝 Creating Modelfile with ADAPTER directive...")
+        print(f"[CREATE] Creating Modelfile with ADAPTER directive...")
         
         try:
             # Check if this is a Unsloth model to determine the correct base model
@@ -282,13 +282,13 @@ class AdapterManager(IAdapterManager):
             if compatibility.get("is_unsloth"):
                 # For Unsloth models, use the deployed base model (e.g., gemma3-latest-custom)
                 base_model_for_adapter = adapter_info.base_model
-                print(f"🔍 UNSLOTH MODEL: Using deployed base model: {base_model_for_adapter}")
+                print(f"[UNSLOTH] Using deployed base model: {base_model_for_adapter}")
                 print(f"   • This uses the model deployed during training specifically for Unsloth adapters")
             else:
                 # For standard models, use the original base model
                 # Extract original model name by removing -custom suffix
                 base_model_for_adapter = adapter_info.base_model.replace('-custom', '')
-                print(f"✅ STANDARD MODEL: Using original base model: {base_model_for_adapter}")
+                print(f"[STANDARD] Using original base model: {base_model_for_adapter}")
             
             # Create Modelfile following EXACT official documentation format
             modelfile_content = f"""FROM {base_model_for_adapter}
@@ -316,7 +316,7 @@ PARAMETER repeat_penalty 1.1
             with open(modelfile_path, 'w') as f:
                 f.write(modelfile_content)
             
-            print(f"✅ ADAPTER Modelfile created: {modelfile_path}")
+            print(f"[SUCCESS] ADAPTER Modelfile created: {modelfile_path}")
             print(f"   • FROM: {base_model_for_adapter}")
             print(f"   • ADAPTER: {adapter_info.adapter_path}")
             
@@ -328,7 +328,7 @@ PARAMETER repeat_penalty 1.1
             return modelfile_path
             
         except Exception as e:
-            print(f"❌ Failed to create Modelfile: {e}")
+            print(f"[ERROR] Failed to create Modelfile: {e}")
             return None
     
     def _check_adapter_compatibility(self, adapter_info: Any) -> Dict[str, Any]:
@@ -368,7 +368,7 @@ PARAMETER repeat_penalty 1.1
                 "expected_error": "Error: unsupported architecture"
             }
         else:
-            print(f"✅ STANDARD MODEL DETECTED: {hf_model_name}")
+            print(f"[STANDARD] Model detected: {hf_model_name}")
             print(f"   • Expected compatibility: HIGH")
             
             return {
@@ -426,4 +426,4 @@ PARAMETER repeat_penalty 1.1
             f"Ollama's ADAPTER directive expects standard LoRA format, creating a mismatch during conversion. "
             f"Solutions: 1) Use deployment approach to deploy Unsloth model directly, "
             f"2) Train with native Ollama models, 3) Wait for better Unsloth support in future versions."
-        ) 
+        )

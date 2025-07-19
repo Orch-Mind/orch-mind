@@ -362,9 +362,8 @@ export class P2PCoordinator {
     const fs = await import("fs/promises");
     const path = await import("path");
 
-    // Get project root directory (4 levels up from this file)
-    const currentDir = path.dirname(__filename);
-    const projectRoot = path.resolve(currentDir, "../../../..");
+    // Use the same project root resolution logic as AdapterRegistry
+    const projectRoot = this.getProjectRoot();
 
     // Create adapter directories
     const weightsDir = path.join(projectRoot, "lora_adapters", "weights");
@@ -463,6 +462,79 @@ export class P2PCoordinator {
         registryPath: registryFilePath,
       },
     });
+  }
+
+  /**
+   * Get project root directory using the same logic as AdapterRegistry
+   */
+  private getProjectRoot(): string {
+    const { app } = require("electron");
+    const path = require("path");
+    const fs = require("fs");
+    const os = require("os");
+
+    console.log(`[P2PCoordinator] 🔍 DEBUG Project Root Resolution:`);
+    console.log(`[P2PCoordinator]   - app.isPackaged: ${app.isPackaged}`);
+    console.log(`[P2PCoordinator]   - process.cwd(): ${process.cwd()}`);
+    console.log(`[P2PCoordinator]   - __dirname: ${__dirname}`);
+    console.log(`[P2PCoordinator]   - __filename: ${__filename}`);
+
+    // Platform-specific paths
+    let userDataDir: string;
+    if (process.platform === "win32") {
+      userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
+    } else if (process.platform === "darwin") {
+      userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
+    } else {
+      userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
+    }
+
+    const potentialPaths = [
+      process.cwd(), // Current working directory (prioritize for development)
+      userDataDir, // Platform-specific user data directory
+      path.resolve(__dirname, "../../../.."), // Relative to this file
+      app.getAppPath(), // Electron app path
+      path.dirname(process.resourcesPath || ""), // Parent of resources path
+    ];
+
+    console.log(`[P2PCoordinator]   - userDataDir: ${userDataDir}`);
+    console.log(`[P2PCoordinator]   - potentialPaths:`, potentialPaths);
+
+    // Find the first path that contains lora_adapters directory
+    for (const potentialPath of potentialPaths) {
+      if (!potentialPath) continue;
+
+      try {
+        const loraAdaptersPath = path.join(potentialPath, "lora_adapters");
+        console.log(`[P2PCoordinator]   - Checking: ${loraAdaptersPath}`);
+
+        if (fs.existsSync(loraAdaptersPath)) {
+          console.log(`[P2PCoordinator] ✅ Found project root: ${potentialPath}`);
+          return potentialPath;
+        }
+      } catch (error) {
+        console.log(`[P2PCoordinator]   - Error checking ${potentialPath}:`, error);
+        continue;
+      }
+    }
+
+    // If no existing lora_adapters found, use userDataDir and create structure
+    console.log(`[P2PCoordinator] ⚠️ No existing lora_adapters found, using userDataDir: ${userDataDir}`);
+    
+    try {
+      const loraAdaptersPath = path.join(userDataDir, "lora_adapters");
+      const weightsPath = path.join(loraAdaptersPath, "weights");
+      const registryPath = path.join(loraAdaptersPath, "registry");
+      
+      fs.mkdirSync(weightsPath, { recursive: true });
+      fs.mkdirSync(registryPath, { recursive: true });
+      
+      console.log(`[P2PCoordinator] ✅ Created lora_adapters structure in: ${userDataDir}`);
+    } catch (error) {
+      console.warn(`[P2PCoordinator] Failed to create lora_adapters structure:`, error);
+    }
+    
+    return userDataDir;
   }
 
   /**

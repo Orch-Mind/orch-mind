@@ -101,172 +101,154 @@ export class LoRAMergeService {
 
   /**
    * Create a fallback adapter registry when the real one is not available
+   * CRITICAL FIX: Use exact same logic as AdapterRegistry.findModelPath()
    */
   private createFallbackAdapterRegistry() {
+    const self = this; // Capture 'this' context for use in the class
+    
     return class FallbackAdapterRegistry {
       async findModelPath(adapterName: string): Promise<string | null> {
-        console.warn(
-          `[FallbackAdapterRegistry] Attempting to find path for: ${adapterName}`
-        );
+        console.log(`🔍 [FALLBACK-ADAPTER-REGISTRY] Finding model path for: ${adapterName}`);
 
-        // CRITICAL FIX: Use userData directory first (matches Python production behavior)
-        const os = require("os");
-        const userDataDir = path.join(
-          os.homedir(),
-          "Library",
-          "Application Support",
-          "Orch-OS"
-        );
-        const projectRoot = userDataDir; // Prioritize userData directory
+        try {
+          // Use the same project root resolution as the main service
+          const projectRoot = self.getProjectRoot();
+          
+          // Look for adapter in the LoRA adapters directory
+          const adapterWeightsDir = path.join(
+            projectRoot,
+            "lora_adapters",
+            "weights"
+          );
 
-        // Remove _adapter suffix if present for directory search
-        const cleanAdapterName = adapterName.replace(/_adapter$/, "");
+          console.log(`[FallbackAdapterRegistry] Project root: ${projectRoot}`);
+          console.log(
+            `[FallbackAdapterRegistry] Looking in weights dir: ${adapterWeightsDir}`
+          );
 
-        // CRITICAL FIX: Handle the exact naming pattern found in filesystem
-        // System saves as: "gemma3-adapter-1751636717504_adapter" (hyphens + _adapter suffix)
-        // Frontend sends: "gemma3_adapter_1751636717504_adapter" (underscores + _adapter suffix)
+          // Clean adapter name - remove _adapter suffix if present
+          const cleanAdapterName = adapterName.replace(/_adapter$/, "");
 
-        const possiblePaths = [
-          // 1. PRIORITY: userData directory paths (matches Python production behavior)
-          path.join(userDataDir, "lora_adapters", "weights", adapterName),
-          path.join(userDataDir, "lora_adapters", "registry", adapterName),
-          path.join(
-            userDataDir,
-            "lora_adapters",
-            "weights",
-            adapterName.replace(/_/g, "-")
-          ),
-          path.join(
-            userDataDir,
-            "lora_adapters",
-            "registry",
-            adapterName.replace(/_/g, "-")
-          ),
-          path.join(
-            userDataDir,
-            "lora_adapters",
-            "weights",
-            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
-          ),
+          // CRITICAL FIX: Use EXACT same logic as AdapterRegistry.findModelPath()
+          // Handle the naming inconsistency between localStorage (underscores) and filesystem (hyphens)
+          // Example: "gemma3_adapter_1751636717504_adapter" (localStorage) -> "gemma3-adapter-1751636717504_adapter" (filesystem)
 
-          // 2. Fallback: traditional project root paths
-          path.join(process.cwd(), "lora_adapters", "weights", adapterName),
-          path.join(process.cwd(), "lora_adapters", "registry", adapterName),
+          // Try multiple adapter directory names with comprehensive naming conventions
+          const possibleAdapterDirs = [
+            // 1. Original naming (with _adapter suffix)
+            path.join(adapterWeightsDir, `${adapterName}_adapter`),
+            path.join(adapterWeightsDir, adapterName),
 
-          // 3. CRITICAL: Convert underscore to hyphen pattern (filesystem format)
-          // "gemma3_adapter_1751636717504_adapter" → "gemma3-adapter-1751636717504_adapter"
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "weights",
-            adapterName.replace(/_/g, "-")
-          ),
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "registry",
-            adapterName.replace(/_/g, "-")
-          ),
+            // 2. Clean naming (without _adapter suffix, then add _adapter)
+            path.join(adapterWeightsDir, `${cleanAdapterName}_adapter`),
+            path.join(adapterWeightsDir, cleanAdapterName),
 
-          // 4. Clean name variations (without _adapter suffix)
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "weights",
-            cleanAdapterName
-          ),
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "registry",
-            cleanAdapterName
-          ),
+            // 3. CRITICAL: Handle localStorage underscore -> filesystem hyphen conversion
+            // "gemma3_adapter_1751636717504" -> "gemma3-adapter-1751636717504"
+            path.join(
+              adapterWeightsDir,
+              `${cleanAdapterName.replace(/_/g, "-")}_adapter`
+            ),
+            path.join(adapterWeightsDir, cleanAdapterName.replace(/_/g, "-")),
 
-          // 5. Clean name with hyphens (most likely match)
-          // "gemma3_adapter_1751636717504" → "gemma3-adapter-1751636717504_adapter"
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "weights",
-            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
-          ),
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "registry",
-            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
-          ),
+            // 4. Handle full name underscore -> hyphen conversion
+            // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
+            path.join(adapterWeightsDir, adapterName.replace(/_/g, "-")),
+            path.join(
+              adapterWeightsDir,
+              `${adapterName.replace(/_/g, "-")}_adapter`
+            ),
 
-          // 6. Clean name with hyphens (without suffix)
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "weights",
-            cleanAdapterName.replace(/_/g, "-")
-          ),
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "registry",
-            cleanAdapterName.replace(/_/g, "-")
-          ),
+            // 5. Handle mixed patterns (common issue)
+            path.join(
+              adapterWeightsDir,
+              `${adapterName.replace(/_adapter/g, "-adapter")}`
+            ),
+            path.join(
+              adapterWeightsDir,
+              `${cleanAdapterName.replace(/_/g, "-")}-adapter`
+            ),
 
-          // 7. Add _adapter suffix to clean names
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "weights",
-            `${cleanAdapterName}_adapter`
-          ),
-          path.join(
-            process.cwd(),
-            "lora_adapters",
-            "registry",
-            `${cleanAdapterName}_adapter`
-          ),
-        ];
+            // 6. SPECIFIC FIX: Handle the exact pattern we're seeing
+            // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
+            // This handles cases where localStorage has "model_adapter_timestamp_adapter" format
+            path.join(
+              adapterWeightsDir,
+              cleanAdapterName.replace(
+                /^([^_]+)_adapter_(.+)$/,
+                "$1-adapter-$2_adapter"
+              )
+            ),
+            path.join(
+              adapterWeightsDir,
+              cleanAdapterName.replace(/^([^_]+)_adapter_(.+)$/, "$1-adapter-$2")
+            ),
+          ];
 
-        console.log(
-          `[FallbackAdapterRegistry] Searching in ${possiblePaths.length} possible locations for: ${adapterName}`
-        );
-        console.log(
-          `[FallbackAdapterRegistry] Clean name: ${cleanAdapterName}`
-        );
+          console.log(
+            `[FallbackAdapterRegistry] Searching for adapter in directories:`,
+            possibleAdapterDirs
+          );
 
-        for (const adapterDir of possiblePaths) {
-          try {
-            // Check for different adapter file types
-            const possibleFiles = [
-              path.join(adapterDir, "adapter_model.safetensors"),
-              path.join(adapterDir, "adapter_model.bin"),
-              path.join(adapterDir, "pytorch_adapter.bin"),
-              path.join(adapterDir, "adapter_model.pt"),
-            ];
+          for (const adapterDir of possibleAdapterDirs) {
+            try {
+              await fs.access(adapterDir);
+              console.log(
+                `[FallbackAdapterRegistry] Found adapter directory: ${adapterDir}`
+              );
 
-            for (const filePath of possibleFiles) {
-              try {
-                await fs.access(filePath);
-                console.log(
-                  `[FallbackAdapterRegistry] Found adapter at: ${filePath}`
-                );
-                return filePath;
-              } catch {
-                // Continue to next file
+              // Look for safetensors files first (preferred format) - SAME ORDER AS AdapterRegistry
+              const safetensorsFiles = [
+                "adapter_model.safetensors",
+                "pytorch_model.safetensors",
+                "model.safetensors",
+              ];
+
+              for (const filename of safetensorsFiles) {
+                const safetensorsPath = path.join(adapterDir, filename);
+                try {
+                  await fs.access(safetensorsPath);
+                  console.log(
+                    `[FallbackAdapterRegistry] Found safetensors file: ${safetensorsPath}`
+                  );
+                  return safetensorsPath;
+                } catch {
+                  // Continue to next file
+                }
               }
-            }
-          } catch {
-            // Continue to next directory
-          }
-        }
 
-        console.warn(
-          `[FallbackAdapterRegistry] Adapter not found: ${adapterName}`
-        );
-        console.warn(
-          `[FallbackAdapterRegistry] Searched directories:`,
-          possiblePaths.slice(0, 5).map((p) => path.basename(p))
-        );
-        return null;
+              // Fallback to .bin files if no safetensors found - SAME ORDER AS AdapterRegistry
+              const binFiles = ["adapter_model.bin", "pytorch_model.bin"];
+              for (const filename of binFiles) {
+                const binPath = path.join(adapterDir, filename);
+                try {
+                  await fs.access(binPath);
+                  console.log(
+                    `[FallbackAdapterRegistry] Found bin file (fallback): ${binPath}`
+                  );
+                  return binPath;
+                } catch {
+                  // Continue to next file
+                }
+              }
+            } catch {
+              // Continue to next directory
+            }
+          }
+
+          console.log(
+            `[FallbackAdapterRegistry] Adapter weights not found for: ${adapterName}`
+          );
+          console.log(
+            `[FallbackAdapterRegistry] Searched directories:`,
+            possibleAdapterDirs
+          );
+
+          return null;
+        } catch (error) {
+          console.error(`[FallbackAdapterRegistry] Error finding adapter path:`, error);
+          return null;
+        }
       }
     };
   }
@@ -344,12 +326,26 @@ export class LoRAMergeService {
   }
 
   /**
-   * Get the correct project root directory (same logic as AdapterRegistry)
+   * Get the correct project root directory (EXACT same logic as AdapterRegistry)
    */
   private getProjectRoot(): string {
     const { app } = require("electron");
     const fs = require("fs");
     const os = require("os");
+
+    console.log(`[LoRAMergeService] 🔍 DEBUG Project Root Resolution:`);
+    console.log(`[LoRAMergeService]   - app.isPackaged: ${app.isPackaged}`);
+    console.log(`[LoRAMergeService]   - process.cwd(): ${process.cwd()}`);
+    console.log(`[LoRAMergeService]   - __dirname: ${__dirname}`);
+    console.log(`[LoRAMergeService]   - __filename: ${__filename}`);
+
+    if (process.resourcesPath) {
+      console.log(
+        `[LoRAMergeService]   - process.resourcesPath: ${process.resourcesPath}`
+      );
+    } else {
+      console.log(`[LoRAMergeService]   - process.resourcesPath: undefined`);
+    }
 
     // CRITICAL FIX: Add userData directory path that matches Python's get_project_root()
     // Platform-specific paths to match Python's behavior
@@ -365,13 +361,14 @@ export class LoRAMergeService {
       userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
     }
 
+    // CRITICAL FIX: Use EXACT same order as AdapterRegistry
     // List of potential project root directories to try
     const potentialRoots = [
-      // 1. PRIORITY: Check userData directory first (matches Python production behavior)
-      userDataDir,
-
-      // 2. Use process.cwd() (should work in development)
+      // 1. PRIORITY: In development, check current working directory first
       process.cwd(),
+
+      // 2. Check userData directory (matches Python production behavior)
+      userDataDir,
 
       // 3. Go up from current file location (works in some Electron contexts)
       path.resolve(__dirname, "../../../.."),
@@ -386,6 +383,13 @@ export class LoRAMergeService {
       "/Users/guilhermeferraribrescia/orch-os",
     ].filter(Boolean) as string[];
 
+    console.log(
+      `[LoRAMergeService]   - Potential roots to try: ${potentialRoots.length}`
+    );
+    console.log(
+      `[LoRAMergeService]   - PRIORITY: Checking current working directory first in development: ${process.cwd()}`
+    );
+
     // Try each potential root and find the one that contains lora_adapters
     for (const candidateRoot of potentialRoots) {
       try {
@@ -393,12 +397,33 @@ export class LoRAMergeService {
 
         // Check if this path has the lora_adapters directory
         if (fs.existsSync(loraAdaptersPath)) {
+          console.log(
+            `[LoRAMergeService] ✅ Found valid project root: ${candidateRoot}`
+          );
+          console.log(
+            `[LoRAMergeService]   - Contains lora_adapters at: ${loraAdaptersPath}`
+          );
           return candidateRoot;
+        } else {
+          console.log(
+            `[LoRAMergeService]   - Rejected ${candidateRoot}: no lora_adapters directory`
+          );
         }
       } catch (error) {
-        // Continue to next candidate
+        console.log(
+          `[LoRAMergeService]   - Error checking ${candidateRoot}: ${error}`
+        );
       }
     }
+
+    // If we get here, none of the candidates worked
+    console.error(`[LoRAMergeService] ❌ Could not find valid project root!`);
+    console.error(
+      `[LoRAMergeService]   - Tried ${potentialRoots.length} candidates`
+    );
+    console.error(
+      `[LoRAMergeService]   - Falling back to userData directory: ${userDataDir}`
+    );
 
     // FALLBACK FIX: Create userData directory structure if it doesn't exist
     // This ensures consistency with Python behavior
@@ -417,7 +442,6 @@ export class LoRAMergeService {
       );
     }
 
-    // Fallback to userData directory (matches Python behavior)
     return userDataDir;
   }
 
@@ -624,26 +648,30 @@ export class LoRAMergeService {
         const pythonCommand = await this.findCompatiblePython();
         console.log(`🐍 [LoRAMergeService] Using Python: ${pythonCommand}`);
 
-        // CRITICAL FIX: Use proper argument handling without shell for better path support
-        console.log(`🐍 [LoRAMergeService] Command: ${pythonCommand}`);
+        // CRITICAL FIX: Handle Python commands with arguments (like "py -3.11")
+        const pythonParts = pythonCommand.split(' ');
+        const pythonExe = pythonParts[0];
+        const pythonArgs = pythonParts.slice(1);
+        
+        console.log(`🐍 [LoRAMergeService] Python executable: ${pythonExe}`);
+        console.log(`🐍 [LoRAMergeService] Python args: ${pythonArgs.join(' ')}`);
         console.log(`🐍 [LoRAMergeService] Script: ${this.pythonScriptPath}`);
         console.log(`🐍 [LoRAMergeService] Config: ${configPath}`);
         console.log(`🐍 [LoRAMergeService] Output: ${outputPath}`);
 
-        const python = spawn(
-          pythonCommand,
-          [
-            this.pythonScriptPath,
-            "--config",
-            configPath,
-            "--output",
-            outputPath,
-          ],
-          {
-            shell: false, // Don't use shell to avoid argument parsing issues
-            cwd: this.mergeDir,
-          }
-        );
+        const allArgs = [
+          ...pythonArgs,
+          this.pythonScriptPath,
+          "--config",
+          configPath,
+          "--output",
+          outputPath,
+        ];
+
+        const python = spawn(pythonExe, allArgs, {
+          shell: false,
+          cwd: this.mergeDir,
+        });
 
         let output = "";
         let errorOutput = "";
@@ -903,27 +931,55 @@ export class LoRAMergeService {
     let pythonCandidates: string[] = [];
 
     if (isWindows) {
+      // First try PATH-based commands
       pythonCandidates = [
-        "py -3.11",
+        "py -3.11", // Python Launcher with specific version
         "py -3.10",
         "py -3.9",
         "py -3.12",
-        "python",
-        "python3",
-        "py",
+        "python", // Standard command
+        "python3", // Sometimes available on Windows
+        "py", // Python Launcher default
       ];
+
+      // Then try common Windows installation paths
+      const windowsPaths = [
+        // Python.org installer locations
+        "C:\\Python311\\python.exe",
+        "C:\\Python310\\python.exe",
+        "C:\\Python39\\python.exe",
+        "C:\\Python312\\python.exe",
+        // Microsoft Store installations
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python311\\python.exe`,
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python310\\python.exe`,
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python39\\python.exe`,
+        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python312\\python.exe`,
+        // User AppData installations
+        `${process.env.APPDATA}\\Python\\Python311\\python.exe`,
+        `${process.env.APPDATA}\\Python\\Python310\\python.exe`,
+        `${process.env.APPDATA}\\Python\\Python39\\python.exe`,
+        `${process.env.APPDATA}\\Python\\Python312\\python.exe`,
+        // Program Files installations
+        "C:\\Program Files\\Python311\\python.exe",
+        "C:\\Program Files\\Python310\\python.exe",
+        "C:\\Program Files\\Python39\\python.exe",
+        "C:\\Program Files\\Python312\\python.exe",
+        "C:\\Program Files (x86)\\Python311\\python.exe",
+        "C:\\Program Files (x86)\\Python310\\python.exe",
+        "C:\\Program Files (x86)\\Python39\\python.exe",
+        "C:\\Program Files (x86)\\Python312\\python.exe",
+      ];
+
+      pythonCandidates = pythonCandidates.concat(windowsPaths);
     } else {
-      // macOS/Linux: prioritize the Homebrew Python that has torch installed
+      // macOS/Linux Python commands (unified approach like LoRATrainingService)
       pythonCandidates = [
-        "/opt/homebrew/bin/python3", // Homebrew Python (Apple Silicon) - has torch installed
-        "/usr/local/bin/python3", // Homebrew Python (Intel) - has torch installed
-        "python3", // System Python (fallback)
-        "python3.13", // Specific version
-        "python3.12",
-        "python3.11",
+        "python3.11", // PRIORIDADE: Versão mais estável para treinamento LoRA
         "python3.10",
         "python3.9",
-        "python",
+        "python3.12", // Pode ter problemas, mas ainda compatível
+        "python3", // fallback Unix
+        "python", // General fallback
       ];
     }
 
@@ -935,8 +991,18 @@ export class LoRAMergeService {
       try {
         console.log(`[LoRAMergeService] Testing Python: ${pythonCmd}`);
 
+        // For full paths on Windows, check if file exists first
+        if (isWindows && pythonCmd.includes(":\\")) {
+          try {
+            await execAsync(`if exist "${pythonCmd}" echo exists`);
+          } catch {
+            console.log(`[LoRAMergeService] ❌ Path not found: ${pythonCmd}`);
+            continue;
+          }
+        }
+
         // Check if this Python version exists and get its version
-        const { stdout } = await execAsync(`${pythonCmd} --version`);
+        const { stdout } = await execAsync(`"${pythonCmd}" --version`);
 
         // Parse version (e.g., "Python 3.12.10")
         const versionStr = stdout.trim().split(" ")[1];
@@ -951,7 +1017,7 @@ export class LoRAMergeService {
           // CRITICAL FIX: Verify that torch is actually available in this Python
           try {
             const { stdout: torchCheck } = await execAsync(
-              `${pythonCmd} -c "import torch; print(f'torch-{torch.__version__}')"`
+              `"${pythonCmd}" -c "import torch; print(f'torch-{torch.__version__}')"`
             );
 
             const torchVersion = torchCheck.trim();

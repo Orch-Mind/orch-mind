@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # SPDX-License-Identifier: MIT OR Apache-2.0
 # LoRA Adapter Merging Script - Orch-OS
 
@@ -12,11 +13,17 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import warnings
 
+# CRITICAL FIX: Force UTF-8 encoding on Windows to handle Unicode characters
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 warnings.filterwarnings("ignore")
 
 def load_adapter_weights(adapter_path: str) -> Dict[str, torch.Tensor]:
     """Load LoRA adapter weights from path."""
-    print(f"📂 Loading adapter from: {adapter_path}")
+    print(f"[LOAD] Loading adapter from: {adapter_path}")
     
     # Try to load pytorch weights
     pytorch_weights = None
@@ -29,14 +36,14 @@ def load_adapter_weights(adapter_path: str) -> Dict[str, torch.Tensor]:
                         from safetensors.torch import load_file
                         pytorch_weights = load_file(weight_path)
                     except ImportError:
-                        print("⚠️ safetensors not available, trying torch.load")
+                        print("[WARNING] safetensors not available, trying torch.load")
                         pytorch_weights = torch.load(weight_path, map_location='cpu')
                 else:
                     pytorch_weights = torch.load(weight_path, map_location='cpu')
-                print(f"✅ Loaded weights from: {weight_file}")
+                print(f"[SUCCESS] Loaded weights from: {weight_file}")
                 break
             except Exception as e:
-                print(f"⚠️ Failed to load {weight_file}: {e}")
+                print(f"[WARNING] Failed to load {weight_file}: {e}")
                 continue
     
     if pytorch_weights is None:
@@ -46,7 +53,7 @@ def load_adapter_weights(adapter_path: str) -> Dict[str, torch.Tensor]:
 
 def arithmetic_mean_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
     """Merge adapters using arithmetic mean of deltas."""
-    print("🧮 Performing arithmetic mean merge...")
+    print("[MERGE] Performing arithmetic mean merge...")
     
     if not adapters_weights:
         raise ValueError("No adapter weights provided")
@@ -57,7 +64,7 @@ def arithmetic_mean_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Di
     # Ensure all adapters have the same parameters
     for i, adapter in enumerate(adapters_weights[1:], 1):
         if set(adapter.keys()) != param_names:
-            print(f"⚠️ Parameter mismatch in adapter {i}")
+            print(f"[WARNING] Parameter mismatch in adapter {i}")
             # Use intersection of parameters
             param_names = param_names.intersection(set(adapter.keys()))
     
@@ -71,9 +78,9 @@ def arithmetic_mean_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Di
         merged_param = torch.stack(param_tensors, dim=0).mean(dim=0)
         merged_weights[param_name] = merged_param
         
-        print(f"📊 Merged parameter: {param_name} (shape: {merged_param.shape})")
+        print(f"[INFO] Merged parameter: {param_name} (shape: {merged_param.shape})")
     
-    print(f"✅ Merged {len(merged_weights)} parameters using arithmetic mean")
+    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using arithmetic mean")
     return merged_weights
 
 def weighted_average_merge(
@@ -81,7 +88,7 @@ def weighted_average_merge(
     weights: List[float]
 ) -> Dict[str, torch.Tensor]:
     """Merge adapters using weighted average of deltas."""
-    print(f"⚖️ Performing weighted average merge with weights: {weights}")
+    print(f"[MERGE] Performing weighted average merge with weights: {weights}")
     
     if len(adapters_weights) != len(weights):
         raise ValueError("Number of adapters must match number of weights")
@@ -89,7 +96,7 @@ def weighted_average_merge(
     # Normalize weights
     total_weight = sum(weights)
     normalized_weights = [w / total_weight for w in weights]
-    print(f"📊 Normalized weights: {normalized_weights}")
+    print(f"[INFO] Normalized weights: {normalized_weights}")
     
     param_names = set(adapters_weights[0].keys())
     for adapter in adapters_weights[1:]:
@@ -108,14 +115,14 @@ def weighted_average_merge(
                 weighted_sum += param_tensor
         
         merged_weights[param_name] = weighted_sum
-        print(f"📊 Merged parameter: {param_name} (shape: {weighted_sum.shape})")
+        print(f"[INFO] Merged parameter: {param_name} (shape: {weighted_sum.shape})")
     
-    print(f"✅ Merged {len(merged_weights)} parameters using weighted average")
+    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using weighted average")
     return merged_weights
 
 def svd_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
     """Merge adapters using SVD-based low-rank approximation."""
-    print("🔬 Performing SVD-based merge...")
+    print("[MERGE] Performing SVD-based merge...")
     
     param_names = set(adapters_weights[0].keys())
     for adapter in adapters_weights[1:]:
@@ -149,9 +156,9 @@ def svd_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torc
             # For non-matrix parameters, use simple average
             merged_weights[param_name] = torch.stack(param_matrices, dim=0).mean(dim=0)
         
-        print(f"📊 SVD merged parameter: {param_name}")
+        print(f"[INFO] SVD merged parameter: {param_name}")
     
-    print(f"✅ Merged {len(merged_weights)} parameters using SVD")
+    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using SVD")
     return merged_weights
 
 def main():
@@ -162,7 +169,7 @@ def main():
     
     args = parser.parse_args()
     
-    print("🚀 Starting LoRA Adapter Merging...")
+    print("[START] Starting LoRA Adapter Merging...")
     
     try:
         # Load configuration
@@ -173,9 +180,9 @@ def main():
         strategy = config["strategy"]
         output_path = args.output
         
-        print(f"📋 Merge strategy: {strategy}")
-        print(f"📁 Output path: {output_path}")
-        print(f"🔗 Adapters to merge: {len(adapters_config)}")
+        print(f"[INFO] Merge strategy: {strategy}")
+        print(f"[INFO] Output path: {output_path}")
+        print(f"[INFO] Adapters to merge: {len(adapters_config)}")
         
         # Load all adapter weights
         adapters_weights = []
@@ -186,12 +193,12 @@ def main():
             adapter_name = adapter_config["name"]
             weight = adapter_config.get("weight", 1.0)
             
-            print(f"\n📂 Loading adapter: {adapter_name}")
+            print(f"\n[LOAD] Loading adapter: {adapter_name}")
             weights = load_adapter_weights(adapter_path)
             adapters_weights.append(weights)
             adapter_weights_list.append(weight)
             
-            print(f"✅ Loaded {len(weights)} parameters from {adapter_name}")
+            print(f"[SUCCESS] Loaded {len(weights)} parameters from {adapter_name}")
         
         # Perform merge based on strategy
         if strategy == "arithmetic_mean":
@@ -210,24 +217,24 @@ def main():
         # 1. PyTorch format (.bin) - traditional format
         merged_weights_path_bin = os.path.join(output_path, "adapter_model.bin")
         torch.save(merged_weights, merged_weights_path_bin)
-        print(f"💾 Saved merged weights (PyTorch): {merged_weights_path_bin}")
+        print(f"[SAVE] Saved merged weights (PyTorch): {merged_weights_path_bin}")
         
         # 2. SafeTensors format (.safetensors) - required by Ollama
         merged_weights_path_safetensors = os.path.join(output_path, "adapter_model.safetensors")
         try:
             from safetensors.torch import save_file
             save_file(merged_weights, merged_weights_path_safetensors)
-            print(f"💾 Saved merged weights (SafeTensors): {merged_weights_path_safetensors}")
+            print(f"[SAVE] Saved merged weights (SafeTensors): {merged_weights_path_safetensors}")
         except ImportError:
-            print("⚠️ SafeTensors not available, installing...")
+            print("[WARNING] SafeTensors not available, installing...")
             import subprocess
             import sys
             subprocess.check_call([sys.executable, "-m", "pip", "install", "safetensors"])
             from safetensors.torch import save_file
             save_file(merged_weights, merged_weights_path_safetensors)
-            print(f"💾 Saved merged weights (SafeTensors): {merged_weights_path_safetensors}")
+            print(f"[SAVE] Saved merged weights (SafeTensors): {merged_weights_path_safetensors}")
         except Exception as e:
-            print(f"⚠️ Failed to save SafeTensors format: {e}")
+            print(f"[WARNING] Failed to save SafeTensors format: {e}")
             print("   • PyTorch format (.bin) is still available")
             print("   • Some Ollama versions may require SafeTensors format")
         
@@ -245,7 +252,7 @@ def main():
             merged_config_path = os.path.join(output_path, "adapter_config.json")
             with open(merged_config_path, 'w') as f:
                 json.dump(adapter_config, f, indent=2)
-            print(f"📋 Saved merged config to: {merged_config_path}")
+            print(f"[SAVE] Saved merged config to: {merged_config_path}")
         
         # Save merge metadata
         merge_metadata = {
@@ -259,16 +266,16 @@ def main():
         metadata_path = os.path.join(output_path, "merge_metadata.json")
         with open(metadata_path, 'w') as f:
             json.dump(merge_metadata, f, indent=2)
-        print(f"📊 Saved merge metadata to: {metadata_path}")
+        print(f"[SAVE] Saved merge metadata to: {metadata_path}")
         
-        print("\n🎉 LoRA adapter merging completed successfully!")
-        print(f"📈 Merged adapter saved to: {output_path}")
+        print("\n[SUCCESS] LoRA adapter merging completed successfully!")
+        print(f"[INFO] Merged adapter saved to: {output_path}")
         
     except Exception as e:
-        print(f"\n❌ Error during merging: {e}")
+        print(f"\n[ERROR] Error during merging: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -361,51 +361,72 @@ export function setupLoRATrainingHandlers(): void {
         const path = await import("path");
         const { app } = require("electron");
 
-        // Get project root directory
+        // Get project root directory using the same logic as AdapterRegistry
         const getProjectRoot = (): string => {
           const os = require("os");
+          const fs = require("fs");
 
-          // Platform-specific paths to match Python's behavior
+          console.log(`[IPC] 🔍 DEBUG Project Root Resolution:`);
+          console.log(`[IPC]   - app.isPackaged: ${app.isPackaged}`);
+          console.log(`[IPC]   - process.cwd(): ${process.cwd()}`);
+          console.log(`[IPC]   - __dirname: ${__dirname}`);
+          console.log(`[IPC]   - __filename: ${__filename}`);
+
+          // Platform-specific paths
           let userDataDir: string;
           if (process.platform === "win32") {
-            // Windows: Use AppData/Local/Programs/lora_adapters as reported by user
             userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
           } else if (process.platform === "darwin") {
-            // macOS: Use Library/Application Support/Orch-OS
             userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
           } else {
-            // Linux: Use .local/share/orch-os
             userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
           }
 
-          const potentialRoots = [
-            userDataDir,
-            process.cwd(),
-            path.resolve(__dirname, "../../../.."),
-            app.getAppPath ? app.getAppPath() : null,
-            process.resourcesPath
-              ? path.resolve(process.resourcesPath, "..")
-              : null,
-            "/Users/guilhermeferraribrescia/orch-os",
-          ].filter(Boolean) as string[];
+          const potentialPaths = [
+            process.cwd(), // Current working directory (prioritize for development)
+            userDataDir, // Platform-specific user data directory
+            path.resolve(__dirname, "../../../.."), // Relative to this file
+            app.getAppPath(), // Electron app path
+            path.dirname(process.resourcesPath || ""), // Parent of resources path
+          ];
 
-          // Find the one that contains lora_adapters
-          for (const candidateRoot of potentialRoots) {
+          console.log(`[IPC]   - userDataDir: ${userDataDir}`);
+          console.log(`[IPC]   - potentialPaths:`, potentialPaths);
+
+          // Find the first path that contains lora_adapters directory
+          for (const potentialPath of potentialPaths) {
+            if (!potentialPath) continue;
+
             try {
-              const loraAdaptersPath = path.join(
-                candidateRoot,
-                "lora_adapters"
-              );
-              const fs = require("fs");
+              const loraAdaptersPath = path.join(potentialPath, "lora_adapters");
+              console.log(`[IPC]   - Checking: ${loraAdaptersPath}`);
+
               if (fs.existsSync(loraAdaptersPath)) {
-                return candidateRoot;
+                console.log(`[IPC] ✅ Found project root: ${potentialPath}`);
+                return potentialPath;
               }
             } catch (error) {
-              // Continue to next candidate
+              console.log(`[IPC]   - Error checking ${potentialPath}:`, error);
+              continue;
             }
           }
 
-          // Fallback to userData directory
+          // If no existing lora_adapters found, use userDataDir and create structure
+          console.log(`[IPC] ⚠️ No existing lora_adapters found, using userDataDir: ${userDataDir}`);
+          
+          try {
+            const loraAdaptersPath = path.join(userDataDir, "lora_adapters");
+            const weightsPath = path.join(loraAdaptersPath, "weights");
+            const registryPath = path.join(loraAdaptersPath, "registry");
+            
+            fs.mkdirSync(weightsPath, { recursive: true });
+            fs.mkdirSync(registryPath, { recursive: true });
+            
+            console.log(`[IPC] ✅ Created lora_adapters structure in: ${userDataDir}`);
+          } catch (error) {
+            console.warn(`[IPC] Failed to create lora_adapters structure:`, error);
+          }
+          
           return userDataDir;
         };
 
