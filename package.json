@@ -1,6 +1,6 @@
 {
   "name": "orch-mind",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "Orch-Mind - Integrative Symbolic Intelligence Desktop Application",
   "main": "dist-electron/main.js",
   "scripts": {
