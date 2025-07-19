@@ -102,28 +102,11 @@ const ConnectionStats: React.FC<{
 
 // Helper function for more informative peer status
 const getPeerStatus = (
-  peersCount: number,
-  incomingAdaptersCount: number
+  peersCount: number
 ): string => {
   // If we have actual peer connections, show the count
-  if (peersCount > 0) {
+
     return `${peersCount} peers`;
-  }
-  
-  // If we have no peers and no incoming adapters, clearly disconnected
-  if (incomingAdaptersCount === 0) {
-    return "0 peers";
-  }
-  
-  // If we have incoming adapters but peersCount is 0, this could be:
-  // 1. A timing issue where adapters arrived but peer count hasn't updated yet
-  // 2. A relay connection (like Docker peer)
-  // 3. A peer that just disconnected but we still have their cached adapters
-  
-  // For now, let's be more conservative and show "1 peer" instead of assuming relay
-  // This better reflects that there is an active connection providing adapters
-  // TODO: Add proper connection type detection in the backend to distinguish relay vs peer
-  return "1 peer (active connection)";
 };
 
 // SRP: Card focado apenas no status de conexão
@@ -188,8 +171,7 @@ const ConnectionStatusCard: React.FC<{
           </svg>
           {isSharing
             ? getPeerStatus(
-                currentRoom?.peersCount || 0,
-                incomingAdapters.length
+                currentRoom?.peersCount || 0
               )
             : "Offline"}
         </div>

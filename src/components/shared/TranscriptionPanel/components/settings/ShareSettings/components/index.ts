@@ -3,6 +3,5 @@
 
 // KISS: Exports centralizados e organizados
 export { AdapterListComponent } from "./AdapterListComponent";
-export { AvailableAdaptersComponent } from "./AvailableAdaptersComponent";
 export { ConnectedStatusComponent } from "./ConnectedStatusComponent";
 export { SmartConnectComponent } from "./SmartConnectComponent";

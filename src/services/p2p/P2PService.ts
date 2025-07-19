@@ -91,7 +91,83 @@ export class P2PService {
         }
       );
 
-      console.log("[P2PService] IPC listeners setup complete");
+      // IMPORTANT: Listen for transfer progress from Electron backend
+      // This converts backend "transfer-progress" events to frontend "download:progress" events
+      (window.electronAPI as any).onP2PTransferProgress?.((data: {
+        topic: string;
+        progress: number;
+        sent: number;
+        total: number;
+      }) => {
+        console.log(
+          "[P2PService] Received transfer-progress from Electron:",
+          data
+        );
+        
+        // Convert backend progress to frontend format
+        const downloadProgressData = {
+          adapterName: data.topic,
+          progress: data.progress,
+          downloadedBytes: Math.floor((data.sent / data.total) * 100000), // Estimate bytes based on progress
+          totalBytes: 100000, // Default estimate, will be updated with real data if available
+        };
+        
+        // Emit as download:progress event for the frontend to consume
+        p2pEventBus.emit("download:progress", downloadProgressData);
+      });
+
+      // Listen for chunk received events to track download progress
+      (window.electronAPI as any).onP2PChunkReceived?.((data: {
+        topic: string;
+        index: number;
+        total: number;
+        chunkSize?: number;
+        [key: string]: any;
+      }) => {
+        console.log(
+          "[P2PService] Received chunk-received from Electron:",
+          `${data.index + 1}/${data.total} for ${data.topic}`
+        );
+        
+        // Calculate progress based on chunks received
+        const progress = ((data.index + 1) / data.total) * 100;
+        
+        // Estimate bytes based on chunks (assuming ~64KB per chunk as typical)
+        const estimatedChunkSize = data.chunkSize || 65536; // 64KB default
+        const downloadedBytes = (data.index + 1) * estimatedChunkSize;
+        const totalBytes = data.total * estimatedChunkSize;
+        
+        const downloadProgressData = {
+          adapterName: data.topic,
+          progress: Math.min(progress, 100),
+          downloadedBytes,
+          totalBytes,
+        };
+        
+        // Emit as download:progress event for the frontend to consume
+        p2pEventBus.emit("download:progress", downloadProgressData);
+      });
+
+      // Listen for transfer completion to finalize progress
+      (window.electronAPI as any).onP2PTransferComplete?.((data: any) => {
+        const topic = typeof data === 'string' ? data : data.topic;
+        console.log(
+          "[P2PService] Transfer completed for adapter:",
+          topic
+        );
+        
+        // Emit final 100% progress with realistic byte values
+        const completionData = {
+          adapterName: topic,
+          progress: 100,
+          downloadedBytes: data.totalBytes || 100000000, // 100MB default if not provided
+          totalBytes: data.totalBytes || 100000000,
+        };
+        
+        p2pEventBus.emit("download:progress", completionData);
+      });
+
+      console.log("[P2PService] IPC listeners setup complete with download progress support");
     }
   }
 

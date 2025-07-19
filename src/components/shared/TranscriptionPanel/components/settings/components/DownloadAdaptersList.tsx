@@ -76,8 +76,8 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
             key={adapter.name || `adapter-${index}`}
             adapter={adapter}
             onDownload={onDownload}
-            isDownloading={isDownloading?.(adapter.name) || false}
-            downloadProgress={getProgress?.(adapter.name)}
+            isDownloading={isDownloading?.(adapter.topic) || false}
+            downloadProgress={getProgress?.(adapter.topic)}
           />
         ))}
       </div>
@@ -164,7 +164,7 @@ const AdapterListItem: React.FC<{
           </div>
 
           {/* Download Progress - Compact */}
-          {isDownloading && downloadProgress && (
+          {downloadProgress && (
             <DownloadProgressIndicator progress={downloadProgress} />
           )}
         </div>
@@ -237,6 +237,11 @@ const AdapterListItem: React.FC<{
 const DownloadProgressIndicator: React.FC<{ progress: any }> = ({
   progress,
 }) => {
+  // Early return if no progress data
+  if (!progress) {
+    return null;
+  }
+  
   const percentage = progress?.progress || 0;
   const status = progress?.status || "downloading";
   const speed = progress?.speed;

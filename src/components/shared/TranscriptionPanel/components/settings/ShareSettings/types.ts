@@ -51,12 +51,7 @@ export interface AdapterListProps {
   isSharing: boolean;
 }
 
-export interface AvailableAdaptersProps {
-  adapters: IncomingAdapter[];
-  currentRoom: P2PRoom | null;
-  onDownload: (adapter: IncomingAdapter) => void;
-  isSharing: boolean;
-}
+
 
 // P2P Download Progress Types
 export interface P2PDownloadProgress {

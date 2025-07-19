@@ -491,7 +491,7 @@ export const useAdapterManager = ({
         const sizeInBytes = ShareUtils.parseSizeToBytes(adapter.size);
 
         // Start download progress tracking
-        downloadProgress.startDownload(adapter.name, sizeInBytes);
+        downloadProgress.startDownload(adapter.topic, sizeInBytes);
 
         console.log(
           `🔽 [ADAPTER-MANAGER] Requesting adapter from peer: ${adapter.from}`

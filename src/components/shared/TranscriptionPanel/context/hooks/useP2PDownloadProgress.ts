@@ -107,6 +107,12 @@ export const useP2PDownloadProgress = () => {
     }) => {
       const { adapterName, progress, downloadedBytes, totalBytes } = data;
       const currentTime = Date.now();
+      
+      // If this is the first progress update and we don't have a start time, set it now
+      if (!startTimes.current.has(adapterName)) {
+        startTimes.current.set(adapterName, currentTime);
+      }
+      
       const startTime = startTimes.current.get(adapterName) || currentTime;
       const timeElapsed = currentTime - startTime;
 
@@ -124,7 +130,7 @@ export const useP2PDownloadProgress = () => {
       setDownloadState((prev) => ({
         ...prev,
         [adapterName]: {
-          ...prev[adapterName],
+          adapterName,
           progress: Math.min(progress, 100),
           downloadedBytes,
           totalBytes,
@@ -135,7 +141,7 @@ export const useP2PDownloadProgress = () => {
       }));
 
       console.log(
-        `📊 [P2P-PROGRESS] ${adapterName}: ${progress.toFixed(1)}% (${speed}, ETA: ${eta})`
+        `📊 [P2P-PROGRESS] ${adapterName}: ${progress.toFixed(1)}% (${speed}, ETA: ${eta}) - Downloaded: ${downloadedBytes}/${totalBytes} bytes`
       );
 
       // Auto-complete download when progress reaches 100%
@@ -253,7 +259,8 @@ export const useP2PDownloadProgress = () => {
   // Check if adapter is currently downloading
   const isDownloading = useCallback(
     (adapterName: string): boolean => {
-      return downloadState[adapterName]?.status === "downloading";
+      const state = downloadState[adapterName];
+      return state?.status === "downloading" || (state?.progress > 0 && state?.progress < 100);
     },
     [downloadState]
   );
