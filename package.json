@@ -137,7 +137,7 @@
         "nsis"
       ],
       "icon": "assets/icons/win/icon.ico",
-      "artifactName": "Orch-Mind-${productName}-Windows-${version}.${ext}",
+      "artifactName": "${productName}-Windows-${version}.${ext}",
       "executableName": "Orch-Mind",
       "legalTrademarks": "Orch-Mind",
       "requestedExecutionLevel": "asInvoker",
