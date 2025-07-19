@@ -1,0 +1,5 @@
+provider: github
+owner: guiferrarib
+repo: orch-mind
+private: true
+releaseType: release

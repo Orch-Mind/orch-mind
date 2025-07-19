@@ -14,11 +14,16 @@ export function initAutoUpdater() {
     return
   }
 
-  // Configure auto updater
+  // Configure auto updater with latest best practices
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.allowDowngrade = true
-  autoUpdater.allowPrerelease = true
+  autoUpdater.allowDowngrade = false // Security best practice
+  autoUpdater.allowPrerelease = false // Only stable releases
+  
+  // Enable development mode if needed (for testing)
+  if (process.env.NODE_ENV === 'development' && process.env.ENABLE_UPDATER_DEV) {
+    autoUpdater.forceDevUpdateConfig = true
+  }
 
   // Enable more verbose logging
   autoUpdater.logger = log

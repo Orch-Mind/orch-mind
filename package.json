@@ -1,6 +1,6 @@
 {
   "name": "orch-mind",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Orch-Mind - Integrative Symbolic Intelligence Desktop Application",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -21,6 +21,16 @@
     "build:renderer": "vite build",
     "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder",
     "dist:all": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --mac --win --linux",
+    "dist:mac": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --mac --publish=always",
+    "dist:win": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --publish=always",
+    "dist:linux": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --linux --publish=always",
+    "publish": "npm run build && electron-builder --publish=always",
+    "publish:patch": "node scripts/publish.js patch",
+    "publish:minor": "node scripts/publish.js minor",
+    "publish:major": "node scripts/publish.js major",
+    "publish:mac": "node scripts/publish.js patch mac",
+    "publish:win": "node scripts/publish.js patch win",
+    "publish:linux": "node scripts/publish.js patch linux",
     "vite:start": "vite --port 54321 --host",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
@@ -46,7 +56,7 @@
       "electron/**/*",
       "scripts/**/*",
       "node_modules/b4a/**/*",
-      "node_modules/hyperswarm/**/*", 
+      "node_modules/hyperswarm/**/*",
       "node_modules/hypercore-crypto/**/*",
       "!**/.git/**",
       "!**/llama.cpp/**",
@@ -71,6 +81,7 @@
     "asar": true,
     "compression": "maximum",
     "generateUpdatesFilesForAllChannels": true,
+    "electronUpdaterCompatibility": ">= 2.16",
     "nodeGypRebuild": false,
     "mac": {
       "target": [
@@ -136,12 +147,14 @@
           "orch-mind"
         ]
       },
-      "fileAssociations": [{
-        "ext": "orchmind",
-        "name": "Orch-Mind File",
-        "description": "Orch-Mind File",
-        "role": "Editor"
-      }]
+      "fileAssociations": [
+        {
+          "ext": "orchmind",
+          "name": "Orch-Mind File",
+          "description": "Orch-Mind File",
+          "role": "Editor"
+        }
+      ]
     },
     "nsis": {
       "include": "build/install-dependencies.nsh",
