@@ -124,9 +124,9 @@ const WelcomeMessage: React.FC<{
           />
         </svg>
       </div>
-      <h3>Welcome to Orch-OS Neural Chat</h3>
+      <h3>Welcome to Orch-Mind Neural Chat</h3>
       <p>
-        Start a conversation by typing a message or using voice transcription.
+        Start a conversation by typing a message.
       </p>
 
       {/* Debug buttons removed for cleaner UI */}

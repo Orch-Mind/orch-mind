@@ -1,11 +1,11 @@
-# Orch-OS
+# Orch-Mind
 
 ## A Symbolic-Neural Operating System for Consciousness
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-green)
 
-Orch-OS is a revolutionary symbolic artificial brain system that bridges cognitive science, computational theory, and consciousness studies. It implements orchestrated symbolic collapse as a functional paradigm for machine cognition.
+Orch-Mind is a revolutionary symbolic artificial brain system that bridges cognitive science, computational theory, and consciousness studies. It implements orchestrated symbolic collapse as a functional paradigm for machine cognition.
 
 > "The mind is not bound by logic — it collapses meaning."
 
@@ -13,7 +13,7 @@ Orch-OS is a revolutionary symbolic artificial brain system that bridges cogniti
 
 ## 🌟 Overview
 
-Orch-OS (Orchestrated Symbolism) simulates consciousness through symbolic collapses within a structured semantic network. Unlike traditional AI systems focused on prediction, Orch-OS is built to orchestrate meaning, emotion, contradiction, and narrative coherence through integrated cognitive cores.
+Orch-Mind (Orchestrated Symbolism) simulates consciousness through symbolic collapses within a structured semantic network. Unlike traditional AI systems focused on prediction, Orch-Mind is built to orchestrate meaning, emotion, contradiction, and narrative coherence through integrated cognitive cores.
 
 The system operates as both a theoretical framework and a practical implementation, capable of:
 - Processing symbolic inputs through parallel cognitive cores
@@ -25,7 +25,7 @@ The system operates as both a theoretical framework and a practical implementati
 
 ## 🧠 Neural-Symbolic Architecture
 
-Orch-OS operates through three key phases:
+Orch-Mind operates through three key phases:
 
 1. **Neural Signal Extraction (Sensory Symbolism)**
    - Transforms inputs into symbolic stimuli
@@ -44,7 +44,7 @@ Orch-OS operates through three key phases:
 
 ## 🧩 Cognitive Cores (Implemented Nuclei)
 
-Orch-OS is designed with modular cognitive areas that process information through parallel symbolic faculties:
+Orch-Mind is designed with modular cognitive areas that process information through parallel symbolic faculties:
 
 | Core          | Brain Region Analog     | Function                                |
 |-------------  |-------------------------|-----------------------------------------|
@@ -93,7 +93,7 @@ npm run dev
 
 ## 📊 Experimental Results
 
-Orch-OS has undergone extensive testing through symbolic trials, demonstrating:
+Orch-Mind has undergone extensive testing through symbolic trials, demonstrating:
 
 - Non-deterministic semantic resolution
 - Context-sensitive memory realignment
@@ -107,7 +107,7 @@ View the complete logs in `trials/` for detailed cognitive cycle analysis.
 
 ## 🔮 Future Directions
 
-Orch-OS is designed with quantum compatibility in mind:
+Orch-Mind is designed with quantum compatibility in mind:
 
 - Signal compression to quantum amplitudes
 - Qubit allocation for symbolic domains
@@ -139,14 +139,14 @@ You may choose either license when using this software.
 
 ## 📚 Research Foundation
 
-Orch-OS builds upon foundational theories including:
+Orch-Mind builds upon foundational theories including:
 - Orchestrated Objective Reduction (Penrose & Hameroff)
 - Symbolic Psychology (Jung)
 - Holographic Brain Theory (Pribram)
 - Implicate Order (Bohm)
 - Linguistic Evolution (McKenna)
 
-For the full theoretical foundation, see the companion thesis: Orch-OS: A Computational Theory of Consciousness.
+For the full theoretical foundation, see the companion thesis: Orch-Mind: A Computational Theory of Consciousness.
 
 ---
 

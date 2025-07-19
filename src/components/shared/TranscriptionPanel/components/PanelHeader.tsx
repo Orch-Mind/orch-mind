@@ -46,7 +46,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             <circle cx="10" cy="10" r="3" fill="#8F00FF" />
           </svg>
         </span>
-        Orch-OS
+        Orch-Mind
       </h3>
 
       {/* Espaço flex para empurrar os elementos para a direita */}

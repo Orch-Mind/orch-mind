@@ -1,12 +1,12 @@
 {
-  "name": "orch-os",
-  "version": "1.0.0",
-  "description": "Orch-OS - Integrative Symbolic Intelligence Desktop Application",
+  "name": "orch-mind",
+  "version": "0.0.1",
+  "description": "Orch-Mind - Integrative Symbolic Intelligence Desktop Application",
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
     "kill-port": "lsof -ti:54321 | xargs -r kill -9 2>/dev/null || true",
-    "kill-electron": "pkill -f 'electron.*orch-os' 2>/dev/null || true",
+    "kill-electron": "pkill -f 'electron.*orch-mind' 2>/dev/null || true",
     "cleanup": "npm run kill-port && npm run kill-electron && npm run clean",
     "copy-duckdb": "echo '✅ DuckDB native files not needed - using @duckdb/node-api for Electron'",
     "dev": "npm run cleanup && npm run copy-duckdb && NODE_OPTIONS=\"--max-old-space-size=8192 --max-semi-space-size=128\" vite dev --port 54321 --host",
@@ -37,8 +37,8 @@
     "test-memory:max": "node --max-old-space-size=16384 scripts/test-memory-limits.js"
   },
   "build": {
-    "appId": "com.ferrari.orch-os",
-    "productName": "Orch-OS",
+    "appId": "com.orchmind",
+    "productName": "Orch-Mind",
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -81,7 +81,7 @@
           ]
         }
       ],
-      "artifactName": "Orch-OS-${arch}.${ext}",
+      "artifactName": "Orch-Mind-${arch}.${ext}",
       "icon": "assets/icons/mac/icon.icns",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
@@ -92,9 +92,9 @@
       "category": "public.app-category.productivity",
       "minimumSystemVersion": "10.15.0",
       "protocols": {
-        "name": "orch-os-protocol",
+        "name": "orch-mind-protocol",
         "schemes": [
-          "orch-os"
+          "orch-mind"
         ]
       },
       "asarUnpack": [
@@ -126,20 +126,20 @@
         "nsis"
       ],
       "icon": "assets/icons/win/icon.ico",
-      "artifactName": "Orch-OS-${productName}-Windows-${version}.${ext}",
-      "executableName": "Orch-OS",
-      "legalTrademarks": "Orch-OS",
+      "artifactName": "Orch-Mind-${productName}-Windows-${version}.${ext}",
+      "executableName": "Orch-Mind",
+      "legalTrademarks": "Orch-Mind",
       "requestedExecutionLevel": "asInvoker",
       "protocols": {
-        "name": "orch-os-protocol",
+        "name": "orch-mind-protocol",
         "schemes": [
-          "orch-os"
+          "orch-mind"
         ]
       },
       "fileAssociations": [{
-        "ext": "orchos",
-        "name": "Orch-OS File",
-        "description": "Orch-OS File",
+        "ext": "orchmind",
+        "name": "Orch-Mind File",
+        "description": "Orch-Mind File",
         "role": "Editor"
       }]
     },
@@ -149,7 +149,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Orch-OS",
+      "shortcutName": "Orch-Mind",
       "runAfterFinish": true,
       "perMachine": false,
       "allowElevation": true
@@ -161,9 +161,9 @@
       "icon": "assets/icons/png/icon-256x256.png",
       "artifactName": "${productName}-Linux-${version}.${ext}",
       "protocols": {
-        "name": "orch-os-protocol",
+        "name": "orch-mind-protocol",
         "schemes": [
-          "orch-os"
+          "orch-mind"
         ]
       }
     },
@@ -171,7 +171,7 @@
       {
         "provider": "github",
         "owner": "guiferrarib",
-        "repo": "orch-os",
+        "repo": "orch-mind",
         "private": true,
         "releaseType": "release"
       }
@@ -204,8 +204,8 @@
         ]
       },
       {
-        "from": "build/launch-orch-os.bat",
-        "to": "launch-orch-os.bat"
+        "from": "build/launch-orch-mind.bat",
+        "to": "launch-orch-mind.bat"
       }
     ],
     "extraMetadata": {
