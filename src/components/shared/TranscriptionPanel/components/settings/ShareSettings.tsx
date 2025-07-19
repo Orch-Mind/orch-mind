@@ -105,15 +105,25 @@ const getPeerStatus = (
   peersCount: number,
   incomingAdaptersCount: number
 ): string => {
+  // If we have actual peer connections, show the count
   if (peersCount > 0) {
     return `${peersCount} peers`;
-  } else if (incomingAdaptersCount > 0) {
-    // When we receive adapters but peer count is 0, it means we have a special connection
-    // (like Docker peer) that shares data but isn't counted as a traditional peer
-    return "🔗 Connected (relay)";
-  } else {
+  }
+  
+  // If we have no peers and no incoming adapters, clearly disconnected
+  if (incomingAdaptersCount === 0) {
     return "0 peers";
   }
+  
+  // If we have incoming adapters but peersCount is 0, this could be:
+  // 1. A timing issue where adapters arrived but peer count hasn't updated yet
+  // 2. A relay connection (like Docker peer)
+  // 3. A peer that just disconnected but we still have their cached adapters
+  
+  // For now, let's be more conservative and show "1 peer" instead of assuming relay
+  // This better reflects that there is an active connection providing adapters
+  // TODO: Add proper connection type detection in the backend to distinguish relay vs peer
+  return "1 peer (active connection)";
 };
 
 // SRP: Card focado apenas no status de conexão
