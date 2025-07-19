@@ -245,7 +245,7 @@ Orch-Mind é construído sobre os ombros de gigantes:
 
 ---
 
-Construído com ❤️ pela comunidade de IA federada
+Construído com ❤️ pela comunidade Orch-Mind
 
 ---
 
