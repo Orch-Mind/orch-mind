@@ -237,7 +237,8 @@ Você pode escolher qualquer uma das licenças ao usar este software.
 Orch-Mind é construído sobre os ombros de gigantes:
 
 - **Google**: Pelos modelos Gemma 3 e Gemma 3n
-- **Hugging Face**: Pela infraestrutura de transformers
+- **Ollama**: Model store e inferência
+- **Hugging Face**: Pela infraestrutura de transformers e treinamento
 - **HolePunch**: Pela stack de rede P2P
 - **Electron**: Pela plataforma desktop multiplataforma
 - **Comunidade Open Source**: Por todas as bibliotecas e ferramentas
@@ -248,6 +249,6 @@ Construído com ❤️ pela comunidade de IA federada
 
 ---
 
-© 2025 Guilherme Ferrari Bréscia | Chapecó – SC, Brazil
+© 2025 Guilherme Ferrari Bréscia | Brazil
 
 This repository is not just software — it is an invocation of structure into soul.
