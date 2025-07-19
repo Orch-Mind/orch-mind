@@ -387,6 +387,38 @@ export class P2PCoordinator {
     await fs.writeFile(adapterFilePath, buffer);
     console.log(`[P2PCoordinator] Saved adapter file: ${adapterFilePath}`);
 
+    // Create adapter_config.json (required for deploy/share)
+    const adapterConfig = {
+      base_model_name_or_path: metadata.metadata?.base_model || "unknown",
+      bias: "none",
+      fan_in_fan_out: false,
+      inference_mode: true,
+      init_lora_weights: true,
+      layers_pattern: null,
+      layers_to_transform: null,
+      loftq_config: {},
+      lora_alpha: (metadata.metadata as any)?.lora_alpha || 32,
+      lora_dropout: (metadata.metadata as any)?.lora_dropout || 0.1,
+      megatron_config: null,
+      megatron_core: "megatron.core",
+      modules_to_save: null,
+      peft_type: "LORA",
+      r: (metadata.metadata as any)?.lora_rank || 16,
+      rank_pattern: {},
+      revision: null,
+      target_modules: (metadata.metadata as any)?.target_modules || ["q_proj", "v_proj"],
+      task_type: "CAUSAL_LM",
+      use_dora: false,
+      use_rslora: false
+    };
+    
+    const adapterConfigPath = path.join(adapterDir, "adapter_config.json");
+    await fs.writeFile(
+      adapterConfigPath,
+      JSON.stringify(adapterConfig, null, 2)
+    );
+    console.log(`[P2PCoordinator] Created adapter config: ${adapterConfigPath}`);
+
     // Create registry metadata
     const registryMetadata = {
       adapter_id: metadata.metadata?.adapter_id || metadata.name,

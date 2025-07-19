@@ -365,13 +365,18 @@ export function setupLoRATrainingHandlers(): void {
         const getProjectRoot = (): string => {
           const os = require("os");
 
-          // Try userData directory first (matches Python production behavior)
-          const userDataDir = path.join(
-            os.homedir(),
-            "Library",
-            "Application Support",
-            "Orch-OS"
-          );
+          // Platform-specific paths to match Python's behavior
+          let userDataDir: string;
+          if (process.platform === "win32") {
+            // Windows: Use AppData/Local/Programs/lora_adapters as reported by user
+            userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
+          } else if (process.platform === "darwin") {
+            // macOS: Use Library/Application Support/Orch-OS
+            userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
+          } else {
+            // Linux: Use .local/share/orch-os
+            userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
+          }
 
           const potentialRoots = [
             userDataDir,

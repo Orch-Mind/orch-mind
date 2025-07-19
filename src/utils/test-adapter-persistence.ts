@@ -103,9 +103,9 @@ export function testAdapterPathResolution() {
   if (isMac) {
     userDataDir = "~/Library/Application Support/Orch-OS";
   } else if (isWin) {
-    userDataDir = "~\\AppData\\Roaming\\Orch-OS";
+    userDataDir = "~\\AppData\\Local\\Programs";
   } else {
-    userDataDir = "~/.config/Orch-OS";
+    userDataDir = "~/.local/share/orch-os";
   }
 
   const devProjectRoot = window.location.origin;
@@ -314,9 +314,9 @@ export async function testE2EProductionErrors() {
     if (isMac) {
       userDataDir = "~/Library/Application Support/Orch-OS";
     } else if (isWin) {
-      userDataDir = "~\\AppData\\Roaming\\Orch-OS";
+      userDataDir = "~\\AppData\\Local\\Programs";
     } else {
-      userDataDir = "~/.config/Orch-OS";
+      userDataDir = "~/.local/share/orch-os";
     }
 
     const failingAdapterName = "gemma3-adapter-1752080790629_adapter";

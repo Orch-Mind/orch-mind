@@ -76,16 +76,34 @@ def get_project_root() -> str:
     Returns:
         Path to the project root directory (writable location)
     """
+    import platform
+    
     try:
         # Check if we're running from a packaged application (read-only Resources directory)
         current_file = os.path.abspath(__file__)
         
-        # If we're in /Applications/.../Contents/Resources/, use writable userData directory
-        if '/Applications/' in current_file and '/Contents/Resources/' in current_file:
+        # Detect packaged application based on platform
+        is_packaged = False
+        system = platform.system().lower()
+        
+        if system == "darwin" and '/Applications/' in current_file and '/Contents/Resources/' in current_file:
+            is_packaged = True
+        elif system == "windows" and ('\\resources\\' in current_file or '/resources/' in current_file):
+            is_packaged = True
+        elif system == "linux" and ('/opt/' in current_file or '/usr/' in current_file):
+            is_packaged = True
+            
+        if is_packaged:
             print("🏗️  Detected packaged application - using writable userData directory")
             
-            # Use macOS userData directory for writable access
-            user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+            # Use platform-specific userData directory for writable access
+            if system == "windows":
+                user_data_dir = os.path.expanduser("~/AppData/Local/Programs")
+            elif system == "darwin":
+                user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+            else:  # Linux
+                user_data_dir = os.path.expanduser("~/.local/share/orch-os")
+                
             os.makedirs(user_data_dir, exist_ok=True)
             print(f"✅ Using writable project root: {user_data_dir}")
             return user_data_dir
@@ -104,7 +122,13 @@ def get_project_root() -> str:
         except (PermissionError, OSError):
             print("⚠️  Development directory not writable, falling back to userData")
             # Fall back to userData directory
-            user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+            system = platform.system().lower()
+            if system == "windows":
+                user_data_dir = os.path.expanduser("~/AppData/Local/Programs")
+            elif system == "darwin":
+                user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+            else:  # Linux
+                user_data_dir = os.path.expanduser("~/.local/share/orch-os")
             os.makedirs(user_data_dir, exist_ok=True)
             return user_data_dir
             
@@ -136,7 +160,14 @@ def get_project_root() -> str:
         current_dir = parent
     
     # Final fallback: use userData directory
-    user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+    import platform
+    system = platform.system().lower()
+    if system == "windows":
+        user_data_dir = os.path.expanduser("~/AppData/Local/Programs")
+    elif system == "darwin":
+        user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+    else:  # Linux
+        user_data_dir = os.path.expanduser("~/.local/share/orch-os")
     os.makedirs(user_data_dir, exist_ok=True)
     print(f"✅ Using final fallback userData directory: {user_data_dir}")
     return user_data_dir
@@ -221,4 +252,4 @@ def validate_model_name(name: str) -> bool:
     no_leading_trailing_separators = not name.startswith(('-', '_')) and not name.endswith(('-', '_'))
     no_consecutive_separators = '--' not in name and '__' not in name
     
-    return is_lowercase and has_valid_chars and no_leading_trailing_separators and no_consecutive_separators 
+    return is_lowercase and has_valid_chars and no_leading_trailing_separators and no_consecutive_separators

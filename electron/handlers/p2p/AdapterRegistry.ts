@@ -69,14 +69,18 @@ export class AdapterRegistry {
     }
 
     // CRITICAL FIX: Add userData directory path that matches Python's get_project_root()
-    // In production, Python saves adapters to ~/Library/Application Support/Orch-OS/
-    // We need to check this location first to match Python's behavior
-    const userDataDir = path.join(
-      os.homedir(),
-      "Library",
-      "Application Support",
-      "Orch-OS"
-    );
+    // Platform-specific paths to match Python's behavior
+    let userDataDir: string;
+    if (process.platform === "win32") {
+      // Windows: Use AppData/Local/Programs/lora_adapters as reported by user
+      userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
+    } else if (process.platform === "darwin") {
+      // macOS: Use Library/Application Support/Orch-OS
+      userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
+    } else {
+      // Linux: Use .local/share/orch-os
+      userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
+    }
 
     // List of potential project root directories to try
     const potentialRoots = [
