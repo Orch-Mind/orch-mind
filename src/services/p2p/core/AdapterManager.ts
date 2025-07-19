@@ -182,7 +182,7 @@ export class AdapterManager {
    */
   private loadPersistedState(): any {
     try {
-      const saved = localStorage.getItem("orch-os-p2p-state");
+      const saved = localStorage.getItem("orch-mind-p2p-state");
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};

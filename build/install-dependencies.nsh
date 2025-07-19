@@ -119,12 +119,12 @@
     ${endIf}
     
     # --- Mensagem Final ---
-    DetailPrint "=== Instalação do Orch-OS Concluída ==="
+    DetailPrint "=== Instalação do Orch-Mind Concluída ==="
     DetailPrint "✅ Python 3.11 e dependências LoRA instaladas"
     DetailPrint "✅ Ollama instalado"
     DetailPrint ""
     DetailPrint "📋 Próximos passos após a instalação:"
-    DetailPrint "1. Execute o Orch-OS"
+    DetailPrint "1. Execute o Orch-Mind"
     DetailPrint "2. O sistema está pronto para treinamento LoRA!"
 
   ${endIf}

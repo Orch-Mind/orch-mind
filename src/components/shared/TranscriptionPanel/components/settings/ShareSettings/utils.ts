@@ -74,11 +74,11 @@ export class ShareUtils {
   // DRY: Topic generation logic
   static async generateLocalNetworkTopic(): Promise<string> {
     const networkId = "local-network"; // TODO: Get real network ID
-    return this.hashString(`orch-os-local-${networkId}`);
+    return this.hashString(`orch-mind-local-${networkId}`);
   }
 
   static async codeToTopic(code: string): Promise<string> {
-    return this.hashString(`orch-os-room-${code}`);
+    return this.hashString(`orch-mind-room-${code}`);
   }
 
   static generateAdapterTopic(): string {

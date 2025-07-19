@@ -75,11 +75,11 @@ export class AdapterRegistry {
       // Windows: Use AppData/Local/Programs/lora_adapters as reported by user
       userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
     } else if (process.platform === "darwin") {
-      // macOS: Use Library/Application Support/Orch-OS
-      userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
+      // macOS: Use Library/Application Support/Orch-Mind
+      userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-Mind");
     } else {
-      // Linux: Use .local/share/orch-os
-      userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
+      // Linux: Use .local/share/orch-mind
+      userDataDir = path.join(os.homedir(), ".local", "share", "orch-mind");
     }
 
     // List of potential project root directories to try
@@ -100,7 +100,7 @@ export class AdapterRegistry {
       process.resourcesPath ? path.resolve(process.resourcesPath, "..") : null,
 
       // 6. Manual fallback to known project path (last resort)
-      "/Users/guilhermeferraribrescia/orch-os",
+      "/Users/guilhermeferraribrescia/orch-mind",
     ].filter(Boolean) as string[];
 
     console.log(

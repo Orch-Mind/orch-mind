@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the implementation of batch processing for semantic enrichment of neural signals in Orch-OS. The system now exclusively uses batch processing for improved efficiency when processing multiple neural signals.
+This document describes the implementation of batch processing for semantic enrichment of neural signals in Orch-Mind. The system now exclusively uses batch processing for improved efficiency when processing multiple neural signals.
 
 ## Key Changes - Simplified Architecture
 

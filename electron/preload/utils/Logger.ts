@@ -5,7 +5,7 @@
  * Neural Logger Utility
  * 
  * Single Responsibility: Handle all logging operations with symbolic awareness
- * Provides structured logging for the Orch-OS neural system
+ * Provides structured logging for the Orch-Mind neural system
  */
 
 export enum LogLevel {

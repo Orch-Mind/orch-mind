@@ -4,7 +4,7 @@
 import { NON_PASSIVE_EVENT_OPTIONS, PASSIVE_EVENT_OPTIONS, PASSIVE_EVENT_TYPES } from './PerformanceConstants';
 
 /**
- * Event Optimizer for Orch-OS Neural Processing
+ * Event Optimizer for Orch-Mind Neural Processing
  * Single Responsibility: Event listener optimization and passive event handling
  */
 export class EventOptimizer {

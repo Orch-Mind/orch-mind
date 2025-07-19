@@ -179,7 +179,7 @@ export class ChatSummarizationService {
         .join("\n\n");
 
       // Create summarization prompt
-      const systemPrompt = `You are the Memory Consolidation System of the Orch-OS architecture.
+      const systemPrompt = `You are the Memory Consolidation System of the Orch-Mind architecture.
 
 THEORETICAL FOUNDATION:
 - Inspired by hippocampal memory consolidation during sleep

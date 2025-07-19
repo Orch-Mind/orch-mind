@@ -8,7 +8,7 @@
  * mantendo apenas sinapses ativas que contribuem para a interface neural-simbólica.
  * 
  * Este script usa PurgeCSS para remover estilos CSS não utilizados dos componentes
- * do Orch-OS, resultando em um sistema mais eficiente e responsivo.
+ * do Orch-Mind, resultando em um sistema mais eficiente e responsivo.
  */
 
 const { PurgeCSS } = require('purgecss');

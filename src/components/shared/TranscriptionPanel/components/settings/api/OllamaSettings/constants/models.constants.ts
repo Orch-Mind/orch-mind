@@ -32,7 +32,7 @@ export const AVAILABLE_MODELS: OllamaModel[] = [
   }
 ];
 
-export const DEFAULT_STORAGE_PATH = "./orch-os-memory";
+export const DEFAULT_STORAGE_PATH = "./orch-mind-memory";
 
 export const OLLAMA_API_URLS = {
   LIST_MODELS: "http://localhost:11434/api/tags",

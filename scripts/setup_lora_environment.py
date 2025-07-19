@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# Orch-OS LoRA Environment Setup and Verification Script
+# Orch-Mind LoRA Environment Setup and Verification Script
 # This script can be run manually to check or install LoRA training dependencies
 
 import sys
@@ -22,9 +22,9 @@ class Colors:
 def log(message, color=None):
     """Print colored log message"""
     if color:
-        print(f"{color}[Orch-OS Setup]{Colors.END} {message}")
+        print(f"{color}[Orch-Mind Setup]{Colors.END} {message}")
     else:
-        print(f"[Orch-OS Setup] {message}")
+        print(f"[Orch-Mind Setup] {message}")
 
 def check_python_version():
     """Check if Python version is compatible"""
@@ -53,14 +53,14 @@ def show_python_installation_instructions():
         print("  🍎 macOS:")
         print("    1. Via Homebrew: brew install python@3.11")
         print("    2. Via python.org: https://www.python.org/downloads/")
-        print("    3. Via script do Orch-OS: ./build/postinstall.sh")
+        print("    3. Via script do Orch-Mind: ./build/postinstall.sh")
         
     elif system == "linux":  # Linux
         print("  🐧 Linux:")
         print("    • Ubuntu/Debian: sudo apt install python3.11")
         print("    • Fedora/RHEL: sudo dnf install python3.11")
         print("    • Arch Linux: sudo pacman -S python")
-        print("    • Via script do Orch-OS: sudo ./build/postinstall-linux.sh")
+        print("    • Via script do Orch-Mind: sudo ./build/postinstall-linux.sh")
         
     elif system == "windows":  # Windows
         print("  🪟 Windows:")
@@ -276,7 +276,7 @@ def test_model_loading():
         return False
 
 if __name__ == "__main__":
-    print("=== Teste do Ambiente LoRA do Orch-OS ===")
+    print("=== Teste do Ambiente LoRA do Orch-Mind ===")
     
     success = True
     success &= test_basic_imports()
@@ -304,14 +304,14 @@ if __name__ == "__main__":
 
 def main():
     """Main setup and verification function"""
-    print(f"{Colors.BOLD}=== Orch-OS LoRA Environment Setup ==={Colors.END}")
+    print(f"{Colors.BOLD}=== Orch-Mind LoRA Environment Setup ==={Colors.END}")
     print(f"Sistema: {platform.system()} {platform.release()}")
     print(f"Python: {sys.version}")
     print()
     
     # Check Python version
     if not check_python_version():
-        log("❌ Python 3.11 é necessário para o treinamento LoRA do Orch-OS", Colors.RED)
+        log("❌ Python 3.11 é necessário para o treinamento LoRA do Orch-Mind", Colors.RED)
         log("📋 Siga as instruções acima para instalar Python 3.11", Colors.YELLOW)
         return 1
     
@@ -345,7 +345,7 @@ def main():
     
     if success_count == total_count and not failed:
         log("✅ Ambiente LoRA configurado com sucesso!", Colors.GREEN)
-        print("🎉 O Orch-OS está pronto para treinamento LoRA!")
+        print("🎉 O Orch-Mind está pronto para treinamento LoRA!")
         
         if not ollama_ok:
             log("⚠️ Ollama não está disponível - instale manualmente se necessário", Colors.YELLOW)

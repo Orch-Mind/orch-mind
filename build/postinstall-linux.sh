@@ -1,11 +1,11 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# Post-installation script for Orch-OS on Linux
+# Post-installation script for Orch-Mind on Linux
 # Installs Docker, Ollama, Python, and LoRA training dependencies
 
 # --- Funções de Logging ---
 log() {
-    echo "[Orch-OS Post-Install] $1"
+    echo "[Orch-Mind Post-Install] $1"
 }
 
 # --- Detecção de Distribuição ---
@@ -220,7 +220,7 @@ install_ollama() {
 }
 
 # --- Execução Principal ---
-log "=== Iniciando pós-instalação do Orch-OS para Linux ==="
+log "=== Iniciando pós-instalação do Orch-Mind para Linux ==="
 
 # Detecta a distribuição Linux
 detect_distro
@@ -237,10 +237,10 @@ install_ollama
 
 log ""
 log "✅ Instalação concluída com sucesso!"
-log "🎉 Orch-OS está pronto para uso, incluindo treinamento LoRA!"
+log "🎉 Orch-Mind está pronto para uso, incluindo treinamento LoRA!"
 log ""
 log "📋 Próximos passos:"
 log "1. Execute 'ollama --version' para verificar o Ollama"
-log "2. Execute o Orch-OS"
+log "2. Execute o Orch-Mind"
 
 exit 0

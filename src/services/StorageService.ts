@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 // StorageService.ts
-// Storage service for Orch-OS user settings (localStorage-based)
+// Storage service for Orch-Mind user settings (localStorage-based)
 // Provides pure functions for saving and retrieving user config.
 
 /**
@@ -11,7 +11,7 @@
  * Este objeto representa o "mapa sináptico" das configurações no sistema,
  * funcionando como uma única fonte de verdade para todas as chaves de armazenamento.
  *
- * Seguindo os princípios neural-simbólicos do Orch-OS, cada chave representa um
+ * Seguindo os princípios neural-simbólicos do Orch-Mind, cada chave representa um
  * "sinal" específico que flui através do sistema e deve manter consistência
  * semântica em todos os contextos.
  */
@@ -19,7 +19,7 @@
  * STORAGE_KEYS: Mapeamento neural-simbólico das chaves de configuração
  *
  * Organizado por categorias semânticas para seguir o princípio neural-simbólico
- * do Orch-OS de manter uma estrutura cognitiva clara e consistente.
+ * do Orch-Mind de manter uma estrutura cognitiva clara e consistente.
  *
  * IMPORTANTE: Ao adicionar novas chaves, utilize a mesma string que é usada
  * nos componentes para evitar problemas de sincronização.
@@ -245,7 +245,7 @@ export function setUserName(name: string): void {
 }
 
 /**
- * Função utilitária para resetar completamente o storage do Orch-OS
+ * Função utilitária para resetar completamente o storage do Orch-Mind
  * Útil para testes ou quando há inconsistências nas configurações
  */
 export function resetStorage(): void {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
 """
-Adapter Manager Bridge - Orch-OS
+Adapter Manager Bridge - Orch-Mind
 Bridge between old CLI interface and new refactored AdapterManager
 """
 

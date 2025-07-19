@@ -145,7 +145,7 @@ export const CognitionEventUI: React.FC<CognitionEventUIProps> = React.memo(
     }, [intensityValue, isNeuralSignal]);
 
     /**
-     * Sistema de cores para todos os cores neurais do Orch-OS
+     * Sistema de cores para todos os cores neurais do Orch-Mind
      * - Cores escolhidas para refletir os domínios cognitivos específicos
      * - Codificação por cores facilita o reconhecimento de padrões (processamento pré-atentivo)
      * - Cores com boa visibilidade e associações semânticas relevantes
@@ -215,7 +215,7 @@ export const CognitionEventUI: React.FC<CognitionEventUIProps> = React.memo(
      */
     /**
      * Cores otimizadas para barras de progresso com alta visibilidade
-     * Especialmente contra fundos escuros (bg-gray-800/60) usado no tema do Orch-OS
+     * Especialmente contra fundos escuros (bg-gray-800/60) usado no tema do Orch-Mind
      *
      * Cores problemáticas contra fundos escuros foram ajustadas para:
      * 1. Tons de azul/roxo/violeta - aumentados para 500/600 (roxo e azul escuro absorvem mais luz)

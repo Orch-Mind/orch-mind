@@ -112,7 +112,7 @@ export const useChatGptImport = (
       setImportStage("Complete");
 
       // Reset window title
-      document.title = "Orch-OS";
+      document.title = "Orch-Mind";
 
       // Small delay before hiding progress to show completion
       await new Promise((res) => setTimeout(res, 500));
@@ -156,7 +156,7 @@ export const useChatGptImport = (
       showToast("Error", errorMsg, "error");
 
       // Reset window title on error
-      document.title = "Orch-OS";
+      document.title = "Orch-Mind";
     }
   };
 

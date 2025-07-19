@@ -257,7 +257,7 @@ export const DependencyChecker: React.FC<DependencyCheckerProps> = ({
                 Desktop Application
               </h5>
               <p className="text-green-400/70 text-xs mt-1">
-                Orch-OS runs natively as a desktop application with excellent
+                Orch-Mind runs natively as a desktop application with excellent
                 performance. Only Ollama is required for local LLM
                 functionality.
               </p>

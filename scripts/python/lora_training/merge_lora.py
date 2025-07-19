@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# LoRA Adapter Merging Script - Orch-OS
+# LoRA Adapter Merging Script - Orch-Mind
 
 import os
 import sys

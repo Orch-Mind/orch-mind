@@ -880,7 +880,7 @@ PARAMETER repeat_penalty 1.0
         print(f"📂 Adapter Path: {adapter_info.adapter_path}")
         print(f"⏱️ Training Steps: {config.max_steps}")
         print(f"🔌 Status: Ready for Enable/Disable")
-        print(f"\n💡 Enable adapter: Use Orch-OS interface or CLI")
+        print(f"\n💡 Enable adapter: Use Orch-Mind interface or CLI")
         print(f"📋 Note: Adapter will use ADAPTER directive with {adapter_info.base_model}")
         print("\n🏁 Real LoRA training completed successfully!")
     

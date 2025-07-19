@@ -37,7 +37,7 @@ mcpServers:
     args:
       - -y
       - "@modelcontextprotocol/server-filesystem"
-      - "/Users/guilhermeferraribrescia/orch-os"
+      - "/Users/guilhermeferraribrescia/orch-mind"
     env: {}
   - name: git
     command: uvx

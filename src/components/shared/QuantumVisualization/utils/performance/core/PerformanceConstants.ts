@@ -4,7 +4,7 @@
 import type { FrameConstraints } from '../interfaces/PerformanceInterfaces';
 
 /**
- * Performance Constants for Orch-OS Neural Processing
+ * Performance Constants for Orch-Mind Neural Processing
  * Single Responsibility: Central configuration for performance parameters
  */
 

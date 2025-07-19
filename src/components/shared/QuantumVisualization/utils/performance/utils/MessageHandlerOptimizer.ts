@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Message Handler Optimizer for Orch-OS Neural Processing
+ * Message Handler Optimizer for Orch-Mind Neural Processing
  * Single Responsibility: Optimize message handling performance with throttling and debouncing
  */
 

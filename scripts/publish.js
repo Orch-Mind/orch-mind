@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Publish Script for Orch-OS
+ * Publish Script for Orch-Mind
  * Handles versioning, building, and publishing to GitHub Releases
  * Compatible with electron-updater auto-update system
  */
@@ -185,7 +185,7 @@ function main() {
   const versionType = args[0] || 'patch'; // patch, minor, major, or specific version
   const platforms = args[1] ? args[1].split(',') : ['mac', 'win', 'linux'];
   
-  log('🎯 Starting Orch-OS publish process...', colors.bright);
+  log('🎯 Starting Orch-Mind publish process...', colors.bright);
   log(`Version type: ${versionType}`, colors.blue);
   log(`Platforms: ${platforms.join(', ')}`, colors.blue);
   

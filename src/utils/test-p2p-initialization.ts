@@ -27,7 +27,7 @@ export class P2PInitializationTester {
 
     if (typeof window !== "undefined") {
       result.hasElectronAPI = !!window.electronAPI;
-      result.hasOrchOSMarker = !!window.__ORCH_OS__;
+      result.hasOrchOSMarker = !!window.__ORCH_MIND__;
       result.isElectron = result.hasElectronAPI && result.hasOrchOSMarker;
     }
 

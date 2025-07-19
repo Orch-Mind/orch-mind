@@ -28,7 +28,7 @@ declare global {
       func: (...args: unknown[]) => void
     ) => void;
     __LANGUAGE__: string;
-    __ORCH_OS__?: boolean; // Marker for Orch-OS Electron environment
+    __ORCH_MIND__?: boolean; // Marker for Orch-Mind Electron environment
     signalMonitoringInterval: NodeJS.Timeout;
     audioSignalDetected: boolean;
   }

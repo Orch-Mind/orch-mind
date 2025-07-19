@@ -16,7 +16,7 @@ import { SettingsModalProps } from "./settings/types";
 import { useSettingsState } from "./settings/useSettingsState";
 
 /**
- * Modal de configurações do Orch-OS
+ * Modal de configurações do Orch-Mind
  * Refatorado seguindo os princípios neural-simbólicos:
  * - Clean Architecture (separação de responsabilidades)
  * - SOLID (componentes com responsabilidade única)

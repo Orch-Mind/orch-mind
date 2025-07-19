@@ -34,7 +34,7 @@ export const StoragePathInput: React.FC<StoragePathInputProps> = ({
             const pathParts = firstFile.webkitRelativePath.split("/");
             pathParts.pop(); // Remove filename
             const dirPath = pathParts.join("/");
-            onChange(dirPath || "./orch-os-memory");
+            onChange(dirPath || "./orch-mind-memory");
           }
         };
         input.click();

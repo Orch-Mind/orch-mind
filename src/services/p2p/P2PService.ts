@@ -19,8 +19,8 @@ export class P2PService {
   private initialized: boolean = false;
 
   // Well-known room topics
-  static readonly GENERAL_ROOM = "orch-os-general-public-community-room-v1";
-  static readonly LOCAL_PREFIX = "orch-os-local-network-";
+  static readonly GENERAL_ROOM = "orch-mind-general-public-community-room-v1";
+  static readonly LOCAL_PREFIX = "orch-mind-local-network-";
 
   constructor() {
     this.swarmManager = new SwarmManager();
@@ -434,7 +434,7 @@ export class P2PService {
    */
   private async codeToTopic(code: string): Promise<string> {
     const normalizedCode = code.trim().toUpperCase();
-    return await this.hashTopic(`orch-os-room-${normalizedCode}`);
+    return await this.hashTopic(`orch-mind-room-${normalizedCode}`);
   }
 
   /**

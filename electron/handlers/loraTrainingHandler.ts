@@ -377,9 +377,9 @@ export function setupLoRATrainingHandlers(): void {
           if (process.platform === "win32") {
             userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
           } else if (process.platform === "darwin") {
-            userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
+            userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-Mind");
           } else {
-            userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
+            userDataDir = path.join(os.homedir(), ".local", "share", "orch-mind");
           }
 
           const potentialPaths = [

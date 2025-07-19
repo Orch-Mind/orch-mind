@@ -134,7 +134,7 @@ export const useP2PStatus = (): P2PStatus => {
     // Check for existing persisted state on mount
     const checkPersistedState = () => {
       try {
-        const persistedData = localStorage.getItem("orch-os-p2p-state");
+        const persistedData = localStorage.getItem("orch-mind-p2p-state");
         if (persistedData) {
           const parsed = JSON.parse(persistedData);
           console.log("🔄 [P2P-STATUS] Found persisted P2P state:", parsed);

@@ -5,7 +5,7 @@ import { NEURAL_FRAME_CONSTRAINTS } from '../core/PerformanceConstants';
 import type { IPerformanceMonitor, PerformanceMetrics } from '../interfaces/PerformanceInterfaces';
 
 /**
- * Performance Monitor for Orch-OS Neural Processing
+ * Performance Monitor for Orch-Mind Neural Processing
  * Single Responsibility: Performance metrics collection and analysis
  */
 export class PerformanceMonitor implements IPerformanceMonitor {

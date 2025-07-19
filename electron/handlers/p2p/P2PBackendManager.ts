@@ -79,12 +79,12 @@ export class P2PBackendManager extends EventEmitter {
       let roomType: "general" | "local" | "private" = "private";
       let roomCode = topicHex.slice(0, 8);
 
-      // Check for general/community room (hash of "orch-os-general-public-community-room-v1")
+      // Check for general/community room (hash of "orch-mind-general-public-community-room-v1")
       if (topicHex.startsWith("7c2f57bba2bb9f97")) {
         roomType = "general";
         roomCode = "COMMUNITY";
       }
-      // Check for local network room (hash starts with known pattern for "orch-os-local-network-")
+      // Check for local network room (hash starts with known pattern for "orch-mind-local-network-")
       // We'll need to compute this hash to identify it properly
       else if (this.isLocalNetworkTopic(topicHex)) {
         roomType = "local";
@@ -346,7 +346,7 @@ export class P2PBackendManager extends EventEmitter {
     try {
       const heartbeat = {
         type: "heartbeat",
-        from: "orch-os-main",
+        from: "orch-mind-main",
         timestamp: Date.now(),
       };
 
@@ -367,7 +367,7 @@ export class P2PBackendManager extends EventEmitter {
       try {
         const response = {
           type: "heartbeat-response",
-          from: "orch-os-main",
+          from: "orch-mind-main",
           timestamp: Date.now(),
         };
 
@@ -455,7 +455,7 @@ export class P2PBackendManager extends EventEmitter {
 
   /**
    * Check if a topic hash corresponds to a local network room
-   * Local network topics are hashes of "orch-os-local-network-{networkId}"
+   * Local network topics are hashes of "orch-mind-local-network-{networkId}"
    */
   private isLocalNetworkTopic(topicHex: string): boolean {
     // For now, we'll use a simple heuristic based on known patterns
@@ -464,7 +464,7 @@ export class P2PBackendManager extends EventEmitter {
 
     // This is a placeholder - in practice, we'd need to:
     // 1. Get the current network ID
-    // 2. Compute hash("orch-os-local-network-" + networkId)
+    // 2. Compute hash("orch-mind-local-network-" + networkId)
     // 3. Compare with topicHex
 
     // For now, we'll use a simple pattern detection

@@ -35,7 +35,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = memo(
   }) => {
     // Estado para configurações avançadas
     const [duckDbPath, setDuckDbPath] = useState<string>(
-      () => getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || "./orch-os-memory"
+      () => getOption<string>(STORAGE_KEYS.DUCKDB_PATH) || "./orch-mind-memory"
     );
 
     // Handler para seleção de diretório DuckDB

@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Performance Optimizations for Orch-OS Neural Processing
+ * Performance Optimizations for Orch-Mind Neural Processing
  * 
  * This file now serves as a compatibility layer that re-exports 
  * the new SOLID architecture implementation.

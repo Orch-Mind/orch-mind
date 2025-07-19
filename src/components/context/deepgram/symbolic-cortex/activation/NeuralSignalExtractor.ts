@@ -445,7 +445,7 @@ export class NeuralSignalExtractor implements INeuralSignalExtractor {
     userContextData: Record<string, unknown>,
     language?: string
   ): string {
-    const styleGuide = `COGNITIVE ACTIVATION FRAMEWORK (Orch-OS):
+    const styleGuide = `COGNITIVE ACTIVATION FRAMEWORK (Orch-Mind):
   Process this input using holographic neural simulation. Each cognitive core represents a functional module based on symbolic and neurobiological mappings.`;
 
     const languageSpec = language

@@ -6,17 +6,17 @@
  * =================================================
  *
  * This file contains simplified tests to validate the fix for the
- * "Adapter not found" issue in production builds of Orch-OS.
+ * "Adapter not found" issue in production builds of Orch-Mind.
  *
  * PROBLEM THAT WAS FIXED:
- * - Python saves adapters to: ~/Library/Application Support/Orch-OS/lora_adapters/
+ * - Python saves adapters to: ~/Library/Application Support/Orch-Mind/lora_adapters/
  * - Electron was searching in: process.cwd()/lora_adapters/ (wrong path in production)
  * - Result: Adapters trained successfully but not found in Share tab
  *
  * HOW TO USE THESE TESTS:
  * =====================
  *
- * 1. Open Orch-OS application
+ * 1. Open Orch-Mind application
  * 2. Go to Share tab
  * 3. Open browser console (Cmd+Option+I on Mac)
  * 4. Run any of these commands:
@@ -101,11 +101,11 @@ export function testAdapterPathResolution() {
 
   let userDataDir: string;
   if (isMac) {
-    userDataDir = "~/Library/Application Support/Orch-OS";
+    userDataDir = "~/Library/Application Support/Orch-Mind";
   } else if (isWin) {
     userDataDir = "~\\AppData\\Local\\Programs";
   } else {
-    userDataDir = "~/.local/share/orch-os";
+    userDataDir = "~/.local/share/orch-mind";
   }
 
   const devProjectRoot = window.location.origin;
@@ -312,11 +312,11 @@ export async function testE2EProductionErrors() {
 
     let userDataDir: string;
     if (isMac) {
-      userDataDir = "~/Library/Application Support/Orch-OS";
+      userDataDir = "~/Library/Application Support/Orch-Mind";
     } else if (isWin) {
       userDataDir = "~\\AppData\\Local\\Programs";
     } else {
-      userDataDir = "~/.local/share/orch-os";
+      userDataDir = "~/.local/share/orch-mind";
     }
 
     const failingAdapterName = "gemma3-adapter-1752080790629_adapter";

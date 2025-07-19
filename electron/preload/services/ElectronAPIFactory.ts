@@ -574,12 +574,12 @@ export class ElectronAPIFactory {
                 ipcRenderer.removeListener("import-progress", progressListener);
 
                 // Reset document title
-                document.title = "Orch-OS";
+                document.title = "Orch-Mind";
 
                 return result;
               } catch (error) {
                 ipcRenderer.removeListener("import-progress", progressListener);
-                document.title = "Orch-OS";
+                document.title = "Orch-Mind";
                 throw error;
               }
             } else {

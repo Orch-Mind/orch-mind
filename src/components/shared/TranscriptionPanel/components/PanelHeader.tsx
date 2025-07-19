@@ -10,7 +10,7 @@ import WifiStatusConnection from "./WifiStatusConnection";
 /**
  * Interface cortical para o cabeçalho do painel de transcrição
  * Representa os controles principais de interface com usuário
- * seguindo a estética neural-simbólica do Orch-OS
+ * seguindo a estética neural-simbólica do Orch-Mind
  */
 interface PanelHeaderProps {
   onClose: () => void;

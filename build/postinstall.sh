@@ -2,7 +2,7 @@
 
 # --- Funções de Logging ---
 log() {
-    echo "[Orch-OS Post-Install] $1"
+    echo "[Orch-Mind Post-Install] $1"
 }
 
 # --- Instalação do Python (Homebrew) ---
@@ -140,7 +140,7 @@ install_ollama() {
 }
 
 # --- Execução Principal ---
-log "Executando script de pós-instalação do Orch-OS..."
+log "Executando script de pós-instalação do Orch-Mind..."
 
 # Instala componentes na ordem correta
 install_python
@@ -148,10 +148,10 @@ install_python_dependencies
 install_ollama
 
 log "✅ Script de pós-instalação concluído com sucesso!"
-log "🎉 Orch-OS está pronto para uso, incluindo treinamento LoRA!"
+log "🎉 Orch-Mind está pronto para uso, incluindo treinamento LoRA!"
 log ""
 log "📋 Próximos passos:"
 log "1. Abra o Ollama para instalar a CLI"
-log "2. Execute o Orch-OS"
+log "2. Execute o Orch-Mind"
 
 exit 0

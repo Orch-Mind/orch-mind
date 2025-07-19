@@ -1,19 +1,19 @@
 #!/bin/bash
-# Script to add SPDX license headers to ALL source files in Orch-OS
-# Following Orch-OS principles of symbolic clarity and cognitive precision
+# Script to add SPDX license headers to ALL source files in Orch-Mind
+# Following Orch-Mind principles of symbolic clarity and cognitive precision
 
 # Create directory if it doesn't exist
-mkdir -p /tmp/orch-os-license
+mkdir -p /tmp/orch-mind-license
 
 # JavaScript/TypeScript header (including TSX, JSX)
-cat > /tmp/orch-os-license/js_header.txt << 'EOL'
+cat > /tmp/orch-mind-license/js_header.txt << 'EOL'
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 EOL
 
 # CSS/SCSS header
-cat > /tmp/orch-os-license/css_header.txt << 'EOL'
+cat > /tmp/orch-mind-license/css_header.txt << 'EOL'
 /* SPDX-License-Identifier: MIT OR Apache-2.0
  * Copyright (c) 2025 Guilherme Ferrari Brescia
  */
@@ -21,7 +21,7 @@ cat > /tmp/orch-os-license/css_header.txt << 'EOL'
 EOL
 
 # HTML header
-cat > /tmp/orch-os-license/html_header.txt << 'EOL'
+cat > /tmp/orch-mind-license/html_header.txt << 'EOL'
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0
      Copyright (c) 2025 Guilherme Ferrari Brescia
 -->
@@ -29,14 +29,14 @@ cat > /tmp/orch-os-license/html_header.txt << 'EOL'
 EOL
 
 # Python header
-cat > /tmp/orch-os-license/py_header.txt << 'EOL'
+cat > /tmp/orch-mind-license/py_header.txt << 'EOL'
 # SPDX-License-Identifier: MIT OR Apache-2.0
 # Copyright (c) 2025 Guilherme Ferrari Brescia
 
 EOL
 
 # Shell script header
-cat > /tmp/orch-os-license/sh_header.txt << 'EOL'
+cat > /tmp/orch-mind-license/sh_header.txt << 'EOL'
 #!/bin/bash
 # SPDX-License-Identifier: MIT OR Apache-2.0
 # Copyright (c) 2025 Guilherme Ferrari Brescia
@@ -53,12 +53,12 @@ extractNeuralSignal() {
     echo "✓ License header already exists in $file"
   else
     echo "➕ Adding license header to $file"
-    cat "$header_file" "$file" > "/tmp/orch-os-license/temp" && mv "/tmp/orch-os-license/temp" "$file"
+    cat "$header_file" "$file" > "/tmp/orch-mind-license/temp" && mv "/tmp/orch-mind-license/temp" "$file"
   fi
 }
 
 # Process different file types
-echo "🔍 Scanning Orch-OS codebase for files to license..."
+echo "🔍 Scanning Orch-Mind codebase for files to license..."
 
 # Define directories to scan (exclude node_modules, coverage, build dirs)
 DIRECTORIES=(
@@ -92,7 +92,7 @@ for dir in "${DIRECTORIES[@]}"; do
       if ! grep -q "SPDX-License-Identifier" "$file"; then
         ADDED_COUNT=$((ADDED_COUNT + 1))
       fi
-      extractNeuralSignal "$file" "/tmp/orch-os-license/js_header.txt"
+      extractNeuralSignal "$file" "/tmp/orch-mind-license/js_header.txt"
     done
     
     # CSS and SCSS files
@@ -105,7 +105,7 @@ for dir in "${DIRECTORIES[@]}"; do
       if ! grep -q "SPDX-License-Identifier" "$file"; then
         ADDED_COUNT=$((ADDED_COUNT + 1))
       fi
-      extractNeuralSignal "$file" "/tmp/orch-os-license/css_header.txt"
+      extractNeuralSignal "$file" "/tmp/orch-mind-license/css_header.txt"
     done
     
     # HTML files
@@ -118,7 +118,7 @@ for dir in "${DIRECTORIES[@]}"; do
       if ! grep -q "SPDX-License-Identifier" "$file"; then
         ADDED_COUNT=$((ADDED_COUNT + 1))
       fi
-      extractNeuralSignal "$file" "/tmp/orch-os-license/html_header.txt"
+      extractNeuralSignal "$file" "/tmp/orch-mind-license/html_header.txt"
     done
     
     # Python files
@@ -131,7 +131,7 @@ for dir in "${DIRECTORIES[@]}"; do
       if ! grep -q "SPDX-License-Identifier" "$file"; then
         ADDED_COUNT=$((ADDED_COUNT + 1))
       fi
-      extractNeuralSignal "$file" "/tmp/orch-os-license/py_header.txt"
+      extractNeuralSignal "$file" "/tmp/orch-mind-license/py_header.txt"
     done
   fi
 done
@@ -149,28 +149,28 @@ for script in scripts/*.sh scripts/*.js; do
         if ! grep -q "SPDX-License-Identifier" "$script"; then
           echo "➕ Adding license header to $script (preserving shebang)"
           SHEBANG=$(head -n 1 "$script")
-          tail -n +2 "$script" > "/tmp/orch-os-license/temp"
-          echo "$SHEBANG" > "/tmp/orch-os-license/new"
-          echo "# SPDX-License-Identifier: MIT OR Apache-2.0" >> "/tmp/orch-os-license/new"
-          echo "# Copyright (c) 2025 Guilherme Ferrari Brescia" >> "/tmp/orch-os-license/new"
-          echo "" >> "/tmp/orch-os-license/new"
-          cat "/tmp/orch-os-license/temp" >> "/tmp/orch-os-license/new"
-          mv "/tmp/orch-os-license/new" "$script"
+          tail -n +2 "$script" > "/tmp/orch-mind-license/temp"
+          echo "$SHEBANG" > "/tmp/orch-mind-license/new"
+          echo "# SPDX-License-Identifier: MIT OR Apache-2.0" >> "/tmp/orch-mind-license/new"
+          echo "# Copyright (c) 2025 Guilherme Ferrari Brescia" >> "/tmp/orch-mind-license/new"
+          echo "" >> "/tmp/orch-mind-license/new"
+          cat "/tmp/orch-mind-license/temp" >> "/tmp/orch-mind-license/new"
+          mv "/tmp/orch-mind-license/new" "$script"
           ADDED_COUNT=$((ADDED_COUNT + 1))
         else
           echo "✓ License header already exists in $script"
         fi
       else
-        extractNeuralSignal "$script" "/tmp/orch-os-license/sh_header.txt"
+        extractNeuralSignal "$script" "/tmp/orch-mind-license/sh_header.txt"
       fi
     elif [[ "$script" == *.js ]]; then
-      extractNeuralSignal "$script" "/tmp/orch-os-license/js_header.txt"
+      extractNeuralSignal "$script" "/tmp/orch-mind-license/js_header.txt"
     fi
   fi
 done
 
 echo ""
-echo "✅ License headers added following Orch-OS symbolic principles"
+echo "✅ License headers added following Orch-Mind symbolic principles"
 echo "📊 Summary: Added headers to $ADDED_COUNT files (already had headers in $((TOTAL_COUNT - ADDED_COUNT)) files)"
 echo ""
 echo "🧠 Neural signal extraction complete - all code now properly attributed" 

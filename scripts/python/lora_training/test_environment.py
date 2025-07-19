@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Environment validation test for LoRA training in Orch-OS
+Environment validation test for LoRA training in Orch-Mind
 """
 
 import sys
@@ -163,7 +163,7 @@ def test_python_version():
 def main():
     """Run all tests."""
     print("=" * 60)
-    print("🧪 Orch-OS LoRA Training Environment Test")
+    print("🧪 Orch-Mind LoRA Training Environment Test")
     print("=" * 60)
     
     tests = [

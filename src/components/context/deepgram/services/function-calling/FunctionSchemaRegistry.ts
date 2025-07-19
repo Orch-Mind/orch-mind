@@ -139,7 +139,7 @@ export class FunctionSchemaRegistry {
     this.register("decideCollapseStrategy", {
       name: "decideCollapseStrategy",
       description:
-        "Determines the optimal symbolic collapse strategy following Orch-OS architecture. Analyzes cognitive state metrics to choose between: 1) Collapse by Dominance (clear hierarchy), 2) Collapse by Synthesis (complementary cores), 3) Collapse by Dialectic (productive contradictions), or 4) Collapse by Context (user intent focus). Outputs whether collapse should be deterministic or probabilistic with appropriate temperature.",
+        "Determines the optimal symbolic collapse strategy following Orch-Mind architecture. Analyzes cognitive state metrics to choose between: 1) Collapse by Dominance (clear hierarchy), 2) Collapse by Synthesis (complementary cores), 3) Collapse by Dialectic (productive contradictions), or 4) Collapse by Context (user intent focus). Outputs whether collapse should be deterministic or probabilistic with appropriate temperature.",
       parameters: {
         type: "object",
         properties: {

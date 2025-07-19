@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
 """
-Shared utilities for LoRA training scripts in Orch-OS
+Shared utilities for LoRA training scripts in Orch-Mind
 Centralizes common functions to follow DRY principle
 """
 
@@ -100,9 +100,9 @@ def get_project_root() -> str:
             if system == "windows":
                 user_data_dir = os.path.expanduser("~/AppData/Local/Programs")
             elif system == "darwin":
-                user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+                user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-Mind")
             else:  # Linux
-                user_data_dir = os.path.expanduser("~/.local/share/orch-os")
+                user_data_dir = os.path.expanduser("~/.local/share/orch-mind")
                 
             os.makedirs(user_data_dir, exist_ok=True)
             print(f"✅ Using writable project root: {user_data_dir}")
@@ -126,9 +126,9 @@ def get_project_root() -> str:
             if system == "windows":
                 user_data_dir = os.path.expanduser("~/AppData/Local/Programs")
             elif system == "darwin":
-                user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+                user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-Mind")
             else:  # Linux
-                user_data_dir = os.path.expanduser("~/.local/share/orch-os")
+                user_data_dir = os.path.expanduser("~/.local/share/orch-mind")
             os.makedirs(user_data_dir, exist_ok=True)
             return user_data_dir
             
@@ -165,9 +165,9 @@ def get_project_root() -> str:
     if system == "windows":
         user_data_dir = os.path.expanduser("~/AppData/Local/Programs")
     elif system == "darwin":
-        user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-OS")
+        user_data_dir = os.path.expanduser("~/Library/Application Support/Orch-Mind")
     else:  # Linux
-        user_data_dir = os.path.expanduser("~/.local/share/orch-os")
+        user_data_dir = os.path.expanduser("~/.local/share/orch-mind")
     os.makedirs(user_data_dir, exist_ok=True)
     print(f"✅ Using final fallback userData directory: {user_data_dir}")
     return user_data_dir
@@ -194,7 +194,7 @@ def get_adapter_registry_dir() -> str:
         "./lora_training_output/adapter_registry",
         "../lora_training_output/adapter_registry", 
         "./adapter_registry",
-        os.path.expanduser("~/Library/Application Support/orch-os/lora-training/lora_adapter/adapter_registry")
+        os.path.expanduser("~/Library/Application Support/orch-mind/lora-training/lora_adapter/adapter_registry")
     ]
     
     for path in alt_paths:
@@ -210,7 +210,7 @@ def get_adapter_registry_dir() -> str:
         return primary_path
     except Exception as e:
         # Final fallback
-        fallback_path = os.path.expanduser("~/Library/Application Support/orch-os/lora-training/lora_adapter/adapter_registry")
+        fallback_path = os.path.expanduser("~/Library/Application Support/orch-mind/lora-training/lora_adapter/adapter_registry")
         os.makedirs(fallback_path, exist_ok=True)
         print(f"⚠️ Using fallback adapter registry: {fallback_path}")
         return fallback_path

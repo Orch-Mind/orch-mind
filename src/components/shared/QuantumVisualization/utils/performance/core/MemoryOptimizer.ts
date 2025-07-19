@@ -5,7 +5,7 @@ import type { IMemoryOptimizer } from '../interfaces/PerformanceInterfaces';
 import { NEURAL_FRAME_CONSTRAINTS } from './PerformanceConstants';
 
 /**
- * Memory Optimizer for Orch-OS Neural Processing
+ * Memory Optimizer for Orch-Mind Neural Processing
  * Single Responsibility: Memory management and optimization
  */
 export class MemoryOptimizer implements IMemoryOptimizer {

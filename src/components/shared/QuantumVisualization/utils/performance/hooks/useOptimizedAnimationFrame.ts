@@ -8,7 +8,7 @@ import type { IAnimationFrameCallback, IAnimationFrameOptimizer } from '../inter
 import { PerformanceMonitor } from '../monitors/PerformanceMonitor';
 
 /**
- * Optimized Animation Frame Hook for Orch-OS Neural Processing
+ * Optimized Animation Frame Hook for Orch-Mind Neural Processing
  * Single Responsibility: Optimized requestAnimationFrame handling with performance monitoring
  * 
  * Performance Optimizations:

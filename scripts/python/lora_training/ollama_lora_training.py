@@ -207,7 +207,7 @@ def main():
     
     args = parser.parse_args()
     
-    print("🚀 Real LoRA Training for Orch-OS")
+    print("🚀 Real LoRA Training for Orch-Mind")
     print("📊 Configuration:")
     print(f"   • Ollama Model: {args.base_model}")
     print(f"   • Data: {args.data}")

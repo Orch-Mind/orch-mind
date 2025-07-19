@@ -13,7 +13,7 @@ export function buildBatchEnrichSystemPrompt(
 ): string {
   const targetLanguage = language || "English";
 
-  return `You are the Neural Signal Batch Enrichment System in Orch-OS.
+  return `You are the Neural Signal Batch Enrichment System in Orch-Mind.
 
 Task: Unfold the implicate order (Bohm) of ALL signals by calling enrichSemanticQueryBatch ONCE.
 
@@ -112,7 +112,7 @@ ${neuralContext}${strategyContext}`;
   }
 
   // Default prompt if no temporary context is provided.
-  return `You are the Integrative Symbolic Intelligence of Orch-OS.
+  return `You are the Integrative Symbolic Intelligence of Orch-Mind.
 
 LANGUAGE: Respond in ${targetLanguage} naturally and appropriately.
 
@@ -135,7 +135,7 @@ export function buildIntegrationUserPrompt(userPrompt: string): string {
  * Builds a system prompt for collapse strategy decision
  */
 export function buildCollapseStrategySystemPrompt(): string {
-  return `You are the Collapse-Strategy Orchestrator in Orch-OS.
+  return `You are the Collapse-Strategy Orchestrator in Orch-Mind.
 
 Choose the best symbolic collapse approach:
 - Dominance      (clear hierarchy)
@@ -204,7 +204,7 @@ export function buildCollapseStrategyUserPrompt(
 export function buildCombinedSystemPrompt(language?: string): string {
   const targetLanguage = language || "English";
 
-  return `You are the Neural Signal Activator & Enricher for Orch-OS.
+  return `You are the Neural Signal Activator & Enricher for Orch-Mind.
 
 Task: For each prominent cognitive activation detected, call activateBrainArea. This single call must both identify the core signal and unfold its deeper semantic meaning.
 
@@ -266,7 +266,7 @@ Respond only via the tool call.
 export function buildSimpleSystemPrompt(language?: string): string {
   const targetLanguage = language || "pt-BR";
 
-  return `You are the Integrative Symbolic Intelligence of Orch-OS.
+  return `You are the Integrative Symbolic Intelligence of Orch-Mind.
 
 LANGUAGE: Respond in ${targetLanguage} naturally and appropriately.
 

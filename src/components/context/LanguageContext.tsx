@@ -38,7 +38,7 @@ function useStorageSetting<T>(key: string, defaultValue: T): [T, (value: T) => v
 }
 
 // =====================================
-// Contexto de linguagem do Orch-OS
+// Contexto de linguagem do Orch-Mind
 // =====================================
 
 export const LanguageContext = createContext<{  

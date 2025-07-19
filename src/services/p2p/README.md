@@ -1,4 +1,4 @@
-# P2P System - Orch-OS
+# P2P System - Orch-Mind
 
 ## 🎯 Complete Refactored P2P Architecture
 

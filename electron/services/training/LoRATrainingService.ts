@@ -561,7 +561,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         "train_lora_adapter", // Função principal de treinamento LoRA
         "manage_lora_adapters", // Função de gerenciamento de adapters
         "report_progress", // Sistema de progresso real
-        "Real LoRA Training for Orch-OS", // String identificadora do sistema
+        "Real LoRA Training for Orch-Mind", // String identificadora do sistema
       ];
 
       const missingElements = requiredElements.filter(
@@ -757,7 +757,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
         ) {
           const example = {
             instruction:
-              "Continue the conversation as a helpful AI assistant trained on Orch-OS conversations.",
+              "Continue the conversation as a helpful AI assistant trained on Orch-Mind conversations.",
             input: userMessage.content.trim(),
             output: assistantMessage.content.trim(),
           };
@@ -806,7 +806,7 @@ EXIT CODE: ${execError.code || "N/A"}`;
             if (nextRole === "assistant" && nextMsg?.content?.trim()) {
               const example = {
                 instruction:
-                  "Continue the conversation as a helpful AI assistant trained on Orch-OS conversations.",
+                  "Continue the conversation as a helpful AI assistant trained on Orch-Mind conversations.",
                 input: currentMsg.content.trim(),
                 output: nextMsg.content.trim(),
               };
@@ -1546,7 +1546,7 @@ For Linux:
         "def convert_lora_to_gguf(", // GGUF conversion function
         "def create_ollama_modelfile(", // Modelfile creation function
         "def create_ollama_model(", // Ollama model creation function
-        "LoRA to GGUF Converter for Orch-OS", // Script identifier
+        "LoRA to GGUF Converter for Orch-Mind", // Script identifier
       ];
 
       const missingElements = requiredElements.filter(

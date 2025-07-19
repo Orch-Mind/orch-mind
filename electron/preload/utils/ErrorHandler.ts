@@ -5,7 +5,7 @@
  * Neural Error Handler
  * 
  * Single Responsibility: Handle all error processing and recovery
- * Provides structured error handling for the Orch-OS neural system
+ * Provides structured error handling for the Orch-Mind neural system
  */
 
 import { Logger } from './Logger';

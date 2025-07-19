@@ -17,7 +17,7 @@ export class SwarmManager implements IP2PConnection {
   private isElectron: boolean;
 
   constructor() {
-    // More robust Electron detection for Orch-OS
+    // More robust Electron detection for Orch-Mind
     this.isElectron = this.detectElectronEnvironment();
   }
 
@@ -42,9 +42,9 @@ export class SwarmManager implements IP2PConnection {
     )
       return true;
 
-    // For Orch-OS, we can also check for specific window properties
+    // For Orch-Mind, we can also check for specific window properties
     if (
-      (window as any).__ORCH_OS__ ||
+      (window as any).__ORCH_MIND__ ||
       (window as any).electronAPI !== undefined
     )
       return true;
@@ -110,13 +110,13 @@ export class SwarmManager implements IP2PConnection {
         );
       }
     } else {
-      // For now, we only support Electron in Orch-OS
+      // For now, we only support Electron in Orch-Mind
       // Future: Could implement WebRTC fallback for browser environments
       console.warn(
         "[SwarmManager] Non-Electron environment detected. P2P requires Electron."
       );
       throw new Error(
-        "P2P networking requires Electron environment. Please run Orch-OS as a desktop application."
+        "P2P networking requires Electron environment. Please run Orch-Mind as a desktop application."
       );
     }
   }

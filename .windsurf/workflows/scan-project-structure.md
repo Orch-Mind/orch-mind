@@ -3,9 +3,9 @@ description: Este workflow escaneia toda a árvore de arquivos `.ts/.tsx` do pro
 ---
 
 {
-  "name": "orchos-project-structure-scan",
+  "name": "orchmind-project-structure-scan",
   "type": "workflow",
-  "description": "Scan all .ts and .tsx files in the Orch-OS project, extract all classes, functions, responsibilities, and architectural relationships. Store this map in internal memory (knowledge base) and as Markdown file for future reference.",
+  "description": "Scan all .ts and .tsx files in the Orch-Mind project, extract all classes, functions, responsibilities, and architectural relationships. Store this map in internal memory (knowledge base) and as Markdown file for future reference.",
   "steps": [
     {
       "type": "file_search",

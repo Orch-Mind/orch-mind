@@ -39,7 +39,7 @@ def find_existing_adapters():
         "./lora_training_output/adapter_registry",
         "../lora_training_output/adapter_registry", 
         "./adapter_registry",
-        os.path.expanduser("~/Library/Application Support/orch-os/lora-training/lora_adapter/adapter_registry")
+        os.path.expanduser("~/Library/Application Support/orch-mind/lora-training/lora_adapter/adapter_registry")
     ]
     
     found_adapters = []

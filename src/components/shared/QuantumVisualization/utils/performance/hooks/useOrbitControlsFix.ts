@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 
 /**
- * 🧠 Symbolic OrbitControls Fix Hook for Orch-OS
+ * 🧠 Symbolic OrbitControls Fix Hook for Orch-Mind
  * 
  * Neural Fix Cortex - resolves passive event listener conflicts with @react-three/drei
  * OrbitControls by ensuring wheel events can call preventDefault() properly.

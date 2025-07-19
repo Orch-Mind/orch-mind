@@ -43,10 +43,10 @@ export class DuckDBConnectionManager {
 
   constructor(customPath?: string) {
     if (customPath) {
-      this.dbPath = path.resolve(customPath, "orch-os-vectors.db");
+      this.dbPath = path.resolve(customPath, "orch-mind-vectors.db");
     } else {
       const userDataPath = app.getPath("userData");
-      this.dbPath = path.join(userDataPath, "orch-os-vectors.db");
+      this.dbPath = path.join(userDataPath, "orch-mind-vectors.db");
     }
   }
 

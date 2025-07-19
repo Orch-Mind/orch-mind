@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
 """
-Automatic llama.cpp installer for Orch-OS
+Automatic llama.cpp installer for Orch-Mind
 Detects and installs llama.cpp when needed for GGUF conversion
 """
 
@@ -17,7 +17,7 @@ from typing import Optional, Tuple, List, Dict, Any
 def get_project_root() -> str:
     """Get the project root directory (4 levels up from current file)."""
     current_file = os.path.abspath(__file__)
-    # Go up 4 levels: lora_training -> python -> scripts -> orch-os
+    # Go up 4 levels: lora_training -> python -> scripts -> orch-mind
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
     return project_root
 
@@ -635,7 +635,7 @@ def install_dependencies_linux_non_interactive() -> bool:
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="llama.cpp installer for Orch-OS")
+    parser = argparse.ArgumentParser(description="llama.cpp installer for Orch-Mind")
     parser.add_argument("--test", action="store_true", help="Test existing installation")
     parser.add_argument("--install", action="store_true", help="Force installation")
     parser.add_argument("--find", action="store_true", help="Find existing installation")

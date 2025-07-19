@@ -3,7 +3,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Test script for LoRA Adapter Merging functionality in Orch-OS
+ * Test script for LoRA Adapter Merging functionality in Orch-Mind
  *
  * This script demonstrates and validates the complete workflow:
  * 1. Creating mock adapter data
@@ -182,7 +182,7 @@ async function testAdapterMerging() {
       })),
       mergeStrategy: mergeRequest.strategy,
       mergeTimestamp: new Date().toISOString(),
-      mergedBy: "Orch-OS Test Suite",
+      mergedBy: "Orch-Mind Test Suite",
       targetBaseModel: mergeRequest.targetBaseModel,
       mergedAdapterPath: path.join(
         MERGED_ADAPTERS_DIR,
@@ -333,9 +333,9 @@ async function validateRequirements() {
   const packageJsonPath = path.join(process.cwd(), "package.json");
   try {
     await fs.access(packageJsonPath);
-    console.log("✅ Orch-OS project directory detected");
+    console.log("✅ Orch-Mind project directory detected");
   } catch (error) {
-    throw new Error("Please run this script from the Orch-OS root directory");
+    throw new Error("Please run this script from the Orch-Mind root directory");
   }
 
   // Check electron directory

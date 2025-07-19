@@ -107,7 +107,7 @@ describe("P2PContext", () => {
   it("should handle localStorage persistence", () => {
     // Mock persisted state
     mockLocalStorage.getItem.mockImplementation((key) => {
-      if (key === "orch-os-p2p-state") {
+      if (key === "orch-mind-p2p-state") {
         return JSON.stringify({
           lastConnectionType: "general",
           lastRoomCode: "",

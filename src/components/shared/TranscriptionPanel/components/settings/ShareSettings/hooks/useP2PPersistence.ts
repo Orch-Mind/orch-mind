@@ -41,7 +41,7 @@ export function useP2PPersistence() {
       }
 
       try {
-        const saved = window.localStorage.getItem("orch-os-p2p-state");
+        const saved = window.localStorage.getItem("orch-mind-p2p-state");
         if (saved) {
           const parsed = JSON.parse(saved);
 
@@ -71,7 +71,7 @@ export function useP2PPersistence() {
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         window.localStorage.setItem(
-          "orch-os-p2p-state",
+          "orch-mind-p2p-state",
           JSON.stringify(persistedState)
         );
       } catch (error) {

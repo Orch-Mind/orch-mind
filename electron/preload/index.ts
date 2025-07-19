@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Main Preload Script - Orch-OS Neural System
+ * Main Preload Script - Orch-Mind Neural System
  *
  * Follows SOLID principles and Electron best practices:
  * - Single Responsibility: Each service handles one concern

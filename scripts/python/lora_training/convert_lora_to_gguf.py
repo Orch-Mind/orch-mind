@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
 """
-LoRA to GGUF Converter for Orch-OS
+LoRA to GGUF Converter for Orch-Mind
 This script handles the deployment of LoRA adapters following the main pipeline approach.
 """
 

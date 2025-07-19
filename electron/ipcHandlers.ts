@@ -314,7 +314,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         info: {
           vectorCount: count,
           isInitialized: true,
-          dbPath: "~/Library/Application Support/orch-os/orch-os-vectors.db",
+          dbPath: "~/Library/Application Support/orch-mind/orch-mind-vectors.db",
         },
       };
     } catch (error: unknown) {
@@ -726,7 +726,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       const result = await dialog.showOpenDialog(mainWindow, {
         properties: ["openDirectory"],
         title: "Select Directory for Neural Memory Database",
-        message: "Choose where to store your Orch-OS neural memory database",
+        message: "Choose where to store your Orch-Mind neural memory database",
         defaultPath: require("os").homedir(),
       });
 

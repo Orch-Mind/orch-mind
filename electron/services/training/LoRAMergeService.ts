@@ -354,11 +354,11 @@ export class LoRAMergeService {
       // Windows: Use AppData/Local/Programs/lora_adapters as reported by user
       userDataDir = path.join(os.homedir(), "AppData", "Local", "Programs");
     } else if (process.platform === "darwin") {
-      // macOS: Use Library/Application Support/Orch-OS
-      userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-OS");
+      // macOS: Use Library/Application Support/Orch-Mind
+      userDataDir = path.join(os.homedir(), "Library", "Application Support", "Orch-Mind");
     } else {
-      // Linux: Use .local/share/orch-os
-      userDataDir = path.join(os.homedir(), ".local", "share", "orch-os");
+      // Linux: Use .local/share/orch-mind
+      userDataDir = path.join(os.homedir(), ".local", "share", "orch-mind");
     }
 
     // CRITICAL FIX: Use EXACT same order as AdapterRegistry
@@ -380,7 +380,7 @@ export class LoRAMergeService {
       process.resourcesPath ? path.resolve(process.resourcesPath, "..") : null,
 
       // 6. Manual fallback to known project path (last resort)
-      "/Users/guilhermeferraribrescia/orch-os",
+      "/Users/guilhermeferraribrescia/orch-mind",
     ].filter(Boolean) as string[];
 
     console.log(
@@ -598,7 +598,7 @@ export class LoRAMergeService {
         })),
         mergeStrategy: resolvedRequest.strategy,
         mergeTimestamp: new Date().toISOString(),
-        mergedBy: "Orch-OS",
+        mergedBy: "Orch-Mind",
         targetBaseModel: resolvedRequest.targetBaseModel,
         mergedAdapterPath: outputPath,
         mergedChecksum,

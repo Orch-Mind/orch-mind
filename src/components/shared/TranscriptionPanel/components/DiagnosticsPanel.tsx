@@ -10,7 +10,7 @@ import styles from './DiagnosticsPanel.module.css';
 /**
  * DiagnosticsPanel - Interface cortical para monitoramento de estados neurais
  * Representa os estados de conexão dos componentes de input neural (Deepgram e Microfone)
- * seguindo a estética neural-simbólica do Orch-OS
+ * seguindo a estética neural-simbólica do Orch-Mind
  */
 interface DiagnosticsPanelProps {
   connectionState: ConnectionState;

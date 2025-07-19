@@ -207,7 +207,7 @@ export class SymbolicCognitionTimelineLogger {
 
   /**
    * Logs detected emergent symbolic patterns.
-   * This is part of the Orch-OS scientific introspection layer for tracking
+   * This is part of the Orch-Mind scientific introspection layer for tracking
    * emergent cognitive phenomena across processing cycles.
    *
    * @param patterns Array of emergent symbolic pattern descriptions

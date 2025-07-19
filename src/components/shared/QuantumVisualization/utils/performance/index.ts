@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Orch-OS Performance Optimization Suite
+ * Orch-Mind Performance Optimization Suite
  * SOLID Architecture Implementation for Neural Processing Performance
  * 
  * This module follows SOLID principles:

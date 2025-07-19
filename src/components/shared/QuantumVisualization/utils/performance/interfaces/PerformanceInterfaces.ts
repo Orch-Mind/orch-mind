@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Performance Interfaces for Orch-OS Neural Processing
+ * Performance Interfaces for Orch-Mind Neural Processing
  * Implements Interface Segregation Principle - specific interfaces for specific needs
  */
 

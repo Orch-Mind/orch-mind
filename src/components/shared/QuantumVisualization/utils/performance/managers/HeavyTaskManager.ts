@@ -4,7 +4,7 @@
 import type { IHeavyTask, IHeavyTaskManager } from '../interfaces/PerformanceInterfaces';
 
 /**
- * Heavy Task Manager for Orch-OS Neural Processing
+ * Heavy Task Manager for Orch-Mind Neural Processing
  * Single Responsibility: Management of heavy computational tasks
  */
 export class HeavyTaskManager implements IHeavyTaskManager {

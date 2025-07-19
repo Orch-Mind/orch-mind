@@ -59,8 +59,8 @@ export class P2PConnectionService {
       console.log("🔧 [P2P-CONNECTION] Initializing P2P service...");
 
       // Check if we're in Electron environment
-      if (typeof window === "undefined" || !window.__ORCH_OS__) {
-        throw new Error("P2P requires Orch-OS desktop application");
+      if (typeof window === "undefined" || !window.__ORCH_MIND__) {
+        throw new Error("P2P requires Orch-Mind desktop application");
       }
 
       // Wait for Electron API to be ready

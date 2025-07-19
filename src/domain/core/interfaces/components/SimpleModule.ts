@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Orch-OS Neural-Symbolic Interface Specification
+ * Orch-Mind Neural-Symbolic Interface Specification
  * 
  * SimpleModule - Interface para módulos de UI colapsáveis/expansíveis.
  * Intenção simbólica: Representa um córtex neuralmente adaptável que pode

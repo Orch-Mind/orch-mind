@@ -5,7 +5,7 @@ import React from "react";
 import LanguageSelector from "../LanguageSelector";
 
 /**
- * Componente para configurações gerais do Orch-OS
+ * Componente para configurações gerais do Orch-Mind
  * Segue os princípios neurais-simbólicos (Single Responsibility)
  * Inclui agora configuração de idioma de transcrição
  */

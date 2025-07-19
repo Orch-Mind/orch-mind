@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// QuantumSettingsIcon.tsx - Epic quantum/futuristic settings icon for Orch-OS
+// QuantumSettingsIcon.tsx - Epic quantum/futuristic settings icon for Orch-Mind
 // Inspired by Icons8 Futuristic Neon Gear, adapted for React
 
 import React from "react";

@@ -197,7 +197,7 @@ export class DefaultNeuralIntegrationService
    * Neural integration using superposition, non-deterministic collapse and emergent property registration.
    * Now uses real embeddings for each answer via OpenAIEmbeddingService.
    *
-   * 🧠 ORCH-OS NEURAL COLLAPSE PROCESS:
+   * 🧠 ORCH-MIND NEURAL COLLAPSE PROCESS:
    *
    * Phase 1: SIGNAL EXTRACTION
    * - NeuralSignalExtractor generates 1-3 neural core activations
@@ -605,17 +605,17 @@ export class DefaultNeuralIntegrationService
       }
     }
 
-    // === Orch-OS: Symbolic Pattern Analysis & Memory Integration ===
-    // Atualizar o analisador de padrões com o contexto/métricas do ciclo atual
-    // Capturar métricas cognitivas completas para análise científica
+    // === ORCH-MIND: Symbolic Pattern Analysis & Memory Integration ===
+    // Update the pattern analyzer with the current context/metrics
+    // Capture complete cognitive metrics for scientific analysis
     const cycleMetrics: CognitiveMetrics = {
-      // Métricas fundamentais para detecção de padrões
+      // Fundamental metrics for pattern detection
       contradictionScore:
         finalAnswer.contradictionScore ?? averageContradictionScore,
       coherenceScore: finalAnswer.narrativeCoherence ?? avgCoherence,
       emotionalWeight: finalAnswer.emotionalWeight ?? averageEmotionalWeight,
 
-      // Métricas ampliadas para tese Orch-OS (com valores heurísticos quando não disponíveis)
+      // Expanded metrics for Orch-Mind thesis (with heuristic values when unavailable)
       archetypalStability:
         cleanedNeuralResults.reduce(
           (sum, r) =>

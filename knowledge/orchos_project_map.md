@@ -1,4 +1,4 @@
-# 🧠 Orch-OS Project Structure Map (Scan Excerpt)
+# 🧠 Orch-Mind Project Structure Map (Scan Excerpt)
 
 ## Key Modules & Responsibilities
 
