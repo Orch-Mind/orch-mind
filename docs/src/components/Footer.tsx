@@ -30,7 +30,7 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-6">
               <img 
-                src="./orch-mind-logo.png" 
+                src="/orch-mind-logo.png" 
                 alt="Orch-Mind Logo" 
                 className="w-10 h-10 object-contain"
                 style={{ 

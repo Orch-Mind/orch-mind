@@ -9,7 +9,7 @@ const Hero: React.FC = () => {
         <div className="mb-8">
           <div className="flex justify-center mb-8">
             <img 
-              src="./orch-mind-logo.png" 
+              src="/orch-mind-logo.png" 
               alt="Orch-Mind Logo" 
               className="w-24 h-24 md:w-32 md:h-32 object-contain animate-pulse"
               style={{ 
@@ -90,7 +90,7 @@ const Hero: React.FC = () => {
         </div>
 
         {/* Modern scroll indicator - Positioned below badges */}
-        <div className="mt-8 flex flex-col items-center space-y-2 opacity-70 hover:opacity-100 transition-opacity duration-300">
+        <div className="mt-16 flex flex-col items-center space-y-2 opacity-70 hover:opacity-100 transition-opacity duration-300">
           <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Explore mais</span>
           <div className="flex flex-col items-center animate-bounce">
             <ChevronDown className="w-5 h-5 text-blue-400" />
