@@ -121,6 +121,11 @@ const Header: React.FC = () => {
                   {item.name}
                 </a>
               ))}
+              {/* Language Selector for Mobile */}
+              <div className="flex justify-center px-4 pb-2">
+                <LanguageSelector />
+              </div>
+              {/* Social Links */}
               <div className="flex items-center justify-center space-x-4 pt-4 border-t border-gray-700">
                 {socialLinks.map((link) => (
                   <a

@@ -66,12 +66,12 @@ const Download: React.FC = () => {
           {/* Experimental disclaimer - Subtle Style */}
           <div className="mb-8">
             <div className="max-w-3xl mx-auto">
-              <p className="text-sm text-amber-200/80 font-montserrat bg-amber-900/15 border border-amber-600/25 rounded-xl px-4 py-2 backdrop-blur-sm text-center whitespace-nowrap overflow-hidden">
-                <span className="inline-flex items-center mr-2">
-                  <span className="w-1.5 h-1.5 bg-amber-400/70 rounded-full mr-2 animate-pulse"></span>
+              <p className="text-sm text-amber-200/80 font-montserrat bg-amber-900/15 border border-amber-600/25 rounded-xl px-3 py-2 sm:px-4 backdrop-blur-sm text-center break-words">
+                <span className="inline-flex items-center mr-1 sm:mr-2">
+                  <span className="w-1.5 h-1.5 bg-amber-400/70 rounded-full mr-1 sm:mr-2 animate-pulse"></span>
                   <span className="text-amber-300/60 text-xs">🚧</span>
                 </span>
-                <span className="truncate">{t('hero.disclaimer')}</span>
+                <span className="break-words">{t('hero.disclaimer')}</span>
               </p>
             </div>
           </div>
@@ -83,7 +83,7 @@ const Download: React.FC = () => {
                 <button
                   onClick={() => handleDownload()}
                   disabled={isLoading}
-                  className="relative bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white text-lg font-montserrat-bold px-12 py-4 rounded-xl border border-cyan-400/50 hover:border-cyan-300 shadow-lg hover:shadow-cyan-500/25 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3 mx-auto overflow-hidden"
+                  className="relative bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white text-base sm:text-lg font-montserrat-bold px-6 sm:px-12 py-3 sm:py-4 rounded-xl border border-cyan-400/50 hover:border-cyan-300 shadow-lg hover:shadow-cyan-500/25 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 sm:space-x-3 mx-auto overflow-hidden"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow = '0 0 30px rgba(6, 182, 212, 0.6), 0 0 60px rgba(6, 182, 212, 0.3)';
                   }}
