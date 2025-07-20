@@ -75,6 +75,44 @@ O site está configurado para deploy automático no GitHub Pages usando GitHub A
 2. Em **Source**, selecione **GitHub Actions**
 3. Faça um push para a branch `main` - o deploy será automático!
 
+### 🌐 Configuração de Domínio Customizado
+
+O projeto está preparado para usar domínio customizado:
+
+**1. Configurar o arquivo CNAME:**
+- Edite `/docs/public/CNAME` e substitua `your-domain.com` pelo seu domínio
+- Exemplo: `orch-mind.com` ou `www.orch-mind.com`
+
+**2. Configurar DNS no seu provedor:**
+
+**Para domínio apex (exemplo.com):**
+```
+Tipo: A
+Nome: @
+Valor: 185.199.108.153
+       185.199.109.153
+       185.199.110.153
+       185.199.111.153
+```
+
+**Para subdomínio (www.exemplo.com):**
+```
+Tipo: CNAME
+Nome: www
+Valor: guiferrarib.github.io
+```
+
+**3. Configurar no GitHub:**
+- Vá em **Settings > Pages**
+- Em **Custom domain**, digite seu domínio
+- Clique **Save**
+- Aguarde verificação DNS (até 24h)
+
+**4. Resultado:**
+- Site disponível em seu domínio customizado
+- HTTPS automático via GitHub Pages
+- Redirecionamento automático configurado
+
 ### Deploy Manual (Alternativo)
 
 Se preferir fazer deploy manual:
