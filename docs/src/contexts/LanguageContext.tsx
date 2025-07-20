@@ -68,8 +68,8 @@ const translations: Record<Language, Record<string, string>> = {
   'pt-BR': {
     // Hero Section
     'hero.title.orch': 'Orch-Mind',
-    'hero.title.first': 'A primeira IA federada para leigos',
-    'hero.title.world': 'do mundo, feita no Brasil.',
+    'hero.title.first': 'A primeira IA federada do mundo que é acessível para todos',
+    'hero.title.world': '— feita no Brasil.',
     'hero.disclaimer': 'Estágio Alpha Experimental — Participe do nascimento de uma nova era da IA.',
     'hero.subtitle.imagine': 'Imagina ter uma inteligência artificial só sua, rodando direto no seu computador.',
     'hero.subtitle.no': 'Sem servidor na nuvem, sem mensalidade, sem esperar!',
@@ -150,7 +150,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.description': 'Plataforma revolucionária de treinamento de IA federada. Código aberto, descentralizada e desenvolvida pela comunidade para o futuro da inteligência artificial.',
     'footer.copyrightStart': 'Feito com',
     'footer.copyrightEnd': 'pela comunidade.',
-    'footer.additionalInfo': 'Orch-Mind é um projeto de código aberto. Todo código está disponível sob licença MIT.',
+    'footer.additionalInfo': 'Orch-Mind é um projeto de código aberto. Todo código está disponível sob dupla licença MIT e Apache 2.0.',
     'footer.builtWith': 'Este site foi construído com React, Vite e Tailwind CSS.',
     
     // Features Section
@@ -223,8 +223,8 @@ const translations: Record<Language, Record<string, string>> = {
   'en-US': {
     // Hero Section
     'hero.title.orch': 'Orch-Mind',
-    'hero.title.first': 'The first federated AI for laypeople',
-    'hero.title.world': 'worldwide, made in Brazil.',
+    'hero.title.first': 'The first federated AI worldwide that is accessible to everyone',
+    'hero.title.world': '— made in Brazil.',
     'hero.disclaimer': 'Alpha Experimental Stage — Participate in the birth of a new AI era.',
     'hero.subtitle.imagine': 'Imagine having your own artificial intelligence, running directly on your computer.',
     'hero.subtitle.no': 'No cloud servers, no monthly fees, no waiting!',
@@ -307,7 +307,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.description': 'Revolutionary federated AI training platform. Open source, decentralized and developed by the community for the future of artificial intelligence.',
     'footer.copyrightStart': 'Made with',
     'footer.copyrightEnd': 'by the community.',
-    'footer.additionalInfo': 'Orch-Mind is an open-source project. All code is available under MIT license.',
+    'footer.additionalInfo': 'Orch-Mind is an open-source project. All code is available under dual MIT and Apache 2.0 license.',
     'footer.builtWith': 'This website is built with React, Vite, and Tailwind CSS.',
     
     // Features Section
