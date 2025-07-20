@@ -88,14 +88,14 @@ const Hero: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Modern scroll indicator - Centered vertically */}
-      <div className="absolute top-[85%] left-1/2 transform -translate-x-1/2 flex flex-col items-center space-y-2 opacity-70 hover:opacity-100 transition-opacity duration-300">
-        <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Explore mais</span>
-        <div className="flex flex-col items-center animate-bounce">
-          <ChevronDown className="w-5 h-5 text-blue-400" />
-          <ChevronDown className="w-4 h-4 text-blue-400/60 -mt-2" />
+        {/* Modern scroll indicator - Positioned below badges */}
+        <div className="mt-8 flex flex-col items-center space-y-2 opacity-70 hover:opacity-100 transition-opacity duration-300">
+          <span className="text-xs text-gray-400 font-medium tracking-wider uppercase">Explore mais</span>
+          <div className="flex flex-col items-center animate-bounce">
+            <ChevronDown className="w-5 h-5 text-blue-400" />
+            <ChevronDown className="w-4 h-4 text-blue-400/60 -mt-2" />
+          </div>
         </div>
       </div>
     </section>
