@@ -9,7 +9,7 @@ const Hero: React.FC = () => {
         <div className="mb-8">
           <div className="flex justify-center mb-8">
             <img 
-              src="/orch-mind-logo.png" 
+              src="./orch-mind-logo.png" 
               alt="Orch-Mind Logo" 
               className="w-24 h-24 md:w-32 md:h-32 object-contain animate-pulse"
               style={{ 
