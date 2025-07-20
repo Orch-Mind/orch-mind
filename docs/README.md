@@ -25,7 +25,7 @@ Official institutional website for the Orch-Mind federated AI training platform.
 
    ```bash
    git clone https://github.com/guiferrarib/orch-mind.git
-   cd orch-mind/website
+   cd orch-mind/docs
    ```
 
 2. **Install dependencies**:
@@ -56,48 +56,39 @@ The build files will be generated in the `dist/` directory.
 
 ## 🚀 Deploy to GitHub Pages
 
-### Option 1: Manual Deployment
+### Configuração Automática (Recomendado)
 
-1. **Build the project**:
-   ```bash
-   npm run build
-   ```
+O site está configurado para deploy automático no GitHub Pages usando GitHub Actions.
 
-2. **Deploy to GitHub Pages**:
-   ```bash
-   # Install gh-pages if not already installed
-   npm install -g gh-pages
-   
-   # Deploy to gh-pages branch
-   gh-pages -d dist
-   ```
+**Pré-requisitos:**
+1. Repositório no GitHub
+2. GitHub Pages habilitado nas configurações do repositório
+3. Source configurado para "GitHub Actions"
 
-### Option 2: GitHub Actions (Recommended)
+**Como funciona:**
+- O workflow `.github/workflows/deploy-pages.yml` já está configurado
+- Deploy automático a cada push na branch `main` que modifique a pasta `docs/`
+- Site disponível em: `https://guiferrarib.github.io/orch-mind`
 
-Create `.github/workflows/deploy.yml` in your repository root:
+**Para habilitar:**
+1. Vá em **Settings > Pages** no seu repositório GitHub
+2. Em **Source**, selecione **GitHub Actions**
+3. Faça um push para a branch `main` - o deploy será automático!
 
-```yaml
-name: Deploy to GitHub Pages
+### Deploy Manual (Alternativo)
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+Se preferir fazer deploy manual:
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
+```bash
+# 1. Build do projeto
+npm run build
+
+# 2. Install gh-pages (se necessário)
+npm install -g gh-pages
+
+# 3. Deploy para GitHub Pages
+gh-pages -d dist
+```
         cache-dependency-path: website/package-lock.json
         
     - name: Install dependencies
