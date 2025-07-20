@@ -1,19 +1,21 @@
 import React from 'react';
 import { Github, Heart } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Footer: React.FC = () => {
+  const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
     product: [
-      { name: 'Recursos', href: '#features' },
-      { name: 'Download', href: '#download' }
+      { name: t('footer.resources'), href: '#features' },
+      { name: t('footer.download'), href: '#download' }
     ],
     community: [
       { name: 'GitHub', href: 'https://github.com/guiferrarib/orch-mind' }
     ],
     legal: [
-      { name: 'Licença', href: 'https://github.com/guiferrarib/orch-mind/blob/main/LICENSE' }
+      { name: t('footer.license'), href: 'https://github.com/guiferrarib/orch-mind/blob/main/LICENSE' }
     ]
   };
 
@@ -38,41 +40,56 @@ const Footer: React.FC = () => {
                   mixBlendMode: 'screen'
                 }}
               />
-              <span className="text-2xl font-bold gradient-text">Orch-Mind</span>
+              <span className="text-2xl font-orbitron-title gradient-text">Orch-Mind</span>
             </div>
             <p className="text-gray-400 mb-6 leading-relaxed">
-              Plataforma revolucionária de treinamento de IA federada. Código aberto, descentralizada 
-              e desenvolvida pela comunidade para o futuro da inteligência artificial.
+              {t('footer.description')}
             </p>
+            {/* Premium Social Links */}
             <div className="flex space-x-4">
-              {socialLinks.map((link) => (
+              {socialLinks.map((link, index) => (
                 <a
                   key={link.label}
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-all duration-200 transform hover:scale-110"
+                  className={`relative p-3 text-gray-400 hover:text-white bg-gradient-to-br from-gray-900/60 via-gray-800/40 to-gray-900/60 rounded-xl border border-gray-600/30 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-125 hover:rotate-6 group shadow-lg hover:shadow-cyan-500/25`}
                   aria-label={link.label}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 20px rgba(6, 182, 212, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                  }}
                 >
-                  <link.icon size={20} />
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-cyan-500/10 to-blue-500/10"></div>
+                  <link.icon className="relative z-10 group-hover:animate-pulse" size={20} />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Product links */}
+          {/* Product links - Premium Style */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Produto</h3>
-            <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
+            <h3 className="text-lg font-orbitron-title mb-6 text-white">
+              {t('footer.product')}
+            </h3>
+            <ul className="space-y-4">
+              {footerLinks.product.map((link, index) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-gray-400 hover:text-white transition-colors duration-200"
+                    className="group flex items-center text-gray-400 hover:text-cyan-300 transition-all duration-300 font-montserrat hover:translate-x-2"
                     target={link.href.startsWith('http') ? '_blank' : undefined}
                     rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    {link.name}
+                    <span className="w-1 h-1 bg-cyan-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    <span className="group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-blue-400 group-hover:bg-clip-text transition-all duration-300">
+                      {link.name}
+                    </span>
                   </a>
                 </li>
               ))}
@@ -81,17 +98,21 @@ const Footer: React.FC = () => {
 
           {/* Community links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Comunidade</h3>
-            <ul className="space-y-3">
-              {footerLinks.community.map((link) => (
+            <h3 className="text-lg font-orbitron-title mb-6 text-white">{t('footer.community')}</h3>
+            <ul className="space-y-4">
+              {footerLinks.community.map((link, index) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-white transition-colors duration-200"
+                    className="group flex items-center text-gray-400 hover:text-cyan-300 transition-all duration-300 font-montserrat hover:translate-x-2"
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    {link.name}
+                    <span className="w-1 h-1 bg-cyan-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    <span className="group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-blue-400 group-hover:bg-clip-text transition-all duration-300">
+                      {link.name}
+                    </span>
                   </a>
                 </li>
               ))}
@@ -105,10 +126,10 @@ const Footer: React.FC = () => {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="text-gray-400 text-sm mb-4 md:mb-0">
-              <p className="flex items-center">
-                © {currentYear} Orch-Mind. Feito com{' '}
+              <p className="flex items-center font-montserrat">
+                © {currentYear} Orch-Mind. {t('footer.copyrightStart')}{' '}
                 <Heart className="w-4 h-4 mx-1 text-red-500" fill="currentColor" />
-                pela comunidade.
+                {t('footer.copyrightEnd')}
               </p>
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
@@ -116,7 +137,7 @@ const Footer: React.FC = () => {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-gray-400 hover:text-white transition-colors duration-200"
+                  className="text-gray-400 hover:text-white transition-colors duration-200 font-montserrat"
                   target={link.href.startsWith('http') ? '_blank' : undefined}
                   rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                 >
@@ -128,10 +149,10 @@ const Footer: React.FC = () => {
           
           {/* Additional info */}
           <div className="mt-6 pt-6 border-t border-gray-800 text-center">
-            <p className="text-gray-500 text-xs">
-              Orch-Mind is an open-source project. All code is available under MIT license.
+            <p className="text-gray-500 text-xs font-montserrat">
+              {t('footer.additionalInfo')}
               <br />
-              This website is built with React, Vite, and Tailwind CSS.
+              {t('footer.builtWith')}
             </p>
           </div>
         </div>

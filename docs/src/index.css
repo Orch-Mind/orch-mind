@@ -8,7 +8,8 @@
   }
   
   body {
-    @apply bg-gray-900 text-white font-sans antialiased;
+    @apply bg-gray-900 text-white antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     background-image: 
       radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
       radial-gradient(circle at 75% 75%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
@@ -16,6 +17,38 @@
 }
 
 @layer components {
+  /* Typography Classes - Refined Strategy */
+  .font-orbitron-title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 800;
+    letter-spacing: 0.025em;
+  }
+  
+  .font-orbitron-highlight {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+  }
+  
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+  }
+  
+  .font-montserrat-bold {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+  }
+  
+  .font-montserrat-extra-bold {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+  }
+  
+  .font-body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+  
   .gradient-text {
     @apply bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent;
   }

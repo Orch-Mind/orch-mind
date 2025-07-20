@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Github, X } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,9 +18,9 @@ const Header: React.FC = () => {
   }, []);
 
   const navItems = [
-    { name: 'Início', href: '#home' },
-    { name: 'Recursos', href: '#features' },
-    { name: 'Download', href: '#download' },
+    { name: t('nav.home'), href: '#home' },
+    { name: t('nav.features'), href: '#features' },
+    { name: t('nav.download'), href: '#download' },
   ];
 
   const socialLinks = [
@@ -30,47 +33,68 @@ const Header: React.FC = () => {
     }`}>
       <nav className="container-custom section-padding py-4">
         <div className="flex items-center justify-between relative">
-          {/* Logo - Left */}
-          <div className="flex items-center space-x-3">
+          {/* Logo - Left (Clickable) */}
+          <a 
+            href="#home" 
+            className="flex items-center space-x-3 group cursor-pointer transition-all duration-300 hover:scale-105"
+            aria-label={t('nav.home')}
+          >
             <img 
               src="/orch-mind-logo.png" 
               alt="Orch-Mind Logo" 
-              className="w-10 h-10 object-contain"
+              className="w-10 h-10 object-contain group-hover:drop-shadow-lg transition-all duration-300"
               style={{ 
                 filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5)) brightness(1.2) contrast(1.1)',
                 mixBlendMode: 'screen'
               }}
             />
-            <span className="text-2xl font-bold gradient-text">Orch-Mind</span>
-          </div>
+            <span className="text-2xl font-orbitron-title gradient-text group-hover:text-cyan-300 transition-colors duration-300">Orch-Mind</span>
+          </a>
 
-          {/* Desktop Navigation - Centered */}
+          {/* Desktop Navigation - Section Navigation Style */}
           <div className="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2">
-            {navItems.map((item) => (
+            {navItems.map((item, index) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
+                className="relative group text-gray-300 hover:text-cyan-300 transition-all duration-300 font-montserrat px-3 py-2 rounded-lg hover:scale-105 hover:shadow-sm"
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {item.name}
+                <span className="relative z-10 transition-all duration-300">
+                  {item.name}
+                </span>
+                {/* Subtle dot indicator for section navigation */}
+                <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 scale-0 group-hover:scale-100"></div>
+                {/* Subtle glow effect */}
+                <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-cyan-500/5"></div>
               </a>
             ))}
           </div>
 
-          {/* Social Links - Right */}
-          <div className="hidden lg:flex items-center space-x-4">
-            {socialLinks.map((link) => (
+          {/* Social Links and Language Selector - Premium Style */}
+          <div className="hidden lg:flex items-center space-x-3">
+            {socialLinks.map((link, index) => (
               <a
                 key={link.label}
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
+                className="relative p-2 text-gray-400 hover:text-white bg-gray-800/30 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-110 group backdrop-blur-sm"
                 aria-label={link.label}
+                style={{ animationDelay: `${index * 0.1}s` }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 15px rgba(6, 182, 212, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
-                <link.icon size={20} />
+                {/* Glow effect */}
+                <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-cyan-500/10 to-blue-500/10"></div>
+                <link.icon className="relative z-10 group-hover:animate-pulse" size={18} />
               </a>
             ))}
+            <LanguageSelector />
           </div>
 
           {/* Mobile Menu Button */}
@@ -91,7 +115,7 @@ const Header: React.FC = () => {
                 <a
                   key={item.name}
                   href={item.href}
-                  className="text-gray-300 hover:text-white transition-colors duration-200 font-medium px-4"
+                  className="text-gray-300 hover:text-white transition-colors duration-200 font-montserrat px-4"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
