@@ -21,7 +21,7 @@
     "build:renderer": "vite build",
     "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder",
     "dist:all": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --mac --win --linux",
-    "dist:mac": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --mac --publish=always",
+    "dist:mac": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false CSC_LINK= CSC_KEY_PASSWORD= npm run build && electron-builder --mac --publish=always",
     "dist:win": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --publish=always",
     "dist:linux": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --linux --publish=always",
     "publish": "npm run build && electron-builder --publish=always",
@@ -47,7 +47,7 @@
     "test-memory:max": "node --max-old-space-size=16384 scripts/test-memory-limits.js"
   },
   "build": {
-    "appId": "com.orchmind",
+    "appId": "com.guiferrarib.orchmind",
     "productName": "Orch-Mind",
     "files": [
       "dist/**/*",
@@ -88,7 +88,8 @@
         {
           "target": "pkg",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         }
       ],
@@ -102,6 +103,8 @@
       "extendInfo": "build/Info.plist",
       "category": "public.app-category.productivity",
       "minimumSystemVersion": "10.15.0",
+      "bundleShortVersion": "${version}",
+      "bundleVersion": "${version}",
       "protocols": {
         "name": "orch-mind-protocol",
         "schemes": [
@@ -113,10 +116,19 @@
         "**/b4a/**",
         "**/hyperswarm/**",
         "**/hypercore-crypto/**"
-      ]
+      ],
+      "notarize": false
     },
     "pkg": {
-      "scripts": "build/postinstall.sh"
+      "scripts": "build/postinstall.sh",
+      "installLocation": "/Applications",
+      "allowAnywhere": false,
+      "allowCurrentUserHome": false,
+      "allowRootDirectory": true,
+      "isRelocatable": false,
+      "isVersionChecked": false,
+      "hasStrictIdentifier": false,
+      "overwriteAction": "upgrade"
     },
     "dmg": {
       "contents": [
@@ -134,13 +146,20 @@
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/icons/win/icon.ico",
       "artifactName": "${productName}-Windows-${version}.${ext}",
       "executableName": "Orch-Mind",
       "legalTrademarks": "Orch-Mind",
       "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": true,
+      "verifyUpdateCodeSignature": false,
       "protocols": {
         "name": "orch-mind-protocol",
         "schemes": [
@@ -165,20 +184,31 @@
       "shortcutName": "Orch-Mind",
       "runAfterFinish": true,
       "perMachine": false,
-      "allowElevation": true
+      "allowElevation": true,
+      "deleteAppDataOnUninstall": false
     },
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "deb",
+          "arch": ["x64", "arm64"]
+        }
       ],
       "icon": "assets/icons/png/icon-256x256.png",
       "artifactName": "${productName}-Linux-${version}.${ext}",
+      "category": "Development",
       "protocols": {
         "name": "orch-mind-protocol",
         "schemes": [
           "orch-mind"
         ]
       }
+    },
+    "deb": {
+      "afterInstall": "build/postinstall-linux.sh",
+      "fpm": [
+        "--deb-no-default-config-files"
+      ]
     },
     "publish": [
       {
@@ -215,10 +245,6 @@
           "!**/data/**",
           "!**/llama.cpp/**"
         ]
-      },
-      {
-        "from": "build/launch-orch-mind.bat",
-        "to": "launch-orch-mind.bat"
       }
     ],
     "extraMetadata": {
@@ -233,7 +259,10 @@
     "neural",
     "symbolic-intelligence"
   ],
-  "author": "Guilherme Ferrari Brescia",
+  "author": {
+    "name": "Guilherme Ferrari Brescia",
+    "email": "guiferrarib@hotmail.com"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=22.16.0",

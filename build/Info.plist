@@ -5,7 +5,7 @@
   <key>CFBundleExecutable</key>
   <string>Orch-Mind</string>
   <key>CFBundleIdentifier</key>
-  <string>com.orch-mind</string>
+  <string>com.guiferrarib.orchmind</string>
   <key>CFBundleName</key>
   <string>Orch-Mind</string>
   <key>CFBundleVersion</key>
@@ -40,7 +40,7 @@
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>com.orch-mind.url</string>
+      <string>com.guiferrarib.orchmind.url</string>
       <key>CFBundleURLSchemes</key>
       <array>
         <string>orch-mind</string>

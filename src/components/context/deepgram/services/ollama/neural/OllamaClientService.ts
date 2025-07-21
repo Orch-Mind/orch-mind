@@ -213,7 +213,6 @@ export class OllamaClientService implements IClientManagementService {
           stream: options.stream || false,
           options: {
             temperature: options.temperature,
-            num_predict: options.max_tokens,
           },
         }),
       });

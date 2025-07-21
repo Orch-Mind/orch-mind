@@ -2,8 +2,8 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import {
-  getOption,
-  STORAGE_KEYS,
+    getOption,
+    STORAGE_KEYS,
 } from "../../../../../../services/StorageService";
 import { OllamaClientService } from "../../../../../context/deepgram/services/ollama/neural/OllamaClientService";
 import { OllamaCompletionService } from "../../../../../context/deepgram/services/ollama/neural/OllamaCompletionService";
@@ -224,7 +224,6 @@ ${conversationText}`;
           { role: "user", content: userPrompt },
         ],
         temperature: 0.3,
-        max_tokens: this.TARGET_SUMMARY_TOKENS + 500, // Allow some flexibility
       });
 
       const summaryContent =

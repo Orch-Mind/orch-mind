@@ -183,9 +183,10 @@ class OllamaService(IOllamaService):
         
         try:
             print(f"🔗 Creating Ollama model: {model_name}")
+            # Increase timeout for large GGUF models (8GB+ can take 10-15 minutes)
             result = subprocess.run([
                 ollama_path, 'create', model_name, '-f', modelfile_path
-            ], capture_output=True, text=True, timeout=300)
+            ], capture_output=True, text=True, timeout=1200)
             
             if result.returncode == 0:
                 print(f"✅ Model {model_name} created successfully")

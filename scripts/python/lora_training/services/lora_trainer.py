@@ -8,6 +8,10 @@ import sys
 import tempfile
 import json
 from typing import List, Dict, Any, Optional
+
+# Disable wandb completely to avoid login issues
+os.environ["WANDB_DISABLED"] = "true"
+os.environ["WANDB_MODE"] = "disabled"
 from interfaces.i_lora_trainer import ILoRATrainer
 from interfaces.i_progress_reporter import IProgressReporter
 from models.training_config import TrainingConfig

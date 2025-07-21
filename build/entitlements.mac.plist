@@ -28,7 +28,7 @@
     <true/>
     <key>com.apple.security.application-groups</key>
     <array>
-      <string>com.orch-mind.shared</string>
+      <string>com.guiferrarib.orchmind.shared</string>
     </array>
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>

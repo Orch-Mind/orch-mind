@@ -5,20 +5,20 @@
 // Symbolic: Processamento de completions e function calling com Ollama local
 import { OllamaToolConfigHelper } from "../../../../../../config/OllamaToolConfig";
 import {
-  STORAGE_KEYS,
-  getOption,
+    STORAGE_KEYS,
+    getOption,
 } from "../../../../../../services/StorageService";
 import { OllamaToolCallParser } from "../../../../../../utils/OllamaToolCallParser";
 import { IClientManagementService } from "../../../interfaces/openai/IClientManagementService";
 import {
-  ICompletionService,
-  ModelStreamResponse,
-  StreamingCallback,
+    ICompletionService,
+    ModelStreamResponse,
+    StreamingCallback,
 } from "../../../interfaces/openai/ICompletionService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import {
-  cleanThinkTags,
-  cleanThinkTagsFromToolCalls,
+    cleanThinkTags,
+    cleanThinkTagsFromToolCalls,
 } from "../../../utils/ThinkTagCleaner";
 
 /**
@@ -124,8 +124,6 @@ export class OllamaCompletionService implements ICompletionService {
           stream: !!options.stream,
           options: {
             temperature: modelConfig.temperature ?? options.temperature ?? 0.5,
-            // num_predict controls the maximum tokens in the response
-            num_predict: modelConfig.num_predict ?? options.max_tokens ?? 2048,
             // num_ctx is the context window size (should be larger)
             num_ctx: modelConfig.num_ctx ?? 8192,
           },

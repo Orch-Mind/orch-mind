@@ -25,7 +25,6 @@ export interface OllamaToolConfig {
   // Configurações gerais para todos os modelos
   defaultConfig: {
     temperature?: number;
-    num_predict?: number;
     num_ctx?: number;
   };
 }
@@ -45,7 +44,6 @@ export const DEFAULT_OLLAMA_TOOL_CONFIG: OllamaToolConfig = {
   // Configurações gerais para todos os modelos
   defaultConfig: {
     temperature: 0.1,
-    num_predict: 2048,
     num_ctx: 8192,
   },
 };

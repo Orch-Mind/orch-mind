@@ -636,7 +636,7 @@ export class LoRAMergeService {
   }
 
   /**
-   * Executa script Python de fusão
+   * Execute merge script using proper path handling
    */
   private async executeMergeScript(
     configPath: string,
@@ -648,31 +648,31 @@ export class LoRAMergeService {
         const pythonCommand = await this.findCompatiblePython();
         console.log(`🐍 [LoRAMergeService] Using Python: ${pythonCommand}`);
 
-        // CRITICAL FIX: Handle Python commands with arguments (like "py -3.11")
-        const pythonParts = pythonCommand.split(' ');
-        const pythonExe = pythonParts[0];
-        const pythonArgs = pythonParts.slice(1);
-        
-        console.log(`🐍 [LoRAMergeService] Python executable: ${pythonExe}`);
-        console.log(`🐍 [LoRAMergeService] Python args: ${pythonArgs.join(' ')}`);
-        console.log(`🐍 [LoRAMergeService] Script: ${this.pythonScriptPath}`);
-        console.log(`🐍 [LoRAMergeService] Config: ${configPath}`);
-        console.log(`🐍 [LoRAMergeService] Output: ${outputPath}`);
+        const scriptPath = this.getMergeScriptPath();
+        console.log(`📜 [LoRAMergeService] Script path: ${scriptPath}`);
 
-        const allArgs = [
-          ...pythonArgs,
-          this.pythonScriptPath,
+        // CRITICAL FIX: Properly handle paths with spaces by using array format
+        // This prevents ENOENT errors with paths like "Application Support"
+        const args = [
+          scriptPath,
           "--config",
           configPath,
           "--output",
           outputPath,
         ];
-
-        const python = spawn(pythonExe, allArgs, {
-          shell: false,
-          cwd: this.mergeDir,
+        
+        console.log(`🔧 [LoRAMergeService] Executing: ${pythonCommand} ${args.join(' ')}`);
+        
+        // Use spawn with array arguments to handle paths with spaces correctly
+        const python = spawn(pythonCommand, args, {
+          stdio: ["pipe", "pipe", "pipe"],
+          env: {
+            ...process.env,
+            PYTHONUNBUFFERED: "1",
+            TOKENIZERS_PARALLELISM: "false",
+          },
         });
-
+        
         let output = "";
         let errorOutput = "";
 
@@ -903,207 +903,46 @@ export class LoRAMergeService {
   private async findCompatiblePython(): Promise<string> {
     const { promisify } = require("util");
     const execAsync = promisify(require("child_process").exec);
-
-    const isWindows = process.platform === "win32";
-    const isMacOS = process.platform === "darwin";
-
-    console.log(
-      `[LoRAMergeService] Detecting Python on ${process.platform}...`
-    );
-
-    // First, try to use the local training venv from LoRATrainingService
-    console.log(`[LoRAMergeService] Checking for local training venv...`);
-    const localVenvPython = await this.checkLocalTrainingVenv();
-
-    if (localVenvPython) {
-      console.log(
-        `[LoRAMergeService] ✅ Using local training venv: ${localVenvPython}`
-      );
-      return localVenvPython;
-    }
-
-    // If that fails, fall back to system Python
-    console.log(
-      `[LoRAMergeService] Virtual environment not found, falling back to system Python...`
-    );
-
-    // Define platform-specific Python candidates
-    let pythonCandidates: string[] = [];
-
-    if (isWindows) {
-      // First try PATH-based commands
-      pythonCandidates = [
-        "py -3.11", // Python Launcher with specific version
-        "py -3.10",
-        "py -3.9",
-        "py -3.12",
-        "python", // Standard command
-        "python3", // Sometimes available on Windows
-        "py", // Python Launcher default
-      ];
-
-      // Then try common Windows installation paths
-      const windowsPaths = [
-        // Python.org installer locations
-        "C:\\Python311\\python.exe",
-        "C:\\Python310\\python.exe",
-        "C:\\Python39\\python.exe",
-        "C:\\Python312\\python.exe",
-        // Microsoft Store installations
-        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python311\\python.exe`,
-        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python310\\python.exe`,
-        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python39\\python.exe`,
-        `${process.env.LOCALAPPDATA}\\Programs\\Python\\Python312\\python.exe`,
-        // User AppData installations
-        `${process.env.APPDATA}\\Python\\Python311\\python.exe`,
-        `${process.env.APPDATA}\\Python\\Python310\\python.exe`,
-        `${process.env.APPDATA}\\Python\\Python39\\python.exe`,
-        `${process.env.APPDATA}\\Python\\Python312\\python.exe`,
-        // Program Files installations
-        "C:\\Program Files\\Python311\\python.exe",
-        "C:\\Program Files\\Python310\\python.exe",
-        "C:\\Program Files\\Python39\\python.exe",
-        "C:\\Program Files\\Python312\\python.exe",
-        "C:\\Program Files (x86)\\Python311\\python.exe",
-        "C:\\Program Files (x86)\\Python310\\python.exe",
-        "C:\\Program Files (x86)\\Python39\\python.exe",
-        "C:\\Program Files (x86)\\Python312\\python.exe",
-      ];
-
-      pythonCandidates = pythonCandidates.concat(windowsPaths);
-    } else {
-      // macOS/Linux Python commands (unified approach like LoRATrainingService)
-      pythonCandidates = [
-        "python3.11", // PRIORIDADE: Versão mais estável para treinamento LoRA
-        "python3.10",
-        "python3.9",
-        "python3.12", // Pode ter problemas, mas ainda compatível
-        "python3", // fallback Unix
-        "python", // General fallback
-      ];
-    }
-
-    console.log(
-      `[LoRAMergeService] Trying ${pythonCandidates.length} Python candidates...`
-    );
-
-    for (const pythonCmd of pythonCandidates) {
-      try {
-        console.log(`[LoRAMergeService] Testing Python: ${pythonCmd}`);
-
-        // For full paths on Windows, check if file exists first
-        if (isWindows && pythonCmd.includes(":\\")) {
-          try {
-            await execAsync(`if exist "${pythonCmd}" echo exists`);
-          } catch {
-            console.log(`[LoRAMergeService] ❌ Path not found: ${pythonCmd}`);
-            continue;
-          }
-        }
-
-        // Check if this Python version exists and get its version
-        const { stdout } = await execAsync(`"${pythonCmd}" --version`);
-
-        // Parse version (e.g., "Python 3.12.10")
-        const versionStr = stdout.trim().split(" ")[1];
-        const [major, minor] = versionStr.split(".").map(Number);
-
-        console.log(
-          `[LoRAMergeService] Found Python version: ${major}.${minor} (${versionStr})`
-        );
-
-        // Check if it's in the compatible range
-        if (major === 3 && minor >= 9 && minor <= 13) {
-          // CRITICAL FIX: Verify that torch is actually available in this Python
-          try {
-            const { stdout: torchCheck } = await execAsync(
-              `"${pythonCmd}" -c "import torch; print(f'torch-{torch.__version__}')"`
-            );
-
-            const torchVersion = torchCheck.trim();
-            console.log(
-              `[LoRAMergeService] ✅ Selected Python: ${pythonCmd} (version ${versionStr}) with ${torchVersion}`
-            );
-
-            return pythonCmd;
-          } catch (torchError) {
-            console.log(
-              `[LoRAMergeService] ❌ ${pythonCmd} (${versionStr}) missing torch: ${torchError}`
-            );
-            continue; // Try next Python candidate
-          }
-        } else {
-          console.log(
-            `[LoRAMergeService] ⚠️ ${pythonCmd} version ${versionStr} not compatible (needs 3.9-3.13)`
-          );
-        }
-      } catch (error) {
-        console.log(
-          `[LoRAMergeService] ❌ ${pythonCmd} failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        );
-        continue;
-      }
-    }
-
-    throw new Error(
-      `No compatible Python with torch found for LoRA merge operations. ` +
-        `Please install torch in your Python environment: ` +
-        `"python3 -m pip install torch --break-system-packages" or set up the LoRA training environment.`
-    );
-  }
-
-  /**
-   * Check if local training venv exists (shared with LoRATrainingService)
-   */
-  private async checkLocalTrainingVenv(): Promise<string | null> {
+    const fs = require("fs").promises;
+    
     try {
-      const { promisify } = require("util");
-      const execAsync = promisify(require("child_process").exec);
-      const fs = require("fs").promises;
-
-      // Get the path to the local training venv - same location as LoRATrainingService uses
-      const projectRoot = this.getProjectRoot();
-      const venvDir = path.join(projectRoot, "training_venv");
-
-      const venvPaths = [
-        // Unix-like systems (macOS, Linux)
-        path.join(venvDir, "bin", "python"),
-        // Windows
-        path.join(venvDir, "Scripts", "python.exe"),
-      ];
-
-      for (const venvPath of venvPaths) {
-        try {
-          console.log(`[LoRAMergeService] Checking venv path: ${venvPath}`);
-
-          // Check if the Python executable exists
-          await fs.access(venvPath);
-
-          // Check if torch is installed in this venv (required for merge operations)
-          const torchCheck = await execAsync(
-            `${venvPath} -c "import torch; print(f'torch:{torch.__version__}')"`
-          );
-
-          if (torchCheck.stdout.trim()) {
-            console.log(
-              `[LoRAMergeService] ✅ Found venv with torch: ${torchCheck.stdout.trim()}`
-            );
-            return venvPath;
-          }
-        } catch (error) {
-          console.log(
-            `[LoRAMergeService] ❌ Venv path failed: ${venvPath} - ${error}`
-          );
-          continue;
-        }
+      // Get the training directory path (same as LoRATrainingService)
+      const userDataPath = require("electron").app.getPath("userData");
+      const trainingDir = require("path").join(userDataPath, "lora-training");
+      const venvDir = require("path").join(trainingDir, "training_venv");
+      
+      // Check if venv exists
+      const venvExists = await fs.access(venvDir).then(() => true).catch(() => false);
+      if (!venvExists) {
+        console.log(`[LoRAMergeService] Training venv not found at: ${venvDir}`);
+        throw new Error(`Training virtual environment not found at: ${venvDir}. Please run LoRA training first to create the environment.`);
       }
-
-      return null;
+      
+      // Get Python executable path
+      const isWindows = process.platform === "win32";
+      const pythonExe = isWindows ? "python.exe" : "python";
+      const pythonPath = require("path").join(
+        venvDir, 
+        isWindows ? "Scripts" : "bin", 
+        pythonExe
+      );
+      
+      // Check if Python executable exists
+      const pythonExists = await fs.access(pythonPath).then(() => true).catch(() => false);
+      if (!pythonExists) {
+        console.log(`[LoRAMergeService] Python not found at: ${pythonPath}`);
+        throw new Error(`Python executable not found at: ${pythonPath}. Training environment may be corrupted.`);
+      }
+      
+      // Verify torch is available
+      const torchCheck = await execAsync(`"${pythonPath}" -c "import torch; print('torch', torch.__version__)"`);
+      console.log(`[LoRAMergeService] ✅ Training venv torch check: ${torchCheck.stdout.trim()}`);
+      
+      return pythonPath;
+      
     } catch (error) {
-      console.log(`[LoRAMergeService] Failed to check local venv: ${error}`);
-      return null;
+      console.log(`[LoRAMergeService] Training venv check failed: ${error}`);
+      throw new Error(`No compatible Python with torch found for LoRA merge operations. Please install torch in your Python environment: "python3 -m pip install torch --break-system-packages" or set up the LoRA training environment.`);
     }
   }
 }
