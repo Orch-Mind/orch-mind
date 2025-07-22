@@ -1,103 +1,26 @@
-# Orch-Mind Website
+# Documentação Técnica do Orch-Mind
 
-Official institutional website for the Orch-Mind federated AI training platform.
+Bem-vindo ao centro de documentação do Orch-Mind. Estes documentos fornecem uma visão aprofundada da arquitetura, funcionalidades e diretrizes de contribuição do projeto.
 
-## 🚀 Features
+## Começando
 
-- **Modern Design**: Dark theme with neural network-inspired visuals
-- **Responsive**: Optimized for desktop and mobile devices
-- **Fast**: Built with Vite for lightning-fast development and builds
-- **Interactive**: Smooth animations and hover effects
-- **OS Detection**: Automatic download button for user's operating system
-- **SEO Optimized**: Meta tags and semantic HTML structure
+Se você é novo no projeto, comece por aqui.
 
-## 🛠 Tech Stack
+- **[Guia de Setup para Desenvolvedores](./Developer_Setup.md)**: Instruções passo a passo para configurar seu ambiente de desenvolvimento local.
+- **[Guia de Contribuição](./Contributing.md)**: Diretrizes sobre como relatar bugs, sugerir funcionalidades e submeter Pull Requests.
 
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite 4
-- **Styling**: Tailwind CSS 3
-- **Icons**: Lucide React
-- **Animations**: Framer Motion (optional)
+## Arquitetura e Features Avançadas
 
-## 📦 Installation
+Explore os documentos abaixo para entender o funcionamento interno das principais funcionalidades do Orch-Mind.
 
-1. **Clone the repository** (if not already done):
-
-   ```bash
-   git clone https://github.com/guiferrarib/orch-mind.git
-   cd orch-mind/docs
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser** and navigate to `http://localhost:3000`
-
-## 🏗 Build for Production
-
-1. **Create production build**:
-   ```bash
-   npm run build
-   ```
-
-2. **Preview production build** (optional):
-   ```bash
-   npm run preview
-   ```
-
-The build files will be generated in the `dist/` directory.
-
-## 🚀 Deploy to GitHub Pages
-
-### Configuração Automática (Recomendado)
-
-O site está configurado para deploy automático no GitHub Pages usando GitHub Actions.
-
-**Pré-requisitos:**
-1. Repositório no GitHub
-2. GitHub Pages habilitado nas configurações do repositório
-3. Source configurado para "GitHub Actions"
-
-**Como funciona:**
-- O workflow `.github/workflows/deploy-pages.yml` já está configurado
-- Deploy automático a cada push na branch `main` que modifique a pasta `docs/`
-- Site disponível em: `https://guiferrarib.github.io/orch-mind`
-
-**Para habilitar:**
-1. Vá em **Settings > Pages** no seu repositório GitHub
-2. Em **Source**, selecione **GitHub Actions**
-3. Faça um push para a branch `main` - o deploy será automático!
-
-### 🌐 Configuração de Domínio Customizado
-
-O projeto está preparado para usar domínio customizado:
-
-**1. Configurar o arquivo CNAME:**
-- Edite `/docs/public/CNAME` e substitua `your-domain.com` pelo seu domínio
-- Exemplo: `orch-mind.com` ou `www.orch-mind.com`
-
-**2. Configurar DNS no seu provedor:**
-
-**Para domínio apex (exemplo.com):**
-```
-Tipo: A
-Nome: @
-Valor: 185.199.108.153
-       185.199.109.153
-       185.199.110.153
-       185.199.111.153
-```
-
-**Para subdomínio (www.exemplo.com):**
-```
-Tipo: CNAME
+- **[01 - Treinamento de IA e Ajuste Fino](./features/01_AI_Training_and_Tuning.md)**: Uma visão geral sobre o processo de treinamento de modelos.
+- **[02 - Fusão e Implantação de Adaptadores](./features/02_Adapter_Merging_and_Deployment.md)**: Como os adaptadores LoRA são combinados e implantados.
+- **[03 - Rede P2P e Compartilhamento de Adaptadores](./features/03_P2P_Network.md)**: Detalhes sobre a arquitetura da rede descentralizada para compartilhamento de adaptadores.
+- **[04 - Banco de Dados Vetorial e Memória Semântica](./features/04_Vector_Database_and_Memory.md)**: Explicação sobre como o DuckDB é usado para criar uma memória de longo prazo para a IA.
+- **[05 - Busca na Web em Tempo Real](./features/05_Web_Search.md)**: Como o Orch-Mind busca informações atualizadas na web para enriquecer suas respostas.
+- **[06 - Simulação de Consciência Quântica (Orch-OS)](./features/06_Orch_OS_Quantum_Simulation.md)**: Uma análise da feature experimental que visualiza a atividade cognitiva da IA.
+- **[07 - Treinamento de Adaptadores LoRA](./features/07_LoRA_Training.md)**: O guia detalhado sobre o fluxo de treinamento de LoRA, desde a preparação dos dados até a criação do adaptador.
+- **[08 - Aprendizado Federado](./features/08_Federated_Learning.md)**: A explicação do ciclo completo de aprendizado colaborativo que une treinamento local, compartilhamento P2P и fusão de adaptadores.
 Nome: www
 Valor: guiferrarib.github.io
 ```
