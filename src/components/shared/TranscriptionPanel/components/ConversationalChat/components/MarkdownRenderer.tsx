@@ -182,10 +182,26 @@ const markdownComponents = {
     }
 
     return (
-      <pre className="markdown-code-block">
-        <code className={className} {...props}>
-          {children}
-        </code>
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+
+  // Enhanced pre blocks (for code blocks)
+  pre: ({ children, ...props }: any) => {
+    // Extract language from the code element if present
+    const codeElement = React.Children.toArray(children).find(
+      (child: any) => child?.type === 'code'
+    ) as any;
+    
+    const className = codeElement?.props?.className || "";
+    const match = /language-(\w+)/.exec(className);
+    const language = match ? match[1] : "";
+
+    return (
+      <pre className="markdown-code-block" {...props}>
+        {children}
         {language && <span className="markdown-code-language">{language}</span>}
       </pre>
     );

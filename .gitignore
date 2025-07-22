@@ -8,6 +8,8 @@ dist
 **/.vscode
 **/.idea
 **/package-lock.json.env
+project.json
+yacy/**
 
 # Python virtual environments (CRITICAL: These are huge!)
 venv/
