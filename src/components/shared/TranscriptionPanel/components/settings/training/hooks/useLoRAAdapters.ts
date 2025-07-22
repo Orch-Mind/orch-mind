@@ -499,7 +499,7 @@ export const useLoRAAdapters = () => {
 
   const deployAdapter = async (
     adapterId: string,
-    targetModel?: string
+    customModelName?: string
   ): Promise<{ success: boolean; error?: string; modelName?: string }> => {
     try {
       const adapter = adapters.find((a) => a.id === adapterId);
@@ -522,10 +522,12 @@ export const useLoRAAdapters = () => {
         return { success: false, error: "API de deploy não disponível" };
       }
 
-      // Criar nome do modelo seguindo convenções do Ollama
-      const baseModelClean = adapter.baseModel.replace(":", "-");
-      const adapterNameClean = adapter.name.replace(/[^a-zA-Z0-9-_]/g, "-");
-      const deployedModelName = `${baseModelClean}-with-${adapterNameClean}:latest`;
+      // Usar nome customizado ou gerar automaticamente seguindo convenções do Ollama
+      const deployedModelName = customModelName || (() => {
+        const baseModelClean = adapter.baseModel.replace(":", "-");
+        const adapterNameClean = adapter.name.replace(/[^a-zA-Z0-9-_]/g, "-");
+        return `${baseModelClean}-with-${adapterNameClean}:latest`;
+      })();
 
       console.log(`🎯 [LoRA Deploy] Target model name: ${deployedModelName}`);
 

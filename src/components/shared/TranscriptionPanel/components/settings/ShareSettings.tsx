@@ -145,9 +145,7 @@ const ConnectionStatusCard: React.FC<{
         <p className="text-xs font-mono text-cyan-400 truncate max-w-32">
           {isSharing
             ? currentRoom?.type === "general"
-              ? "General Room"
-              : currentRoom?.type === "local"
-              ? "Local Network"
+              ? "Global"
               : `Room: ${currentRoom?.code}`
             : "Disconnected"}
         </p>
@@ -314,9 +312,7 @@ const InfoFooter: React.FC<{
     <p className="text-[10px] text-amber-400">
       <strong>💡 How it works:</strong>
       {currentRoom?.type === "general"
-        ? " General room connects you to the global Orch-Mind community. Share your adapters with the world! Check the Download tab to discover adapters from other users."
-        : currentRoom?.type === "local"
-        ? " Auto-discovery finds peers on your local network. Perfect for sharing adapters within the same office or home. Use the Download tab to get adapters from nearby peers."
+        ? " Global room connects you to the global Orch-Mind community. Share your adapters with the world! Check the Download tab to discover adapters from other users."
         : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to collaborate securely. Visit the Download tab to get shared adapters."}
     </p>
   </div>

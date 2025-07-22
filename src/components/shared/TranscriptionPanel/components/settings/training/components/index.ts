@@ -4,6 +4,7 @@
 
 export { default as AdaptersList } from "./AdaptersList";
 export { ConversationSelector } from "./ConversationSelector";
+export { NamingModal } from "./NamingModal";
 export { TrainingControls } from "./TrainingControls";
 export { TrainingModals } from "./TrainingModals";
 export { default as TrainingStats } from "./TrainingStats";

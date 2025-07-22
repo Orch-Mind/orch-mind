@@ -125,9 +125,7 @@ export class ShareUtils {
   static getRoomName(type: string, code?: string): string {
     switch (type) {
       case "general":
-        return "Community Room";
-      case "local":
-        return "Local Network";
+        return "Global";
       case "private":
         return `Room ${code}`;
       default:

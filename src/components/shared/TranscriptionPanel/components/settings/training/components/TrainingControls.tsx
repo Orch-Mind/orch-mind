@@ -2,12 +2,13 @@
 // Training Controls Component - Following SRP and KISS
 // Single responsibility: Handle training controls and progress display
 
-import React from "react";
+import React, { useState } from "react";
 import {
   formatLearningRate,
   useTrainingConfig,
 } from "../hooks/useTrainingConfig";
 import type { TrainingDetails } from "../types";
+import { NamingModal } from "./NamingModal";
 
 interface TrainingControlsProps {
   isTraining: boolean;
@@ -16,7 +17,7 @@ interface TrainingControlsProps {
   selectedCount: number;
   validPairs: number;
   trainingDetails: TrainingDetails | null;
-  onStartTraining: () => void;
+  onStartTraining: (customAdapterName?: string) => void;
 }
 
 export const TrainingControls: React.FC<TrainingControlsProps> = ({
@@ -30,6 +31,41 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
 }) => {
   const canStartTraining = !isTraining && selectedCount > 0;
   const { config } = useTrainingConfig(); // No loading/error since it's synchronous
+  
+  // State for adapter naming modal
+  const [showNamingModal, setShowNamingModal] = useState(false);
+  const [isStartingTraining, setIsStartingTraining] = useState(false);
+
+  // Generate default adapter name based on current date/time
+  const generateDefaultAdapterName = () => {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+    return `adapter-${dateStr}-${timeStr}`;
+  };
+
+  // Handle training button click - show naming modal
+  const handleTrainingClick = () => {
+    if (canStartTraining) {
+      setShowNamingModal(true);
+    }
+  };
+
+  // Handle adapter name confirmation from modal
+  const handleNameConfirm = async (adapterName: string) => {
+    setIsStartingTraining(true);
+    try {
+      await onStartTraining(adapterName);
+    } finally {
+      setIsStartingTraining(false);
+      setShowNamingModal(false);
+    }
+  };
+
+  // Handle modal cancel
+  const handleNameCancel = () => {
+    setShowNamingModal(false);
+  };
 
   return (
     <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-52 flex flex-col overflow-hidden">
@@ -50,11 +86,23 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
             selectedCount={selectedCount}
             validPairs={validPairs}
             canStartTraining={canStartTraining}
-            onStartTraining={onStartTraining}
+            onStartTraining={handleTrainingClick}
             config={config}
           />
         )}
       </div>
+      
+      {/* Naming Modal */}
+      <NamingModal
+        isOpen={showNamingModal}
+        type="adapter"
+        defaultName={generateDefaultAdapterName()}
+        title="Nome do Adapter"
+        description={`Escolha um nome personalizado para seu adapter LoRA que será criado com ${selectedCount} conversas selecionadas.`}
+        onConfirm={handleNameConfirm}
+        onCancel={handleNameCancel}
+        isLoading={isStartingTraining}
+      />
     </div>
   );
 };

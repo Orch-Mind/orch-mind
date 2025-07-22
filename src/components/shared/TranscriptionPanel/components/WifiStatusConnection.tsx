@@ -65,9 +65,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
     } else if (p2pStatus.isConnected && p2pStatus.currentRoom) {
       const roomName =
         p2pStatus.currentRoom.type === "general"
-          ? "Community"
-          : p2pStatus.currentRoom.type === "local"
-          ? "Local Network"
+          ? "Global"
           : `Room ${p2pStatus.currentRoom.code}`;
       return `Connected to ${roomName}`;
     } else {
@@ -201,9 +199,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
                       <span className="text-gray-400">Room:</span>
                       <span className="text-cyan-400 font-mono">
                         {p2pStatus.currentRoom.type === "general"
-                          ? "Community"
-                          : p2pStatus.currentRoom.type === "local"
-                          ? "Local Network"
+                          ? "Global"
                           : p2pStatus.currentRoom.code || "Private"}
                       </span>
                     </div>

@@ -108,9 +108,7 @@ const ConnectionStatus: React.FC<{
         <p className="text-green-400 font-medium text-sm">
           Connected to{" "}
           {currentRoom?.type === "general"
-            ? "Community"
-            : currentRoom?.type === "local"
-            ? "Local Network"
+            ? "Global"
             : `Room ${currentRoom?.code}`}
         </p>
       </div>

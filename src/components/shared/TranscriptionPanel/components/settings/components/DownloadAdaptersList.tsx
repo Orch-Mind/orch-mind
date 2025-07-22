@@ -57,9 +57,7 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
           <h3 className="text-sm font-semibold text-green-400">
             Connected to{" "}
             {currentRoom?.type === "general"
-              ? "Community"
-              : currentRoom?.type === "local"
-              ? "Local Network"
+              ? "Global"
               : `Room ${currentRoom?.code}`}
           </h3>
         </div>

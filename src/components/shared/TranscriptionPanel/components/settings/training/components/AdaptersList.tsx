@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 import React, { useState } from "react";
+import { NamingModal } from "./NamingModal";
 
 interface LoRAAdapter {
   id: string;
@@ -29,7 +30,7 @@ interface AdaptersListProps {
   ) => Promise<{ success: boolean; error?: string; mergedAdapterId?: string }>;
   onDeployAdapter?: (
     adapterId: string,
-    targetModel?: string
+    customModelName?: string
   ) => Promise<{ success: boolean; error?: string; modelName?: string }>;
 }
 
@@ -52,6 +53,8 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
   const [deployingAdapters, setDeployingAdapters] = useState<Set<string>>(
     new Set()
   );
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deployingAdapterId, setDeployingAdapterId] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     try {
@@ -174,15 +177,29 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     }
   };
 
-  const handleDeployAdapter = async (adapterId: string) => {
-    if (!onDeployAdapter) return;
+  // Generate default model name for deployment
+  const generateDefaultModelName = (adapter: LoRAAdapter) => {
+    const baseModelClean = adapter.baseModel.replace(/:latest$/, '').replace(/[^a-zA-Z0-9._-]/g, '-');
+    const adapterNameClean = adapter.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+    return `${baseModelClean}-with-${adapterNameClean}:latest`;
+  };
 
-    setDeployingAdapters((prev) => new Set([...prev, adapterId]));
+  // Handle deploy button click - show naming modal
+  const handleDeployClick = (adapterId: string) => {
+    setDeployingAdapterId(adapterId);
+    setShowDeployModal(true);
+  };
+
+  // Handle model name confirmation from modal
+  const handleDeployConfirm = async (customModelName: string) => {
+    if (!onDeployAdapter || !deployingAdapterId) return;
+
+    setDeployingAdapters((prev) => new Set([...prev, deployingAdapterId]));
 
     try {
-      const result = await onDeployAdapter(adapterId);
+      const result = await onDeployAdapter(deployingAdapterId, customModelName);
       if (result.success) {
-        alert(`✅ Adapter deployed successfully as model: ${result.modelName}`);
+        alert(`✅ Adapter deployed successfully as model: ${result.modelName || customModelName}`);
       } else {
         alert(`❌ Deploy failed: ${result.error}`);
       }
@@ -191,10 +208,18 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     } finally {
       setDeployingAdapters((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(adapterId);
+        newSet.delete(deployingAdapterId);
         return newSet;
       });
+      setShowDeployModal(false);
+      setDeployingAdapterId(null);
     }
+  };
+
+  // Handle modal cancel
+  const handleDeployCancel = () => {
+    setShowDeployModal(false);
+    setDeployingAdapterId(null);
   };
 
   // Filtrar adapters que podem ser mergeados (downloaded, ready ou merged, mesmo baseModel)
@@ -426,7 +451,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   {/* Deploy Button */}
                   {canDeploy(adapter) && (
                     <button
-                      onClick={() => handleDeployAdapter(adapter.id)}
+                      onClick={() => handleDeployClick(adapter.id)}
                       disabled={deployingAdapters.has(adapter.id) || isTraining}
                       className="px-3 py-1.5 bg-green-600/30 border border-green-400/50 text-green-300 rounded-lg hover:bg-green-600/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium min-w-[60px] flex items-center justify-center"
                       title="Deploy adapter to Ollama model"
@@ -518,6 +543,20 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
           </p>
         )}
       </div>
+      
+      {/* Deploy Naming Modal */}
+      {deployingAdapterId && (
+        <NamingModal
+          isOpen={showDeployModal}
+          type="deploy"
+          defaultName={generateDefaultModelName(adapters.find(a => a.id === deployingAdapterId)!)}
+          title="Nome do Modelo"
+          description={`Escolha um nome personalizado para o modelo Ollama que será criado com este adapter LoRA.`}
+          onConfirm={handleDeployConfirm}
+          onCancel={handleDeployCancel}
+          isLoading={deployingAdapters.has(deployingAdapterId)}
+        />
+      )}
     </div>
   );
 };

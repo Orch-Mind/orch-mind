@@ -115,7 +115,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
   };
 
   // === EVENT HANDLERS (Following SRP) ===
-  const handleTraining = async () => {
+  const handleTraining = async (customAdapterName?: string) => {
     // Debug conversation format to help diagnose issues
     console.log(
       "[Training] Starting training process, debugging conversation format..."
@@ -178,9 +178,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     );
     setTimeout(() => setTrainingStatus(""), 2000);
 
-    // ADAPTER TRAINING: Create new adapter for base model with sanitized name
+    // ADAPTER TRAINING: Create new adapter for base model with custom or generated name
     const originalBaseModel = extractBaseModel(selectedBaseModel);
-    const adapterName = generateOutputName(originalBaseModel);
+    const adapterName = customAdapterName || generateOutputName(originalBaseModel);
 
     console.log("[Training] LoRA Adapter training logic:");
     console.log(`  - Base model: ${originalBaseModel}`);
