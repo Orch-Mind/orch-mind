@@ -20,6 +20,7 @@ interface PanelHeaderProps {
   onShowDebugModal?: () => void; // Abre o modal de debug DuckDB
   onMinimize?: () => void;
   onWifiStatusClick?: () => void; // Abre configurações de Share P2P
+  showLogsButton?: boolean; // Controla a visibilidade do botão Logs baseado no processamento orch-os
   connectionState?: ConnectionState;
   microphoneState?: MicrophoneState;
   hasActiveConnection?: () => boolean;
@@ -35,6 +36,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onShowDebugModal,
   onMinimize,
   onWifiStatusClick,
+  showLogsButton = false,
 }) => {
   return (
     <div className="orchos-header-glass flex justify-between items-center mb-4 h-14 px-4">
@@ -79,33 +81,35 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           Import Neural Data
         </button>
 
-        {/* Botão Logs */}
-        <button
-          title="Cognition Logs"
-          aria-label="Open Cognition Logs"
-          onClick={onShowLogsModal}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 20 20"
-            fill="none"
-            aria-hidden="true"
-            className={styles.logsIcon}
+        {/* Botão Logs - só aparece se processamento orch-os estiver habilitado */}
+        {showLogsButton && (
+          <button
+            title="Cognition Logs"
+            aria-label="Open Cognition Logs"
+            onClick={onShowLogsModal}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10"
           >
-            <ellipse
-              cx="10"
-              cy="10"
-              rx="8"
-              ry="6"
-              stroke="#00F0FF"
-              strokeWidth="2"
-            />
-            <circle cx="10" cy="10" r="3" fill="#8F00FF" />
-          </svg>
-          Logs
-        </button>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+              className={styles.logsIcon}
+            >
+              <ellipse
+                cx="10"
+                cy="10"
+                rx="8"
+                ry="6"
+                stroke="#00F0FF"
+                strokeWidth="2"
+              />
+              <circle cx="10" cy="10" r="3" fill="#8F00FF" />
+            </svg>
+            Logs
+          </button>
+        )}
 
         {/* Botão Debug DuckDB - apenas em desenvolvimento */}
         {onShowDebugModal && process.env.NODE_ENV === "development" && (

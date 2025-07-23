@@ -55,8 +55,8 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   // Hook para acessar as configurações gerais
   const {} = useGeneralSettings();
 
-  // Hook para acessar as configurações beta, incluindo quantumVisualization
-  const { quantumVisualization } = useBetaSettings();
+  // Hook para acessar as configurações beta, incluindo quantumVisualization e quantumProcessing
+  const { quantumVisualization, quantumProcessing } = useBetaSettings();
 
   // Force re-render when quantum visualization changes - debug state
   const [visualizationRenderKey, setVisualizationRenderKey] = useState(0);
@@ -366,7 +366,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           onClose={() => {
             if (window?.electronAPI?.closeWindow) {
               window.electronAPI.closeWindow();
-            } else if (onClose) {
+            } else {
               onClose();
             }
           }}
@@ -379,6 +379,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           onShowLogsModal={() => setShowLogsModal(true)}
           onShowImportModal={() => setShowImportModal(true)}
           onWifiStatusClick={handleWifiStatusClick}
+          showLogsButton={quantumProcessing}
         />
 
         {/* Main Chat Dashboard Layout */}
