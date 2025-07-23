@@ -114,7 +114,8 @@ Output JSON only:
       const response = await this.llmService.callOpenAIWithFunctions({
         model: getOption(STORAGE_KEYS.OLLAMA_MODEL),
         messages,
-        temperature: 0.2,
+        temperature: 0.3,
+        max_tokens: 1500,
       });
 
       const content = response.choices[0]?.message?.content;
@@ -277,27 +278,32 @@ ${result.content ? `Content: ${result.content}` : ""}
         )
         .join("\n");
 
-      const processingPrompt = `Query: "${originalQuery}"
+      const systemPrompt = "Você é um assistente especializado em análise de resultados de busca web. Sua tarefa é extrair e sintetizar informações específicas dos resultados fornecidos para responder à consulta do usuário.\n\nINSTRUÇÕES OBRIGATÓRIAS:\n1. SEMPRE responda em português brasileiro\n2. Forneça informações específicas e detalhadas\n3. Inclua preços exatos, datas e números quando disponíveis\n4. Cite as fontes com URLs sempre que possível\n5. Organize a resposta de forma clara e estruturada\n6. Se não houver informações suficientes, indique claramente\n7. NUNCA retorne apenas '{}' ou respostas vazias\n8. Mínimo de 100 caracteres na resposta";
 
-Search Results:
-\`\`\`
+      const processingPrompt = `CONSULTA DO USUÁRIO: "${originalQuery}"
+
+RESULTADOS DA BUSCA WEB:
 ${formattedResults}
-\`\`\`
 
-Extract specific facts to answer the query. Include exact prices, dates, and sources when available.`;
+TAREFA: Analise os resultados acima e forneça uma resposta completa e detalhada para a consulta do usuário. Inclua informações específicas como preços, datas, especificações técnicas e cite as fontes.`;
+
+      // Log do prompt para depuração
+      LoggingUtils.logInfo(
+        `🧠 [WEB_SEARCH_PROCESS] Sending prompt to LLM:\nSystem: ${systemPrompt.substring(0, 200)}...\nUser: ${processingPrompt.substring(0, 200)}...`
+      );
 
       const response = await this.llmService.callOpenAIWithFunctions({
         model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "gemma3:latest",
         messages: [
           {
             role: "system",
-            content:
-              "Extract specific factual information from search results. Be direct and cite sources.",
+            content: systemPrompt,
           },
           { role: "user", content: processingPrompt },
         ],
-        temperature: 0.1,
-        max_tokens: 1000,
+        temperature: 0.5,
+        max_tokens: 3000,
+        // Removido format: "json" que estava causando respostas malformadas
       });
 
       const processedContent = response.choices[0]?.message?.content || "";
@@ -305,6 +311,44 @@ Extract specific facts to answer the query. Include exact prices, dates, and sou
       LoggingUtils.logInfo(
         `✅ [WEB_SEARCH_PROCESS] LLM response received (${processedContent.length} chars)`
       );
+
+      // Log da resposta da LLM para depuração
+      LoggingUtils.logInfo(
+        `🧠 [WEB_SEARCH_PROCESS] LLM raw response: ${processedContent.substring(0, 500)}${processedContent.length > 500 ? '...' : ''}`
+      );
+
+      // Validate response quality and provide fallback if needed
+      // Verifica se a resposta é JSON malformado ou inadequada
+      const isInvalidJson = processedContent.trim().startsWith('{') && !processedContent.trim().endsWith('}');
+      const isEmptyResponse = processedContent.length < 100 || processedContent.trim() === '{}' || processedContent.trim() === '';
+      const hasExcessiveWhitespace = (processedContent.match(/\n\s*\n/g) || []).length > 10;
+      
+      if (isInvalidJson || isEmptyResponse || hasExcessiveWhitespace) {
+        LoggingUtils.logWarning(
+          `⚠️ [WEB_SEARCH_PROCESS] LLM response inadequate (${processedContent.length} chars: "${processedContent.substring(0, 50)}"), using enhanced fallback`
+        );
+        
+        const fallbackContent = results
+          .slice(0, 4)
+          .map((result, index) => {
+            const title = result.title || 'Título não disponível';
+            const source = result.source || result.url || 'Fonte não disponível';
+            const snippet = result.snippet || 'Resumo não disponível';
+            const content = result.content ? result.content.substring(0, 300) : '';
+            
+            return `**${index + 1}. ${title}**\n` +
+                   `📍 Fonte: ${source}\n` +
+                   `📝 Resumo: ${snippet}\n` +
+                   (content ? `📄 Detalhes: ${content}...\n` : '') +
+                   '\n---\n';
+          })
+          .join('');
+        
+        return `## Resultados da busca para: "${originalQuery}"\n\n` +
+               `Encontrei ${results.length} resultado(s) relevante(s):\n\n` +
+               fallbackContent +
+               '\n💡 *Informações extraídas diretamente dos resultados da busca web.*';
+      }
 
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(

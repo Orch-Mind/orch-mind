@@ -12,9 +12,11 @@ module.exports = {
     "**/src/**/*.test.tsx",
     "**/src/**/*.spec.tsx",
     "**/src/**/*.e2e.test.tsx",
+    "**/test/**/*.test.ts",
+    "**/test/**/*.spec.ts"
   ],
   moduleFileExtensions: ["ts", "tsx", "js", "json", "node"],
-  roots: ["<rootDir>/src"],
+  roots: ["<rootDir>/src", "<rootDir>/test"],
   transform: {
     "^.+\\.(ts|tsx)$": [
       "ts-jest",
@@ -25,7 +27,7 @@ module.exports = {
     ],
     "^.+\\.jsx?$": "babel-jest",
   },
-  transformIgnorePatterns: ["/node_modules/(?!(@dqbd/tiktoken|nanoid))"],
+  transformIgnorePatterns: ["/node_modules/(?!(@dqbd/tiktoken|nanoid|cheerio))"],
   setupFiles: ["<rootDir>/jest.setup.js"],
   setupFilesAfterEnv: ["<rootDir>/jest.silence-console.js"],
   moduleNameMapper: {

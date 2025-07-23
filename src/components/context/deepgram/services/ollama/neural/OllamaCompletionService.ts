@@ -129,12 +129,10 @@ export class OllamaCompletionService implements ICompletionService {
           },
         };
 
-        // Important: Do NOT use format: "json" when using tools
-        // This can interfere with the model's ability to generate proper tool calls
-        // Only use JSON format for non-tool requests
-        if (!options.tools || options.tools.length === 0) {
-          requestBody.format = "json";
-        }
+        // Important: Do NOT use format: "json" automatically
+        // This can interfere with the model's ability to generate proper responses
+        // JSON format should only be used when explicitly requested
+        // Removed automatic JSON format to prevent malformed responses
 
         // Handle tools based on model capabilities
         if (options.tools && options.tools.length > 0) {
