@@ -54,9 +54,19 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
   // Handle adapter name confirmation from modal
   const handleNameConfirm = async (adapterName: string) => {
     setIsStartingTraining(true);
+    
     try {
-      await onStartTraining(adapterName);
+      // Start training asynchronously (don't wait for completion)
+      Promise.resolve(onStartTraining(adapterName)).catch((error: unknown) => {
+        console.warn('[TrainingControls] Training error (modal already closed):', error);
+      });
+      
+      // Close modal immediately after starting training
+      console.log('[TrainingControls] Training started, closing modal immediately');
+    } catch (error) {
+      console.warn('[TrainingControls] Error starting training:', error);
     } finally {
+      // Always close modal immediately
       setIsStartingTraining(false);
       setShowNamingModal(false);
     }
