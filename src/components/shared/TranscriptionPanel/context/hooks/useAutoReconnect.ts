@@ -48,8 +48,17 @@ export const useAutoReconnect = ({
       hasAutoReconnected: hasAutoReconnected.current,
       isReconnecting: isReconnecting.current,
       lastConnectionType,
+      lastRoomCode,
       isAutoRestoring: isAutoRestoring.current,
       timeSinceLastAttempt: now - lastReconnectAttempt.current,
+    });
+    
+    // DEBUG: Log exactly what we received from props
+    console.log("🔍 [AUTO-RECONNECT-DEBUG] Props received:", {
+      lastConnectionType: lastConnectionType,
+      lastRoomCode: lastRoomCode,
+      typeOfLastConnectionType: typeof lastConnectionType,
+      typeOfLastRoomCode: typeof lastRoomCode,
     });
 
     if (!connectionService) {
@@ -85,7 +94,16 @@ export const useAutoReconnect = ({
     NotificationUtils.setSilentMode(true);
 
     try {
-      // If there's a persisted connection type, restore it
+      // DEBUG: Log the exact decision tree
+      console.log("🔍 [AUTO-RECONNECT-DEBUG] Decision tree:", {
+        hasLastConnectionType: !!lastConnectionType,
+        lastConnectionType: lastConnectionType,
+        lastRoomCode: lastRoomCode,
+        willConnectTo: lastConnectionType || "general (default)",
+        willUseCode: lastConnectionType === "private" ? (lastRoomCode || undefined) : undefined,
+      });
+      
+      // Restore previous connection based on local storage
       if (lastConnectionType) {
         console.log(
           `🔄 [AUTO-RECONNECT] Restoring previous connection: ${lastConnectionType}${
@@ -94,10 +112,10 @@ export const useAutoReconnect = ({
         );
 
         if (lastConnectionType === "general") {
+          console.log("🔄 [AUTO-RECONNECT] Connecting to GENERAL room");
           await connectionService.connect("general", undefined, true);
-        } else if (lastConnectionType === "local") {
-          await connectionService.connect("local", undefined, true);
         } else if (lastConnectionType === "private") {
+          console.log(`🔄 [AUTO-RECONNECT] Connecting to PRIVATE room with code: ${lastRoomCode || "undefined"}`);
           await connectionService.connect(
             "private",
             lastRoomCode || undefined,

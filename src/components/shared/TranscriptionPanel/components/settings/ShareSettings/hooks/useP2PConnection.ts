@@ -30,17 +30,29 @@ export const useP2PConnection = () => {
   const isAutoRestoring = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
+  // Flag to prevent conflicting room events during manual connections
+  const isManuallyConnecting = useRef(false);
+
   // Event handlers
   const handleRoomJoined = useCallback(
     (data: any) => {
-      console.log("🎉 [P2P] Room joined:", data);
+      console.log("🎉 [P2P] Room joined event received:", data);
+      
+      // CRITICAL FIX: Ignore conflicting events during manual connection
+      if (isManuallyConnecting.current) {
+        console.log("🚫 [P2P] Ignoring room:joined event during manual connection");
+        return;
+      }
+      
+      console.log("✅ [P2P] Processing room:joined event:", data);
       setIsSharing(true);
       setIsLoading(false);
 
+      // Only set code for private rooms, not for general rooms
       const roomData = {
         type: data.type,
-        code: data.code,
-        peersCount: 0,
+        code: data.type === "private" ? data.code : undefined,
+        peersCount: data.peersCount || 0,
         isActive: true,
       };
       setCurrentRoom(roomData);
@@ -48,7 +60,9 @@ export const useP2PConnection = () => {
       // Update persistence
       updateConnectionType(data.type);
       updateIsSharing(true);
-      if (data.code) {
+      
+      // Only update room code and history for private rooms
+      if (data.code && data.type === "private") {
         updateRoomCode(data.code);
         addToRoomHistory({
           code: data.code,
@@ -104,12 +118,16 @@ export const useP2PConnection = () => {
     try {
       console.log("🌍 [P2P] Connecting to general room...");
       
+      // CRITICAL FIX: Set flag to prevent conflicting events
+      isManuallyConnecting.current = true;
+      
       await p2pService.joinGeneralRoom();
       
+      // Don't hardcode peersCount - let it be updated by peer detection
       const generalRoom = {
         type: "general" as const,
         topic: "general-room",
-        peersCount: 0,
+        peersCount: 0, // Start with 0, will be updated by handlePeersUpdated
         isActive: true,
       };
       
@@ -121,16 +139,19 @@ export const useP2PConnection = () => {
       updateConnectionType("general");
       updateIsSharing(true);
 
-      // Emit event manually since P2PService doesn't have emit
-      p2pEventBus.emit("room:joined", {
-        type: "general",
-        topic: "general-room",
-        peersCount: 0,
-      });
-      
+      // DON'T emit room:joined event to avoid conflicts with Electron events
+      // The Electron backend will emit its own events
       console.log("✅ [P2P] Successfully connected to general room");
+      
+      // Clear the flag after a delay to allow for peer detection
+      setTimeout(() => {
+        console.log("🔍 [P2P] Clearing manual connection flag...");
+        isManuallyConnecting.current = false;
+      }, 3000); // 3 seconds should be enough for connection to stabilize
+      
     } catch (error) {
       console.error("❌ [P2P] Failed to connect to general room:", error);
+      isManuallyConnecting.current = false; // Clear flag on error
       setIsLoading(false);
       throw error;
     }
@@ -338,17 +359,13 @@ export const useP2PConnection = () => {
   useEffect(() => {
     const cleanup = setupEventListeners();
 
-    // Auto-restore if conditions are met
-    if (persistedState.lastConnectionType && !isAutoRestoring.current) {
-      performCompleteRestoration();
-    }
+    // AUTO-RESTORATION DISABLED:
+    // Removed automatic restoration to give user full control over connections
+    // User must manually connect to desired rooms
+    console.log("🔧 [P2P] Auto-restoration disabled - manual connection required");
 
     return cleanup;
-  }, [
-    setupEventListeners,
-    persistedState.lastConnectionType,
-    performCompleteRestoration,
-  ]);
+  }, [setupEventListeners]);
 
   // Utility functions
   const updatePeerCount = useCallback((count: number) => {

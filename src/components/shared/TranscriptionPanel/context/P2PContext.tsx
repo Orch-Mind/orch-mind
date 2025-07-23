@@ -274,7 +274,8 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []); // Empty dependency array - run only once
 
-  // Auto-reconnect effect - runs after connection service is ready
+  // Auto-reconnect effect  // AUTO-RECONNECT: Restore previous connection from local storage
+  // Only triggers when there's a saved connection type
   useEffect(() => {
     if (
       isConnectionServiceReady &&
@@ -283,7 +284,7 @@ export const P2PProvider: React.FC<{ children: React.ReactNode }> = ({
       autoReconnectRef.current
     ) {
       console.log(
-        "🔄 [P2P-CONTEXT] Connection service ready, attempting auto-reconnect..."
+        "🔄 [P2P-CONTEXT] Connection service ready, attempting auto-reconnect to saved room..."
       );
       autoReconnectRef.current.checkAndAutoReconnect();
     }

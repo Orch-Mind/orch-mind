@@ -417,13 +417,19 @@ export class P2PBackendManager extends EventEmitter {
     );
 
     setTimeout(async () => {
-      if (this.currentTopic && this.swarm) {
-        try {
-          console.log(`[P2P-Backend] Rejoining room: ${this.currentTopic}`);
-          await this.joinRoom(this.currentTopic);
-        } catch (error) {
-          console.error("[P2P-Backend] Recovery attempt failed:", error);
-        }
+      if (this.swarm) {
+        // IMPORTANT: Don't use backend memory (this.currentTopic) for recovery
+        // Instead, let the frontend auto-reconnect system handle it based on local storage
+        // This ensures we reconnect to the CORRECT room as persisted by the user
+        console.log(`[P2P-Backend] Recovery attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} - deferring to frontend auto-reconnect system`);
+        console.log(`[P2P-Backend] Frontend will handle reconnection based on local storage data`);
+        
+        // Clear the current topic to prevent backend from interfering with frontend decisions
+        this.currentTopic = null;
+        
+        // Note: The frontend auto-reconnect system (useAutoReconnect) will handle
+        // reconnection based on persistedState.lastConnectionType and lastRoomCode
+        // This ensures we connect to the correct room as chosen by the user
       }
     }, this.reconnectDelay * this.reconnectAttempts); // Exponential backoff
   }

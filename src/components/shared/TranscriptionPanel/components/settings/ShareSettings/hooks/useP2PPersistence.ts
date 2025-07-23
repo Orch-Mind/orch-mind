@@ -93,12 +93,12 @@ export function useP2PPersistence() {
           lastConnectionType: type,
           lastRoomCode: roomCode || prev.lastRoomCode,
           isSharing: isSharing ?? prev.isSharing,
-          // Add to room history if it's a new connection
+          // Keep only the last room in history (single item, not array)
           roomHistory:
             type && isSharing
               ? [
                   { type, code: roomCode, timestamp: Date.now() },
-                  ...prev.roomHistory.slice(0, 4), // Keep last 5 entries
+                  // Only keep the last room, not multiple entries
                 ]
               : prev.roomHistory,
         };
@@ -137,7 +137,7 @@ export function useP2PPersistence() {
     (entry: { type: string; code?: string; timestamp: number }) => {
       setPersistedState((prev) => ({
         ...prev,
-        roomHistory: [entry, ...prev.roomHistory.slice(0, 4)], // Keep last 5 entries
+        roomHistory: [entry], // Only keep the last room entry
       }));
     },
     []
