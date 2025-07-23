@@ -27,14 +27,30 @@ export const ConnectedStatusComponent: React.FC<ConnectionStatusProps> = ({
 const ConnectionStatus: React.FC<{
   currentRoom: NonNullable<ConnectionStatusProps["currentRoom"]>;
   incomingAdapters: ConnectionStatusProps["incomingAdapters"];
-}> = ({ currentRoom, incomingAdapters }) => (
-  <div className="p-3 bg-green-500/10 rounded border border-green-400/30">
-    <ConnectionHeader currentRoom={currentRoom} incomingAdapters={incomingAdapters} />
-    {currentRoom.code && currentRoom.type === "private" && (
-      <ShareCodeSection code={currentRoom.code} />
-    )}
-  </div>
-);
+}> = ({ currentRoom, incomingAdapters }) => {
+  // Determine background color based on room type for better visual feedback
+  const getBackgroundClass = () => {
+    switch (currentRoom.type) {
+      case "general":
+        return "bg-purple-500/10 border-purple-400/30";
+      case "local":
+        return "bg-green-500/10 border-green-400/30";
+      case "private":
+        return "bg-blue-500/10 border-blue-400/30";
+      default:
+        return "bg-green-500/10 border-green-400/30";
+    }
+  };
+
+  return (
+    <div className={`p-3 rounded ${getBackgroundClass()}`}>
+      <ConnectionHeader currentRoom={currentRoom} incomingAdapters={incomingAdapters} />
+      {currentRoom.code && currentRoom.type === "private" && (
+        <ShareCodeSection code={currentRoom.code} />
+      )}
+    </div>
+  );
+};
 
 // SRP: Header com ícone e nome da room
 const ConnectionHeader: React.FC<{

@@ -101,21 +101,39 @@ export const useP2PConnection = () => {
 
   // Connection functions
   const connectToGeneral = async () => {
-    await p2pService.joinGeneralRoom();
-    const generalRoom = {
-      type: "general" as const,
-      topic: "general-room",
-      peersCount: 0,
-      isActive: true,
-    };
-    setCurrentRoom(generalRoom);
+    try {
+      console.log("🌍 [P2P] Connecting to general room...");
+      
+      await p2pService.joinGeneralRoom();
+      
+      const generalRoom = {
+        type: "general" as const,
+        topic: "general-room",
+        peersCount: 0,
+        isActive: true,
+      };
+      
+      setCurrentRoom(generalRoom);
+      setIsSharing(true);
+      setIsLoading(false);
 
-    // Emit event manually since P2PService doesn't have emit
-    p2pEventBus.emit("room:joined", {
-      type: "general",
-      topic: "general-room",
-      peersCount: 0,
-    });
+      // Update persistence immediately
+      updateConnectionType("general");
+      updateIsSharing(true);
+
+      // Emit event manually since P2PService doesn't have emit
+      p2pEventBus.emit("room:joined", {
+        type: "general",
+        topic: "general-room",
+        peersCount: 0,
+      });
+      
+      console.log("✅ [P2P] Successfully connected to general room");
+    } catch (error) {
+      console.error("❌ [P2P] Failed to connect to general room:", error);
+      setIsLoading(false);
+      throw error;
+    }
   };
 
   const connectToLocal = async () => {
