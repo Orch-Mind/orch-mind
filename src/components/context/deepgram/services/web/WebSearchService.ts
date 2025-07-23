@@ -114,8 +114,8 @@ Output JSON only:
       const response = await this.llmService.callOpenAIWithFunctions({
         model: getOption(STORAGE_KEYS.OLLAMA_MODEL),
         messages,
-        temperature: 0.3,
-        max_tokens: 1500,
+        temperature: 0.3
+        // Removed max_tokens limitation for unrestricted responses
       });
 
       const content = response.choices[0]?.message?.content;
@@ -302,7 +302,7 @@ TAREFA: Analise os resultados acima e forneça uma resposta completa e detalhada
           { role: "user", content: processingPrompt },
         ],
         temperature: 0.5,
-        max_tokens: 3000,
+        // Removed max_tokens limitation for unrestricted responses
         // Removido format: "json" que estava causando respostas malformadas
       });
 

@@ -36,16 +36,11 @@ export interface SimpleProcessingResponse {
 
 /**
  * Simple prompt processor for direct LLM communication
- * Used when quantum processing is disabled for faster, simpler responses
- * Includes context retrieval from DuckDB and result saving
+ * Streamlined implementation following DRY, KISS, and YAGNI principles
  */
 export class SimplePromptProcessor {
   private isProcessingPrompt: boolean = false;
   private currentLanguage: string;
-  private processingStatusInterval: NodeJS.Timeout | null = null;
-  private isWebSearchActive: boolean = false; // Track web search state
-
-  // Reused processors for conversation management
   private transcriptionExtractor!: TranscriptionExtractor;
   private sessionManager!: SessionManager;
   private webSearchService!: WebSearchService;
@@ -59,916 +54,267 @@ export class SimplePromptProcessor {
   ) {
     this.currentLanguage = getOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE) || "pt-BR";
     this._initializeProcessors();
-
-    // Create UI adapter for web search service
-    const uiAdapter = new UIServiceAdapter(this.uiService, this);
+    
+    const uiAdapter = new UIServiceAdapter(this.uiService);
     this.webSearchService = new WebSearchService(this.llmService, uiAdapter);
   }
 
-  /**
-   * Initialize minimal processors for conversation management
-   */
   private _initializeProcessors(): void {
-    this.transcriptionExtractor = new TranscriptionExtractor(
-      this.storageService
-    );
+    this.transcriptionExtractor = new TranscriptionExtractor(this.storageService);
     this.sessionManager = new SessionManager();
   }
 
-  /**
-   * Show simple processing status with animated indicator
-   * Only shows if web search is not active
-   */
-  private showProcessingStatus(message: string): void {
-    // Don't show status if web search is active
-    if (this.isWebSearchActive) {
-      return;
-    }
-
-    // Clear any existing interval
-    if (this.processingStatusInterval) {
-      clearInterval(this.processingStatusInterval);
-    }
-
-    let dotCount = 0;
-    const spinnerChars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-    const updateStatus = () => {
-      const spinner = spinnerChars[dotCount % spinnerChars.length];
-      const dots = ".".repeat((dotCount % 3) + 1);
-      const statusMessage = `⚡ ${message}${dots} ${spinner}`;
-
-      // Update processing status via window function
-      if (
-        typeof window !== "undefined" &&
-        (window as any).__updateProcessingStatus
-      ) {
-        (window as any).__updateProcessingStatus(statusMessage);
-      }
-
-      dotCount++;
-    };
-
-    // Initial update
-    updateStatus();
-
-    // Update every 400ms for smooth animation
-    this.processingStatusInterval = setInterval(updateStatus, 400);
-  }
-
-  /**
-   * Clear processing status animation
-   */
-  private clearProcessingStatus(): void {
-    if (this.processingStatusInterval) {
-      clearInterval(this.processingStatusInterval);
-      this.processingStatusInterval = null;
-    }
-
-    // Clear status display
-    if (
-      typeof window !== "undefined" &&
-      (window as any).__updateProcessingStatus
-    ) {
-      (window as any).__updateProcessingStatus("");
+  private updateStatus(message: string): void {
+    if (typeof window !== "undefined" && (window as any).__updateProcessingStatus) {
+      (window as any).__updateProcessingStatus(message);
     }
   }
 
-  /**
-   * Set web search active state
-   */
-  public setWebSearchActive(active: boolean): void {
-    this.isWebSearchActive = active;
+  private clearStatus(): void {
+    if (typeof window !== "undefined" && (window as any).__clearProcessingStatus) {
+      (window as any).__clearProcessingStatus();
+    }
   }
 
-  /**
-   * Process transcription with simple LLM completion
-   * No neural processing, just direct response
-   */
-  async processTranscription(
+  public async processTranscription(
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
-    await this._processTranscriptionPrompt(
-      temporaryContext,
-      conversationMessages
-    );
+    const transcription = this.storageService.getLastTranscription();
+    if (!transcription?.trim()) return;
+    
+    await this._processMessage(transcription, temporaryContext, conversationMessages);
   }
 
-  /**
-   * Process direct message from chat (no transcription)
-   * @param message The message from chat input
-   * @param temporaryContext Optional additional context
-   * @param conversationMessages Optional conversation messages from chat
-   */
-  async processDirectMessage(
+  public async processDirectMessage(
     message: string,
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
-    await this._processDirectMessage(
-      message,
-      temporaryContext,
-      conversationMessages
-    );
+    if (!message?.trim()) return;
+    await this._processMessage(message, temporaryContext, conversationMessages);
   }
 
-  /**
-   * Process a direct message from chat interface
-   */
-  private async _processDirectMessage(
+  private async _processMessage(
     message: string,
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
-    // Prevent concurrent processing
     if (this.isProcessingPrompt) {
-      LoggingUtils.logWarning(
-        "⚠️ [SIMPLE_MODE] Blocking prompt request: Already processing another prompt"
-      );
-      // Show user feedback for blocked request
-      if (this.uiService.notifyPromptError) {
-        this.uiService.notifyPromptError(
-          "Please wait for the current request to complete before sending another message."
-        );
-      }
+      LoggingUtils.logWarning("⚠️ Already processing a request");
+      this.uiService.notifyPromptError?.("Please wait for the current request to complete.");
       return;
     }
 
-    // Show initial processing message
-    this.uiService.updateUI({ aiResponse: "Processing..." });
+    this.isProcessingPrompt = true;
+    this.updateStatus("⚡ Processing...");
 
     try {
-      this.isProcessingPrompt = true;
-
-      // Ensure LLM service is ready
       if (!(await this.llmService.ensureOpenAIClient())) {
-        this.clearProcessingStatus();
-        return;
+        throw new Error("LLM service not available");
       }
 
-      LoggingUtils.logInfo("⚡ [SIMPLE_MODE] Processing direct message");
-
-      // Notify processing start
-      this.uiService.notifyPromptProcessingStarted(temporaryContext);
-
-      // Process using simple completion
-      const result = await this._executeSimpleCompletion(
-        message,
-        temporaryContext,
-        conversationMessages
-      );
-
-      // Update UI and complete processing
+      const result = await this._executeCompletion(message, temporaryContext, conversationMessages);
       this.uiService.updateUI({ aiResponse: result.response });
-      this.uiService.notifyPromptComplete(result.response);
-    } catch (error: Error | unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      LoggingUtils.logError("❌ [SIMPLE_MODE] Error processing message", error);
+      this.uiService.notifyPromptComplete?.(result.response);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      LoggingUtils.logError("❌ Processing error", error);
       this.uiService.updateUI({ aiResponse: `Error: ${errorMessage}` });
-      this.uiService.notifyPromptError(errorMessage);
+      this.uiService.notifyPromptError?.(errorMessage);
     } finally {
       this.isProcessingPrompt = false;
-      this.clearProcessingStatus();
-      LoggingUtils.logInfo("✅ [SIMPLE_MODE] Message processing completed");
+      this.clearStatus();
     }
   }
 
-  /**
-   * Main transcription processing - simple mode
-   */
-  private async _processTranscriptionPrompt(
-    temporaryContext?: string,
-    conversationMessages?: any[]
-  ): Promise<void> {
-    // Prevent concurrent processing
-    if (this.isProcessingPrompt) {
-      LoggingUtils.logWarning(
-        "⚠️ [SIMPLE_MODE] Blocking transcription request: Already processing"
-      );
-      return;
-    }
-
-    // Show initial processing message
-    this.uiService.updateUI({ aiResponse: "Processing..." });
-
-    try {
-      this.isProcessingPrompt = true;
-
-      // Ensure LLM service is ready
-      if (!(await this.llmService.ensureOpenAIClient())) {
-        this.clearProcessingStatus();
-        return;
-      }
-
-      // Validate and extract transcriptions
-      const hasTranscriptions = this.storageService.hasValidTranscriptions();
-
-      if (!hasTranscriptions) {
-        LoggingUtils.logWarning("No transcription detected");
-
-        // Verify if there is text in lastTranscription
-        const lastTranscription = this.storageService.getLastTranscription();
-        if (lastTranscription) {
-          LoggingUtils.logInfo(
-            `Using last known transcription: "${lastTranscription}"`
-          );
-        } else {
-          // Notify error if there is no transcription
-          this.uiService.notifyPromptError(
-            "No transcription detected for processing"
-          );
-          LoggingUtils.logInfo(`No transcription detected for processing`);
-          this.clearProcessingStatus();
-          return;
-        }
-      }
-
-      // Notify processing start
-      this.uiService.notifyPromptProcessingStarted(temporaryContext);
-
-      // Extract new transcription lines AND mark as sent atomically
-      const extractedLines = this.transcriptionExtractor.extractAndMarkAsSent();
-      let promptText: string | null = extractedLines;
-
-      if (!promptText || promptText.trim().length === 0) {
-        LoggingUtils.logInfo("No new transcription to send.");
-        this.clearProcessingStatus();
-        return;
-      }
-
-      LoggingUtils.logInfo(
-        `⚡ [SIMPLE_MODE] Processing transcription: "${promptText.substring(
-          0,
-          50
-        )}..."${temporaryContext ? " with additional context" : ""}`
-      );
-
-      // Process using simple completion
-      const result = await this._executeSimpleCompletion(
-        promptText,
-        temporaryContext,
-        conversationMessages
-      );
-
-      // Update UI and complete processing
-      this.uiService.updateUI({ aiResponse: result.response });
-      this.uiService.notifyPromptComplete(result.response);
-
-      // Update UI to show only new transcriptions (empty initially)
-      if (this.storageService.updateUIWithNewTranscriptions) {
-        this.storageService.updateUIWithNewTranscriptions();
-      }
-    } catch (error: Error | unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      LoggingUtils.logError("❌ [SIMPLE_MODE] Error processing prompt", error);
-      this.uiService.updateUI({ aiResponse: `Error: ${errorMessage}` });
-      this.uiService.notifyPromptError(errorMessage);
-    } finally {
-      this.isProcessingPrompt = false;
-      this.clearProcessingStatus();
-      LoggingUtils.logInfo(
-        "✅ [SIMPLE_MODE] Transcription processing completed"
-      );
-    }
-  }
-
-  /**
-   * Execute simple completion without neural processing using OllamaCompletionService
-   * Includes context retrieval from DuckDB and result saving
-   */
-  private async _executeSimpleCompletion(
+  private async _executeCompletion(
     prompt: string,
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<SimpleProcessingResponse> {
+    // Get memory context
+    let memoryContext = "";
     try {
-      // Track if web search was performed
-      let wasWebSearchPerformed = false;
-      let webSearchResultsCount = 0;
-
-      // STEP 1: Retrieve context from DuckDB memory (silent)
-      LoggingUtils.logInfo(
-        "🔍 [SIMPLE_MODE] Step 1: Retrieving context from memory..."
-      );
-
-      let memoryContextContent = "";
-      try {
-        // Search for relevant context using the prompt as query
-        const contextResults = await this.memoryService.queryExpandedMemory(
-          prompt,
-          [], // no specific keywords for simple mode
-          5 // get top 5 relevant memories
-        );
-
-        if (contextResults && contextResults.trim().length > 0) {
-          memoryContextContent = contextResults;
-          LoggingUtils.logInfo(
-            `✅ Retrieved ${contextResults.length} chars of context from memory`
-          );
-        } else {
-          LoggingUtils.logInfo("ℹ️ No relevant context found in memory");
-        }
-      } catch (memoryError) {
-        LoggingUtils.logWarning(
-          "⚠️ Error retrieving memory context, proceeding without it: " +
-            (memoryError instanceof Error
-              ? memoryError.message
-              : String(memoryError))
-        );
+      const contextResults = await this.memoryService.queryExpandedMemory(prompt, [], 5);
+      if (contextResults?.trim()) {
+        memoryContext = contextResults;
       }
-
-      // STEP 2: LLM decides web search strategy (only if enabled)
-      let webContextContent = "";
-      const isWebSearchEnabled =
-        getOption(STORAGE_KEYS.WEB_SEARCH_ENABLED) || false;
-
-      if (isWebSearchEnabled) {
-        try {
-          LoggingUtils.logInfo(
-            "🌐 [SIMPLE_MODE] Step 2: LLM deciding search strategy..."
-          );
-          wasWebSearchPerformed = true;
-          this.setWebSearchActive(true);
-
-          // Get conversation history for context-aware search strategy
-          const conversationHistory =
-            this.memoryService.getConversationHistory();
-
-          const searchStrategy =
-            await this.webSearchService.generateSearchStrategy(
-              prompt,
-              conversationHistory
-            );
-
-          LoggingUtils.logInfo(
-            `🎯 [WEB_SEARCH] Strategy: ${searchStrategy.searchQueries.length} queries, ${searchStrategy.resultsCount} results - ${searchStrategy.reasoning}`
-          );
-
-          // STEP 3: Execute queries and LLM filters results
-          LoggingUtils.logInfo(
-            "🔍 [SIMPLE_MODE] Step 3: Executing queries and filtering results..."
-          );
-
-          const webResults = await this.webSearchService.searchWeb(
-            searchStrategy.searchQueries,
-            {
-              maxResults: searchStrategy.resultsCount,
-              safeSearch: true,
-            }
-          );
-
-          if (webResults && webResults.length > 0) {
-            webSearchResultsCount = webResults.length;
-            // LLM processes and filters only necessary information
-            webContextContent =
-              await this.webSearchService.processSearchResults(
-                webResults,
-                prompt
-              );
-            LoggingUtils.logInfo(
-              `✅ Found and processed ${webResults.length} relevant web results`
-            );
-
-            // Debug log for web context content
-            LoggingUtils.logInfo(
-              `🔍 [WEB_CONTEXT_DEBUG] Web context content length: ${webContextContent.length} chars`
-            );
-            LoggingUtils.logInfo(
-              `🔍 [WEB_CONTEXT_DEBUG] Web context preview: ${webContextContent.substring(
-                0,
-                300
-              )}...`
-            );
-          } else {
-            LoggingUtils.logInfo("ℹ️ No web results found or empty results");
-          }
-
-          this.setWebSearchActive(false);
-        } catch (webError) {
-          this.setWebSearchActive(false);
-          LoggingUtils.logWarning(
-            "⚠️ Error performing web search, proceeding without it: " +
-              (webError instanceof Error ? webError.message : String(webError))
-          );
-        }
-      } else {
-        LoggingUtils.logInfo(
-          "🚫 [SIMPLE_MODE] Step 2: Web search disabled by user settings"
-        );
-      }
-
-      // STEP 4: Build message list with temporary context messages
-      LoggingUtils.logInfo(
-        "📝 [SIMPLE_MODE] Step 4: Building message list with temporary contexts..."
-      );
-
-      // Show contextual message based on what was processed
-      if (wasWebSearchPerformed && webSearchResultsCount > 0) {
-        this.showProcessingStatus(
-          `📝 Processing ${webSearchResultsCount} web sources + local memory`
-        );
-      } else if (isWebSearchEnabled) {
-        this.showProcessingStatus("📝 Preparing response with local memory");
-      } else {
-        this.showProcessingStatus("📝 Preparing response");
-      }
-
-      // Clean system prompt - no context mixed in
-      const systemPrompt = buildSimpleSystemPrompt(this.currentLanguage);
-
-      // Clean user prompt - no context mixed in
-      const userPrompt = buildSimpleUserPrompt(
-        prompt,
-        temporaryContext,
-        this.currentLanguage
-      );
-
-      // PRIORITIZE CHAT CONVERSATION MESSAGES: Use conversation messages from chat if provided,
-      // otherwise fallback to internal memory service conversation history
-      let conversationHistory: any[] = [];
-
-      if (conversationMessages && conversationMessages.length > 0) {
-        // Use messages from chat conversation (already formatted for this conversation)
-        conversationHistory = conversationMessages
-          .filter((msg) => msg.role !== "system" && msg.content.trim() !== "")
-          .map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          }));
-
-        LoggingUtils.logInfo(
-          `📚 [CONTEXT] Using ${conversationHistory.length} chat conversation messages (synced)`
-        );
-
-        // Sync memory service with current conversation for consistency
-        try {
-          this.memoryService.syncConversationHistory(conversationMessages);
-          LoggingUtils.logInfo(
-            "🔄 [SYNC] Memory service conversation history synchronized"
-          );
-        } catch (syncError) {
-          LoggingUtils.logWarning(
-            "⚠️ [SYNC] Could not sync memory service history: " +
-              (syncError instanceof Error
-                ? syncError.message
-                : String(syncError))
-          );
-        }
-      } else {
-        // Fallback to internal memory service conversation history
-        const internalHistory = this.memoryService.getConversationHistory();
-        conversationHistory = internalHistory.filter(
-          (msg) => msg.role !== "system"
-        );
-
-        LoggingUtils.logInfo(
-          `📚 [CONTEXT] Using ${conversationHistory.length} internal conversation messages (fallback)`
-        );
-      }
-
-      // Build complete message list with temporary context messages
-      const messages = [
-        { role: "system", content: systemPrompt, speaker: "system" },
-
-        // Add conversation history (prioritized from chat or fallback from memory)
-        ...conversationHistory,
-
-        // TEMPORARY CONTEXT MESSAGES (will be removed after response)
-        ...(memoryContextContent
-          ? [
-              {
-                role: "system",
-                content: `MEMORY CONTEXT (for this response only): ${memoryContextContent}`,
-                speaker: "system",
-              },
-            ]
-          : []),
-
-        ...(webContextContent
-          ? [
-              {
-                role: "system",
-                content: `WEB SEARCH CONTEXT (for this response only): ${webContextContent}`,
-                speaker: "system",
-              },
-            ]
-          : []),
-
-        // Current user message
-        { role: "user", content: userPrompt, speaker: "user" },
-      ];
-
-      LoggingUtils.logInfo(
-        `📚 [CONTEXT_DEBUG] Total messages: ${messages.length} (${
-          conversationHistory.length
-        } history + ${memoryContextContent ? 1 : 0} memory + ${
-          webContextContent ? 1 : 0
-        } web + 2 system/user)`
-      );
-
-      // STEP 5: Generate response with streaming
-      LoggingUtils.logInfo("🎯 [SIMPLE_MODE] Step 5: Generating response...");
-      this.showProcessingStatus("🎯 Generating response");
-
-      let firstChunkReceived = false;
-      let accumulatedResponse = "";
-
-      // Create streaming chunk handler
-      const onStreamingChunk = (chunk: string) => {
-        if (!chunk || chunk.trim() === "") return;
-
-        // On first real chunk, clear processing status and notify streaming started
-        if (!firstChunkReceived) {
-          firstChunkReceived = true;
-
-          // Show processing status with null safety
-          this.clearProcessingStatus();
-
-          if (this.uiService?.notifyStreamingStarted) {
-            this.uiService.notifyStreamingStarted();
-          }
-        }
-
-        // Accumulate response
-        accumulatedResponse += chunk;
-
-        // Send chunk via IPC if available (with null safety)
-        if (this.uiService?.notifyStreamingChunk) {
-          this.uiService.notifyStreamingChunk(chunk);
-        }
-      };
-
-// ...
-      // DEBUG: Check LLM service type and methods before calling
-      LoggingUtils.logInfo(`🔍 [LLM_DEBUG] LLM Service type: ${this.llmService.constructor.name}`);
-      LoggingUtils.logInfo(`🔍 [LLM_DEBUG] Has streamOpenAIResponse: ${typeof this.llmService.streamOpenAIResponse === 'function'}`);
-      LoggingUtils.logInfo(`🔍 [LLM_DEBUG] Available methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(this.llmService)).filter(name => typeof (this.llmService as any)[name] === 'function').join(', ')}`);
-      
-      let response: any; // Using any to avoid import issues, will be compatible with ModelStreamResponse
-      
-      // ULTRA-ROBUST FIX: Handle all possible LLM service scenarios
-      if (typeof this.llmService.streamOpenAIResponse === 'function') {
-        // Use streaming if available (preferred)
-        LoggingUtils.logInfo(`✅ [LLM_STREAM] Using streaming response with ${this.llmService.constructor.name}`);
-        response = await this.llmService.streamOpenAIResponse(
-          messages,
-          0.7, // temperature
-          onStreamingChunk
-        );
-      } else if (typeof this.llmService.callOpenAIWithFunctions === 'function') {
-        // FALLBACK 1: Use callOpenAIWithFunctions
-        LoggingUtils.logWarning(`⚠️ [LLM_FALLBACK1] Using callOpenAIWithFunctions fallback`);
-        
-        const model = getOption(STORAGE_KEYS.OLLAMA_MODEL) || "gemma3:latest";
-        const fallbackResult = await this.llmService.callOpenAIWithFunctions({
-          model,
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
-          temperature: 0.7,
-          max_tokens: 3000
-        });
-        
-        const fallbackContent = fallbackResult.choices[0]?.message?.content || "";
-        
-        // Simulate streaming behavior for UI consistency
-        if (onStreamingChunk && fallbackContent) {
-          for (const char of fallbackContent) {
-            onStreamingChunk(char);
-          }
-        }
-        
-        response = {
-          responseText: fallbackContent,
-          messageId: Date.now().toString(),
-          isComplete: true,
-          isDone: true
-        };
-        
-        LoggingUtils.logInfo(`✅ [LLM_FALLBACK1] Completed successfully (${fallbackContent.length} chars)`);
-      } else {
-        // FALLBACK 2: Emergency fallback - use web context directly if available
-        LoggingUtils.logError(`❌ [LLM_EMERGENCY] No compatible LLM methods available, using web context directly`);
-        
-        let emergencyResponse = "";
-        
-        // PRIORITY 1: Check if we have webContextContent directly (the 1855 chars processed response)
-        LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] webContextContent available: ${!!webContextContent}, length: ${webContextContent?.length || 0}`);
-        
-        if (webContextContent && webContextContent.length > 200) {
-          emergencyResponse = webContextContent;
-          LoggingUtils.logInfo(`🎯 [LLM_EMERGENCY] Using webContextContent directly (${webContextContent.length} chars)`);
-        } else {
-          // PRIORITY 2: Check messages for web context
-          const webContextMsg = messages.find(msg => msg.content && msg.content.includes('WEB SEARCH CONTEXT'));
-          LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] Found web context message: ${!!webContextMsg}`);
-          
-          if (webContextMsg && webContextMsg.content) {
-            const webContent = webContextMsg.content;
-            LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] Web content length: ${webContent.length} chars`);
-            LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] Web content preview: ${webContent.substring(0, 200)}...`);
-            
-            // Extract the processed web search results directly (should be rich formatted response)
-            const webContextMatch = webContent.match(/WEB SEARCH CONTEXT \(for this response only\): (.+)$/s);
-            LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] Regex match found: ${!!webContextMatch}`);
-            
-            if (webContextMatch && webContextMatch[1]) {
-              const processedResults = webContextMatch[1].trim();
-              LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] Processed results length: ${processedResults.length} chars`);
-              LoggingUtils.logInfo(`🔍 [LLM_EMERGENCY_DEBUG] Processed results preview: ${processedResults.substring(0, 300)}...`);
-              
-              // If we have a rich processed response (>200 chars), use it directly
-              if (processedResults.length > 200) {
-                emergencyResponse = processedResults;
-                LoggingUtils.logInfo(`🎯 [LLM_EMERGENCY] Using processed web results directly (${processedResults.length} chars)`);
-              } else {
-                // Fallback to price extraction if processed results are too short
-                const priceMatches = webContent.match(/R\$[\s]*[\d.,]+/g) || [];
-                
-                if (priceMatches.length > 0) {
-                  emergencyResponse = `Encontrei os seguintes preços:\n\n` +
-                    priceMatches.slice(0, 3).map((price: string, idx: number) => {
-                      const stores = ['Sony Store', 'Magazine Luiza', 'Amazon'];
-                      return `💰 ${stores[idx] || 'Loja'}: ${price}`;
-                    }).join('\n') +
-                    `\n\n🎯 Melhor preço: ${priceMatches[0]}\n\n` +
-                    `*Preços extraídos da pesquisa web*`;
-                } else {
-                  emergencyResponse = "Realizei a pesquisa web, mas não foi possível processar os preços no momento. Tente novamente em alguns instantes.";
-                }
-              }
-            } else {
-              emergencyResponse = "Realizei a pesquisa web, mas não foi possível processar os preços no momento. Tente novamente em alguns instantes.";
-            }
-          } else {
-            emergencyResponse = "Processando sua consulta... Por favor, aguarde um momento e tente novamente.";
-          }
-        }
-        
-        // Simulate streaming
-        if (onStreamingChunk && emergencyResponse) {
-          for (const char of emergencyResponse) {
-            onStreamingChunk(char);
-          }
-        }
-        
-        response = {
-          responseText: emergencyResponse,
-          messageId: Date.now().toString(),
-          isComplete: true,
-          isDone: true
-        };
-        
-        LoggingUtils.logInfo(`🚨 [LLM_EMERGENCY] Emergency fallback completed (${emergencyResponse.length} chars)`);
-      }
-
-      // Notify streaming complete with null safety
-      if (this.uiService?.notifyStreamingComplete) {
-        this.uiService.notifyStreamingComplete();
-      }
-
-      // Use accumulated response if available, otherwise use the returned response
-      const finalResponse = accumulatedResponse || response.responseText || "";
-
-      // STEP 6: Save ONLY user/assistant interaction (NO temporary contexts)
-      LoggingUtils.logInfo(
-        "💾 [SIMPLE_MODE] Step 6: Saving clean interaction..."
-      );
-
-      try {
-        // ONLY ADD TO CONVERSATION HISTORY IF WE DIDN'T SYNC WITH CHAT MESSAGES
-        // If we synchronized with chat conversation, the messages are already there
-        if (!conversationMessages || conversationMessages.length === 0) {
-          // Only add messages if we used fallback (internal memory service history)
-          this.memoryService.addToConversationHistory({
-            role: "user",
-            content: prompt, // Original prompt without any context
-          });
-
-          this.memoryService.addToConversationHistory({
-            role: "assistant",
-            content: finalResponse,
-          });
-
-          LoggingUtils.logInfo(
-            "✅ Messages added to internal conversation history (fallback mode)"
-          );
-        } else {
-          LoggingUtils.logInfo(
-            "ℹ️ Skipped adding to conversation history - already synced with chat messages"
-          );
-        }
-
-        // Save to long-term memory (DuckDB) using direct save method
-        await this.memoryService.saveDirectInteraction(
-          prompt, // Clean prompt
-          finalResponse, // Clean response
-          this.speakerService.getPrimaryUserSpeaker(),
-          true // forceSave = true for immediate persistence
-        );
-
-        LoggingUtils.logInfo(
-          "✅ Clean interaction saved to memory successfully"
-        );
-        LoggingUtils.logInfo("🗑️ Temporary contexts automatically discarded");
-      } catch (saveError) {
-        LoggingUtils.logError(
-          "❌ Error saving interaction to memory: " +
-            (saveError instanceof Error ? saveError.message : String(saveError))
-        );
-        // Don't throw here - response was successful, just saving failed
-      }
-
-      return {
-        response: finalResponse,
-      };
     } catch (error) {
-      LoggingUtils.logError("❌ [SIMPLE_MODE] Error in completion", error);
+      LoggingUtils.logWarning("⚠️ Memory context unavailable");
+    }
 
-      // Fallback: try without streaming using callOpenAIWithFunctions
+    // Notify processing start to set isProcessing=true in frontend BEFORE web search
+    this.uiService.notifyPromptProcessingStarted?.(temporaryContext);
+
+    // Get web search results if enabled
+    let webContext = "";
+    const isWebSearchEnabled = getOption(STORAGE_KEYS.WEB_SEARCH_ENABLED) || false;
+    if (isWebSearchEnabled) {
       try {
-        LoggingUtils.logInfo("🔄 [SIMPLE_MODE] Attempting fallback completion");
-        this.showProcessingStatus("🔄 Trying alternative method");
-
-        // Build clean fallback messages with conversation history
-        const fallbackSystemPrompt = buildSimpleSystemPrompt(
-          this.currentLanguage
-        );
-        const fallbackUserPrompt = buildSimpleUserPrompt(
-          prompt,
-          temporaryContext,
-          this.currentLanguage
-        );
-
-        // Use the same conversation history logic as main execution
-        let fallbackConversationHistory: any[] = [];
-
-        if (conversationMessages && conversationMessages.length > 0) {
-          // Use messages from chat conversation for fallback too
-          fallbackConversationHistory = conversationMessages
-            .filter((msg) => msg.role !== "system" && msg.content.trim() !== "")
-            .map((msg) => ({
-              role: msg.role,
-              content: msg.content,
-            }));
-
-          LoggingUtils.logInfo(
-            `🔄 [FALLBACK] Using ${fallbackConversationHistory.length} chat conversation messages`
-          );
-        } else {
-          // Fallback to internal memory service conversation history
-          const internalHistory = this.memoryService.getConversationHistory();
-          fallbackConversationHistory = internalHistory
-            .filter((msg) => msg.role !== "system")
-            .slice(-6); // Last 6 messages for fallback
-
-          LoggingUtils.logInfo(
-            `🔄 [FALLBACK] Using ${fallbackConversationHistory.length} internal conversation messages`
-          );
-        }
-
-        const fallbackMessages = [
-          { role: "system", content: fallbackSystemPrompt },
-          // Include conversation history based on the same priority logic
-          ...fallbackConversationHistory,
-          { role: "user", content: fallbackUserPrompt },
-        ];
-
-        const fallbackResponse = await this.llmService.callOpenAIWithFunctions({
-          model: getOption(STORAGE_KEYS.OLLAMA_MODEL) || "gemma3:latest",
-          messages: fallbackMessages,
-          temperature: 0.7,
-          max_tokens: 4000,
+        const conversationHistory = this.memoryService.getConversationHistory();
+        const searchStrategy = await this.webSearchService.generateSearchStrategy(prompt, conversationHistory);
+        const webResults = await this.webSearchService.searchWeb(searchStrategy.searchQueries, {
+          maxResults: searchStrategy.resultsCount,
+          safeSearch: true,
         });
-
-        const fallbackContent =
-          fallbackResponse.choices[0]?.message?.content ||
-          "Error generating response";
-
-        // Still try to save the clean interaction in fallback mode
-        try {
-          // ONLY ADD TO CONVERSATION HISTORY IF WE DIDN'T SYNC WITH CHAT MESSAGES
-          // If we synchronized with chat conversation, the messages are already there
-          if (!conversationMessages || conversationMessages.length === 0) {
-            // Only add messages if we used fallback (internal memory service history)
-            this.memoryService.addToConversationHistory({
-              role: "user",
-              content: prompt, // Clean prompt
-            });
-            this.memoryService.addToConversationHistory({
-              role: "assistant",
-              content: fallbackContent,
-            });
-
-            LoggingUtils.logInfo(
-              "✅ [FALLBACK] Messages added to internal conversation history"
-            );
-          } else {
-            LoggingUtils.logInfo(
-              "ℹ️ [FALLBACK] Skipped adding to conversation history - already synced with chat messages"
-            );
-          }
-
-          await this.memoryService.saveDirectInteraction(
-            prompt, // Clean prompt
-            fallbackContent,
-            this.speakerService.getPrimaryUserSpeaker(),
-            true // forceSave = true for immediate persistence
-          );
-        } catch (saveError) {
-          LoggingUtils.logWarning(
-            "⚠️ Could not save fallback interaction: " +
-              (saveError instanceof Error
-                ? saveError.message
-                : String(saveError))
-          );
+        if (webResults?.length > 0) {
+          webContext = await this.webSearchService.processSearchResults(webResults, prompt);
         }
-
-        return {
-          response: fallbackContent,
-        };
-      } catch (fallbackError) {
-        LoggingUtils.logError(
-          "❌ [SIMPLE_MODE] Fallback also failed",
-          fallbackError
-        );
-        throw error; // Re-throw original error
+      } catch (error) {
+        LoggingUtils.logWarning("⚠️ Web search unavailable");
       }
+    }
+
+    // Build messages for LLM
+    const messages = this._buildMessages(prompt, memoryContext, webContext, temporaryContext, conversationMessages);
+    
+    // Show "Generating response" status using both methods for guaranteed visibility
+    this.updateStatus("🎯 Generating response");
+    
+    // Fallback: Also show in UI response area if status bar doesn't work
+    this.uiService.updateUI({ aiResponse: "🎯 Generating response..." });
+
+    // Execute streaming with first chunk handling (like backup)
+    let accumulatedResponse = "";
+    let firstChunkReceived = false;
+    
+    const streamingHandler = (chunk: string) => {
+      if (!chunk) return;
+      
+      // On first real chunk, clear processing status and notify streaming started (like backup)
+      if (!firstChunkReceived) {
+        firstChunkReceived = true;
+        this.clearStatus();
+        this.uiService.notifyStreamingStarted?.();
+      }
+      
+      // Accumulate response
+      accumulatedResponse += chunk;
+      
+      // Send chunk via IPC (like backup)
+      this.uiService.notifyStreamingChunk?.(chunk);
+    };
+
+    try {
+      const response = await this.llmService.streamOpenAIResponse(messages, 0.7, streamingHandler);
+      this.uiService.notifyStreamingComplete?.();
+      
+      const finalResponse = accumulatedResponse || response.responseText || "";
+      
+      // Save interaction
+      await this._saveInteraction(prompt, finalResponse, conversationMessages);
+      
+      return { response: finalResponse };
+    } catch (error) {
+      LoggingUtils.logError("❌ Streaming failed", error);
+      throw error;
     }
   }
 
-  /**
-   * Check if currently processing a prompt
-   */
+  private _buildMessages(
+    prompt: string,
+    memoryContext: string,
+    webContext: string,
+    temporaryContext?: string,
+    conversationMessages?: any[]
+  ): any[] {
+    const messages = [];
+    
+    // System prompt
+    messages.push({
+      role: "system",
+      content: buildSimpleSystemPrompt(this.currentLanguage)
+    });
+
+    // Add conversation history
+    if (conversationMessages?.length) {
+      messages.push(...conversationMessages);
+    } else {
+      const history = this.memoryService.getConversationHistory();
+      messages.push(...history);
+    }
+
+    // Build user prompt with context
+    let userPrompt = prompt;
+    if (memoryContext) {
+      userPrompt += `\n\nRELEVANT CONTEXT: ${memoryContext}`;
+    }
+    if (webContext) {
+      userPrompt += `\n\nWEB SEARCH CONTEXT: ${webContext}`;
+    }
+    if (temporaryContext) {
+      userPrompt += `\n\nADDITIONAL CONTEXT: ${temporaryContext}`;
+    }
+
+    messages.push({
+      role: "user",
+      content: buildSimpleUserPrompt(userPrompt, this.currentLanguage)
+    });
+
+    return messages;
+  }
+
+  private async _saveInteraction(
+    prompt: string,
+    response: string,
+    conversationMessages?: any[]
+  ): Promise<void> {
+    try {
+      // Add to conversation history only if not already there
+      if (!conversationMessages?.length) {
+        this.memoryService.addToConversationHistory({ role: "user", content: prompt });
+        this.memoryService.addToConversationHistory({ role: "assistant", content: response });
+      }
+
+      // Save interaction
+      await this.memoryService.saveDirectInteraction(
+        prompt,
+        response,
+        this.speakerService.getPrimaryUserSpeaker(),
+        true
+      );
+    } catch (error) {
+      LoggingUtils.logWarning("⚠️ Could not save interaction");
+    }
+  }
+
+  // Compatibility methods for existing code
   public isProcessingPromptRequest(): boolean {
     return this.isProcessingPrompt;
   }
 
-  /**
-   * Update current language for processing
-   */
   public setLanguage(language: string): void {
     this.currentLanguage = language;
   }
 
-  /**
-   * Get current processing language
-   */
   public getCurrentLanguage(): string {
     return this.currentLanguage;
   }
 
-  /**
-   * Reset processing state
-   */
   public reset(): void {
     this.isProcessingPrompt = false;
-    this.clearProcessingStatus();
+    this.clearStatus();
     this.transcriptionExtractor.reset();
     this.sessionManager.resetSession();
   }
 }
 
 /**
- * Simplified UI Service adapter
+ * Simplified UI Service adapter for WebSearchService
  */
 class UIServiceAdapter implements WebUIUpdateService {
-  constructor(
-    private originalUIService: IUIUpdateService,
-    private processor: SimplePromptProcessor
-  ) {}
+  constructor(private originalUIService: IUIUpdateService) {}
 
   updateProcessingStatus(message: string): void {
-    // Forward to original UI service
-    if (
-      typeof window !== "undefined" &&
-      (window as any).__updateProcessingStatus
-    ) {
+    if (typeof window !== "undefined" && (window as any).__updateProcessingStatus) {
       (window as any).__updateProcessingStatus(message);
     }
   }
 
   notifyWebSearchStep(step: string, details?: string): void {
-    // Mark web search as active
-    this.processor.setWebSearchActive(true);
-
-    // Format the message with visual indicators
     const statusMessage = details ? `🌐 ${step}: ${details}` : `🌐 ${step}`;
-
-    // Update UI immediately
-    if (
-      typeof window !== "undefined" &&
-      (window as any).__updateProcessingStatus
-    ) {
-      (window as any).__updateProcessingStatus(statusMessage);
-    }
-
-    // Reset web search state
-    this.processor.setWebSearchActive(false);
-    LoggingUtils.logInfo("🔄 [UI_ADAPTER] Web search completed");
-
-    // Log for debugging
-    LoggingUtils.logInfo(`🔍 [WEB_SEARCH_UI] ${statusMessage}`);
+    this.updateProcessingStatus(statusMessage);
+    LoggingUtils.logInfo(`🔍 [WEB_SEARCH] ${statusMessage}`);
   }
 }
