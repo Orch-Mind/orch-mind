@@ -88,7 +88,13 @@
     
     # Executa o script de instalação das dependências Python
     DetailPrint "Executando instalação das dependências Python..."
-    ExecWait 'python "$PLUGINSDIR\install_lora_deps.py"' $R1
+    ReadRegStr $R2 HKLM "SOFTWARE\Python\PythonCore\3.11\InstallPath" ""
+    ${if} $R2 != ""
+      ExecWait '"$R2\python.exe" "$PLUGINSDIR\install_lora_deps.py"' $R1
+    ${else}
+      DetailPrint "Python não encontrado no registro, tentando comando global..."
+      ExecWait '"python" "$PLUGINSDIR\install_lora_deps.py"' $R1
+    ${endIf}
     ${if} $R1 == 0
       DetailPrint "Dependências Python instaladas com sucesso."
     ${else}
@@ -99,9 +105,14 @@
 
     # --- Instalação do Ollama ---
     DetailPrint "Baixando o instalador do Ollama..."
-    # URL de download do Ollama para Windows
-    inetc::get "https://ollama.com/download/OllamaSetup.exe" "$PLUGINSDIR\OllamaSetup.exe" /END
-    Pop $R0 # Captura o status do download
+    # URLs de download do Ollama para Windows - tenta GitHub primeiro, depois site oficial
+    inetc::get "https://github.com/ollama/ollama/releases/latest/download/OllamaSetup.exe" "$PLUGINSDIR\OllamaSetup.exe" /END
+    Pop $R0 # status do download do GitHub
+    ${if} $R0 != "OK"
+      DetailPrint "Falha ao baixar do GitHub, tentando URL alternativa..."
+      inetc::get "https://ollama.com/download/OllamaSetup.exe" "$PLUGINSDIR\OllamaSetup.exe" /END
+      Pop $R0 # status do download alternativo
+    ${endIf}
 
     ${if} $R0 == "OK"
       DetailPrint "Instalando o Ollama..."
