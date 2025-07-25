@@ -665,17 +665,18 @@ export const useAdapterManager = ({
       }
 
       setIncomingAdapters((prev) => {
-        // Remove duplicates based on topic AND from fields
-        const filtered = prev.filter(
-          (existing) =>
-            !newAdapters.some(
-              (newAdapter) =>
-                newAdapter.topic === existing.topic &&
-                newAdapter.from === existing.from
-            )
-        );
+        // Merge and de-duplicate incoming adapters by name
+        const merged = [...prev, ...newAdapters];
 
-        const updated = [...filtered, ...newAdapters];
+        const dedupMap = new Map<string, IncomingAdapter>();
+        merged.forEach((adapter) => {
+          // Prefer the first occurrence (keeps earliest source information)
+          if (!dedupMap.has(adapter.name)) {
+            dedupMap.set(adapter.name, adapter);
+          }
+        });
+
+        const updated = Array.from(dedupMap.values());
 
         // Only log significant changes
         if (updated.length !== prev.length) {
@@ -684,7 +685,7 @@ export const useAdapterManager = ({
           );
         }
 
-        // Log current state for debugging (debug level)
+        // Debug current state
         console.debug(
           `📥 [ADAPTER-MANAGER] Current incoming adapters:`,
           updated.map((adapter) => ({
