@@ -4,6 +4,7 @@
 // @ts-ignore - b4a doesn't have official TypeScript types
 import * as b4a from "b4a";
 import { EventEmitter } from "events";
+import * as crypto from "crypto";
 // @ts-ignore - hyperswarm doesn't have official TypeScript types
 import Hyperswarm from "hyperswarm";
 
@@ -22,6 +23,13 @@ export class P2PBackendManager extends EventEmitter {
   private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 5000; // 5 seconds
   private healthCheckInterval: NodeJS.Timeout | null = null;
+
+  // Hash of the well-known global/community room topic.
+  // Calculated once at startup to ensure consistency with frontend constant.
+  private static readonly GENERAL_ROOM_HASH: string = crypto
+    .createHash("sha256")
+    .update("orch-mind-general-public-community-room-v1")
+    .digest("hex");
 
   async initialize(): Promise<void> {
     if (this.swarm) return;
@@ -80,7 +88,7 @@ export class P2PBackendManager extends EventEmitter {
       let roomCode = topicHex.slice(0, 8);
 
       // Check for general/community room (hash of "orch-mind-general-public-community-room-v1")
-      if (topicHex.startsWith("7c2f57bba2bb9f97")) {
+      if (topicHex === P2PBackendManager.GENERAL_ROOM_HASH) {
         roomType = "general";
         roomCode = "COMMUNITY";
       }
