@@ -306,7 +306,7 @@ async function createWindow(): Promise<void> {
     height: state.screenHeight, // Use entire screen height
     x: 0,
     y: 0,
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     webPreferences: {
       // Security configuration following Electron best practices
       sandbox: true, // Enable sandbox for security
@@ -528,22 +528,23 @@ async function createWindow(): Promise<void> {
   // Enhanced screen capture resistance
   //state.mainWindow.setContentProtection(true)
 
-  state.mainWindow.setVisibleOnAllWorkspaces(true, {
-    visibleOnFullScreen: true,
-  });
-  state.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+  // Comentado para permitir janela normal
+  // state.mainWindow.setVisibleOnAllWorkspaces(true, {
+  //   visibleOnFullScreen: true,
+  // });
+  // state.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
 
   // Additional screen capture resistance settings
   if (process.platform === "darwin") {
-    // Prevent window from being captured in screenshots
-    state.mainWindow.setHiddenInMissionControl(true);
-    state.mainWindow.setWindowButtonVisibility(false);
+    // Configurações comentadas para janela normal
+    // state.mainWindow.setHiddenInMissionControl(true);
+    state.mainWindow.setWindowButtonVisibility(true);
 
-    // Prevent window from being included in window switcher
-    state.mainWindow.setSkipTaskbar(true);
+    // Permitir janela no switcher
+    state.mainWindow.setSkipTaskbar(false);
 
-    // Disable window shadow
-    state.mainWindow.setHasShadow(false);
+    // Habilitar shadow normal
+    state.mainWindow.setHasShadow(true);
   }
 
   // Prevent the window from being captured by screen recording
@@ -634,10 +635,6 @@ function hideMainWindow(): void {
       height: bounds?.height || 0,
     };
     state.mainWindow?.setIgnoreMouseEvents(true, { forward: true });
-    state.mainWindow?.setAlwaysOnTop(true, "screen-saver", 1);
-    state.mainWindow?.setVisibleOnAllWorkspaces(true, {
-      visibleOnFullScreen: true,
-    });
     state.mainWindow?.hide();
     state.isWindowVisible = false;
   }
@@ -652,12 +649,7 @@ function showMainWindow(): void {
       });
     }
     state.mainWindow?.setIgnoreMouseEvents(false);
-    state.mainWindow?.setAlwaysOnTop(true, "screen-saver", 1);
-    state.mainWindow?.setVisibleOnAllWorkspaces(true, {
-      visibleOnFullScreen: true,
-    });
-    // state.mainWindow?.setContentProtection(true)
-    state.mainWindow?.showInactive();
+    state.mainWindow?.show();
     state.isWindowVisible = true;
   }
 }
