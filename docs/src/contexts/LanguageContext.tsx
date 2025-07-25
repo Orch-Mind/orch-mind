@@ -19,19 +19,22 @@ export const useLanguage = () => {
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Get initial language from localStorage or default to Portuguese
+  // Get initial language from localStorage or auto-detect from browser
   const getInitialLanguage = (): Language => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('orch-mind-language') as Language;
       if (saved && (saved === 'pt-BR' || saved === 'en-US')) {
         return saved;
       }
-      // Detect browser language
-      const browserLang = navigator.language;
-      if (browserLang.startsWith('pt')) return 'pt-BR';
-      if (browserLang.startsWith('en')) return 'en-US';
+      // Auto-detect browser language: Portuguese → pt-BR, any other → en-US
+      const browserLang = navigator.language.toLowerCase();
+      if (browserLang.startsWith('pt')) {
+        return 'pt-BR';
+      }
+      // Default to English for any other language
+      return 'en-US';
     }
-    return 'pt-BR'; // Default to Portuguese
+    return 'pt-BR'; // Fallback to Portuguese if no window (SSR)
   };
 
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
@@ -76,9 +79,15 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.promise.free': 'É de graça. Sem assinatura. Sem censura. Tecnologia brasileira para todos.',
     'hero.promise.yours': 'Inovação brasileira levando IA para o mundo todo.',
     
-    // CTA Buttons
-    'cta.revolution': 'Experimente Agora',
-    'cta.open-source': '💾 Código Aberto',
+    // CTA
+    'cta.revolution': 'Iniciar Revolução',
+    'cta.open-source': 'Código Aberto',
+    'cta.open-source-soon': 'Código aberto em breve',
+    
+    // Tooltips
+    'tooltip.github-coming-soon': 'Código aberto em breve',
+    'tooltip.license-coming-soon': 'Licença estará disponível quando o código for lançado',
+    'tooltip.open-source-release': 'Código será lançado em breve para o público',
     
     // Microcopy
     'hero.microcopy': 'Totalmente offline. Seus dados nunca saem do seu aparelho.',
@@ -137,7 +146,7 @@ const translations: Record<Language, Record<string, string>> = {
     'download.specs.storage': '10GB de armazenamento',
     'download.specs.gpu.nvidia': 'GPU NVIDIA GTX 1060+',
     'download.specs.gpu.cuda': 'GPU CUDA compatível',
-    'download.specs.chip': 'Chip M1/M2 ou Intel',
+    'download.specs.chip': 'Chip Apple Silicon ou Intel',
     
     // Footer
     'footer.product': 'Produto',
@@ -197,7 +206,7 @@ const translations: Record<Language, Record<string, string>> = {
     'features.req.storage': 'Armazenamento: 10GB',
     'features.req.gpu.nvidia': 'GPU: NVIDIA GTX 1060+',
     'features.req.gpu.cuda': 'GPU: CUDA compatível',
-    'features.req.chip': 'Chip: M1/M2 ou Intel',
+    'features.req.chip': 'Chip: Apple Silicon ou Intel',
     
     // Download Section
     'download.main-title': 'Baixar Orch-Mind',
@@ -231,9 +240,15 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.promise.free': 'It\'s free. No subscription. No censorship. Brazilian technology for everyone.',
     'hero.promise.yours': 'Brazilian innovation bringing AI to the entire world.',
     
-    // CTA Buttons
+    // CTA
     'cta.revolution': 'Try It Now',
-    'cta.open-source': '💾 Open Source',
+    'cta.open-source': 'Open Source',
+    'cta.open-source-soon': 'Open source coming soon',
+    
+    // Tooltips
+    'tooltip.github-coming-soon': 'Open source code coming soon',
+    'tooltip.license-coming-soon': 'License will be available when code is released',
+    'tooltip.open-source-release': 'Open source code will be released soon',
     
     // Microcopy
     'hero.microcopy': 'Completely offline. Your data never leaves your device.',
@@ -294,7 +309,7 @@ const translations: Record<Language, Record<string, string>> = {
     'download.specs.storage': '10GB storage space',
     'download.specs.gpu.nvidia': 'NVIDIA GTX 1060+ GPU',
     'download.specs.gpu.cuda': 'CUDA compatible GPU',
-    'download.specs.chip': 'M1/M2 or Intel chip',
+    'download.specs.chip': 'Apple Silicon or Intel chip',
     
     // Footer
     'footer.product': 'Product',
@@ -354,7 +369,7 @@ const translations: Record<Language, Record<string, string>> = {
     'features.req.storage': 'Storage: 10GB',
     'features.req.gpu.nvidia': 'GPU: NVIDIA GTX 1060+',
     'features.req.gpu.cuda': 'GPU: CUDA compatible',
-    'features.req.chip': 'Chip: M1/M2 or Intel',
+    'features.req.chip': 'Chip: Apple Silicon or Intel',
     'features.ai-engine': 'AI Engine',
     'features.ai-engine.desc': 'Based on the most advanced Gemma 3 and 3n models',
     'features.federated': 'Federated Learning',

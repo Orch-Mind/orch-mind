@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Download as DownloadIcon, Monitor, Smartphone, Github, ExternalLink } from 'lucide-react';
-import { detectOS, getDownloadUrl, getOSDisplayName, type OSType } from '../utils/detectOS';
+import { detectOS, getDownloadUrl, getOSDisplayName, detectMacArchitecture, getMacArchitectureDisplayName, type OSType, type MacArchitecture } from '../utils/detectOS';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const Download: React.FC = () => {
   const { t } = useLanguage();
   const [detectedOS, setDetectedOS] = useState<OSType>('unknown');
+  const [detectedMacArch, setDetectedMacArch] = useState<MacArchitecture>('unknown');
+  const [selectedMacArch, setSelectedMacArch] = useState<MacArchitecture>('unknown');
   const [isLoading, setIsLoading] = useState(false);
+  const [showMacDropdown, setShowMacDropdown] = useState(false);
 
   useEffect(() => {
-    setDetectedOS(detectOS());
+    const os = detectOS();
+    setDetectedOS(os);
+    
+    // If it's macOS, detect and pre-select the architecture
+    if (os === 'macos') {
+      const macArch = detectMacArchitecture();
+      setDetectedMacArch(macArch);
+      setSelectedMacArch(macArch);
+    }
   }, []);
 
-  const handleDownload = (os: OSType = detectedOS) => {
+  const handleDownload = (os: OSType = detectedOS, macArch?: MacArchitecture) => {
     setIsLoading(true);
-    const url = getDownloadUrl(os);
+    const url = getDownloadUrl(os, macArch);
     window.open(url, '_blank');
     
     // Reset loading state after a short delay
@@ -27,28 +38,22 @@ const Download: React.FC = () => {
       name: 'Windows',
       icon: '🪟',
       size: '~160 MB',
-      format: '.exe'
+      format: '.exe',
+      version: 'v0.0.1'
     },
     {
       os: 'macos' as OSType,
       name: 'macOS',
       icon: '🍎',
       size: '~210 MB',
-      format: '.pkg'
-    },
-    {
-      os: 'linux' as OSType,
-      name: 'Linux',
-      icon: '🐧',
-      size: '~160 MB',
-      format: '.AppImage'
+      format: '.pkg',
+      version: 'v0.0.1'
     }
   ];
 
-  const systemRequirements: Record<Exclude<OSType, 'unknown'>, string[]> = {
+  const systemRequirements: Record<Exclude<OSType, 'unknown' | 'linux'>, string[]> = {
     windows: ['Windows 10/11', t('download.specs.ram'), t('download.specs.gpu.nvidia'), t('download.specs.storage')],
-    macos: ['macOS 12+', t('download.specs.ram'), t('download.specs.chip'), t('download.specs.storage')],
-    linux: ['Ubuntu 20.04+', t('download.specs.ram'), t('download.specs.gpu.cuda'), t('download.specs.storage')]
+    macos: ['macOS 12+', t('download.specs.ram'), t('download.specs.chip'), t('download.specs.storage')]
   };
 
   return (
@@ -81,7 +86,13 @@ const Download: React.FC = () => {
             <div className="mb-12">
               <div className="relative inline-block">
                 <button
-                  onClick={() => handleDownload()}
+                  onClick={() => {
+                    if (detectedOS === 'macos') {
+                      handleDownload(detectedOS, detectedMacArch);
+                    } else {
+                      handleDownload();
+                    }
+                  }}
                   disabled={isLoading}
                   className="relative bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white text-base sm:text-lg font-montserrat-bold px-6 sm:px-12 py-3 sm:py-4 rounded-xl border border-cyan-400/50 hover:border-cyan-300 shadow-lg hover:shadow-cyan-500/25 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 sm:space-x-3 mx-auto overflow-hidden"
                   onMouseEnter={(e) => {
@@ -96,7 +107,11 @@ const Download: React.FC = () => {
                   
                   <DownloadIcon className={`relative z-10 w-6 h-6 ${isLoading ? 'animate-bounce' : 'group-hover:scale-125 group-hover:rotate-12'} transition-transform duration-300`} />
                   <span className="relative z-10">
-                    {isLoading ? t('download.downloading') : `${t('download.downloadFor')} ${getOSDisplayName(detectedOS)}`}
+                    {isLoading ? t('download.downloading') : (
+                      detectedOS === 'macos' && detectedMacArch !== 'unknown'
+                        ? `${t('download.downloadFor')} macOS (${getMacArchitectureDisplayName(detectedMacArch)})`
+                        : `${t('download.downloadFor')} ${getOSDisplayName(detectedOS)}`
+                    )}
                   </span>
                   
                   {/* Pulse effect */}
@@ -115,7 +130,7 @@ const Download: React.FC = () => {
         </div>
 
         {/* Download options */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 max-w-4xl mx-auto">
           {downloadOptions.map((option) => (
             <div
               key={option.os}
@@ -125,21 +140,101 @@ const Download: React.FC = () => {
             >
               <div className="text-4xl mb-4">{option.icon}</div>
               <h3 className="text-xl font-montserrat mb-2">{option.name}</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                {option.size} • {option.format}
-              </p>
-              <button
-                onClick={() => handleDownload(option.os)}
-                className="btn-secondary w-full mb-4"
-              >
-                {t('download.downloadButton')}
-              </button>
+              <div className="text-gray-400 text-sm mb-4 space-y-1">
+                <p>{option.size} • {option.format}</p>
+                <p className="text-cyan-400 font-medium">{option.version}</p>
+              </div>
+              {option.os === 'macos' ? (
+                <div className="relative">
+                  {/* Download button with dropdown */}
+                  <div className="relative">
+                    <div className="btn-secondary w-full mb-4 flex items-center justify-between p-0 overflow-hidden">
+                      {/* Main button area */}
+                      <button
+                        onClick={() => {
+                          if (selectedMacArch !== 'unknown') {
+                            handleDownload(option.os, selectedMacArch);
+                          } else {
+                            setShowMacDropdown(!showMacDropdown);
+                          }
+                        }}
+                        className="flex-1 px-4 py-3 text-left hover:bg-white/5 transition-colors"
+                      >
+                        {selectedMacArch === 'unknown' 
+                          ? 'Escolher arquitetura' 
+                          : `${t('download.downloadButton')} (${selectedMacArch === 'arm64' ? 'Apple Silicon' : 'Intel'})`
+                        }
+                      </button>
+                      
+                      {/* Dropdown toggle area */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowMacDropdown(!showMacDropdown);
+                        }}
+                        className="px-3 py-3 border-l border-gray-600 hover:bg-white/5 transition-colors"
+                        aria-label="Toggle architecture selection menu"
+                      >
+                        <svg 
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            showMacDropdown ? 'rotate-180' : ''
+                          }`} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    {/* Dropdown menu */}
+                    {showMacDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
+                        <button
+                          onClick={() => {
+                            setSelectedMacArch('arm64');
+                            setShowMacDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-600 last:border-b-0 rounded-t-lg"
+                        >
+                          <div className="font-medium text-white">Apple Silicon</div>
+                          <div className="text-xs text-gray-400">M1, M2, M3 chips</div>
+                          {detectedMacArch === 'arm64' && (
+                            <div className="text-xs text-cyan-400 mt-1">✓ Detectado</div>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMacArch('intel');
+                            setShowMacDropdown(false);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors rounded-b-lg"
+                        >
+                          <div className="font-medium text-white">Intel</div>
+                          <div className="text-xs text-gray-400">x64 processors</div>
+                          {detectedMacArch === 'intel' && (
+                            <div className="text-xs text-cyan-400 mt-1">✓ Detectado</div>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleDownload(option.os)}
+                  className="btn-secondary w-full mb-4"
+                >
+                  {t('download.downloadButton')}
+                </button>
+              )}
               
               {/* System requirements */}
               <div className="text-left">
                 <h4 className="text-sm font-montserrat text-gray-300 mb-2">{t('download.requirements')}</h4>
                 <ul className="text-xs text-gray-400 space-y-1">
-                  {option.os !== 'unknown' && systemRequirements[option.os]?.map((req, index) => (
+                  {option.os !== 'unknown' && option.os !== 'linux' && systemRequirements[option.os as keyof typeof systemRequirements]?.map((req: string, index: number) => (
                     <li key={index}>• {req}</li>
                   ))}
                 </ul>
@@ -149,31 +244,9 @@ const Download: React.FC = () => {
         </div>
 
         {/* Additional options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* GitHub releases */}
-          <div className="glass-effect rounded-xl p-6 flex flex-col h-full">
-            <div>
-              <div className="flex items-center mb-4">
-                <Github className="w-8 h-8 text-gray-300 mr-3" />
-                <h3 className="text-xl font-montserrat-bold">{t('download.github.title')}</h3>
-              </div>
-              <p className="text-gray-400 mb-6 font-montserrat">
-                {t('download.github.desc')}
-              </p>
-            </div>
-            <a
-              href="https://github.com/guiferrarib/orch-mind/releases"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary font-montserrat flex items-center space-x-2 mt-auto w-fit"
-            >
-              <span>{t('download.github.button')}</span>
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
-
+        <div className="flex justify-center">
           {/* Mobile app info */}
-          <div className="glass-effect rounded-xl p-6 flex flex-col h-full">
+          <div className="glass-effect rounded-xl p-6 flex flex-col h-full max-w-md">
             <div>
               <div className="flex items-center mb-4">
                 <Smartphone className="w-8 h-8 text-gray-300 mr-3" />

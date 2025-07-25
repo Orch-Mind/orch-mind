@@ -12,15 +12,15 @@ const Footer: React.FC = () => {
       { name: t('footer.download'), href: '#download' }
     ],
     community: [
-      { name: 'GitHub', href: 'https://github.com/guiferrarib/orch-mind' }
+      { name: 'GitHub', href: '#', disabled: true }
     ],
     legal: [
-      { name: t('footer.license'), href: 'https://github.com/guiferrarib/orch-mind/blob/main/LICENSE' }
+      { name: t('footer.license'), href: '#', disabled: true }
     ]
   };
 
   const socialLinks = [
-    { icon: Github, href: 'https://github.com/guiferrarib/orch-mind', label: 'GitHub' }
+    { icon: Github, href: '#', label: 'GitHub', disabled: true }
   ];
 
   return (
@@ -48,25 +48,38 @@ const Footer: React.FC = () => {
             {/* Premium Social Links */}
             <div className="flex space-x-4">
               {socialLinks.map((link, index) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`relative p-3 text-gray-400 hover:text-white bg-gradient-to-br from-gray-900/60 via-gray-800/40 to-gray-900/60 rounded-xl border border-gray-600/30 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-125 hover:rotate-6 group shadow-lg hover:shadow-cyan-500/25`}
-                  aria-label={link.label}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 20px rgba(6, 182, 212, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-                  }}
-                >
-                  {/* Glow effect */}
-                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-cyan-500/10 to-blue-500/10"></div>
-                  <link.icon className="relative z-10 group-hover:animate-pulse" size={20} />
-                </a>
+                link.disabled ? (
+                  <button
+                    key={link.label}
+                    disabled
+                    className="relative p-3 text-gray-500 bg-gradient-to-br from-gray-900/30 via-gray-800/20 to-gray-900/30 rounded-xl border border-gray-600/20 cursor-not-allowed opacity-50 shadow-lg"
+                    aria-label={link.label}
+                    title={t('tooltip.github-coming-soon')}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <link.icon className="relative z-10" size={20} />
+                  </button>
+                ) : (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`relative p-3 text-gray-400 hover:text-white bg-gradient-to-br from-gray-900/60 via-gray-800/40 to-gray-900/60 rounded-xl border border-gray-600/30 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-125 hover:rotate-6 group shadow-lg hover:shadow-cyan-500/25`}
+                    aria-label={link.label}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 20px rgba(6, 182, 212, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                    }}
+                  >
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-cyan-500/10 to-blue-500/10"></div>
+                    <link.icon className="relative z-10 group-hover:animate-pulse" size={20} />
+                  </a>
+                )
               ))}
             </div>
           </div>
@@ -102,18 +115,30 @@ const Footer: React.FC = () => {
             <ul className="space-y-4">
               {footerLinks.community.map((link, index) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center text-gray-400 hover:text-cyan-300 transition-all duration-300 font-montserrat hover:translate-x-2"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <span className="w-1 h-1 bg-cyan-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                    <span className="group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-blue-400 group-hover:bg-clip-text transition-all duration-300">
-                      {link.name}
-                    </span>
-                  </a>
+                  {link.disabled ? (
+                    <button
+                      disabled
+                      className="group flex items-center text-gray-500 cursor-not-allowed opacity-60 font-montserrat"
+                      title={t('tooltip.github-coming-soon')}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <span className="w-1 h-1 bg-gray-500 rounded-full mr-3"></span>
+                      <span>{link.name}</span>
+                    </button>
+                  ) : (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center text-gray-400 hover:text-cyan-300 transition-all duration-300 font-montserrat hover:translate-x-2"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <span className="w-1 h-1 bg-cyan-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                      <span className="group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-cyan-400 group-hover:to-blue-400 group-hover:bg-clip-text transition-all duration-300">
+                        {link.name}
+                      </span>
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -134,15 +159,26 @@ const Footer: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
               {footerLinks.legal.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-gray-400 hover:text-white transition-colors duration-200 font-montserrat"
-                  target={link.href.startsWith('http') ? '_blank' : undefined}
-                  rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                >
-                  {link.name}
-                </a>
+                link.disabled ? (
+                  <button
+                    key={link.name}
+                    disabled
+                    className="text-gray-500 cursor-not-allowed opacity-60 font-montserrat"
+                    title={t('tooltip.license-coming-soon')}
+                  >
+                    {link.name}
+                  </button>
+                ) : (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="text-gray-400 hover:text-white transition-colors duration-200 font-montserrat"
+                    target={link.href.startsWith('http') ? '_blank' : undefined}
+                    rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  >
+                    {link.name}
+                  </a>
+                )
               ))}
             </div>
           </div>

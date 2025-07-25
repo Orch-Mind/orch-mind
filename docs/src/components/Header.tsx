@@ -24,7 +24,7 @@ const Header: React.FC = () => {
   ];
 
   const socialLinks = [
-    { icon: Github, href: 'https://github.com/guiferrarib/orch-mind', label: 'GitHub' },
+    { icon: Github, href: '#', label: 'GitHub', disabled: true },
   ];
 
   return (
@@ -74,25 +74,38 @@ const Header: React.FC = () => {
           {/* Social Links and Language Selector - Premium Style */}
           <div className="hidden lg:flex items-center space-x-3">
             {socialLinks.map((link, index) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative p-2 text-gray-400 hover:text-white bg-gray-800/30 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-110 group backdrop-blur-sm"
-                aria-label={link.label}
-                style={{ animationDelay: `${index * 0.1}s` }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 15px rgba(6, 182, 212, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {/* Glow effect */}
-                <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-cyan-500/10 to-blue-500/10"></div>
-                <link.icon className="relative z-10 group-hover:animate-pulse" size={18} />
-              </a>
+              link.disabled ? (
+                <button
+                  key={link.label}
+                  disabled
+                  className="relative p-2 text-gray-500 bg-gray-800/20 rounded-lg border border-gray-700/30 cursor-not-allowed opacity-50 backdrop-blur-sm"
+                  aria-label={link.label}
+                  title={t('tooltip.github-coming-soon')}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <link.icon className="relative z-10" size={18} />
+                </button>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative p-2 text-gray-400 hover:text-white bg-gray-800/30 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 hover:border-cyan-400/50 transition-all duration-300 transform hover:scale-110 group backdrop-blur-sm"
+                  aria-label={link.label}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 15px rgba(6, 182, 212, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-cyan-500/10 to-blue-500/10"></div>
+                  <link.icon className="relative z-10 group-hover:animate-pulse" size={18} />
+                </a>
+              )
             ))}
             <LanguageSelector />
           </div>
@@ -128,16 +141,28 @@ const Header: React.FC = () => {
               {/* Social Links */}
               <div className="flex items-center justify-center space-x-4 pt-4 border-t border-gray-700">
                 {socialLinks.map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
-                    aria-label={link.label}
-                  >
-                    <link.icon size={20} />
-                  </a>
+                  link.disabled ? (
+                    <button
+                      key={link.label}
+                      disabled
+                      className="p-2 text-gray-500 cursor-not-allowed opacity-50"
+                      aria-label={link.label}
+                      title={t('tooltip.github-coming-soon')}
+                    >
+                      <link.icon size={20} />
+                    </button>
+                  ) : (
+                    <a
+                      key={link.label}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
+                      aria-label={link.label}
+                    >
+                      <link.icon size={20} />
+                    </a>
+                  )
                 ))}
               </div>
             </div>

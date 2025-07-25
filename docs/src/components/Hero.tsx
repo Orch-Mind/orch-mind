@@ -47,14 +47,13 @@ const Hero: React.FC = () => {
             <span>{t('cta.revolution')}</span>
             <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-200" />
           </a>
-          <a
-            href="https://github.com/guiferrarib/orch-mind"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-gray-900/80 border-2 border-cyan-400/50 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-400/25 px-8 py-4 text-lg font-montserrat transform hover:scale-105 transition-all duration-300 rounded-lg backdrop-blur-sm"
+          <button
+            disabled
+            className="bg-gray-900/60 border-2 border-gray-500/30 text-gray-400 px-8 py-4 text-lg font-montserrat rounded-lg backdrop-blur-sm cursor-not-allowed opacity-60 select-none"
+            title={t('tooltip.open-source-release')}
           >
-            {t('cta.open-source')}
-          </a>
+            {t('cta.open-source-soon')}
+          </button>
         </div>
         
         {/* Microcopy */}
