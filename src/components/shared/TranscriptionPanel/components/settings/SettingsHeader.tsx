@@ -95,7 +95,7 @@ const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onClose }) => {
       </button>
 
       <h2 className="text-2xl font-bold mb-4 text-center tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)] orchos-title">
-        Quantum System Settings
+        System Settings
       </h2>
     </>
   );

@@ -25,6 +25,7 @@ import {
   ToastViewport,
 } from "./components/ui/toast";
 import TranscriptionModule from "./features/transcription/TranscriptionModule";
+import { StartupModelChecker } from "./components/startup/StartupModelChecker";
 import "./styles/orchos-theme.css";
 
 const queryClient = new QueryClient({
@@ -137,6 +138,8 @@ export default function App() {
           </TranscriptionProvider>
         </LanguageProvider>
       </QueryClientProvider>
+      {/* Global model download checker overlay */}
+      <StartupModelChecker />
     </div>
   );
 }

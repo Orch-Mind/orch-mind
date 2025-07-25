@@ -35,7 +35,7 @@ export class MockPeerService {
       typeof process !== "undefined" &&
       process.env.NODE_ENV === "development"
     ) {
-      return true;
+      return false;
     }
 
     // Check if localhost or development URL
