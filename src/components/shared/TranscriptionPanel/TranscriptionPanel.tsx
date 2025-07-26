@@ -31,7 +31,7 @@ import { QuantumVisualizationContainer } from "../QuantumVisualization/QuantumVi
 // Conversational Chat import
 import { ConversationalChat } from "./components/ConversationalChat";
 // Chat History imports
-import { ChatHistorySidebar } from "./components/ConversationalChat/components/ChatHistorySidebar";
+import { TabContainer } from "./components/ConversationalChat/components/TabContainer";
 import { useChatHistory } from "./components/ConversationalChat/hooks/useChatHistory";
 // Brain visualization is now handled in a separate module
 import { P2PProvider } from "./context/P2PContext";
@@ -398,7 +398,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
               mobileSidebarOpen ? "mobile-open" : ""
             } ${!isSidebarOpen ? "desktop-collapsed" : ""}`}
           >
-            <ChatHistorySidebar
+            <TabContainer
               conversations={chatHistory.conversations}
               currentConversationId={chatHistory.currentConversationId}
               onSelectConversation={(id: string) => {

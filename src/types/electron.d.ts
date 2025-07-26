@@ -339,6 +339,50 @@ export interface ElectronAPI {
     callback: (data: { progress: number; message: string }) => void
   ) => () => void;
 
+  // File System Methods
+  selectWorkspaceFolder: () => Promise<{
+    canceled: boolean;
+    filePath?: string;
+  }>;
+  readDirectory: (dirPath: string) => Promise<{
+    success: boolean;
+    files?: Array<{
+      name: string;
+      isDirectory: boolean;
+      path: string;
+      size?: number;
+      updatedAt: string;
+      createdAt: string;
+      permissions: {
+        readable: boolean;
+        writable: boolean;
+        executable: boolean;
+      };
+    }>;
+    error?: string;
+  }>;
+  openFile: (filePath: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getFileInfo: (itemPath: string) => Promise<{
+    success: boolean;
+    info?: {
+      name: string;
+      path: string;
+      isDirectory: boolean;
+      size: number;
+      updatedAt: string;
+      createdAt: string;
+      permissions: {
+        readable: boolean;
+        writable: boolean;
+        executable: boolean;
+      };
+    };
+    error?: string;
+  }>;
+
   // Web Search Methods
   webSearch: (
     queries: string[],

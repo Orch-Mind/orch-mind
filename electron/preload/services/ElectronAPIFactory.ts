@@ -98,6 +98,9 @@ export class ElectronAPIFactory {
       // Legacy Vector Database Support
       ...this.createLegacyVectorDatabaseAPI(),
 
+      // File System Management
+      ...this.createFileSystemManager(),
+
       // Web Search Management
       ...this.createWebSearchManager(),
 
@@ -1376,6 +1379,97 @@ export class ElectronAPIFactory {
             component: "LoRAMergeManager",
             operation: "shareMergedAdapter",
             severity: "medium",
+          }
+        );
+      },
+    };
+  }
+
+  /**
+   * Create File System Management service methods
+   */
+  private createFileSystemManager() {
+    return {
+      selectWorkspaceFolder: async () => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug("📁 [API] Opening workspace folder selection dialog");
+            
+            const result = await ipcRenderer.invoke("select-workspace-folder");
+            
+            this.logger.debug(
+              `📁 [API] Folder selection result: ${result.canceled ? 'canceled' : 'selected ' + result.filePath}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemManager",
+            operation: "selectWorkspaceFolder",
+            severity: "medium",
+          }
+        );
+      },
+
+      readDirectory: async (dirPath: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`📁 [API] Reading directory: ${dirPath}`);
+            
+            const result = await ipcRenderer.invoke("read-directory", dirPath);
+            
+            this.logger.debug(
+              `📁 [API] Directory read result: ${result.success ? result.files?.length + ' files' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemManager",
+            operation: "readDirectory",
+            severity: "medium",
+          }
+        );
+      },
+
+      openFile: async (filePath: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`📁 [API] Opening file: ${filePath}`);
+            
+            const result = await ipcRenderer.invoke("open-file", filePath);
+            
+            this.logger.debug(
+              `📁 [API] File open result: ${result.success ? 'success' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemManager",
+            operation: "openFile",
+            severity: "low",
+          }
+        );
+      },
+
+      getFileInfo: async (itemPath: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`📁 [API] Getting file info: ${itemPath}`);
+            
+            const result = await ipcRenderer.invoke("get-file-info", itemPath);
+            
+            this.logger.debug(
+              `📁 [API] File info result: ${result.success ? 'success' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemManager",
+            operation: "getFileInfo",
+            severity: "low",
           }
         );
       },

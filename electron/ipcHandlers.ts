@@ -4,6 +4,8 @@
 // ipcHandlers.ts
 
 import { dialog, ipcMain } from "electron";
+import * as fs from "fs";
+import * as path from "path";
 import type { ProgressInfo } from "../src/electron/chatgpt-import";
 import { importChatGPTHistoryHandler } from "../src/electron/chatgpt-import";
 import { DuckDBHelper } from "./DuckDBHelper";
@@ -1033,4 +1035,162 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     console.log("🖥️ [Hardware] Intel/AMD architecture detected");
     return false;
   }
+
+  // ========================================
+  // 📁 FILE SYSTEM HANDLERS
+  // ========================================
+
+  // Select workspace folder
+  ipcMain.handle("select-workspace-folder", async () => {
+    try {
+      console.log("📁 [IPC] Opening folder selection dialog...");
+      
+      const result = await dialog.showOpenDialog(deps.getMainWindow()!, {
+        title: "Select Workspace Folder",
+        properties: ["openDirectory", "createDirectory"],
+        buttonLabel: "Select Folder"
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        console.log("📁 [IPC] Folder selection canceled");
+        return { canceled: true };
+      }
+
+      const selectedPath = result.filePaths[0];
+      console.log("📁 [IPC] Folder selected:", selectedPath);
+      
+      return {
+        canceled: false,
+        filePath: selectedPath
+      };
+    } catch (error) {
+      console.error("📁 [IPC] Error selecting folder:", error);
+      throw error;
+    }
+  });
+
+  // Read directory contents
+  ipcMain.handle("read-directory", async (event, dirPath: string) => {
+    try {
+      console.log("📁 [IPC] Reading directory:", dirPath);
+      
+      // Check if directory exists and is accessible
+      try {
+        await fs.promises.access(dirPath, fs.constants.R_OK);
+      } catch (accessError) {
+        throw new Error(`Cannot access directory: ${dirPath}`);
+      }
+
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      const files = [];
+
+      for (const entry of entries) {
+        try {
+          const fullPath = path.join(dirPath, entry.name);
+          const stats = await fs.promises.stat(fullPath);
+          
+          // Skip hidden files/folders on macOS/Linux (starting with .)
+          if (entry.name.startsWith('.')) {
+            continue;
+          }
+
+          files.push({
+            name: entry.name,
+            isDirectory: entry.isDirectory(),
+            path: fullPath,
+            size: entry.isFile() ? stats.size : undefined,
+            updatedAt: stats.mtime.toISOString(),
+            createdAt: stats.birthtime.toISOString(),
+            permissions: {
+              readable: true, // We already checked access above
+              writable: false, // We'll check this if needed
+              executable: entry.isFile() && (stats.mode & parseInt('111', 8)) > 0
+            }
+          });
+        } catch (entryError) {
+          console.warn(`📁 [IPC] Error reading entry ${entry.name}:`, entryError);
+          // Skip this entry and continue
+        }
+      }
+
+      // Sort: directories first, then files, both alphabetically
+      files.sort((a, b) => {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      });
+
+      console.log(`📁 [IPC] Successfully read ${files.length} entries from ${dirPath}`);
+      return {
+        success: true,
+        files
+      };
+    } catch (error) {
+      console.error("📁 [IPC] Error reading directory:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error reading directory'
+      };
+    }
+  });
+
+  // Open file with system default application
+  ipcMain.handle("open-file", async (event, filePath: string) => {
+    try {
+      console.log("📁 [IPC] Opening file:", filePath);
+      
+      // Check if file exists
+      try {
+        await fs.promises.access(filePath, fs.constants.R_OK);
+      } catch (accessError) {
+        throw new Error(`Cannot access file: ${filePath}`);
+      }
+
+      // Import shell from electron to open file
+      const { shell } = require('electron');
+      await shell.openPath(filePath);
+      
+      return { success: true };
+    } catch (error) {
+      console.error("📁 [IPC] Error opening file:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error opening file'
+      };
+    }
+  });
+
+  // Get file/directory info
+  ipcMain.handle("get-file-info", async (event, itemPath: string) => {
+    try {
+      console.log("📁 [IPC] Getting file info:", itemPath);
+      
+      const stats = await fs.promises.stat(itemPath);
+      
+      return {
+        success: true,
+        info: {
+          name: path.basename(itemPath),
+          path: itemPath,
+          isDirectory: stats.isDirectory(),
+          size: stats.size,
+          updatedAt: stats.mtime.toISOString(),
+          createdAt: stats.birthtime.toISOString(),
+          permissions: {
+            readable: true,
+            writable: false, // Could add write check if needed
+            executable: stats.isFile() && (stats.mode & parseInt('111', 8)) > 0
+          }
+        }
+      };
+    } catch (error) {
+      console.error("📁 [IPC] Error getting file info:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error getting file info'
+      };
+    }
+  });
+
+  console.log("📁 [IPC] File system handlers initialized");
 }
