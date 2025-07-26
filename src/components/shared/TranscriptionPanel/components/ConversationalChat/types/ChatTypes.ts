@@ -65,6 +65,9 @@ export interface ChatControlsProps {
   // Web Search controls
   webSearchEnabled?: boolean;
   onToggleWebSearch?: () => void;
+  // AI Mode controls (Chat/Agent)
+  aiMode?: "chat" | "agent";
+  onToggleAiMode?: () => void;
   // TODO: Re-enable for future versions - Audio Settings in chat input
   // onToggleAudioSettings?: () => void;
   // showAudioSettings?: boolean;

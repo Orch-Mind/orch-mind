@@ -18,6 +18,8 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   showContext,
   webSearchEnabled = false,
   onToggleWebSearch,
+  aiMode = "chat",
+  onToggleAiMode,
   // TODO: Re-enable for future versions - Audio Settings in chat input
   // onToggleAudioSettings,
   // showAudioSettings,
@@ -249,6 +251,110 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
           )}
         </svg>
       </button>
+
+      {/* AI Mode Toggle Switch - Modern Design */}
+      <div className="ai-mode-toggle-container">
+        <button
+          className={`ai-mode-toggle ${aiMode}`}
+          onClick={onToggleAiMode}
+          title={`Currently in ${aiMode.toUpperCase()} mode - Click to switch to ${aiMode === "chat" ? "AGENT" : "CHAT"} mode`}
+          type="button"
+        >
+          <div className="toggle-track">
+            <div className="toggle-slider">
+              <div className="toggle-icon">
+                {aiMode === "chat" ? (
+                  // Chat icon - minimalist message bubble
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"
+                      fill="currentColor"
+                      opacity="0.9"
+                    />
+                    <circle cx="8" cy="12" r="1" fill="white" />
+                    <circle cx="12" cy="12" r="1" fill="white" />
+                    <circle cx="16" cy="12" r="1" fill="white" />
+                  </svg>
+                ) : (
+                  // Agent icon - clear robot design
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    {/* Robot head */}
+                    <rect
+                      x="7"
+                      y="6"
+                      width="10"
+                      height="8"
+                      rx="2"
+                      fill="currentColor"
+                      opacity="0.9"
+                    />
+                    {/* Robot eyes */}
+                    <circle cx="10" cy="9" r="1" fill="white" />
+                    <circle cx="14" cy="9" r="1" fill="white" />
+                    {/* Robot mouth */}
+                    <rect
+                      x="11"
+                      y="11.5"
+                      width="2"
+                      height="0.8"
+                      rx="0.4"
+                      fill="white"
+                    />
+                    {/* Robot antenna */}
+                    <line
+                      x1="12"
+                      y1="6"
+                      x2="12"
+                      y2="4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+                    <circle cx="12" cy="3.5" r="0.8" fill="currentColor" opacity="0.8" />
+                    {/* Robot body connection */}
+                    <rect
+                      x="11"
+                      y="14"
+                      width="2"
+                      height="3"
+                      fill="currentColor"
+                      opacity="0.7"
+                    />
+                    {/* Robot arms */}
+                    <rect
+                      x="5"
+                      y="8"
+                      width="2"
+                      height="4"
+                      rx="1"
+                      fill="currentColor"
+                      opacity="0.6"
+                    />
+                    <rect
+                      x="17"
+                      y="8"
+                      width="2"
+                      height="4"
+                      rx="1"
+                      fill="currentColor"
+                      opacity="0.6"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <div className="toggle-labels">
+              <span className={`toggle-label left ${aiMode === "chat" ? "active" : ""}`}>
+                CHAT
+              </span>
+              <span className={`toggle-label right ${aiMode === "agent" ? "active" : ""}`}>
+                AGENT
+              </span>
+            </div>
+          </div>
+        </button>
+      </div>
 
       {/* TODO: Re-enable for future versions - Audio Settings Button
       <button

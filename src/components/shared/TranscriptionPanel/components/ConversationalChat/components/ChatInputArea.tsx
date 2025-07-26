@@ -60,6 +60,11 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
     () => getOption<boolean>(STORAGE_KEYS.WEB_SEARCH_ENABLED) || false
   );
 
+  // AI Mode state management
+  const [aiMode, setAiMode] = useState<"chat" | "agent">(
+    () => getOption<string>(STORAGE_KEYS.AI_MODE) as "chat" | "agent" || "chat"
+  );
+
   // Handler for toggling web search
   const handleToggleWebSearch = () => {
     const newState = !webSearchEnabled;
@@ -67,6 +72,15 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
     setOption(STORAGE_KEYS.WEB_SEARCH_ENABLED, newState);
     
     console.log(`🌐 [Web Search] ${newState ? "Enabled" : "Disabled"}`);
+  };
+
+  // Handler for toggling AI mode
+  const handleToggleAiMode = () => {
+    const newMode = aiMode === "chat" ? "agent" : "chat";
+    setAiMode(newMode);
+    setOption(STORAGE_KEYS.AI_MODE, newMode);
+    
+    console.log(`🤖 [AI Mode] Switched to ${newMode.toUpperCase()} mode`);
   };
 
   const canSend =
@@ -127,6 +141,8 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               }
               webSearchEnabled={webSearchEnabled}
               onToggleWebSearch={handleToggleWebSearch}
+              aiMode={aiMode}
+              onToggleAiMode={handleToggleAiMode}
               // TODO: Re-enable for future versions - Audio Settings in chat input
               // onToggleAudioSettings={onToggleAudioSettings}
               // showAudioSettings={showAudioSettings}
