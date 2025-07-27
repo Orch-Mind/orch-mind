@@ -432,4 +432,60 @@ export interface IElectronAPI
     deletedFiles?: number;
     deletedDirs?: number;
   }>;
+
+  // File System Methods
+  selectWorkspaceFolder(): Promise<{
+    canceled: boolean;
+    filePath?: string;
+  }>;
+  readDirectory(dirPath: string): Promise<{
+    success: boolean;
+    files?: Array<{
+      name: string;
+      isDirectory: boolean;
+      path: string;
+      size?: number;
+      updatedAt: string;
+      createdAt: string;
+      permissions: {
+        readable: boolean;
+        writable: boolean;
+        executable: boolean;
+      };
+    }>;
+    error?: string;
+  }>;
+  openFile(filePath: string): Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getFileInfo(itemPath: string): Promise<{
+    success: boolean;
+    info?: {
+      name: string;
+      path: string;
+      isDirectory: boolean;
+      size: number;
+      updatedAt: string;
+      createdAt: string;
+      permissions: {
+        readable: boolean;
+        writable: boolean;
+        executable: boolean;
+      };
+    };
+    error?: string;
+  }>;
+
+  // Generic invoke method for ActionExecutor
+  invoke?: (channel: string, ...args: any[]) => Promise<any>;
+
+  // Cache Management
+  clearCache(): Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
+    deletedFiles?: number;
+    deletedDirs?: number;
+  }>;
 }

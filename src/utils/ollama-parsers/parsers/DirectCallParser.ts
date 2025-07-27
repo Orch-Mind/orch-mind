@@ -28,40 +28,70 @@ export class DirectCallParser implements IToolCallParser {
     const toolCalls: ToolCall[] = [];
     const trimmed = content.trim();
 
-    // Regex simplificado (KISS)
-    const functionCallRegex = new RegExp(
-      `(${ParserUtils.KNOWN_FUNCTIONS.join("|")})\\s*\\(` + // Funções conhecidas
-        "([^)]*)" + // Captura argumentos (simplificado)
-        "\\)",
-      "gs"
-    );
+    // Processa cada função conhecida individualmente para lidar com parênteses aninhados
+    for (const functionName of ParserUtils.KNOWN_FUNCTIONS) {
+      const functionPattern = `${functionName}\\s*\\(`;
+      const regex = new RegExp(functionPattern, 'g');
+      let match;
+      
+      while ((match = regex.exec(trimmed)) !== null) {
+        const startIndex = match.index + match[0].length;
+        
+        // Encontra os argumentos balanceando parênteses
+        const argsString = this.extractBalancedArguments(trimmed, startIndex);
+        
+        if (argsString !== null) {
+          try {
+            // Delega parsing de argumentos (SRP)
+            const args = ArgumentParser.parseArguments(argsString);
 
-    let match;
-    while ((match = functionCallRegex.exec(trimmed)) !== null) {
-      const functionName = match[1];
-      const argsString = match[2];
+            toolCalls.push({
+              type: "function",
+              function: {
+                name: functionName,
+                arguments: args,
+              },
+            });
 
-      try {
-        // Delega parsing de argumentos (SRP)
-        const args = ArgumentParser.parseArguments(argsString);
-
-        toolCalls.push({
-          type: "function",
-          function: {
-            name: functionName,
-            arguments: args,
-          },
-        });
-
-        console.log(`[${this.formatName}] Parsed function: ${functionName}`);
-      } catch (error) {
-        console.warn(
-          `[${this.formatName}] Failed to parse: ${functionName}`,
-          error
-        );
+            console.log(`[${this.formatName}] Parsed function: ${functionName}`);
+          } catch (error) {
+            console.warn(
+              `[${this.formatName}] Failed to parse: ${functionName}`,
+              error
+            );
+          }
+        }
       }
     }
 
     return toolCalls;
+  }
+
+  /**
+   * Extrai argumentos balanceando parênteses para lidar com conteúdo aninhado
+   * Por exemplo: content:"public class Main { public static void main(String[] args) { ... } }"
+   */
+  private extractBalancedArguments(content: string, startIndex: number): string | null {
+    let balance = 1; // Já estamos dentro do primeiro parêntese
+    let i = startIndex;
+    
+    while (i < content.length && balance > 0) {
+      const char = content[i];
+      
+      if (char === '(') {
+        balance++;
+      } else if (char === ')') {
+        balance--;
+      }
+      
+      i++;
+    }
+    
+    if (balance === 0) {
+      // Encontrou o parêntese de fechamento balanceado
+      return content.substring(startIndex, i - 1); // -1 para excluir o ')' final
+    }
+    
+    return null; // Parênteses não balanceados
   }
 }

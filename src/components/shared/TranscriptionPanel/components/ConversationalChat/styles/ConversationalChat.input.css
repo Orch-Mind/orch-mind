@@ -713,103 +713,237 @@
 }
 
 /* ================================================================
- * AI MODE TOGGLE - Modern Switch Design
+ * AI MODE TOGGLE - Enhanced Quantum Theme with Best Practices
  * ================================================================ */
 
 .ai-mode-toggle-container {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  position: relative;
 }
 
 .ai-mode-toggle {
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 4px;
   cursor: pointer;
   outline: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+  /* Enhanced touch target for mobile */
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ai-mode-toggle:focus {
   outline: none;
 }
 
+/* Enhanced focus state for better accessibility */
 .ai-mode-toggle:focus-visible .toggle-track {
   box-shadow: 
-    0 0 0 3px rgba(0, 250, 255, 0.4),
-    0 4px 20px rgba(0, 250, 255, 0.2);
+    0 0 0 3px rgba(0, 240, 255, 0.6),
+    0 0 32px rgba(0, 240, 255, 0.4),
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: rgba(0, 240, 255, 0.8);
 }
 
 .toggle-track {
   position: relative;
-  width: 64px;
-  height: 32px;
-  background: rgba(0, 0, 0, 0.4);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1.5px solid rgba(0, 250, 255, 0.3);
-  border-radius: 18px;
+  width: 72px;
+  height: 36px;
+  /* Enhanced glassmorphism background */
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 35, 0.9) 0%,
+    rgba(20, 20, 40, 0.8) 50%,
+    rgba(15, 15, 38, 0.85) 100%
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.3) brightness(1.1);
+  backdrop-filter: blur(20px) saturate(1.3) brightness(1.1);
+  border: 2px solid rgba(0, 240, 255, 0.3);
+  border-radius: 20px;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Enhanced shadow system for depth */
   box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(0, 240, 255, 0.2),
+    0 1px 3px rgba(0, 240, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  /* Subtle inner glow */
+  position: relative;
 }
 
 .toggle-track:hover {
-  border-color: rgba(0, 250, 255, 0.5);
+  border-color: rgba(0, 240, 255, 0.5);
+  /* Enhanced hover effects with better depth */
   box-shadow: 
-    0 6px 24px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(0, 250, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(0, 240, 255, 0.35),
+    0 2px 8px rgba(0, 240, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px) scale(1.02);
+  /* Subtle background enhancement on hover */
+  background: linear-gradient(
+    135deg,
+    rgba(15, 15, 40, 0.95) 0%,
+    rgba(25, 25, 45, 0.85) 50%,
+    rgba(20, 20, 43, 0.9) 100%
+  );
 }
 
 .toggle-slider {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
+  /* Enhanced gradient with more depth */
   background: linear-gradient(
     135deg,
-    rgba(0, 250, 255, 0.9) 0%,
-    rgba(0, 200, 255, 0.8) 50%,
-    rgba(0, 150, 255, 0.9) 100%
+    #00F0FF 0%,
+    #00D4F0 25%,
+    #00C8E6 50%,
+    #00B8DC 75%,
+    #0096CC 100%
   );
   border-radius: 50%;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Enhanced shadow system for better depth perception */
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 16px rgba(0, 250, 255, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  z-index: 2;
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(0, 240, 255, 0.6),
+    0 1px 3px rgba(0, 240, 255, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 3;
+  position: relative;
+  /* Subtle border for definition */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(
+    45deg,
+    rgba(0, 240, 255, 0.4),
+    rgba(0, 240, 255, 0.1),
+    rgba(0, 240, 255, 0.4),
+    rgba(0, 240, 255, 0.1),
+    rgba(0, 240, 255, 0.4)
+  );
+  border-radius: 50%;
+  z-index: -1;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: blur(1px);
+}
+
+.toggle-slider:hover::before {
+  opacity: 1;
+  animation: quantum-pulse 2s ease-in-out infinite;
+  filter: blur(2px);
+}
+
+@keyframes quantum-pulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% {
+    transform: scale(1.05) rotate(90deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1) rotate(180deg);
+    opacity: 0.7;
+  }
+  75% {
+    transform: scale(1.05) rotate(270deg);
+    opacity: 0.5;
+  }
+}
+
+/* Enhanced quantum flow animation with better performance */
+@keyframes quantum-flow-optimized {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .ai-mode-toggle.agent .toggle-slider {
-  transform: translateX(32px);
+  transform: translateX(36px);
+  /* Enhanced agent mode gradient */
   background: linear-gradient(
     135deg,
-    rgba(255, 100, 50, 0.9) 0%,
-    rgba(255, 80, 80, 0.8) 50%,
-    rgba(255, 60, 120, 0.9) 100%
+    #8F00FF 0%,
+    #8500F5 25%,
+    #7A00E6 50%,
+    #7000DC 75%,
+    #6600CC 100%
   );
+  /* Enhanced shadow system for agent mode */
   box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 16px rgba(255, 100, 50, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(143, 0, 255, 0.6),
+    0 1px 3px rgba(143, 0, 255, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ai-mode-toggle.agent .toggle-slider::before {
+  background: linear-gradient(
+    45deg,
+    rgba(143, 0, 255, 0.4),
+    rgba(143, 0, 255, 0.1),
+    rgba(143, 0, 255, 0.4),
+    rgba(143, 0, 255, 0.1),
+    rgba(143, 0, 255, 0.4)
+  );
 }
 
 .toggle-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 12px;
-  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Enhanced drop shadow for better contrast */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(0, 240, 255, 0.3));
+  /* Ensure icon stays crisp */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Icon state transitions for better UX feedback */
+.ai-mode-toggle:hover .toggle-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 12px rgba(0, 240, 255, 0.5));
+}
+
+.ai-mode-toggle.agent:hover .toggle-icon {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 12px rgba(143, 0, 255, 0.5));
 }
 
 .toggle-labels {
@@ -821,18 +955,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 6px;
-  z-index: 1;
+  padding: 0 8px;
+  z-index: 2;
   overflow: hidden;
 }
 
 .toggle-label {
-  font-size: 7.5px;
-  font-weight: 800;
+  font-family: 'Orbitron', 'Inter', Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1px;
-  color: rgba(255, 255, 255, 0.75);
-  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  color: rgba(227, 246, 255, 0.8);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-user-select: none;
   user-select: none;
   pointer-events: none;
@@ -840,27 +975,38 @@
   flex-shrink: 0;
   display: block;
   line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Enhanced text shadow for better readability */
+  text-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(0, 240, 255, 0.4),
+    0 0 16px rgba(0, 240, 255, 0.2);
+  /* Better font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .toggle-label.active {
   opacity: 0;
   visibility: hidden;
+  transform: scale(0.8);
 }
 
 .toggle-label:not(.active) {
-  color: rgba(255, 255, 255, 0.8);
-  text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
-  font-weight: 600;
+  color: rgba(227, 246, 255, 0.9);
+  text-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(0, 240, 255, 0.4);
+  font-weight: 700;
   opacity: 1;
   visibility: visible;
+  transform: scale(1);
 }
 
 .toggle-label.left {
   text-align: center;
   position: absolute;
-  left: 2px;
-  width: 28px;
+  left: 4px;
+  width: 32px;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -868,13 +1014,13 @@
 .toggle-label.right {
   text-align: center;
   position: absolute;
-  right: 2px;
-  width: 28px;
+  right: 4px;
+  width: 32px;
   top: 50%;
   transform: translateY(-50%);
 }
 
-/* Animated background gradient */
+/* Enhanced quantum energy flow background */
 .toggle-track::before {
   content: '';
   position: absolute;
@@ -884,36 +1030,216 @@
   bottom: 0;
   background: linear-gradient(
     90deg,
-    rgba(0, 250, 255, 0.1) 0%,
-    transparent 50%,
-    rgba(255, 100, 50, 0.1) 100%
+    rgba(0, 240, 255, 0.12) 0%,
+    rgba(0, 240, 255, 0.06) 20%,
+    transparent 40%,
+    transparent 60%,
+    rgba(143, 0, 255, 0.06) 80%,
+    rgba(143, 0, 255, 0.12) 100%
   );
+  background-size: 200% 100%;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  border-radius: inherit;
 }
 
 .ai-mode-toggle:hover .toggle-track::before {
   opacity: 1;
+  animation: quantum-flow-optimized 2s ease-in-out infinite;
 }
 
-/* Mobile responsive design */
-@media (max-width: 768px) {
+/* Active state enhancement */
+.ai-mode-toggle:active .toggle-track {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+.ai-mode-toggle:active .toggle-slider {
+  transform: translateX(36px) scale(0.95);
+}
+
+.ai-mode-toggle.agent:active .toggle-slider {
+  transform: translateX(36px) scale(0.95);
+}
+
+@keyframes quantum-flow {
+  0%, 100% {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 240, 255, 0.08) 0%,
+      transparent 30%,
+      transparent 70%,
+      rgba(143, 0, 255, 0.08) 100%
+    );
+  }
+  50% {
+    background: linear-gradient(
+      90deg,
+      rgba(143, 0, 255, 0.08) 0%,
+      transparent 30%,
+      transparent 70%,
+      rgba(0, 240, 255, 0.08) 100%
+    );
+  }
+}
+
+/* Quantum particle effect */
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  width: 2px;
+  height: 2px;
+  background: rgba(0, 240, 255, 0.6);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.ai-mode-toggle:hover .toggle-track::after {
+  opacity: 1;
+  animation: quantum-particle 2s linear infinite;
+}
+
+@keyframes quantum-particle {
+  0% {
+    left: 10%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 90%;
+    opacity: 0;
+  }
+}
+
+/* Enhanced loading state for better UX */
+.ai-mode-toggle.loading .toggle-slider {
+  animation: loading-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+}
+
+/* Improved disabled state */
+.ai-mode-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ai-mode-toggle:disabled .toggle-track {
+  background: rgba(20, 20, 20, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.ai-mode-toggle:disabled .toggle-slider {
+  background: rgba(100, 100, 100, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* High contrast mode support for accessibility */
+@media (prefers-contrast: high) {
   .toggle-track {
-    width: 72px;
-    height: 32px;
+    border-width: 3px;
+    border-color: rgba(0, 240, 255, 0.8);
+  }
+  
+  .toggle-label {
+    color: rgba(255, 255, 255, 1);
+    text-shadow: 0 0 4px rgba(0, 0, 0, 1);
+  }
+  
+  .ai-mode-toggle:focus-visible .toggle-track {
+    outline: 3px solid rgba(0, 240, 255, 1);
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .ai-mode-toggle,
+  .toggle-track,
+  .toggle-slider,
+  .toggle-icon,
+  .toggle-label {
+    transition: none;
+    animation: none;
+  }
+  
+  .toggle-slider::before {
+    animation: none;
+  }
+  
+  .toggle-track::before,
+  .toggle-track::after {
+    animation: none;
+  }
+}
+
+/* Mobile responsive design - Enhanced Quantum Theme */
+@media (max-width: 768px) {
+  .ai-mode-toggle {
+    padding: 3px;
+    /* Ensure adequate touch target on mobile */
+    min-width: 48px;
+    min-height: 48px;
+  }
+  
+  .toggle-track {
+    width: 68px;
+    height: 34px;
+    border-radius: 18px;
+    /* Reduce blur intensity on mobile for performance */
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.2);
   }
   
   .toggle-slider {
     width: 28px;
     height: 28px;
+    top: 2px;
+    left: 2px;
   }
   
   .ai-mode-toggle.agent .toggle-slider {
-    transform: translateX(40px);
+    transform: translateX(34px);
   }
   
   .toggle-label {
-    font-size: 8px;
+    font-size: 7.5px;
+    letter-spacing: 0.4px;
+    width: 30px;
+  }
+  
+  .toggle-label.left {
+    left: 3px;
+  }
+  
+  .toggle-label.right {
+    right: 3px;
+  }
+  
+  .toggle-icon {
+    font-size: 12px;
   }
   
   .toggle-icon svg {
@@ -923,28 +1249,84 @@
 }
 
 @media (max-width: 480px) {
+  .ai-mode-toggle {
+    padding: 2px;
+    /* Maintain adequate touch target */
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
   .toggle-track {
-    width: 68px;
-    height: 30px;
+    width: 64px;
+    height: 32px;
+    border-radius: 16px;
+    border-width: 1.5px;
+    /* Further reduce blur for better performance on low-end devices */
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    backdrop-filter: blur(8px) saturate(1.1);
   }
   
   .toggle-slider {
     width: 26px;
     height: 26px;
+    top: 2px;
+    left: 2px;
   }
   
   .ai-mode-toggle.agent .toggle-slider {
-    transform: translateX(38px);
+    transform: translateX(32px);
   }
   
   .toggle-label {
     font-size: 7px;
     letter-spacing: 0.3px;
+    width: 28px;
+  }
+  
+  .toggle-label.left {
+    left: 2px;
+  }
+  
+  .toggle-label.right {
+    right: 2px;
+  }
+  
+  .toggle-icon {
+    font-size: 11px;
   }
   
   .toggle-icon svg {
     width: 10px;
     height: 10px;
+  }
+  
+  /* Optimize performance on mobile devices */
+  .toggle-slider:hover::before {
+    animation: none;
+  }
+  
+  .ai-mode-toggle:hover .toggle-track::before {
+    animation: none;
+    opacity: 0.5;
+  }
+  
+  .ai-mode-toggle:hover .toggle-track::after {
+    animation: none;
+  }
+  
+  /* Reduce shadow complexity on mobile */
+  .toggle-track {
+    box-shadow: 
+      0 2px 12px rgba(0, 0, 0, 0.4),
+      0 0 16px rgba(0, 240, 255, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  
+  .toggle-slider {
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 0 16px rgba(0, 240, 255, 0.4),
+      inset 0 1px 2px rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -1262,4 +1644,4 @@ button {
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
-} 
+}

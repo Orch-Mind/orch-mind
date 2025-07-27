@@ -173,7 +173,7 @@ Output JSON only:
     queries: string[],
     options: Record<string, any> = {}
   ): Promise<WebSearchResult[]> {
-    if (!window.electronAPI || !window.electronAPI.webSearch) {
+    if (!(window as any).electronAPI || !(window as any).electronAPI.webSearch) {
       if (this.uiService?.notifyWebSearchStep) {
         this.uiService.notifyWebSearchStep(
           "❌ Search unavailable",
@@ -201,7 +201,7 @@ Output JSON only:
       }
 
       // Use IPC to perform web search in main process
-      const results = await window.electronAPI.webSearch(queries, {
+      const results = await (window as any).electronAPI.webSearch(queries, {
         maxResults: options.maxResults || this.DEFAULT_MAX_RESULTS,
         extractContent: options.extractContent,
         maxContentResults: options.maxContentResults,

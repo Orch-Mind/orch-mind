@@ -1193,4 +1193,362 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   });
 
   console.log("📁 [IPC] File system handlers initialized");
+
+  // =====================================
+  // AGENT FILE SYSTEM OPERATIONS
+  // =====================================
+
+  // Write file (create or edit)
+  ipcMain.handle('fs-write-file', async (event, filePath: string, content: string) => {
+    try {
+      console.log(`📝 [AGENT] Writing file: ${filePath}`);
+      
+      // Ensure directory exists
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      // Write file
+      await fs.promises.writeFile(filePath, content, 'utf8');
+      
+      console.log(`✅ [AGENT] File written successfully: ${filePath}`);
+      return { success: true, message: `File written: ${filePath}` };
+    } catch (error) {
+      console.error(`❌ [AGENT] Failed to write file: ${filePath}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error writing file'
+      };
+    }
+  });
+
+  // Read file content
+  ipcMain.handle('fs-read-file', async (event, filePath: string) => {
+    try {
+      console.log(`📖 [AGENT] Reading file: ${filePath}`);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File does not exist: ${filePath}`);
+      }
+      
+      // Check if it's actually a file (not directory)
+      const stats = await fs.promises.stat(filePath);
+      if (!stats.isFile()) {
+        throw new Error(`Path is not a file: ${filePath}`);
+      }
+      
+      // Read file content
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      
+      console.log(`✅ [AGENT] File read successfully: ${filePath} (${content.length} characters)`);
+      return { 
+        success: true, 
+        content,
+        size: content.length,
+        path: filePath
+      };
+    } catch (error) {
+      console.error(`❌ [AGENT] Failed to read file: ${filePath}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error reading file'
+      };
+    }
+  });
+
+  // Delete file
+  ipcMain.handle('fs-delete-file', async (event, filePath: string) => {
+    try {
+      console.log(`🗑️ [AGENT] Deleting file: ${filePath}`);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File does not exist: ${filePath}`);
+      }
+      
+      // Delete file
+      await fs.promises.unlink(filePath);
+      
+      console.log(`✅ [AGENT] File deleted successfully: ${filePath}`);
+      return { success: true, message: `File deleted: ${filePath}` };
+    } catch (error) {
+      console.error(`❌ [AGENT] Failed to delete file: ${filePath}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error deleting file'
+      };
+    }
+  });
+
+  // Execute shell command
+  ipcMain.handle('shell-execute', async (event, command: string, workingDir?: string) => {
+    try {
+      console.log(`⚡ [AGENT] Executing command: ${command}`);
+      
+      const { spawn } = await import('child_process');
+      const { promisify } = await import('util');
+      
+      return new Promise((resolve) => {
+        const isWindows = process.platform === 'win32';
+        const shell = isWindows ? 'cmd' : 'bash';
+        const shellArgs = isWindows ? ['/c'] : ['-c'];
+        
+        const child = spawn(shell, [...shellArgs, command], {
+          cwd: workingDir || process.cwd(),
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        
+        child.stdout?.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        child.stderr?.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        child.on('close', (code) => {
+          console.log(`✅ [AGENT] Command completed with code: ${code}`);
+          resolve({
+            success: code === 0,
+            code,
+            stdout: stdout.trim(),
+            stderr: stderr.trim(),
+            message: `Command executed: ${command}`
+          });
+        });
+        
+        child.on('error', (error) => {
+          console.error(`❌ [AGENT] Command failed: ${command}`, error);
+          resolve({
+            success: false,
+            error: error.message,
+            stdout: stdout.trim(),
+            stderr: stderr.trim()
+          });
+        });
+      });
+    } catch (error) {
+      console.error(`❌ [AGENT] Failed to execute command: ${command}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error executing command'
+      };
+    }
+  });
+
+  // Search files in directory
+  ipcMain.handle('search-files', async (event, searchPath: string, query: string, extensions?: string[]) => {
+    try {
+      console.log(`🔍 [AGENT] Searching files in: ${searchPath} for: ${query}`);
+      
+      const results: Array<{ path: string; content: string; matches: number }> = [];
+      const defaultExtensions = ['.ts', '.tsx', '.js', '.jsx', '.py', '.md', '.txt', '.json', '.html', '.css'];
+      const searchExtensions = extensions || defaultExtensions;
+      
+      // Recursive file search function
+      const searchInDirectory = async (dir: string) => {
+        try {
+          const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+              // Skip common ignore directories
+              if (!['node_modules', '.git', 'dist', 'build', '.next'].includes(entry.name)) {
+                await searchInDirectory(fullPath);
+              }
+            } else if (entry.isFile()) {
+              // Check if file has valid extension
+              const ext = path.extname(entry.name).toLowerCase();
+              if (searchExtensions.includes(ext)) {
+                try {
+                  const content = await fs.promises.readFile(fullPath, 'utf8');
+                  const matches = (content.match(new RegExp(query, 'gi')) || []).length;
+                  
+                  if (matches > 0) {
+                    results.push({
+                      path: fullPath,
+                      content: content.substring(0, 500), // Limit content preview
+                      matches
+                    });
+                  }
+                } catch (readError) {
+                  // Skip files that can't be read
+                  console.warn(`⚠️ [AGENT] Could not read file: ${fullPath}`);
+                }
+              }
+            }
+          }
+        } catch (dirError) {
+          console.warn(`⚠️ [AGENT] Could not read directory: ${dir}`);
+        }
+      };
+      
+      await searchInDirectory(searchPath);
+      
+      console.log(`✅ [AGENT] Search completed. Found ${results.length} files with matches`);
+      return {
+        success: true,
+        results: results.sort((a, b) => b.matches - a.matches), // Sort by match count
+        message: `Search completed: found ${results.length} files`
+      };
+    } catch (error) {
+      console.error(`❌ [AGENT] Failed to search files in: ${searchPath}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error searching files',
+        results: []
+      };
+    }
+  });
+
+  console.log("🤖 [IPC] Agent file system operations initialized");
+
+  // File System Watcher APIs
+  const activeWatchers = new Map<string, fs.FSWatcher>();
+
+  // Start watching a directory for changes
+  ipcMain.handle('start-workspace-watcher', async (event, workspacePath: string) => {
+    try {
+      console.log(`👁️ [WATCHER] Starting file system watcher for: ${workspacePath}`);
+      
+      // Stop existing watcher if any
+      if (activeWatchers.has(workspacePath)) {
+        activeWatchers.get(workspacePath)?.close();
+        activeWatchers.delete(workspacePath);
+      }
+      
+      // Verify path exists and is directory
+      const stats = await fs.promises.stat(workspacePath);
+      if (!stats.isDirectory()) {
+        throw new Error('Path is not a directory');
+      }
+      
+      // Create file system watcher
+      const watcher = fs.watch(workspacePath, { recursive: true }, (eventType, filename) => {
+        if (filename) {
+          const fullPath = path.join(workspacePath, filename);
+          console.log(`📄 [WATCHER] File ${eventType}: ${fullPath}`);
+          
+          // Notify renderer process of file changes
+          const mainWindow = deps.getMainWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('workspace-file-changed', {
+              eventType, // 'rename' or 'change'
+              filename,
+              fullPath,
+              workspacePath
+            });
+          }
+        }
+      });
+      
+      // Handle watcher errors
+      watcher.on('error', (error) => {
+        console.error(`❌ [WATCHER] Error watching ${workspacePath}:`, error);
+        activeWatchers.delete(workspacePath);
+        
+        // Notify renderer of watcher error
+        const mainWindow = deps.getMainWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('workspace-watcher-error', {
+            workspacePath,
+            error: error.message
+          });
+        }
+      });
+      
+      // Store watcher reference
+      activeWatchers.set(workspacePath, watcher);
+      
+      console.log(`✅ [WATCHER] File system watcher started successfully for: ${workspacePath}`);
+      return {
+        success: true,
+        message: `File watcher started for ${workspacePath}`
+      };
+      
+    } catch (error) {
+      console.error(`❌ [WATCHER] Failed to start file watcher for: ${workspacePath}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error starting file watcher'
+      };
+    }
+  });
+
+  // Stop watching a directory
+  ipcMain.handle('stop-workspace-watcher', async (event, workspacePath: string) => {
+    try {
+      console.log(`🚫 [WATCHER] Stopping file system watcher for: ${workspacePath}`);
+      
+      const watcher = activeWatchers.get(workspacePath);
+      if (watcher) {
+        watcher.close();
+        activeWatchers.delete(workspacePath);
+        console.log(`✅ [WATCHER] File system watcher stopped for: ${workspacePath}`);
+        return {
+          success: true,
+          message: `File watcher stopped for ${workspacePath}`
+        };
+      } else {
+        console.log(`⚠️ [WATCHER] No active watcher found for: ${workspacePath}`);
+        return {
+          success: false,
+          error: 'No active watcher found for this path'
+        };
+      }
+    } catch (error) {
+      console.error(`❌ [WATCHER] Failed to stop file watcher for: ${workspacePath}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error stopping file watcher'
+      };
+    }
+  });
+
+  // Get list of currently watched directories
+  ipcMain.handle('get-active-watchers', async () => {
+    try {
+      const watchedPaths = Array.from(activeWatchers.keys());
+      console.log(`👁️ [WATCHER] Active watchers: ${watchedPaths.length}`);
+      return {
+        success: true,
+        watchedPaths
+      };
+    } catch (error) {
+      console.error(`❌ [WATCHER] Failed to get active watchers:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error getting active watchers',
+        watchedPaths: []
+      };
+    }
+  });
+
+  // Cleanup watchers on app exit
+  const cleanupWatchers = () => {
+    console.log(`🧙 [WATCHER] Cleaning up ${activeWatchers.size} active watchers...`);
+    for (const [path, watcher] of activeWatchers) {
+      try {
+        watcher.close();
+        console.log(`✅ [WATCHER] Closed watcher for: ${path}`);
+      } catch (error) {
+        console.error(`❌ [WATCHER] Error closing watcher for ${path}:`, error);
+      }
+    }
+    activeWatchers.clear();
+  };
+
+  // Register cleanup on app events
+  process.on('exit', cleanupWatchers);
+  process.on('SIGINT', cleanupWatchers);
+  process.on('SIGTERM', cleanupWatchers);
+
+  console.log("👁️ [IPC] File system watcher APIs initialized");
 }

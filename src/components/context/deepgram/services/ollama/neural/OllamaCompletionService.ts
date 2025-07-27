@@ -142,42 +142,141 @@ export class OllamaCompletionService implements ICompletionService {
               `🦙 [OllamaCompletion] Detected ${selectedModel}, using direct instruction format instead of native tools`
             );
 
-            const toolFunction = options.tools[0].function;
+            // Check if this is an agent context with multiple tools (Open/Closed Principle)
+            const isAgentContext = options.tools && options.tools.length > 1;
+            
+            let directInstructionPrompt: string;
+            
+            if (isAgentContext) {
+              // EXTENDED behavior for Agent Universal (multiple tools)
+              const availableFunctions = options.tools.map(tool => {
+                const func = tool.function;
+                const params = func.parameters.properties || {};
+                const requiredParams = Array.isArray(func.parameters.required)
+                  ? func.parameters.required
+                  : [];
 
-            // Build dynamic parameter list based on actual function schema
-            const params = toolFunction.parameters.properties || {};
-            const requiredParams = Array.isArray(
-              toolFunction.parameters.required
-            )
-              ? toolFunction.parameters.required
-              : [];
+                // Create example parameter format based on types
+                const paramExamples = Object.entries(params)
+                  .map(([key, prop]: [string, any]) => {
+                    const isRequired = requiredParams.includes(key);
+                    let example = "";
 
-            // Create example parameter format based on types
-            const paramExamples = Object.entries(params)
-              .map(([key, prop]: [string, any]) => {
-                const isRequired = requiredParams.includes(key);
-                let example = "";
+                    if (prop.type === "string") {
+                      example = `${key}:"<${prop.description || "text"}>"`;
+                    } else if (prop.type === "number") {
+                      const min = prop.minimum || 0;
+                      const max = prop.maximum || 1;
+                      example = `${key}:<${min}-${max}>`;
+                    } else if (prop.type === "boolean") {
+                      example = `${key}:<true/false>`;
+                    } else if (prop.type === "array") {
+                      example = `${key}:["item1", "item2"]`;
+                    } else if (prop.type === "object") {
+                      example = `${key}:{...}`;
+                    }
 
-                if (prop.type === "string") {
-                  example = `${key}:"<${prop.description || "text"}>"`;
-                } else if (prop.type === "number") {
-                  const min = prop.minimum || 0;
-                  const max = prop.maximum || 1;
-                  example = `${key}:<${min}-${max}>`;
-                } else if (prop.type === "boolean") {
-                  example = `${key}:<true/false>`;
-                } else if (prop.type === "array") {
-                  example = `${key}:["item1", "item2"]`;
-                } else if (prop.type === "object") {
-                  example = `${key}:{...}`;
-                }
+                    return isRequired ? example : `${example} (optional)`;
+                  })
+                  .filter(Boolean)
+                  .join(", ");
 
-                return isRequired ? example : `${example} (optional)`;
-              })
-              .filter(Boolean)
-              .join(", ");
+                return {
+                  name: func.name,
+                  description: func.description,
+                  paramExamples
+                };
+              });
 
-            const directInstructionPrompt = `You must respond with a function call in this exact format:
+              const functionExamples = availableFunctions
+                .map(f => `${f.name}(${f.paramExamples})`)
+                .join('\nOR\n');
+
+              const functionList = availableFunctions
+                .map(f => `- ${f.name}: ${f.description}`)
+                .join('\n');
+
+              directInstructionPrompt = `You must respond with a function call in this exact format:
+${functionExamples}
+
+Available functions:
+${functionList}
+
+You are a Universal AI Agent with access to the user's workspace.
+
+IMPORTANT: Choose the RIGHT tool for each task:
+
+🔸 FOR FILE OPERATIONS (creating, editing, deleting files):
+- createFile: When user wants to CREATE any file (.txt, .csv, .xlsx, .py, .java, etc)
+- editFile: When user wants to EDIT/MODIFY existing file content
+- deleteFile: When user wants to DELETE/REMOVE files
+
+🔸 FOR SYSTEM OPERATIONS:
+- executeCommand: ONLY for system commands (git, npm, ls, cd, etc) - NOT for file creation
+- searchFiles: When user wants to FIND/SEARCH files
+
+RULE: If user says "create file", "make file", "write file" → ALWAYS use createFile tool, NEVER executeCommand.
+RULE: If user says "run command", "execute", "install" → use executeCommand tool.
+
+📈 FILE FORMAT GUIDELINES:
+- CSV files (.csv): ALWAYS include header row + multiple data rows with realistic examples
+  Format: [Column1],[Column2],[Column3]...
+  ALWAYS use the column names requested by the user, not generic examples
+  Generate data that matches the user's specific request and context
+
+⚠️ IMPORTANT - Excel Files (.xlsx):
+- .xlsx files require binary Excel format - current system can only create text files
+- For tabular data, ALWAYS use .csv extension (works in Excel, Numbers, etc)
+- If user asks for .xlsx, create .csv instead and explain the format choice
+
+🎯 CSV CONTENT RULES:
+- Never create empty CSVs with only headers - always include 3-5 realistic data rows
+- Keep data CONSISTENT with the same schema throughout the file
+- Don't mix different table schemas (e.g., products + employees) in the same CSV
+- All data rows must match the header columns exactly
+
+- Code files: Include proper syntax, imports, and complete implementations
+- Text files: Use clear formatting and proper line breaks
+
+Always choose the most DIRECT tool for the user's request.`;
+            } else {
+              // ORIGINAL behavior for single tool contexts (backwards compatibility)
+              const toolFunction = options.tools[0].function;
+
+              // Build dynamic parameter list based on actual function schema
+              const params = toolFunction.parameters.properties || {};
+              const requiredParams = Array.isArray(
+                toolFunction.parameters.required
+              )
+                ? toolFunction.parameters.required
+                : [];
+
+              // Create example parameter format based on types
+              const paramExamples = Object.entries(params)
+                .map(([key, prop]: [string, any]) => {
+                  const isRequired = requiredParams.includes(key);
+                  let example = "";
+
+                  if (prop.type === "string") {
+                    example = `${key}:"<${prop.description || "text"}>"`;
+                  } else if (prop.type === "number") {
+                    const min = prop.minimum || 0;
+                    const max = prop.maximum || 1;
+                    example = `${key}:<${min}-${max}>`;
+                  } else if (prop.type === "boolean") {
+                    example = `${key}:<true/false>`;
+                  } else if (prop.type === "array") {
+                    example = `${key}:["item1", "item2"]`;
+                  } else if (prop.type === "object") {
+                    example = `${key}:{...}`;
+                  }
+
+                  return isRequired ? example : `${example} (optional)`;
+                })
+                .filter(Boolean)
+                .join(", ");
+
+              directInstructionPrompt = `You must respond with a function call in this exact format:
 ${toolFunction.name}(${paramExamples})
 
 Available function:
@@ -192,6 +291,7 @@ ${Object.entries(params)
     }`;
   })
   .join("\n")}`;
+            }
 
             // Modify the system message to include direct instructions
             if (
@@ -519,6 +619,10 @@ IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the 
           | undefined;
 
         // For gemma3 and qwen, we expect the tool call in the content
+        LoggingUtils.logInfo(
+          `🔍 [PARSER-DEBUG] Checking parser conditions: model=${selectedModel}, isGemma=${isGemma}, isQwen=${isQwen}, isLlama3=${isLlama3}, hasTools=${!!(options.tools && options.tools.length > 0)}, toolsCount=${options.tools?.length || 0}, hasContent=${!!content}, contentPreview=${content?.substring(0, 100)}`
+        );
+        
         if (
           (isGemma || isQwen || isLlama3) &&
           options.tools &&

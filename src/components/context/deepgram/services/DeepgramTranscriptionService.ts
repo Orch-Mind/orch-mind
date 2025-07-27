@@ -23,6 +23,7 @@ import { LoggingUtils } from "../utils/LoggingUtils";
 import { MemoryService } from "./memory/MemoryService";
 import { SimplePromptProcessor } from "./transcription/SimplePromptProcessor";
 import { TranscriptionPromptProcessor } from "./transcription/TranscriptionPromptProcessor";
+import { AgentPromptProcessor } from "./transcription/agent/AgentPromptProcessor";
 import { TranscriptionStorageService } from "./transcription/TranscriptionStorageService";
 import { SpeakerIdentificationService } from "./utils/SpeakerIdentificationService";
 import { UIUpdateService } from "./utils/UIUpdateService";
@@ -79,6 +80,7 @@ export class DeepgramTranscriptionService
   // Transcription prompt processors
   private transcriptionPromptProcessor: TranscriptionPromptProcessor;
   private simplePromptProcessor: SimplePromptProcessor;
+  private agentPromptProcessor: AgentPromptProcessor;
 
   constructor(
     setTexts: UIUpdater,
@@ -112,6 +114,15 @@ export class DeepgramTranscriptionService
 
     // Initialize the simple prompt processor for when quantum processing is disabled
     this.simplePromptProcessor = new SimplePromptProcessor(
+      this.storageService,
+      this.memoryService,
+      this.llmService,
+      this.uiService,
+      this.speakerService
+    );
+
+    // Initialize the agent prompt processor for agent mode
+    this.agentPromptProcessor = new AgentPromptProcessor(
       this.storageService,
       this.memoryService,
       this.llmService,
@@ -221,8 +232,8 @@ export class DeepgramTranscriptionService
   }
 
   /**
-   * Processes the transcription using the appropriate processor based on quantum processing setting
-   * Uses TranscriptionPromptProcessor for quantum processing or SimplePromptProcessor for direct processing
+   * Processes the transcription using the appropriate processor based on AI mode selection
+   * Routes between SimplePromptProcessor (Chat mode) and AgentPromptProcessor (Agent mode)
    * @param temporaryContext Optional additional context
    * @param conversationMessages Optional conversation messages from chat (including summaries)
    */
@@ -230,20 +241,58 @@ export class DeepgramTranscriptionService
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
+    // Get AI mode from storage (set by ChatInputArea toggle)
+    const aiMode = getOption<string>(STORAGE_KEYS.AI_MODE) || "chat";
     const useQuantumProcessing = this.isQuantumProcessingEnabled();
+    const transcriptionText = this.storageService.getUITranscriptionText() || "";
 
     console.log("🚀 [DEEPGRAM_SERVICE] sendTranscriptionPrompt called:", {
       temporaryContext,
       hasContext: !!temporaryContext,
       hasConversationMessages: !!conversationMessages,
       messageCount: conversationMessages?.length || 0,
+      aiMode,
       quantumProcessingEnabled: useQuantumProcessing,
+      transcriptionText: transcriptionText.substring(0, 100),
+      hasTranscriptionText: !!transcriptionText,
       timestamp: new Date().toISOString(),
     });
+    
+    // DEBUG: Check what mode is being used
+    console.log(`🔍 [DEBUG] AI Mode check: aiMode='${aiMode}', will use ${aiMode === "agent" ? "AgentPromptProcessor" : "SimplePromptProcessor/QuantumProcessing"}`);
 
     try {
-      if (useQuantumProcessing) {
-        LoggingUtils.logInfo("🧠 Using Quantum Processing (Neural mode)");
+      if (aiMode === "agent") {
+        // Agent mode: Use the refactored AgentPromptProcessor
+        LoggingUtils.logInfo("🤖 Using Agent Processing (Agent mode)");
+        console.log("📤 [DEEPGRAM_SERVICE] Calling AgentPromptProcessor");
+        console.log(`🔍 [DEBUG] AgentPromptProcessor initialized: ${!!this.agentPromptProcessor}`);
+        console.log(`🔍 [DEBUG] Transcription text for agent: "${transcriptionText}"`); 
+        
+        if (!this.agentPromptProcessor) {
+          console.error("❌ [ERROR] AgentPromptProcessor not initialized!");
+          throw new Error("AgentPromptProcessor not initialized");
+        }
+        
+        if (!transcriptionText?.trim()) {
+          console.warn("⚠️ [WARNING] No transcription text available for agent processing");
+          return;
+        }
+        
+        const response = await this.agentPromptProcessor.processAgentMessage(
+          this.storageService.getUITranscriptionText() || "",
+          temporaryContext,
+          conversationMessages
+        );
+        
+        console.log("✅ [DEEPGRAM_SERVICE] AgentPromptProcessor completed:", {
+          hasResponse: !!response.response,
+          hasActions: !!response.actions?.length,
+          actionCount: response.actions?.length || 0
+        });
+      } else if (useQuantumProcessing) {
+        // Chat mode with quantum processing: Use TranscriptionPromptProcessor
+        LoggingUtils.logInfo("🧠 Using Quantum Processing (Chat + Neural mode)");
         console.log("📤 [DEEPGRAM_SERVICE] Calling processWithOpenAI");
         await this.transcriptionPromptProcessor.processWithOpenAI(
           temporaryContext,
@@ -251,7 +300,8 @@ export class DeepgramTranscriptionService
         );
         console.log("✅ [DEEPGRAM_SERVICE] processWithOpenAI completed");
       } else {
-        LoggingUtils.logInfo("⚡ Using Simple Processing (Direct mode)");
+        // Chat mode with simple processing: Use SimplePromptProcessor
+        LoggingUtils.logInfo("⚡ Using Simple Processing (Chat + Direct mode)");
         console.log("📤 [DEEPGRAM_SERVICE] Calling processTranscription");
         await this.simplePromptProcessor.processTranscription(
           temporaryContext,
@@ -280,6 +330,8 @@ export class DeepgramTranscriptionService
     temporaryContext?: string,
     conversationMessages?: any[]
   ): Promise<void> {
+    // Get AI mode from storage (set by ChatInputArea toggle)
+    const aiMode = getOption<string>(STORAGE_KEYS.AI_MODE) || "chat";
     const useQuantumProcessing = this.isQuantumProcessingEnabled();
 
     console.log("💬 [DEEPGRAM_SERVICE] sendDirectMessage called:", {
@@ -287,12 +339,40 @@ export class DeepgramTranscriptionService
       hasContext: !!temporaryContext,
       hasConversationMessages: !!conversationMessages,
       messageCount: conversationMessages?.length || 0,
+      aiMode,
       quantumProcessingEnabled: useQuantumProcessing,
       timestamp: new Date().toISOString(),
     });
+    
+    // DEBUG: Check what mode is being used
+    console.log(`🔍 [DEBUG] AI Mode check in sendDirectMessage: aiMode='${aiMode}', will use ${aiMode === "agent" ? "AgentPromptProcessor" : useQuantumProcessing ? "TranscriptionPromptProcessor" : "SimplePromptProcessor"}`);
 
     try {
-      if (useQuantumProcessing) {
+      if (aiMode === "agent") {
+        // Agent mode: Use the refactored AgentPromptProcessor
+        LoggingUtils.logInfo("🤖 Using Agent Processing (Agent mode via sendDirectMessage)");
+        console.log("📤 [DEEPGRAM_SERVICE] Calling AgentPromptProcessor from sendDirectMessage");
+        console.log(`🔍 [DEBUG] AgentPromptProcessor initialized: ${!!this.agentPromptProcessor}`);
+        console.log(`🔍 [DEBUG] Message for agent: "${message}"`); 
+        
+        if (!this.agentPromptProcessor) {
+          console.error("❌ [ERROR] AgentPromptProcessor not initialized!");
+          throw new Error("AgentPromptProcessor not initialized");
+        }
+        
+        if (!message?.trim()) {
+          console.warn("⚠️ [WARNING] No message available for agent processing");
+          return;
+        }
+        
+        const response = await this.agentPromptProcessor.processAgentMessage(
+          message,
+          temporaryContext,
+          conversationMessages
+        );
+        
+        LoggingUtils.logInfo(`✅ [AGENT] Agent processing completed: ${response.response?.substring(0, 100)}...`);
+      } else if (useQuantumProcessing) {
         await this.transcriptionPromptProcessor.processDirectMessage(
           message,
           temporaryContext,

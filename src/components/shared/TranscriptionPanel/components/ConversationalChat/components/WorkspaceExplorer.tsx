@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState, useEffect } from "react";
+import { setOption, getOption, STORAGE_KEYS } from '../../../../../../services/StorageService';
 
 // File structure interface for our custom file explorer
 // We'll build a simple version first, then integrate the external library later
@@ -25,6 +26,136 @@ export const WorkspaceExplorer: React.FC = () => {
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [watcherActive, setWatcherActive] = useState(false);
+
+  // Carregar workspace salvo na inicialização
+  useEffect(() => {
+    const loadSavedWorkspace = async () => {
+      const savedWorkspacePath = getOption<string>(STORAGE_KEYS.WORKSPACE_PATH);
+      
+      if (savedWorkspacePath) {
+        try {
+          // Verificar se o diretório ainda existe
+          const result = await window.electronAPI.readDirectory(savedWorkspacePath);
+          
+          if (result.success) {
+            const workspaceName = savedWorkspacePath.split('/').pop() || 'Workspace';
+            
+            setSelectedWorkspace({
+              name: workspaceName,
+              path: savedWorkspacePath
+            });
+            setCurrentPath(savedWorkspacePath);
+            
+            // Carregar conteúdo do diretório
+            await loadDirectoryContents(savedWorkspacePath);
+            
+            console.log('📁 [WORKSPACE] Workspace salvo carregado:', savedWorkspacePath);
+          } else {
+            // Se o diretório não existe mais, limpar das configurações
+            setOption(STORAGE_KEYS.WORKSPACE_PATH, undefined);
+            console.warn('⚠️ [WORKSPACE] Workspace salvo não existe mais, removido das configurações');
+          }
+        } catch (error) {
+          console.error('❌ [WORKSPACE] Erro ao carregar workspace salvo:', error);
+          setOption(STORAGE_KEYS.WORKSPACE_PATH, undefined);
+        }
+      }
+    };
+    
+    loadSavedWorkspace();
+  }, []);
+
+  // Setup file system watcher when workspace changes
+  useEffect(() => {
+    if (!selectedWorkspace?.path || !(window as any).electronAPI?.startWorkspaceWatcher) {
+      return;
+    }
+
+    const setupWatcher = async () => {
+      try {
+        console.log('👁️ [WORKSPACE] Setting up file system watcher for:', selectedWorkspace.path);
+        
+        // Start file system watcher
+        const result = await (window as any).electronAPI.startWorkspaceWatcher(selectedWorkspace.path);
+        
+        if (result.success) {
+          setWatcherActive(true);
+          console.log('✅ [WORKSPACE] File system watcher started successfully');
+        } else {
+          console.error('❌ [WORKSPACE] Failed to start file system watcher:', result.error);
+        }
+      } catch (error) {
+        console.error('❌ [WORKSPACE] Error setting up file system watcher:', error);
+      }
+    };
+
+    setupWatcher();
+
+    // Cleanup function
+    return () => {
+      if (selectedWorkspace?.path && (window as any).electronAPI?.stopWorkspaceWatcher) {
+        (window as any).electronAPI.stopWorkspaceWatcher(selectedWorkspace.path)
+          .then((result: any) => {
+            if (result.success) {
+              setWatcherActive(false);
+              console.log('🚫 [WORKSPACE] File system watcher stopped');
+            }
+          })
+          .catch((error: any) => {
+            console.error('❌ [WORKSPACE] Error stopping file system watcher:', error);
+          });
+      }
+    };
+  }, [selectedWorkspace?.path]);
+
+  // Setup file change listeners
+  useEffect(() => {
+    if (!(window as any).electronAPI?.onWorkspaceFileChanged) {
+      return;
+    }
+
+    // Listen for file system changes
+    const unsubscribeFileChanged = (window as any).electronAPI.onWorkspaceFileChanged(
+      async (data: {
+        eventType: string;
+        filename: string;
+        fullPath: string;
+        workspacePath: string;
+      }) => {
+        console.log('📄 [WORKSPACE] File system change detected:', data);
+        
+        // Check if the change is in the current directory we're viewing
+        if (currentPath === data.workspacePath || data.fullPath.startsWith(currentPath)) {
+          console.log('🔄 [WORKSPACE] Refreshing current directory view...');
+          
+          // Add a small delay to ensure file system operations are complete
+          setTimeout(async () => {
+            try {
+              await loadDirectoryContents(currentPath);
+            } catch (error) {
+              console.error('❌ [WORKSPACE] Error refreshing directory:', error);
+            }
+          }, 100);
+        }
+      }
+    );
+
+    // Listen for watcher errors
+    const unsubscribeWatcherError = (window as any).electronAPI.onWorkspaceWatcherError?.(
+      (data: { workspacePath: string; error: string }) => {
+        console.error('❌ [WORKSPACE] File system watcher error:', data);
+        setWatcherActive(false);
+        // Optionally show user notification here
+      }
+    );
+
+    // Cleanup function
+    return () => {
+      unsubscribeFileChanged?.();
+      unsubscribeWatcherError?.();
+    };
+  }, [currentPath]);
 
   const handleSelectWorkspace = async () => {
     try {
@@ -56,6 +187,10 @@ export const WorkspaceExplorer: React.FC = () => {
         path: workspacePath
       });
       setCurrentPath(workspacePath);
+      
+      // Salvar o caminho do workspace nas configurações
+      setOption(STORAGE_KEYS.WORKSPACE_PATH, workspacePath);
+      console.log('💾 [WORKSPACE] Workspace salvo nas configurações:', workspacePath);
       
       // Load initial directory contents
       await loadDirectoryContents(workspacePath);

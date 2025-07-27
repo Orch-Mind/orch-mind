@@ -82,6 +82,9 @@ export const STORAGE_KEYS = {
   // ===== Configurações de debugging =====
   DEBUG_MODE: "debugMode",
   LOG_LEVEL: "logLevel",
+
+  // ===== Configurações de workspace =====
+  WORKSPACE_PATH: "workspacePath", // Caminho do workspace selecionado pelo usuário
 };
 
 // Symbolic: All user options are stored as a map/object in the selected storage cortex.

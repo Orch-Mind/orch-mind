@@ -91,10 +91,17 @@ export class ParserUtils {
    * DRY: Centralizado em um lugar
    */
   static readonly KNOWN_FUNCTIONS = [
+    // Brain area functions (legacy)
     "activateBrainArea",
     "decideCollapseStrategy",
     "enrichSemanticQueryBatch",
     "activateAndEnrichBrainArea",
+    // Agent tool functions (universal agent)
+    "createFile",
+    "editFile",
+    "deleteFile",
+    "executeCommand",
+    "searchFiles",
   ];
 
   /**

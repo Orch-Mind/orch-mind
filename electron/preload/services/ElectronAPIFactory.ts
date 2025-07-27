@@ -118,6 +118,34 @@ export class ElectronAPIFactory {
 
       // Crypto Manager
       ...this.createCryptoManager(),
+
+      // Generic invoke method for Agent operations
+      invoke: async (channel: string, ...args: any[]) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke(channel, ...args);
+          },
+          {
+            component: "AgentInvoker",
+            operation: channel,
+            severity: "medium",
+          }
+        );
+      },
+
+      // Cache Management
+      clearCache: async () => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            return await ipcRenderer.invoke('clear-cache');
+          },
+          {
+            component: "CacheManager",
+            operation: "clearCache",
+            severity: "medium",
+          }
+        );
+      },
     };
 
     this.logger.success("Neural Electron API composition completed");
@@ -1473,6 +1501,31 @@ export class ElectronAPIFactory {
           }
         );
       },
+
+      // Agent ActionExecutor APIs
+      invoke: async (channel: string, ...args: any[]) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`🔧 [API] Generic invoke: ${channel}`);
+            
+            const result = await ipcRenderer.invoke(channel, ...args);
+            
+            this.logger.debug(
+              `🔧 [API] Invoke result: ${channel} - ${result?.success ? 'success' : 'failed'}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemManager",
+            operation: "invoke",
+            severity: "medium",
+          }
+        );
+      },
+
+      // File System Watcher APIs
+      ...this.createFileSystemWatcher(),
     };
   }
 
@@ -1513,6 +1566,113 @@ export class ElectronAPIFactory {
             severity: "medium",
           }
         );
+      },
+    };
+  }
+
+  /**
+   * Create File System Watcher service methods
+   */
+  private createFileSystemWatcher() {
+    return {
+      startWorkspaceWatcher: async (workspacePath: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`👁️ [API] Starting workspace watcher: ${workspacePath}`);
+            
+            const result = await ipcRenderer.invoke('start-workspace-watcher', workspacePath);
+            
+            this.logger.debug(
+              `👁️ [API] Workspace watcher start result: ${result.success ? 'success' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemWatcher",
+            operation: "startWorkspaceWatcher",
+            severity: "medium",
+          }
+        );
+      },
+
+      stopWorkspaceWatcher: async (workspacePath: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`🚫 [API] Stopping workspace watcher: ${workspacePath}`);
+            
+            const result = await ipcRenderer.invoke('stop-workspace-watcher', workspacePath);
+            
+            this.logger.debug(
+              `🚫 [API] Workspace watcher stop result: ${result.success ? 'success' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemWatcher",
+            operation: "stopWorkspaceWatcher",
+            severity: "medium",
+          }
+        );
+      },
+
+      getActiveWatchers: async () => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`👁️ [API] Getting active watchers`);
+            
+            const result = await ipcRenderer.invoke('get-active-watchers');
+            
+            this.logger.debug(
+              `👁️ [API] Active watchers result: ${result.success ? result.watchedPaths?.length + ' watchers' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemWatcher",
+            operation: "getActiveWatchers",
+            severity: "low",
+          }
+        );
+      },
+
+      // Event listeners for file system changes
+      onWorkspaceFileChanged: (callback: (data: {
+        eventType: string;
+        filename: string;
+        fullPath: string;
+        workspacePath: string;
+      }) => void) => {
+        const handler = (_event: any, data: any) => {
+          this.logger.debug(`📄 [API] File changed event: ${data.eventType} - ${data.filename}`);
+          callback(data);
+        };
+        
+        ipcRenderer.on('workspace-file-changed', handler);
+        
+        // Return cleanup function
+        return () => {
+          ipcRenderer.removeListener('workspace-file-changed', handler);
+        };
+      },
+
+      onWorkspaceWatcherError: (callback: (data: {
+        workspacePath: string;
+        error: string;
+      }) => void) => {
+        const handler = (_event: any, data: any) => {
+          this.logger.error(`❌ [API] Workspace watcher error: ${data.error}`);
+          callback(data);
+        };
+        
+        ipcRenderer.on('workspace-watcher-error', handler);
+        
+        // Return cleanup function
+        return () => {
+          ipcRenderer.removeListener('workspace-watcher-error', handler);
+        };
       },
     };
   }
