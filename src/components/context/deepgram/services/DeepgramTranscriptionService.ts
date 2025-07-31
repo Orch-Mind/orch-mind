@@ -21,9 +21,9 @@ import { DefaultNeuralIntegrationService } from "../symbolic-cortex/integration/
 import { INeuralIntegrationService } from "../symbolic-cortex/integration/INeuralIntegrationService";
 import { LoggingUtils } from "../utils/LoggingUtils";
 import { MemoryService } from "./memory/MemoryService";
+import { AgentPromptProcessor } from "./transcription/agent/AgentPromptProcessor";
 import { SimplePromptProcessor } from "./transcription/SimplePromptProcessor";
 import { TranscriptionPromptProcessor } from "./transcription/TranscriptionPromptProcessor";
-import { AgentPromptProcessor } from "./transcription/agent/AgentPromptProcessor";
 import { TranscriptionStorageService } from "./transcription/TranscriptionStorageService";
 import { SpeakerIdentificationService } from "./utils/SpeakerIdentificationService";
 import { UIUpdateService } from "./utils/UIUpdateService";

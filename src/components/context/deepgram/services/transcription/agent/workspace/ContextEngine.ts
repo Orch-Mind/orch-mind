@@ -3,11 +3,11 @@
 
 import { LoggingUtils } from "../../../../utils/LoggingUtils";
 import {
+  DirectoryStructure,
+  FileType,
   WorkspaceContext,
   WorkspaceFile,
-  WorkspaceMetadata,
-  DirectoryStructure,
-  FileType
+  WorkspaceMetadata
 } from "../types/AgentTypes";
 
 /**

@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { LoggingUtils } from "../../../../utils/LoggingUtils";
-import { AgentMode, AgentAction, AgentResponse } from "../types/AgentTypes";
+import { AgentAction, AgentResponse } from "../types/AgentTypes";
 
 /**
  * Response Processor - Parses LLM responses and extracts actions
@@ -133,88 +133,24 @@ export class ResponseProcessor {
   buildSystemPrompt(mode: string, workspaceInfo: { languages: string[]; frameworks: string[] }): string {
     const basePrompt = "You are a helpful AI coding assistant with access to the user's workspace.";
     
-    const modeInstructions = this._getModeInstructions(mode);
+    const modeInstructions = this._getModeInstructions();
     const contextInfo = this._buildContextInfo(workspaceInfo);
     
     return `${basePrompt}\n\n${modeInstructions}\n\n${contextInfo}`;
   }
   
-  private _getModeInstructions(mode: string): string {
-    switch (mode) {
-      case 'universal':
-        return `## UNIVERSAL AGENT MODE - Full IDE Capabilities
+  private _getModeInstructions(): string {
+    return `You are a Universal AI Agent with full IDE capabilities.
 
-⚠️ **CRITICAL: You MUST respond using ONLY the structured command format below. NEVER use conversational responses like "I created..." or "Done!". Always use the exact command syntax.**
+Use the appropriate tools to complete user requests:
+- createFile: Create new files
+- editFile: Edit existing files  
+- deleteFile: Delete files
+- readFile: Read and analyze files
+- executeCommand: Run commands
+- searchFiles: Find files
 
-🎯 **REQUIRED RESPONSE FORMAT:**
-When the user asks you to create/edit/delete files or run commands, you MUST respond with these exact commands:
-
-**File Operations (REQUIRED FORMAT):**
-- CREATE FILE: path/to/file.ext
-  Content:
-  \`\`\`
-  file content here
-  \`\`\`
-
-- EDIT FILE: path/to/file.ext
-  Content:
-  \`\`\`
-  updated content here
-  \`\`\`
-
-- DELETE FILE: path/to/file.ext
-
-**Command Execution:**
-- EXECUTE: command here
-  Working Directory: /optional/path
-
-**File Search:**
-- SEARCH: search query
-
-**Examples of CORRECT responses:**
-User: "crie um arquivo teste.txt escrito Olá"
-Your response:
-CREATE FILE: teste.txt
-Content:
-\`\`\`
-Olá
-\`\`\`
-
-User: "delete the old file"
-Your response:
-DELETE FILE: old_file.txt
-
-❌ **NEVER respond like this:**
-- "Beleza! Criei um arquivo..."
-- "Done! I've created the file..."
-- "OK, arquivo criado com sucesso!"
-
-✅ **ALWAYS respond like this:**
-- CREATE FILE: filename.ext
-- EDIT FILE: filename.ext
-- DELETE FILE: filename.ext
-
-🔥 **REMEMBER: Use ONLY command format, never conversational text!**`;
-        
-      case 'chat':
-        return `## CHAT MODE - Collaborative
-- Suggest changes using SUGGEST: commands
-- Ask for user confirmation before major changes
-- Provide detailed explanations of proposed solutions
-- Focus on guidance and recommendations`;
-        
-      case 'analysis':
-        return `## ANALYSIS MODE - Read-only
-- Analyze code and provide insights
-- Answer questions about the codebase
-- Do not suggest file modifications
-- Focus on understanding and explanation`;
-        
-      default:
-        return `## UNIVERSAL AGENT MODE - Full IDE Capabilities
-- You have full access to create, edit, delete files and execute commands
-- Work like Cursor or Windsurf - be proactive and implement solutions directly`;
-    }
+Be direct and helpful. Use tools based on user intent.`;
   }
   
   private _buildContextInfo(workspaceInfo: { languages: string[]; frameworks: string[] }): string {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   getOption,
   setOption,
@@ -82,6 +82,25 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
     
     console.log(`🤖 [AI Mode] Switched to ${newMode.toUpperCase()} mode`);
   };
+
+  // 🔧 SOLUÇÃO: Listener reativo para sincronizar AI_MODE com storage
+  useEffect(() => {
+    const checkStorageSync = () => {
+      const storageMode = getOption<string>(STORAGE_KEYS.AI_MODE) as "chat" | "agent" || "chat";
+      if (storageMode !== aiMode) {
+        console.log(`🔄 [AI Mode Sync] Storage changed to ${storageMode.toUpperCase()}, updating UI`);
+        setAiMode(storageMode);
+      }
+    };
+
+    // Check immediately
+    checkStorageSync();
+
+    // Set up periodic check (fallback for edge cases)
+    const interval = setInterval(checkStorageSync, 1000);
+
+    return () => clearInterval(interval);
+  }, [aiMode]); // Depend on aiMode to avoid infinite loops
 
   const canSend =
     !!(chatState.inputMessage.trim() || transcriptionText.trim()) &&

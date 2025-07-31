@@ -2,13 +2,6 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 /**
- * Agent operation mode - Universal agent that handles all operations
- * Works like Cursor/Windsurf for any file in the selected workspace
- */
-export const AGENT_MODE = "universal" as const;
-export type AgentMode = typeof AGENT_MODE;
-
-/**
  * File type categories for processing
  */
 export enum FileType {
@@ -24,10 +17,11 @@ export enum FileType {
  * Agent action types
  */
 export interface AgentAction {
-  type: 'create' | 'edit' | 'delete' | 'execute' | 'search';
+  type: 'create' | 'edit' | 'delete' | 'execute' | 'search' | 'read';
   target: string;
   content?: string;
   workingDir?: string;
+  readContent?: string; // Content read from file for 'read' actions
 }
 
 /**

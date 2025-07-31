@@ -5,20 +5,20 @@
 // Symbolic: Processamento de completions e function calling com Ollama local
 import { OllamaToolConfigHelper } from "../../../../../../config/OllamaToolConfig";
 import {
-    STORAGE_KEYS,
-    getOption,
+  STORAGE_KEYS,
+  getOption,
 } from "../../../../../../services/StorageService";
 import { OllamaToolCallParser } from "../../../../../../utils/OllamaToolCallParser";
 import { IClientManagementService } from "../../../interfaces/openai/IClientManagementService";
 import {
-    ICompletionService,
-    ModelStreamResponse,
-    StreamingCallback,
+  ICompletionService,
+  ModelStreamResponse,
+  StreamingCallback,
 } from "../../../interfaces/openai/ICompletionService";
 import { LoggingUtils } from "../../../utils/LoggingUtils";
 import {
-    cleanThinkTags,
-    cleanThinkTagsFromToolCalls,
+  cleanThinkTags,
+  cleanThinkTagsFromToolCalls,
 } from "../../../utils/ThinkTagCleaner";
 
 /**
@@ -196,49 +196,47 @@ export class OllamaCompletionService implements ICompletionService {
                 .map(f => `- ${f.name}: ${f.description}`)
                 .join('\n');
 
-              directInstructionPrompt = `You must respond with a function call in this exact format:
-${functionExamples}
+              // 🚨 CORREÇÃO CRÍTICA: Usar apenas comandos estruturados para Gemma3, não function calling
+              // O modelo Gemma3 ignora instruções de function calling e responde conversacionalmente
+              // Precisamos usar comandos estruturados que o OllamaToolCallParser consegue detectar
+              directInstructionPrompt = `You are a Universal AI Agent. Respond with structured commands in this EXACT format:
 
-Available functions:
-${functionList}
+CREATE FILE: path/to/file.ext
+Content:
+\`\`\`
+file content here
+\`\`\`
 
-You are a Universal AI Agent with access to the user's workspace.
+OR
 
-IMPORTANT: Choose the RIGHT tool for each task:
+EDIT FILE: path/to/file.ext
+Content:
+\`\`\`
+new file content here
+\`\`\`
 
-🔸 FOR FILE OPERATIONS (creating, editing, deleting files):
-- createFile: When user wants to CREATE any file (.txt, .csv, .xlsx, .py, .java, etc)
-- editFile: When user wants to EDIT/MODIFY existing file content
-- deleteFile: When user wants to DELETE/REMOVE files
+OR
 
-🔸 FOR SYSTEM OPERATIONS:
-- executeCommand: ONLY for system commands (git, npm, ls, cd, etc) - NOT for file creation
-- searchFiles: When user wants to FIND/SEARCH files
+DELETE FILE: path/to/file.ext
 
-RULE: If user says "create file", "make file", "write file" → ALWAYS use createFile tool, NEVER executeCommand.
-RULE: If user says "run command", "execute", "install" → use executeCommand tool.
+OR
 
-📈 FILE FORMAT GUIDELINES:
-- CSV files (.csv): ALWAYS include header row + multiple data rows with realistic examples
-  Format: [Column1],[Column2],[Column3]...
-  ALWAYS use the column names requested by the user, not generic examples
-  Generate data that matches the user's specific request and context
+READ FILE: path/to/file.ext
 
-⚠️ IMPORTANT - Excel Files (.xlsx):
-- .xlsx files require binary Excel format - current system can only create text files
-- For tabular data, ALWAYS use .csv extension (works in Excel, Numbers, etc)
-- If user asks for .xlsx, create .csv instead and explain the format choice
+OR
 
-🎯 CSV CONTENT RULES:
-- Never create empty CSVs with only headers - always include 3-5 realistic data rows
-- Keep data CONSISTENT with the same schema throughout the file
-- Don't mix different table schemas (e.g., products + employees) in the same CSV
-- All data rows must match the header columns exactly
+EXECUTE: command here
+Working Directory: /path/to/dir (optional)
 
-- Code files: Include proper syntax, imports, and complete implementations
-- Text files: Use clear formatting and proper line breaks
+OR
 
-Always choose the most DIRECT tool for the user's request.`;
+SEARCH: search query here
+
+IMPORTANT: 
+- Always respond with ONLY the structured command, never with conversational text
+- Do not explain your reasoning or add extra text
+- Use the exact format shown above
+- Path should be relative to workspace root`;
             } else {
               // ORIGINAL behavior for single tool contexts (backwards compatibility)
               const toolFunction = options.tools[0].function;
@@ -348,23 +346,9 @@ ${Object.entries(params)
               .filter(Boolean)
               .join(", ");
 
-            const directInstructionPrompt = `You must respond with a function call in this exact format:
-${toolFunction.name}(${paramExamples})
+            const directInstructionPrompt = `Respond with: ${toolFunction.name}(${paramExamples})
 
-Available function:
-- ${toolFunction.name}: ${toolFunction.description}
-
-Parameters:
-${Object.entries(params)
-  .map(([key, prop]: [string, any]) => {
-    const isRequired = requiredParams.includes(key);
-    return `- ${key}: ${prop.description || prop.type}${
-      isRequired ? " (required)" : " (optional)"
-    }`;
-  })
-  .join("\n")}
-
-IMPORTANT: Do not use <think> tags or explain your reasoning. Simply output the function call.`;
+${toolFunction.description}`;
 
             // Modify the system message to include direct instructions
             if (

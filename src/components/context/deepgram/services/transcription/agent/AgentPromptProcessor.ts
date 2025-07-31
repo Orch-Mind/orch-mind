@@ -15,8 +15,6 @@ import { IUIUpdateService } from "../../../interfaces/utils/IUIUpdateService";
 
 // Refactored components (SRP: Single Responsibility Principle)
 import { 
-  AGENT_MODE,
-  AgentMode, 
   AgentAction,
   AgentResponse, 
   WorkspaceContext 
@@ -37,7 +35,6 @@ import { WebSearchAdapter } from "./core/WebSearchAdapter";
 export class AgentPromptProcessor {
   private isProcessing: boolean = false;
   private currentLanguage: string;
-  private readonly mode: AgentMode = AGENT_MODE;
   private workspaceContext: WorkspaceContext | null = null;
   
   // Specialized components (SRP: each handles one responsibility)
@@ -70,14 +67,6 @@ export class AgentPromptProcessor {
     this.memoryManager = new AgentMemoryManager(this.memoryService);
     this.responseProcessor = new ResponseProcessor();
     this.webSearchAdapter = new WebSearchAdapter(this.llmService, this.uiService);
-  }
-
-  /**
-   * Get agent operating mode
-   * KISS: Always returns universal mode
-   */
-  getMode(): AgentMode {
-    return this.mode;
   }
 
   /**
@@ -141,6 +130,11 @@ export class AgentPromptProcessor {
         LoggingUtils.logInfo(`🎯 [DEBUG] Executing ${result.actions.length} actions: ${JSON.stringify(result.actions)}`);
         await this.actionExecutor.executeActions(result.actions);
         LoggingUtils.logInfo(`✅ [DEBUG] Actions execution completed`);
+        
+        // CRITICAL: Reconstruct response AFTER actions are executed
+        const finalResponse = this._buildFinalResponse(result.actions);
+        LoggingUtils.logInfo(`🔧 [DEBUG] Final response reconstructed with action results: ${finalResponse.substring(0, 150)}...`);
+        result.response = finalResponse;
       } else {
         LoggingUtils.logWarning(`⚠️ [DEBUG] No actions found in agent response. Response: ${result.response?.substring(0, 200)}...`);
       }
@@ -246,7 +240,7 @@ export class AgentPromptProcessor {
    */
   private _buildAgentTools(): any[] {
     const registry = FunctionSchemaRegistry.getInstance();
-    const toolNames = ['createFile', 'editFile', 'deleteFile', 'executeCommand', 'searchFiles'];
+    const toolNames = ['createFile', 'editFile', 'deleteFile', 'readFile', 'executeCommand', 'searchFiles'];
     
     const tools: any[] = [];
     toolNames.forEach(toolName => {
@@ -264,18 +258,59 @@ export class AgentPromptProcessor {
   }
 
   /**
+   * Build final response AFTER actions are executed
+   * This ensures readContent and other action results are included
+   */
+  private _buildFinalResponse(actions: AgentAction[]): string {
+    if (!actions || actions.length === 0) {
+      return "✅ **Agente Universal - Processamento Completo**\n\n🎯 **Nenhuma ação foi necessária.**";
+    }
+
+    let finalResponse = "✅ **Agente Universal - Ações Executadas:**\n\n";
+    
+    actions.forEach((action, index) => {
+      switch (action.type) {
+        case 'create':
+          finalResponse += `${index + 1}. 📝 **Criado arquivo:** \`${action.target}\`\n`;
+          break;
+        case 'edit':
+          finalResponse += `${index + 1}. ✏️ **Editado arquivo:** \`${action.target}\`\n`;
+          break;
+        case 'delete':
+          finalResponse += `${index + 1}. 🗑️ **Deletado arquivo:** \`${action.target}\`\n`;
+          break;
+        case 'execute':
+          finalResponse += `${index + 1}. ⚡ **Executado comando:** \`${action.target}\`\n`;
+          break;
+        case 'search':
+          finalResponse += `${index + 1}. 🔍 **Busca realizada:** \`${action.target}\`\n`;
+          break;
+        case 'read':
+          finalResponse += `${index + 1}. 📖 **Arquivo lido:** \`${action.target}\`\n`;
+          LoggingUtils.logInfo(`🔍 [DEBUG] Building final response for read action. readContent exists: ${!!action.readContent}, length: ${action.readContent?.length || 0}`);
+          if (action.readContent) {
+            LoggingUtils.logInfo(`📝 [DEBUG] Adding readContent to final response: ${action.readContent.substring(0, 100)}...`);
+            finalResponse += `\n**Conteúdo do arquivo:**\n\`\`\`\n${action.readContent}\n\`\`\`\n`;
+          } else {
+            LoggingUtils.logWarning(`⚠️ [DEBUG] action.readContent is undefined in final response building!`);
+          }
+          break;
+        default:
+          finalResponse += `${index + 1}. ❓ **Ação desconhecida:** \`${action.type}\` em \`${action.target}\`\n`;
+      }
+    });
+    
+    finalResponse += "\n🎯 **Todas as ações foram processadas com sucesso!**";
+    return finalResponse;
+  }
+
+  /**
    * Build simplified system prompt for function calling
    * Focus on tool usage rather than text parsing
+   * NOTE: OllamaCompletionService already builds the full prompt, so we keep this minimal
    */
   private _buildFunctionCallingSystemPrompt(): string {
     return `You are a Universal AI Agent with access to the user's workspace.
-
-You have access to these tools:
-- createFile: Create new files with content
-- editFile: Edit existing files by replacing content
-- deleteFile: Delete files from workspace
-- executeCommand: Run shell commands
-- searchFiles: Search for files by query
 
 When the user asks you to perform file operations or commands, use the appropriate tools.
 You can use multiple tools in sequence to complete complex tasks.
@@ -369,8 +404,16 @@ Always be helpful and execute the user's requests directly using the available t
           });
           break;
           
+        case 'readFile':
+          actions.push({
+            type: 'read',
+            target: args.path
+          });
+          LoggingUtils.logInfo(`📖 [DEBUG] ReadFile action - Path: ${args.path}`);
+          break;
+          
         default:
-          LoggingUtils.logWarning(`⚠️ [AGENT] Unknown tool call: ${functionName}`);
+          LoggingUtils.logWarning(`⚠️ Unknown function: ${functionName}`);
       }
     });
     
@@ -398,6 +441,16 @@ Always be helpful and execute the user's requests directly using the available t
             break;
           case 'search':
             finalResponse += `${index + 1}. 🔍 **Busca realizada:** \`${action.target}\`\n`;
+            break;
+          case 'read':
+            finalResponse += `${index + 1}. 📖 **Arquivo lido:** \`${action.target}\`\n`;
+            LoggingUtils.logInfo(`🔍 [DEBUG] Processing read action. readContent exists: ${!!action.readContent}, length: ${action.readContent?.length || 0}`);
+            if (action.readContent) {
+              LoggingUtils.logInfo(`📝 [DEBUG] Adding readContent to response: ${action.readContent.substring(0, 100)}...`);
+              finalResponse += `\n**Conteúdo do arquivo:**\n\`\`\`\n${action.readContent}\n\`\`\`\n`;
+            } else {
+              LoggingUtils.logWarning(`⚠️ [DEBUG] action.readContent is undefined or empty!`);
+            }
             break;
         }
       });
@@ -435,11 +488,33 @@ Always be helpful and execute the user's requests directly using the available t
   ): any[] {
     const messages: any[] = [{ role: "system", content: systemPrompt }];
 
-    // Add conversation history if available (YAGNI: only when provided)
+    // 🎯 SIMPLIFICAÇÃO CRÍTICA: Apenas enviar últimas 10 mensagens para contexto
+    // A IA precisa ver o histórico recente para entender comandos implícitos como "adiciona mais 3"
     if (conversationMessages?.length) {
       const recentHistory = conversationMessages
-        .filter(msg => msg.role !== "system")
-        .slice(-10); // Keep last 10 messages
+        .filter(msg => {
+          // Filtrar system messages
+          if (msg.role === "system") return false;
+          
+          // 🚨 CORREÇÃO CRÍTICA: FILTRAR TODAS as mensagens assistant!
+          // O modelo está "aprendendo" a responder conversacionalmente ao ver as respostas anteriores
+          // Isso quebra a geração de comandos estruturados (EDIT FILE, CREATE FILE, etc.)
+          if (msg.role === "assistant") {
+            LoggingUtils.logInfo(`🗑️ [AGENT] Filtering assistant message to prevent contamination: ${msg.content.substring(0, 50)}...`);
+            return false; // Remover TODAS as mensagens assistant
+          }
+          
+          // 💬 Apenas mensagens USER são permitidas para contexto
+          // O contexto vem das mensagens do usuário: "edite funcionarios.csv" -> "adiciona mais 3"
+          if (msg.role === "user") {
+            LoggingUtils.logInfo(`💬 [AGENT] Including user message for context: ${msg.content.substring(0, 50)}...`);
+          }
+          
+          return true;
+        })
+        .slice(-10); // Manter últimas 10 mensagens limpas
+      
+      LoggingUtils.logInfo(`🧹 [AGENT] Filtered history: ${conversationMessages.length} -> ${recentHistory.length} messages`);
       messages.push(...recentHistory);
     }
 
@@ -515,12 +590,7 @@ Always be helpful and execute the user's requests directly using the available t
       (window as any).__clearProcessingStatus();
     }
   }
-
-  // Public utility methods (YAGNI: only essential getters)
-  getCurrentMode(): AgentMode {
-    return this.mode;
-  }
-
+  
   getWorkspaceContext(): WorkspaceContext | null {
     return this.workspaceContext;
   }

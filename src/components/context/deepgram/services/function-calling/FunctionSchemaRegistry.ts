@@ -361,6 +361,21 @@ export class FunctionSchemaRegistry {
       }
     });
 
+    this.register("readFile", {
+      name: "readFile",
+      description: "Read and display the complete content of an existing file. Use this when you need to VIEW, ANALYZE, or EXAMINE the actual content inside a file (e.g., 'read file.txt', 'analyze data.csv', 'show me what's in config.json')",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "File path relative to workspace root to read (e.g., 'src/components/Button.tsx', 'package.json', 'data.csv')"
+          }
+        },
+        required: ["path"]
+      }
+    });
+
     this.register("executeCommand", {
       name: "executeCommand",
       description: "Execute a shell command in the workspace",
@@ -382,13 +397,13 @@ export class FunctionSchemaRegistry {
 
     this.register("searchFiles", {
       name: "searchFiles",
-      description: "Search for files in the workspace using a query",
+      description: "Find and locate files in the workspace by name or pattern. Use this when you need to FIND, LOCATE, or DISCOVER files (e.g., 'find all .js files', 'search for components', 'locate files containing Auth'). Do NOT use this to read file content - use readFile instead.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "Search query to find files (can be filename, content, or pattern)"
+            description: "Search query to find files by name, pattern, or content keywords (e.g., 'Button.tsx', '*.css', 'authentication')"
           },
           fileType: {
             type: "string",

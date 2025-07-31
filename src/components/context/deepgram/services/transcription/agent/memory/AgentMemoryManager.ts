@@ -23,18 +23,28 @@ export class AgentMemoryManager {
   /**
    * Add message to conversation history
    * Based on SimplePromptProcessor pattern
+   * 🔧 SOLUÇÃO ARQUITETURAL: Nunca salvar system messages no histórico
    */
   addToHistory(role: string, content: string): void {
-    // Use same pattern as SimplePromptProcessor
+    // 🚨 CORREÇÃO CRÍTICA: Filtrar system messages como no SimplePromptProcessor
+    if (role === "system") {
+      console.log(`🧹 [AGENT_MEMORY] Blocking system message from history: ${content.substring(0, 50)}...`);
+      console.log(`🎯 [AGENT_MEMORY] System messages should be temporary only - not persisted in history`);
+      return; // NÃO salvar system messages no histórico
+    }
+    
+    // Use same pattern as SimplePromptProcessor - apenas user/assistant
     this.memoryService.addToConversationHistory({ role: role as any, content });
     
-    // Also keep local cache for compatibility
+    // Also keep local cache for compatibility (sem system messages)
     this.conversationHistory.push({ role, content });
     
     // YAGNI: Simple history size management
     if (this.conversationHistory.length > this.maxHistorySize) {
       this.conversationHistory = this.conversationHistory.slice(-this.maxHistorySize);
     }
+    
+    console.log(`✅ [AGENT_MEMORY] Added ${role} message to history (length: ${this.conversationHistory.length})`);
   }
 
   /**

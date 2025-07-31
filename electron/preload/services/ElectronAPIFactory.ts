@@ -1502,6 +1502,27 @@ export class ElectronAPIFactory {
         );
       },
 
+      readFile: async (filePath: string) => {
+        return this.errorHandler.wrapAsync(
+          async () => {
+            this.logger.debug(`📖 [API] Reading file: ${filePath}`);
+            
+            const result = await ipcRenderer.invoke("fs-read-file", filePath);
+            
+            this.logger.debug(
+              `📖 [API] Read file result: ${result.success ? 'success' : 'failed - ' + result.error}`
+            );
+            
+            return result;
+          },
+          {
+            component: "FileSystemManager",
+            operation: "readFile",
+            severity: "low",
+          }
+        );
+      },
+
       // Agent ActionExecutor APIs
       invoke: async (channel: string, ...args: any[]) => {
         return this.errorHandler.wrapAsync(

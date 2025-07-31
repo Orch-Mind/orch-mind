@@ -36,13 +36,13 @@ export class ActionExecutor {
     
     try {
       // Validate action type
-      const validActions = ['create', 'edit', 'delete', 'execute', 'search'];
+      const validActions = ['create', 'edit', 'delete', 'read', 'execute', 'search'];
       if (!validActions.includes(action.type)) {
         throw new Error(`Invalid action type: ${action.type}`);
       }
 
       // Parse and resolve target path for file operations
-      const resolvedTarget = ['create', 'edit', 'delete'].includes(action.type) 
+      const resolvedTarget = ['create', 'edit', 'delete', 'read'].includes(action.type) 
         ? this._resolveTargetPath(action.target)
         : action.target;
       
@@ -61,6 +61,11 @@ export class ActionExecutor {
           break;
         case 'search':
           await this._searchFiles(action.target, this.workspaceRoot || undefined);
+          break;
+        case 'read':
+          const readContent = await this._readFile(resolvedTarget, action);
+          action.readContent = readContent;
+          LoggingUtils.logInfo(`📝 [DEBUG] Set action.readContent: ${readContent.substring(0, 100)}...`);
           break;
         default:
           LoggingUtils.logWarning(`⚠️ Unknown action type: ${action.type}`);
@@ -222,6 +227,49 @@ export class ActionExecutor {
         workspaceRoot: this.workspaceRoot
       })}`);
       this._updateUI(`❌ Failed to delete: ${filePath}`);
+      throw error;
+    }
+  }
+  
+  private async _readFile(filePath: string, action?: AgentAction): Promise<string> {
+    LoggingUtils.logInfo(`📖 Reading file: ${filePath}`);
+    this._updateUI(`Reading file: ${filePath}`);
+    
+    try {
+      if (!(window as any).electronAPI) {
+        throw new Error("Electron API not available");
+      }
+      
+      // Validate file path
+      if (!filePath || filePath.trim() === '') {
+        throw new Error('Invalid file path provided');
+      }
+      
+      // Use the specific file system method from IPC handlers
+      const result = await (window as any).electronAPI.invoke('fs-read-file', filePath);
+      
+      if (result.success) {
+        LoggingUtils.logInfo(`✅ File read successfully: ${filePath}`);
+        LoggingUtils.logInfo(`📋 Content preview: ${result.content.substring(0, 200)}${result.content.length > 200 ? '...' : ''}`);
+        LoggingUtils.logInfo(`📊 File size: ${result.size} characters`);
+        this._updateUI(`✅ Read: ${filePath} (${result.size} chars)`);
+        
+        // Store the read content in the action for response building
+        if (action) {
+          action.readContent = result.content;
+          LoggingUtils.logInfo(`💾 [DEBUG] Stored readContent in action: ${result.content.substring(0, 100)}...`);
+        } else {
+          LoggingUtils.logWarning(`⚠️ [DEBUG] No action provided to store readContent!`);
+        }
+        
+        // Return the content
+        return result.content;
+      } else {
+        throw new Error(result.error || 'Unknown error reading file');
+      }
+    } catch (error) {
+      LoggingUtils.logError(`❌ Failed to read file: ${filePath}`, error);
+      this._updateUI(`❌ Failed to read: ${filePath}`);
       throw error;
     }
   }

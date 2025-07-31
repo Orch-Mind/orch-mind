@@ -386,11 +386,23 @@ export class MessageProcessor {
       return true;
     }
 
-    // Verifica duplicação nas mensagens atuais (procura por assistant agora!)
+    // 🚨 DEBUG: Verifica duplicação nas mensagens atuais
     const isDuplicateInCurrent = currentMessages.some(
-      (msg) =>
-        (msg.type === "system" || msg.type === "assistant") &&
-        this.normalizeForComparison(msg.content) === normalizedText
+      (msg) => {
+        const isMatch = (msg.type === "system" || msg.type === "assistant") &&
+          this.normalizeForComparison(msg.content) === normalizedText;
+        
+        if (isMatch) {
+          console.log("🔍 [isDuplicate] MATCH in currentMessages:", {
+            msgType: msg.type,
+            msgContent: msg.content.substring(0, 100),
+            normalizedMsg: this.normalizeForComparison(msg.content),
+            normalizedText: normalizedText
+          });
+        }
+        
+        return isMatch;
+      }
     );
 
     if (isDuplicateInCurrent) {
@@ -460,19 +472,20 @@ export class MessageProcessor {
   }
 
   /**
-   * Normaliza texto para comparação removendo diferenças de formatação
-   * Remove espaços extras, quebras de linha múltiplas e normaliza espaços
-   * Adiciona espaços após pontuação quando necessário
-   */
-  private normalizeForComparison(text: string): string {
-    // Aggressively normalize by removing all non-alphanumeric characters,
-    // making comparisons robust against minor spacing, punctuation, and casing differences.
-    return (
-      text
-        .trim()
-        .toLowerCase()
-        // Replaces all non-alphanumeric characters with an empty string
-        .replace(/[^a-z0-9]/gi, "")
-    );
-  }
+ * Normaliza texto para comparação removendo diferenças de formatação
+ * Remove espaços extras, quebras de linha múltiplas e normaliza espaços
+ * 🚨 CORREÇÃO: Normalização menos agressiva para evitar falsos positivos
+ */
+private normalizeForComparison(text: string): string {
+  // 🎯 CORREÇÃO: Normalização menos agressiva que preserva diferenças essenciais
+  return text
+    .trim()
+    .toLowerCase()
+    // Remove apenas espaços extras e quebras de linha, preservando pontuação e caracteres especiais
+    .replace(/\s+/g, ' ') // Normaliza espaços múltiplos para um único espaço
+    .replace(/\n+/g, ' ') // Converte quebras de linha em espaços
+    // Preserva emojis, asteriscos, pontos, vírgulas e outros caracteres importantes
+    // que podem diferenciar mensagens do agente
+    .replace(/[\r\t]/g, ''); // Remove apenas tabs e carriage returns
+}
 }

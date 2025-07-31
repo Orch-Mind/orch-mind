@@ -9,6 +9,7 @@ import { DirectCallParser } from "./ollama-parsers/parsers/DirectCallParser";
 import { JSONArrayParser } from "./ollama-parsers/parsers/JSONArrayParser";
 import { MarkdownJSONParser } from "./ollama-parsers/parsers/MarkdownJSONParser";
 import { StringJSONParser } from "./ollama-parsers/parsers/StringJSONParser";
+import { StructuredCommandParser } from "./ollama-parsers/parsers/StructuredCommandParser";
 import { ToolCallsFormatParser } from "./ollama-parsers/parsers/ToolCallsFormatParser";
 import { XMLParser } from "./ollama-parsers/parsers/XMLParser";
 import { ParserUtils } from "./ollama-parsers/utils/ParserUtils";
@@ -35,6 +36,7 @@ export class OllamaToolCallParser {
     // Lista de parsers em ordem de prioridade
     // SOLID: Facilmente extensível com novos parsers
     this.parsers = [
+      new StructuredCommandParser(), // 🚀 NOVO: Parser para comandos estruturados (CREATE FILE:, EDIT FILE:, etc)
       new MarkdownJSONParser(),
       new StringJSONParser(),
       new JSONArrayParser(),

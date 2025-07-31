@@ -100,6 +100,7 @@ export class ParserUtils {
     "createFile",
     "editFile",
     "deleteFile",
+    "readFile",
     "executeCommand",
     "searchFiles",
   ];
