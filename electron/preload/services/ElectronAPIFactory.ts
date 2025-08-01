@@ -90,7 +90,7 @@ export class ElectronAPIFactory {
       ...this.createImportManager(),
 
       // Ollama Manager (as nested object)
-      ollama: this.createOllamaManager(),
+      ...this.createOllamaManager(),
 
       // DuckDB Commands (sandboxed version via IPC)
       duckdbCommand: duckdbService.duckdbCommand.bind(duckdbService),

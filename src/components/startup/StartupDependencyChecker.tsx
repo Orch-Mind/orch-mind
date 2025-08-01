@@ -125,12 +125,12 @@ export const StartupDependencyChecker: React.FC = () => {
             
             try {
               // Verificar se temos a API para iniciar serviços
-              if (!window.electronAPI?.ollama?.startService) {
+              if (!window.electronAPI?.startService) {
                 throw new Error('startService API not available in Electron');
               }
               
               // Use Electron API to start the service
-              const startResult = await window.electronAPI.ollama.startService();
+              const startResult = await window.electronAPI.startService();
               
               if (startResult.success) {
                 // Verify using HTTP direct connection to confirm
@@ -313,8 +313,8 @@ export const StartupDependencyChecker: React.FC = () => {
           setState(prev => ({ ...prev, installationProgress: 'Starting Ollama service automatically...' }));
           
           // Check if auto-start API is available
-          if (window.electronAPI?.ollama?.startService) {
-            const startResult = await window.electronAPI.ollama.startService();
+          if (window.electronAPI?.startService) {
+            const startResult = await window.electronAPI.startService();
             
             if (startResult.success) {
               // Wait for service to stabilize

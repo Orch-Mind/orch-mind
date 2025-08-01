@@ -352,13 +352,12 @@ export interface IElectronAPI
     IAudioProcessor,
     IEnvironmentManager,
     IImportManager,
+    IOllamaManager,
     IDuckDBCommander,
     IP2PShareManager,
     ILoRAMergeManager,
     IWebSearchManager {
-  
-  // Ollama Manager as nested object
-  ollama: IOllamaManager;
+
   // Legacy support for existing vector databases
   queryPinecone(
     embedding: number[],

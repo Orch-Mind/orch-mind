@@ -245,7 +245,7 @@ export interface ElectronAPI {
   }>;
 
   // Ollama APIs
-  ollama?: {
+
     listModels: () => Promise<
       Array<{ name: string; id: string; size?: string }>
     >;
@@ -283,7 +283,6 @@ export interface ElectronAPI {
       message?: string;
       error?: string;
     }>;
-  };
 
   listModels(): Promise<OllamaModel[]>;
   getAvailableModels(): Promise<OllamaModel[]>;
