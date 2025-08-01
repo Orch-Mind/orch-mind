@@ -161,6 +161,11 @@ export interface IOllamaManager {
     message?: string;
     error?: string;
   }>;
+  startService(): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }>;
 }
 
 // Dependency Management Types (Ollama only)
@@ -343,10 +348,12 @@ export interface IElectronAPI
     IEnvironmentManager,
     IImportManager,
     IDuckDBCommander,
-    IOllamaManager,
     IP2PShareManager,
     ILoRAMergeManager,
     IWebSearchManager {
+  
+  // Ollama Manager as nested object
+  ollama: IOllamaManager;
   // Legacy support for existing vector databases
   queryPinecone(
     embedding: number[],

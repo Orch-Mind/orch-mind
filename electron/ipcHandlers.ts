@@ -622,6 +622,65 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   });
 
+  // Start Ollama service
+  ipcMain.handle("ollama-start-service", async () => {
+    try {
+      console.log("🚀 [IPC] Starting Ollama service...");
+      
+      const { spawn } = require('child_process');
+      const os = require('os');
+      
+      let command: string;
+      let args: string[];
+      
+      // Platform-specific command setup
+      if (os.platform() === 'win32') {
+        command = 'cmd';
+        args = ['/c', 'start', '/b', 'ollama', 'serve'];
+      } else {
+        command = 'nohup';
+        args = ['ollama', 'serve'];
+      }
+      
+      // Start the service in background
+      const ollamaProcess = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      
+      // Detach the process so it runs independently
+      ollamaProcess.unref();
+      
+      console.log("🚀 [IPC] Ollama service start command executed");
+      
+      // Wait a moment and test connection
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const isRunning = await ollamaClient.testConnection();
+      
+      if (isRunning) {
+        console.log("✅ [IPC] Ollama service started successfully!");
+        return {
+          success: true,
+          message: "Ollama service started successfully"
+        };
+      } else {
+        console.log("⚠️ [IPC] Ollama service start command executed but connection test failed");
+        return {
+          success: false,
+          error: "Service start command executed but connection test failed. Please wait a moment and try again."
+        };
+      }
+      
+    } catch (error) {
+      console.error("❌ [IPC] Error starting Ollama service:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
   // Handler for the realtime-transcription event sent by DeepgramConnectionService
   ipcMain.on("realtime-transcription", (event, text) => {
     try {

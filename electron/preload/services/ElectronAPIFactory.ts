@@ -89,8 +89,8 @@ export class ElectronAPIFactory {
       // Import Management
       ...this.createImportManager(),
 
-      // Ollama Manager
-      ...this.createOllamaManager(),
+      // Ollama Manager (as nested object)
+      ollama: this.createOllamaManager(),
 
       // DuckDB Commands (sandboxed version via IPC)
       duckdbCommand: duckdbService.duckdbCommand.bind(duckdbService),
@@ -406,6 +406,17 @@ export class ElectronAPIFactory {
             component: "OllamaManager",
             operation: "testConnection",
             severity: "low",
+          }
+        );
+      },
+
+      startService: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("ollama-start-service"),
+          {
+            component: "OllamaManager",
+            operation: "startService",
+            severity: "medium",
           }
         );
       },

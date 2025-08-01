@@ -278,6 +278,11 @@ export interface ElectronAPI {
       running?: boolean;
       error?: string;
     }>;
+    startService: () => Promise<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>;
   };
 
   listModels(): Promise<OllamaModel[]>;
