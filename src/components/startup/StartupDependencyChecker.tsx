@@ -1,60 +1,104 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StartupModelChecker } from './StartupModelChecker';
-import { OllamaService } from '../shared/TranscriptionPanel/components/settings/api/OllamaSettings/services/ollamaService';
+
+interface DependencyStatus {
+  installed: boolean;
+  error?: string;
+}
 
 interface StartupDependencyCheckerState {
   isCheckingDependencies: boolean;
-  dependenciesValid: boolean;
+  dependencies: {
+    ollama: DependencyStatus;
+    python: DependencyStatus;
+  };
+  allDependenciesValid: boolean;
   isInstalling: boolean;
   installationProgress: string;
   error: string | null;
-  showManualInstructions: boolean;
   isBrewLocked: boolean;
-  lastAttemptTime: number;
-  skipAutoInstall: boolean;
 }
 
 export const StartupDependencyChecker: React.FC = () => {
   const [state, setState] = useState<StartupDependencyCheckerState>({
     isCheckingDependencies: true,
-    dependenciesValid: false,
+    dependencies: {
+      ollama: { installed: false },
+      python: { installed: false }
+    },
+    allDependenciesValid: false,
     isInstalling: false,
     installationProgress: '',
     error: null,
-    showManualInstructions: false,
-    isBrewLocked: false,
-    lastAttemptTime: 0,
-    skipAutoInstall: false
+    isBrewLocked: false
   });
 
-  // Ref para prevenir execuções simultâneas
+  // Ref to prevent simultaneous executions
   const isAttemptingInstallRef = useRef(false);
 
-  const checkOllamaDependency = async () => {
+  // Helper function to render dependency status (DRY principle)
+  const renderDependencyStatus = (name: string, installed: boolean) => (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-600 dark:text-gray-300">{name}:</span>
+      <span className={`font-medium ${
+        installed 
+          ? 'text-green-600 dark:text-green-400' 
+          : 'text-red-600 dark:text-red-400'
+      }`}>
+        {installed ? '✅ Installed' : '❌ Not Installed'}
+      </span>
+    </div>
+  );
+
+  const checkAllDependencies = async () => {
     try {
-      console.log('🚀 [StartupDependencyChecker] === STARTING DEPENDENCY CHECK ===');
       setState(prev => ({
         ...prev,
         isCheckingDependencies: true,
-        error: null,
-        showManualInstructions: false
+        error: null
       }));
 
-      // Primeiro, verifica usando a API do Electron
+      // Check using Electron API
       if (window.electronAPI?.checkDependencies) {
-        console.log('🔧 [StartupDependencyChecker] Checking dependencies via Electron API...');
         const dependencyStatus = await window.electronAPI.checkDependencies();
-        console.log('🔍 [StartupDependencyChecker] Dependency status result:', dependencyStatus);
         
-        if (dependencyStatus.ollama?.installed) {
-          console.log('🔍 [StartupDependencyChecker] Ollama binary found, verifying service is running...');
+        // Update individual dependency status
+        const updatedDependencies = {
+          ollama: {
+            ...state.dependencies.ollama,
+            installed: dependencyStatus.ollama?.installed || false,
+            needsInstall: !dependencyStatus.ollama?.installed
+          },
+          python: {
+            ...state.dependencies.python,
+            installed: (dependencyStatus as any).python?.installed || false,
+            needsInstall: !(dependencyStatus as any).python?.installed
+          }
+        };
+        
+        setState(prev => ({
+          ...prev,
+          dependencies: updatedDependencies
+        }));
+        
+        // Check if all dependencies are installed
+        const allDependenciesInstalled = updatedDependencies.ollama.installed && updatedDependencies.python.installed;
+        
+        if (!allDependenciesInstalled) {
+          // Some dependencies need to be installed
+          const missingDependencies = [];
+          if (!updatedDependencies.ollama.installed) missingDependencies.push('Ollama');
+          if (!updatedDependencies.python.installed) missingDependencies.push('Python');
           
-          // Verificar se o serviço está realmente rodando usando teste HTTP direto
-          // (Electron API pode mascarar erros retornando array vazio)
+          // Go to automatic installation flow
+          await attemptAutoInstallation(missingDependencies);
+          return;
+        }
+        
+        // If Python is OK but Ollama needs service verification
+        if (dependencyStatus.ollama?.installed) {
+          // Test direct HTTP connection to Ollama service
           try {
-            console.log('🔍 [StartupDependencyChecker] Testing HTTP direct connection to Ollama service...');
-            
-            // Testar conexão HTTP direta ao serviço Ollama (mesma que StartupModelChecker usa)
             const response = await fetch('http://localhost:11434/api/tags', {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
@@ -62,23 +106,19 @@ export const StartupDependencyChecker: React.FC = () => {
             
             if (response.ok) {
               const data = await response.json();
-              console.log('✅ [StartupDependencyChecker] HTTP direct connection successful! Ollama service is running.');
-              console.log('🔍 [StartupDependencyChecker] Available models:', data.models?.length || 0);
               
               setState(prev => ({
                 ...prev,
                 isCheckingDependencies: false,
-                dependenciesValid: true,
+                allDependenciesValid: true,
                 error: null
               }));
-              console.log('✅ [StartupDependencyChecker] === DEPENDENCY CHECK PASSED - LAUNCHING MODEL CHECKER ===');
               return;
             } else {
               throw new Error(`HTTP response not OK: ${response.status}`);
             }
           } catch (serviceError) {
             console.error('❌ [StartupDependencyChecker] HTTP direct connection failed:', serviceError);
-            console.log('🚀 [StartupDependencyChecker] Ollama binary installed but service not running - attempting automatic startup...');
             
             // Tentar iniciar o serviço Ollama automaticamente
             setState(prev => ({ ...prev, installationProgress: 'Inicializando serviço Ollama automaticamente...' }));
@@ -86,18 +126,14 @@ export const StartupDependencyChecker: React.FC = () => {
             try {
               // Verificar se temos a API para iniciar serviços
               if (!window.electronAPI?.ollama?.startService) {
-                throw new Error('API startService não disponível no Electron');
+                throw new Error('startService API not available in Electron');
               }
               
-              console.log('🚀 [StartupDependencyChecker] Starting Ollama service via Electron API...');
-              
-              // Usar a API real do Electron para iniciar o serviço
+              // Use Electron API to start the service
               const startResult = await window.electronAPI.ollama.startService();
               
               if (startResult.success) {
-                console.log('✅ [StartupDependencyChecker] Ollama service started successfully via Electron API!');
-                
-                // Verificar novamente usando HTTP direto para confirmar
+                // Verify using HTTP direct connection to confirm
                 try {
                   const testResponse = await fetch('http://localhost:11434/api/tags', {
                     method: 'GET',
@@ -106,15 +142,14 @@ export const StartupDependencyChecker: React.FC = () => {
                   
                   if (testResponse.ok) {
                     await testResponse.json();
-                    console.log('✅ [StartupDependencyChecker] Service confirmed accessible via HTTP');
                     
                     setState(prev => ({
                       ...prev,
                       isCheckingDependencies: false,
-                      dependenciesValid: true,
+                      allDependenciesValid: true,
+                      installationProgress: 'Service auto-started successfully!',
                       error: null
                     }));
-                    console.log('✅ [StartupDependencyChecker] === DEPENDENCY CHECK PASSED - SERVICE AUTO-STARTED ===');
                     return;
                   } else {
                     throw new Error('HTTP test failed after service start');
@@ -130,20 +165,20 @@ export const StartupDependencyChecker: React.FC = () => {
                       setState(prev => ({
                         ...prev,
                         isCheckingDependencies: false,
-                        dependenciesValid: true,
+                        allDependenciesValid: true,
                         error: null
                       }));
-                      console.log('✅ [StartupDependencyChecker] === SERVICE CONFIRMED ON RETRY ===');
+
                       return;
                     }
                   } catch (retryError) {
                     console.error('❌ [StartupDependencyChecker] Service started but still not accessible:', retryError);
                   }
                   
-                  throw new Error('Serviço iniciado mas não respondeu ao teste HTTP');
+                  throw new Error('Service started but did not respond to HTTP test');
                 }
               } else {
-                throw new Error(startResult.error || 'Falha ao iniciar serviço Ollama');
+                throw new Error(startResult.error || 'Failed to start Ollama service');
               }
               
             } catch (autoStartError) {
@@ -153,7 +188,7 @@ export const StartupDependencyChecker: React.FC = () => {
               setState(prev => ({
                 ...prev,
                 isCheckingDependencies: false,
-                error: 'Ollama foi instalado com sucesso, mas não foi possível iniciar o serviço automaticamente. Por favor, execute "ollama serve" no terminal para iniciar o serviço, depois clique em "Verificar Novamente".'
+                error: 'Ollama was installed successfully, but the service could not be started automatically. Please run "ollama serve" in terminal to start the service, then click "Try Again".'
               }));
               console.log('⚠️ [StartupDependencyChecker] === AUTO-START FAILED - MANUAL INTERVENTION REQUIRED ===');
               return;
@@ -166,91 +201,58 @@ export const StartupDependencyChecker: React.FC = () => {
         console.error('❌ [StartupDependencyChecker] checkDependencies API not available');
       }
 
-      // Se chegou aqui, Ollama não está instalado
-      console.log('🔧 [StartupDependencyChecker] Ollama not found');
-      console.log('🔧 [StartupDependencyChecker] Current state:', {
-        skipAutoInstall: state.skipAutoInstall,
-        isBrewLocked: state.isBrewLocked,
-        lastAttemptTime: state.lastAttemptTime
-      });
-      
-      // Verificar se devemos pular instalação automática ou se houve tentativa recente
-      const now = Date.now();
-      const timeSinceLastAttempt = now - state.lastAttemptTime;
-      const COOLDOWN_PERIOD = 30000; // 30 segundos
-      
-      if (state.skipAutoInstall) {
-        console.log('🔧 [StartupDependencyChecker] ⚠️ Skipping auto-install - flag is set');
-        setState(prev => ({
-          ...prev,
-          isCheckingDependencies: false,
-          dependenciesValid: false,
-          showManualInstructions: true,
-          isBrewLocked: true, // Manter indicação de lock
-          error: 'Instalação automática desabilitada devido a conflito do Homebrew'
-        }));
-        return;
-      }
-      
-      if (timeSinceLastAttempt < COOLDOWN_PERIOD && state.lastAttemptTime > 0) {
-        console.log(`🔧 [StartupDependencyChecker] ⏰ Cooldown active: ${Math.round((COOLDOWN_PERIOD - timeSinceLastAttempt) / 1000)}s remaining`);
-        setState(prev => ({
-          ...prev,
-          isCheckingDependencies: false,
-          dependenciesValid: false,
-          isBrewLocked: true,
-          error: `Aguarde ${Math.round((COOLDOWN_PERIOD - timeSinceLastAttempt) / 1000)}s antes de tentar novamente`
-        }));
-        return;
-      }
-      
-      console.log('🔧 [StartupDependencyChecker] 🚀 Attempting automatic installation...');
+      // If reached here, Ollama is not installed
       await attemptAutoInstallation();
       
     } catch (error) {
-      console.error('🔧 [StartupDependencyChecker] Dependency check failed:', error);
+      console.error('❌ [StartupDependencyChecker] Dependency check failed:', error);
       setState(prev => ({
         ...prev,
         isCheckingDependencies: false,
-        dependenciesValid: false,
+        allDependenciesValid: false,
         isInstalling: false,
-        error: 'Falha na verificação de dependências',
+        error: 'Dependency verification failed',
         showManualInstructions: true
       }));
     }
   };
 
-  const attemptAutoInstallation = async () => {
-    // Verificar se já há uma tentativa em andamento
+  const attemptAutoInstallation = async (missingDependencies: string[] = ['Ollama']) => {
+    // Check if installation attempt is already in progress
     if (isAttemptingInstallRef.current) {
-      console.log('🚫 [StartupDependencyChecker] Installation already in progress - aborting');
       return;
     }
 
     try {
-      // Marcar como em andamento
+      // Mark as in progress
       isAttemptingInstallRef.current = true;
-      console.log('🚀 [StartupDependencyChecker] Starting installation attempt - ref locked');
       
-      if (!window.electronAPI?.installOllama) {
-        throw new Error('API de instalação não disponível');
+      // Check available installation APIs
+      const availableAPIs = {
+        ollama: !!window.electronAPI?.installOllama,
+        python: !!window.electronAPI?.installPython
+      };
+      
+      if (!availableAPIs.ollama && missingDependencies.includes('Ollama')) {
+        throw new Error('Ollama installation API not available');
+      }
+      if (missingDependencies.includes('Python') && !window.electronAPI.installPython) {
+        throw new Error('Python installation API not available');
       }
 
-      // Registrar timestamp da tentativa
-      const attemptTime = Date.now();
+      // Set installation state
       setState(prev => ({
         ...prev,
         isCheckingDependencies: false,
         isInstalling: true,
-        installationProgress: 'Iniciando instalação do Ollama...',
-        lastAttemptTime: attemptTime
+        installationProgress: `Starting installation of: ${missingDependencies.join(', ')}...`
       }));
 
-      // Escutar progresso da instalação
+      // Listen for installation progress
       const progressHandler = (progress: any) => {
         setState(prev => ({
           ...prev,
-          installationProgress: progress.message || 'Instalando...'
+          installationProgress: progress.message || 'Installing...'
         }));
       };
 
@@ -258,75 +260,105 @@ export const StartupDependencyChecker: React.FC = () => {
         window.electronAPI.onInstallProgress(progressHandler);
       }
 
-      // Executar instalação
-      console.log('🦙 [StartupDependencyChecker] Starting Ollama installation...');
-      await window.electronAPI.installOllama();
+      // Execute sequential installations
+      let installationResults = [];
       
-      console.log('✅ [StartupDependencyChecker] Ollama installation completed!');
-      
-      // Verificar se a instalação foi bem-sucedida
-      const postInstallStatus = await window.electronAPI.checkDependencies();
-      if (postInstallStatus.ollama?.installed) {
-        console.log('🔍 [StartupDependencyChecker] Ollama binary installed, checking if service is running...');
-        
-        // Verificar se o serviço Ollama está funcionando (pode não estar após install via Homebrew)
-        setState(prev => ({ ...prev, installationProgress: 'Verificando se o serviço Ollama está ativo...' }));
+      for (const dependency of missingDependencies) {
+        setState(prev => ({
+          ...prev,
+          installationProgress: `Installing ${dependency}...`
+        }));
         
         try {
-          // Tentar auto-start imediatamente após instalação (mais direto e confiável)
-          console.log('🚀 [StartupDependencyChecker] Attempting auto-start after installation...');
-          setState(prev => ({ ...prev, installationProgress: 'Iniciando serviço Ollama automaticamente...' }));
+          if (dependency === 'Ollama' && window.electronAPI.installOllama) {
+            await window.electronAPI.installOllama();
+            installationResults.push({ dependency: 'Ollama', success: true });
+          } else if (dependency === 'Python' && window.electronAPI.installPython) {
+            await window.electronAPI.installPython();
+            installationResults.push({ dependency: 'Python', success: true });
+          } else {
+            console.warn(`⚠️ [StartupDependencyChecker] No installation API available for ${dependency}`);
+            installationResults.push({ dependency, success: false, error: 'API not available' });
+          }
+        } catch (installError) {
+          console.error(`❌ [StartupDependencyChecker] ${dependency} installation failed:`, installError);
+          installationResults.push({ dependency, success: false, error: installError });
+        }
+      }
+      
+      // Verify post-installation status
+      const postInstallStatus = await window.electronAPI.checkDependencies();
+      
+
+      const finalStatus = {
+        ollama: {
+          requested: missingDependencies.includes('Ollama'),
+          installed: postInstallStatus.ollama?.installed || false
+        },
+        python: {
+          requested: missingDependencies.includes('Python'),
+          installed: (postInstallStatus as any).python?.installed || false
+        }
+      };
+      
+      // If Python was requested and installed successfully, no service verification needed
+      // If Ollama was requested and installed, need to verify if service is running
+      if (finalStatus.ollama.requested && finalStatus.ollama.installed) {
+        
+        // Check if Ollama service is working (might not be after Homebrew install)
+        setState(prev => ({ ...prev, installationProgress: 'Checking if Ollama service is active...' }));
+        
+        try {
+          // Attempt auto-start immediately after installation
+          setState(prev => ({ ...prev, installationProgress: 'Starting Ollama service automatically...' }));
           
-          // Verificar se a API de auto-start está disponível
+          // Check if auto-start API is available
           if (window.electronAPI?.ollama?.startService) {
-            console.log('🚀 [StartupDependencyChecker] Auto-starting Ollama service after installation...');
             const startResult = await window.electronAPI.ollama.startService();
             
             if (startResult.success) {
-              console.log('✅ [StartupDependencyChecker] Ollama service auto-started after installation!');
-              
-              // Aguardar um momento para o serviço se estabilizar
+              // Wait for service to stabilize
               await new Promise(resolve => setTimeout(resolve, 2000));
               
-              // Verificar se conseguimos listar modelos agora
-              try {
-                const models = await OllamaService.fetchInstalledModels();
-                console.log('✅ [StartupDependencyChecker] Ollama service confirmed working after auto-start!');
-                
-                setState(prev => ({
-                  ...prev,
-                  isInstalling: false,
-                  dependenciesValid: true,
-                  installationProgress: 'Instalação e inicialização concluídas com sucesso!',
-                  error: null
-                }));
-                return; // Sucesso! Sair da função
-              } catch (modelError) {
-                console.warn('⚠️ [StartupDependencyChecker] Auto-start succeeded but model listing failed:', modelError);
-                // Mesmo se listar modelos falhar, consideramos sucesso se o startService funcionou
-                setState(prev => ({
-                  ...prev,
-                  isInstalling: false,
-                  dependenciesValid: true,
-                  installationProgress: 'Serviço iniciado! Pode precisar de alguns segundos para ficar totalmente disponível.',
-                  error: null
-                }));
-                return;
-              }
+              // Service auto-started successfully
+              setState(prev => ({
+                ...prev,
+                isInstalling: false,
+                allDependenciesValid: true,
+                installationProgress: 'Installation and initialization completed successfully!',
+                error: null
+              }));
+              return; // Success! Exit function
             } else {
               console.error('❌ [StartupDependencyChecker] Auto-start failed:', startResult.error);
               throw new Error(startResult.error || 'Falha ao iniciar serviço automaticamente');
             }
           } else {
             console.log('⚠️ [StartupDependencyChecker] Auto-start API not available, falling back to manual instructions');
-            throw new Error('APIs de controle de serviço não disponíveis');
+            throw new Error('Service control APIs not available');
           }
         } catch (serviceError) {
           console.error('❌ [StartupDependencyChecker] Service check failed:', serviceError);
-          throw new Error('Ollama foi instalado mas o serviço não está acessível. Execute "ollama serve" no terminal para iniciar o serviço, depois clique em "Verificar Novamente".');
+          throw new Error('Ollama was installed but the service is not accessible. Run "ollama serve" in terminal to start the service, then click "Try Again".');
         }
       } else {
-        throw new Error('Verificação pós-instalação falhou');
+        // Se Ollama não foi solicitado ou não foi instalado, verificar se todas as outras dependências estão OK
+        const ollamaOK = (!finalStatus.ollama.requested || finalStatus.ollama.installed);
+        const pythonOK = (!finalStatus.python.requested || finalStatus.python.installed);
+        const allRequestedInstalled = ollamaOK && pythonOK;
+        
+        if (allRequestedInstalled) {
+          setState(prev => ({
+            ...prev,
+            isInstalling: false,
+            allDependenciesValid: true,
+            installationProgress: 'All dependencies installed successfully!',
+            error: null
+          }));
+          return;
+        } else {
+          throw new Error('Post-installation verification failed - some dependencies were not installed');
+        }
       }
       
     } catch (error) {
@@ -345,30 +377,30 @@ export const StartupDependencyChecker: React.FC = () => {
                            errorMessage.includes('Please wait for it to finish'));
       
       if (isBrewLocked) {
-        console.log('🍺 [StartupDependencyChecker] Detected Homebrew lock - disabling auto-install');
+
         setState(prev => ({
           ...prev,
           isInstalling: false,
-          dependenciesValid: false,
+          allDependenciesValid: false,
           isBrewLocked: true,
-          skipAutoInstall: true, // Desabilitar tentativas automáticas futuras
-          error: 'Processo de instalação do Ollama já em andamento via Homebrew',
+          skipAutoInstall: true, // Disable future automatic attempts
+          error: 'Ollama installation process already in progress via Homebrew',
           showManualInstructions: false
         }));
       } else {
         setState(prev => ({
           ...prev,
           isInstalling: false,
-          dependenciesValid: false,
+          allDependenciesValid: false,
           isBrewLocked: false,
-          error: 'Falha na instalação automática do Ollama',
+          error: 'Automatic Ollama installation failed',
           showManualInstructions: true
         }));
       }
     } finally {
       // Sempre limpar a ref ao finalizar (sucesso ou erro)
       isAttemptingInstallRef.current = false;
-      console.log('🔓 [StartupDependencyChecker] Installation attempt finished - ref unlocked');
+
     }
   };
 
@@ -383,45 +415,20 @@ export const StartupDependencyChecker: React.FC = () => {
     }));
     
     setTimeout(() => {
-      checkOllamaDependency();
+      checkAllDependencies();
     }, 100);
   };
 
-  const handleManualInstall = async () => {
-    if (window.electronAPI?.getInstallInstructions) {
-      try {
-        const instructions = await window.electronAPI.getInstallInstructions('ollama');
-        console.log('📝 [StartupDependencyChecker] Manual instructions:', instructions);
-      } catch (error) {
-        console.error('📝 [StartupDependencyChecker] Failed to get manual instructions:', error);
-      }
-    }
-  };
 
-  const handleForceRetry = () => {
-    console.log('🔄 [StartupDependencyChecker] Force retry - resetting all flags');
-    
-    // Reset completo de todos os flags de proteção
-    setState(prev => ({
-      ...prev,
-      isBrewLocked: false,
-      skipAutoInstall: false,
-      lastAttemptTime: 0,
-      error: null,
-      showManualInstructions: false
-    }));
-    
-    setTimeout(() => {
-      checkOllamaDependency();
-    }, 100);
-  };
+
+
 
   useEffect(() => {
-    checkOllamaDependency();
+    checkAllDependencies();
   }, []);
 
   // Se as dependências estão OK, renderiza o ModelChecker
-  if (state.dependenciesValid) {
+  if (state.allDependenciesValid) {
     return <StartupModelChecker />;
   }
 
@@ -433,14 +440,15 @@ export const StartupDependencyChecker: React.FC = () => {
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {state.isInstalling ? 'Instalando Ollama...' : 'Verificando dependências...'}
+              {state.isInstalling ? 'Installing Dependencies...' : 'Checking Dependencies...'}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
               {state.isInstalling 
-                ? state.installationProgress || 'Instalando o Ollama automaticamente...'
-                : 'Verificando se o Ollama está instalado e rodando'
+                ? state.installationProgress || 'Installing dependencies automatically...'
+                : 'Checking if Ollama and Python are installed and working'
               }
             </p>
+
             {state.isInstalling && (
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div className="bg-blue-500 h-2 rounded-full animate-pulse w-3/5"></div>
@@ -465,114 +473,64 @@ export const StartupDependencyChecker: React.FC = () => {
           
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {state.isBrewLocked ? '⏳ Instalação em Andamento' : 
-               state.showManualInstructions ? 'Instalação Manual Necessária' : 
-               'Ollama não encontrado'}
+              {state.isBrewLocked ? '⏳ Installation in Progress' : 'Dependencies Not Found'}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               {state.error}
             </p>
+            
+            {/* Dependency status */}
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg w-full mb-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                📋 Dependency Status:
+              </h4>
+              <div className="space-y-1 text-xs">
+                {renderDependencyStatus('Ollama', state.dependencies.ollama.installed)}
+                {renderDependencyStatus('Python', state.dependencies.python.installed)}
+              </div>
+            </div>
           </div>
 
           {state.isBrewLocked ? (
             <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg w-full border border-orange-200 dark:border-orange-800">
               <h4 className="font-medium text-orange-900 dark:text-orange-200 mb-2">
-                🍺 Homebrew está instalando o Ollama
+                Installation in Progress
               </h4>
               <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
-                Já existe um processo de instalação do Ollama em andamento no Homebrew. 
-                Aguarde a conclusão ou termine o processo manualmente.
+                Homebrew is installing dependencies
+              </p>
+              <p className="text-sm text-orange-600 dark:text-orange-400 mb-3">
+                Please wait for the process to complete or resolve manually if needed.
               </p>
               <div className="text-xs text-orange-600 dark:text-orange-400 space-y-1">
-                <div><strong>Opções:</strong></div>
-                <div>• <strong>Aguardar:</strong> O processo pode levar alguns minutos</div>
-                <div>• <strong>Verificar terminal:</strong> Execute <code className="bg-orange-200 dark:bg-orange-800 px-1 rounded">ps aux | grep brew</code></div>
-                <div>• <strong>Forçar limpeza:</strong> Execute <code className="bg-orange-200 dark:bg-orange-800 px-1 rounded">brew cleanup --prune=all</code></div>
-                <div>• <strong>Matar processo:</strong> Execute <code className="bg-orange-200 dark:bg-orange-800 px-1 rounded">pkill -f "brew install"</code></div>
+                <div>• Check terminal: Look for prompts waiting for interaction</div>
+                <div>• Force cleanup: Run <code className="bg-orange-200 dark:bg-orange-800 px-1 rounded">brew cleanup --prune=all</code></div>
+                <div>• Kill process: Run <code className="bg-orange-200 dark:bg-orange-800 px-1 rounded">pkill -f "brew install"</code></div>
               </div>
-            </div>
-          ) : state.showManualInstructions ? (
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg w-full">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                Instruções de instalação manual:
-              </h4>
-              <ol className="text-sm text-gray-700 dark:text-gray-300 space-y-2 list-decimal list-inside">
-                <li>
-                  Acesse <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                    https://ollama.com/download
-                  </a>
-                </li>
-                <li>Baixe e instale o Ollama para seu sistema operacional</li>
-                <li>Após a instalação, execute: <code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">ollama serve</code></li>
-                <li>Instale um modelo: <code className="bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">ollama pull llama3.2</code></li>
-                <li>Clique em "Verificar Novamente" abaixo</li>
-              </ol>
             </div>
           ) : (
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg w-full border border-blue-200 dark:border-blue-800">
               <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">
-                ✨ Instalação Automática Disponível
+                Automatic Installation Available
               </h4>
               <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                Detectamos que o Ollama não está instalado. Podemos instalá-lo automaticamente para você!
+                Missing dependencies detected. We can install them automatically for you!
               </p>
               <div className="text-xs text-blue-600 dark:text-blue-400">
-                • Detecta automaticamente seu sistema operacional<br/>
-                • Usa o instalador oficial do Ollama<br/>
-                • Configura tudo para você
+                • Automatically detects your operating system<br/>
+                • Uses official installers<br/>
+                • Configures everything for you
               </div>
             </div>
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 w-full">
-            {state.isBrewLocked ? (
-              <>
-                <button
-                  onClick={handleRetry}
-                  className="flex-1 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                >
-                  ⏳ Aguardar e Verificar
-                </button>
-                <button
-                  onClick={() => setState(prev => ({ ...prev, showManualInstructions: true, isBrewLocked: false }))}
-                  className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  🛠️ Resolver Manualmente
-                </button>
-              </>
-            ) : !state.showManualInstructions ? (
-              <>
-                <button
-                  onClick={handleRetry}
-                  className="flex-1 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                >
-                  🚀 Instalar Automaticamente
-                </button>
-                <button
-                  onClick={() => setState(prev => ({ ...prev, showManualInstructions: true }))}
-                  className="flex-1 px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  📖 Instalação Manual
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={handleRetry}
-                  className="flex-1 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  🔄 Verificar Novamente
-                </button>
-                <a
-                  href="https://ollama.com/download"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-center"
-                >
-                  ⬇️ Baixar Ollama
-                </a>
-              </>
-            )}
+            <button
+              onClick={handleRetry}
+              className="flex-1 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+            >
+              {state.isBrewLocked ? '⏳ Wait and Check Again' : '🚀 Try Again'}
+            </button>
           </div>
         </div>
       </div>

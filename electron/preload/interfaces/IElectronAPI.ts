@@ -168,9 +168,14 @@ export interface IOllamaManager {
   }>;
 }
 
-// Dependency Management Types (Ollama only)
+// Dependency Management Types
 export interface DependencyStatus {
   ollama: {
+    installed: boolean;
+    version?: string;
+    path?: string;
+  };
+  python: {
     installed: boolean;
     version?: string;
     path?: string;
@@ -178,7 +183,7 @@ export interface DependencyStatus {
 }
 
 export interface InstallProgress {
-  dependency: "ollama";
+  dependency: "ollama" | "python";
   status: "checking" | "downloading" | "installing" | "completed" | "error";
   progress?: number;
   message: string;
@@ -422,10 +427,11 @@ export interface IElectronAPI
     vectors: VectorData[]
   ): Promise<{ success: boolean; error?: string }>;
 
-  // Dependency Management (Ollama only)
+  // Dependency Management
   checkDependencies: () => Promise<DependencyStatus>;
   installOllama: () => Promise<void>;
-  getInstallInstructions: (dependency: "ollama") => Promise<string>;
+  installPython: () => Promise<void>;
+  getInstallInstructions: (dependency: "ollama" | "python") => Promise<string>;
   onInstallProgress: (
     callback: (progress: InstallProgress) => void
   ) => () => void;

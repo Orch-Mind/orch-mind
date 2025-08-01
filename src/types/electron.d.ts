@@ -298,10 +298,11 @@ export interface ElectronAPI {
     message?: string;
     error?: string;
   }>;
-  // Dependency Management (Ollama only)
+  // Dependency Management (Ollama + Python)
   checkDependencies: () => Promise<DependencyStatus>;
   installOllama: () => Promise<void>;
-  getInstallInstructions: (dependency: "ollama") => Promise<string>;
+  installPython: () => Promise<void>;
+  getInstallInstructions: (dependency: "ollama" | "python") => Promise<string>;
   onInstallProgress: (
     callback: (progress: InstallProgress) => void
   ) => () => void;

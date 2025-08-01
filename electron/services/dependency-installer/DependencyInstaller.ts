@@ -13,6 +13,7 @@ import { InstallProgress } from "./interfaces/IProgressReporter";
 import { CommandExecutor } from "./services/CommandExecutor";
 
 import { OllamaDependency } from "./services/OllamaDependency";
+import { PythonDependency } from "./services/PythonDependency";
 import { ProgressReporter } from "./services/ProgressReporter";
 import { PlatformInstallerFactory } from "./strategies/PlatformInstallerFactory";
 
@@ -21,6 +22,7 @@ import { PlatformInstallerFactory } from "./strategies/PlatformInstallerFactory"
  */
 export interface AllDependenciesStatus {
   ollama: DependencyStatus;
+  python: DependencyStatus;
 }
 
 /**
@@ -57,6 +59,12 @@ export class DependencyInstaller extends EventEmitter {
         installerFactory.create(platform)
       )
     );
+    this.dependencies.set(
+      "python",
+      new PythonDependency(this.commandExecutor, (platform) =>
+        installerFactory.create(platform)
+      )
+    );
   }
 
   /**
@@ -64,8 +72,9 @@ export class DependencyInstaller extends EventEmitter {
    */
   async checkDependencies(): Promise<AllDependenciesStatus> {
     const ollama = await this.checkDependency("ollama");
+    const python = await this.checkDependency("python");
 
-    return { ollama };
+    return { ollama, python };
   }
 
   /**
@@ -84,6 +93,13 @@ export class DependencyInstaller extends EventEmitter {
    */
   async installOllama(): Promise<void> {
     await this.installDependency("ollama");
+  }
+
+  /**
+   * Install Python
+   */
+  async installPython(): Promise<void> {
+    await this.installDependency("python");
   }
 
   /**

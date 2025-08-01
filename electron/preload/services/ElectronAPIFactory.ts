@@ -896,7 +896,18 @@ export class ElectronAPIFactory {
         );
       },
 
-      getInstallInstructions: async (dependency: "ollama") => {
+      installPython: async () => {
+        return this.errorHandler.wrapAsync(
+          () => ipcRenderer.invoke("install-python"),
+          {
+            component: "DependencyManager",
+            operation: "installPython",
+            severity: "high",
+          }
+        );
+      },
+
+      getInstallInstructions: async (dependency: "ollama" | "python") => {
         return this.errorHandler.wrapAsync(
           () => ipcRenderer.invoke("get-install-instructions", dependency),
           {

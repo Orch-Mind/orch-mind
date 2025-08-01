@@ -1015,6 +1015,30 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   });
 
+  // Install Python handler
+  ipcMain.handle("install-python", async (event) => {
+    try {
+      console.log("🐍 [IPC] Starting Python installation...");
+
+      // Listen for progress updates
+      const progressHandler = (progress: InstallProgress) => {
+        event.sender.send("install-progress", progress);
+      };
+
+      dependencyInstaller.on("progress", progressHandler);
+
+      try {
+        await dependencyInstaller.installPython();
+        console.log("🐍 [IPC] Python installation completed");
+      } finally {
+        dependencyInstaller.removeListener("progress", progressHandler);
+      }
+    } catch (error) {
+      console.error("🐍 [IPC] Error installing Python:", error);
+      throw error;
+    }
+  });
+
   // Get manual installation instructions
   ipcMain.handle(
     "get-install-instructions",
