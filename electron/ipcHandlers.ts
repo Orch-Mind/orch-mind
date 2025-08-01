@@ -540,6 +540,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
 
             // Send formatted progress to renderer
             event.sender.send("ollama-download-progress", {
+              modelId: modelId, // ALWAYS include modelId for filtering
               progress: status.progress || 0,
               speed: speed,
               eta: eta,

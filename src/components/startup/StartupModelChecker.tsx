@@ -112,57 +112,71 @@ export const StartupModelChecker: React.FC = () => {
 
   const downloadWithProgress = async (modelId: string): Promise<void> => {
     return new Promise(async (resolve) => {
-      // Initialise state for this model and avoid flicker by pre-setting map with this entry
-      setDownloads(new Map([[modelId, { progress: 0, speed: "Starting...", eta: "Preparing download..." }]]));
+      // Control flag to prevent multiple finalization paths
+      let isCompleted = false;
+      let pollInterval: NodeJS.Timeout | null = null;
 
-      const maybeDone = () => {
-        if (downloads.get(modelId)?.progress === 100) {
-          resolve();
+      // Helper function for safe completion - prevents race conditions
+      const completeDownload = () => {
+        if (isCompleted) return; // Already completed, prevent duplicate execution
+        isCompleted = true;
+        
+        // Clear polling if active
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
         }
+        
+        // Mark as completed and remove after delay
+        updateDownloadInfo(modelId, { progress: 100, speed: "", eta: "Done" });
+        setTimeout(() => {
+          setDownloads((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(modelId);
+            return newMap;
+          });
+          resolve();
+        }, 750); // small delay so user can see 100%
       };
+
+      // Initialise state for this model and avoid flicker by pre-setting map with this entry
+      // PRESERVE existing downloads instead of replacing the entire Map
+      setDownloads((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(modelId, { progress: 0, speed: "Starting...", eta: "Preparing download..." });
+        return newMap;
+      });
 
       // Real progress via Electron API
       const success = await OllamaService.downloadModel(
         modelId,
         (progress, speed, eta) => {
+          if (isCompleted) return; // Don't update if already completed
+          
           updateDownloadInfo(modelId, { progress, speed, eta });
           if (progress >= 100) {
-            // mark completed
-            updateDownloadInfo(modelId, { progress: 100, speed: "", eta: "Done" });
-            setTimeout(() => {
-              setDownloads((prev) => {
-                const newMap = new Map(prev);
-                newMap.delete(modelId);
-                return newMap;
-              });
-              resolve();
-            }, 750); // small delay so user can see 100%
+            completeDownload(); // Use centralized completion logic
           }
         }
       );
 
       if (success) return; // electron API will call resolve via callback
 
-      // No simulated progress. Instead, poll Ollama every 5s to detect when the model becomes available.
-      const poll = setInterval(async () => {
-        try {
-          const installed = await OllamaService.fetchInstalledModels();
-          if (installed.includes(modelId)) {
-            clearInterval(poll);
-            updateDownloadInfo(modelId, { progress: 100, speed: "", eta: "Done" });
-            setTimeout(() => {
-              setDownloads((prev) => {
-                const newMap = new Map(prev);
-                newMap.delete(modelId);
-                return newMap;
-              });
-              resolve();
-            }, 750);
+      // Fallback polling - only if not already completed
+      if (!isCompleted) {
+        pollInterval = setInterval(async () => {
+          if (isCompleted) return; // Check again in case it completed while polling
+          
+          try {
+            const installed = await OllamaService.fetchInstalledModels();
+            if (installed.includes(modelId)) {
+              completeDownload(); // Use centralized completion logic
+            }
+          } catch (err) {
+            console.warn(`[StartupModelChecker] Polling error for ${modelId}:`, err);
           }
-        } catch (err) {
-          console.warn(`[StartupModelChecker] Polling error for ${modelId}:`, err);
-        }
-      }, 5000);
+        }, 5000);
+      }
     });
   };
 

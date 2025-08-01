@@ -334,10 +334,13 @@ export class ElectronAPIFactory {
             if (onProgress) {
               const progressListener = (
                 _event: Electron.IpcRendererEvent,
-                data: { progress: number; speed: string; eta: string }
+                data: { modelId: string; progress: number; speed: string; eta: string }
               ) => {
                 try {
-                  onProgress(data.progress, data.speed, data.eta);
+                  // FILTER: Only process progress for THIS specific model
+                  if (data.modelId === modelId) {
+                    onProgress(data.progress, data.speed, data.eta);
+                  }
                 } catch (error) {
                   this.logger.error(
                     "Error processing Ollama download progress",
