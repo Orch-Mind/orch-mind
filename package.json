@@ -95,9 +95,9 @@
       ],
       "artifactName": "Orch-Mind-${arch}.${ext}",
       "icon": "assets/icons/mac/icon.icns",
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "identity": null,
+      "identity":"Guilherme Ferrari Brescia (83B9QD7BNT)",
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": "build/Info.plist",
@@ -117,7 +117,7 @@
         "**/hyperswarm/**",
         "**/hypercore-crypto/**"
       ],
-      "notarize": false
+      "notarize": true
     },
     "pkg": {
       "scripts": "build/postinstall.sh",
@@ -128,7 +128,8 @@
       "isRelocatable": false,
       "isVersionChecked": false,
       "hasStrictIdentifier": false,
-      "overwriteAction": "upgrade"
+      "overwriteAction": "upgrade",
+      "identity": "Guilherme Ferrari Brescia (83B9QD7BNT)"
     },
     "dmg": {
       "contents": [
