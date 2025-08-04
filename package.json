@@ -22,6 +22,7 @@
     "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder",
     "dist:all": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --mac --win --linux",
     "dist:mac": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false CSC_LINK= CSC_KEY_PASSWORD= npm run build && electron-builder --mac --publish=always",
+    "dist:mac:arm64": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --mac --arm64 --publish=never",
     "dist:win": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --publish=always",
     "dist:linux": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --linux --publish=always",
     "publish": "npm run build && electron-builder --publish=always",
@@ -47,7 +48,7 @@
     "test-memory:max": "node --max-old-space-size=16384 scripts/test-memory-limits.js"
   },
   "build": {
-    "appId": "com.guiferrarib.orchmind",
+    "appId": "com.orch.orchmind",
     "productName": "Orch-Mind",
     "files": [
       "dist/**/*",
@@ -88,8 +89,7 @@
         {
           "target": "pkg",
           "arch": [
-            "arm64",
-            "x64"
+            "arm64"
           ]
         }
       ],
@@ -97,7 +97,6 @@
       "icon": "assets/icons/mac/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "identity":"Guilherme Ferrari Brescia (83B9QD7BNT)",
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": "build/Info.plist",
@@ -116,14 +115,12 @@
         "**/b4a/**",
         "**/hyperswarm/**",
         "**/hypercore-crypto/**"
-      ],
-      "notarize": true
+      ]
     },
     "pkg": {
-      "scripts": "build/postinstall.sh",
       "installLocation": "/Applications",
-      "allowAnywhere": false,
-      "allowCurrentUserHome": false,
+      "allowAnywhere": true,
+      "allowCurrentUserHome": true,
       "allowRootDirectory": true,
       "isRelocatable": false,
       "isVersionChecked": false,
@@ -192,7 +189,10 @@
       "target": [
         {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "assets/icons/png/icon-256x256.png",
