@@ -4,6 +4,13 @@ import { StartupModelChecker } from './StartupModelChecker';
 interface DependencyStatus {
   installed: boolean;
   error?: string;
+  needsInstall?: boolean;
+  wasAlreadyInstalled?: boolean;
+}
+
+interface AllDependenciesStatus {
+  ollama: { installed: boolean };
+  python: { installed: boolean };
 }
 
 interface StartupDependencyCheckerState {
@@ -17,7 +24,19 @@ interface StartupDependencyCheckerState {
   installationProgress: string;
   error: string | null;
   isBrewLocked: boolean;
+  showManualInstructions?: boolean;
 }
+
+// Helper function to detect Homebrew lock errors
+const isHomebrewLockError = (errorMessage: string): boolean => {
+  return errorMessage.includes('brew install') && 
+         (errorMessage.includes('has already locked') || 
+          errorMessage.includes('process has already locked') ||
+          errorMessage.includes('Cellar/ollama') ||
+          errorMessage.includes('.tar.gz.incomplete') ||
+          errorMessage.includes('downloads/') ||
+          errorMessage.includes('Please wait for it to finish'));
+};
 
 export const StartupDependencyChecker: React.FC = () => {
   const [state, setState] = useState<StartupDependencyCheckerState>({
@@ -62,17 +81,28 @@ export const StartupDependencyChecker: React.FC = () => {
       if (window.electronAPI?.checkDependencies) {
         const dependencyStatus = await window.electronAPI.checkDependencies();
         
+        // Store INITIAL status to distinguish between already-installed vs newly-installed
+        const dependencyStatusTyped = dependencyStatus as unknown as AllDependenciesStatus;
+        const initialStatus = {
+          ollama: dependencyStatusTyped.ollama?.installed || false,
+          python: dependencyStatusTyped.python?.installed || false
+        };
+        
+        console.log('📈 [StartupDependencyChecker] Initial dependency status:', initialStatus);
+        
         // Update individual dependency status
         const updatedDependencies = {
           ollama: {
             ...state.dependencies.ollama,
-            installed: dependencyStatus.ollama?.installed || false,
-            needsInstall: !dependencyStatus.ollama?.installed
+            installed: initialStatus.ollama,
+            needsInstall: !initialStatus.ollama,
+            wasAlreadyInstalled: initialStatus.ollama // Track if it was already there
           },
           python: {
             ...state.dependencies.python,
-            installed: (dependencyStatus as any).python?.installed || false,
-            needsInstall: !(dependencyStatus as any).python?.installed
+            installed: initialStatus.python,
+            needsInstall: !initialStatus.python,
+            wasAlreadyInstalled: initialStatus.python
           }
         };
         
@@ -82,16 +112,18 @@ export const StartupDependencyChecker: React.FC = () => {
         }));
         
         // Check if all dependencies are installed
-        const allDependenciesInstalled = updatedDependencies.ollama.installed && updatedDependencies.python.installed;
+        const allDependenciesInstalled = initialStatus.ollama && initialStatus.python;
         
         if (!allDependenciesInstalled) {
           // Some dependencies need to be installed
           const missingDependencies = [];
-          if (!updatedDependencies.ollama.installed) missingDependencies.push('Ollama');
-          if (!updatedDependencies.python.installed) missingDependencies.push('Python');
+          if (!initialStatus.ollama) missingDependencies.push('Ollama');
+          if (!initialStatus.python) missingDependencies.push('Python');
           
-          // Go to automatic installation flow
-          await attemptAutoInstallation(missingDependencies);
+          console.log('🔧 [StartupDependencyChecker] Missing dependencies:', missingDependencies);
+          
+          // Go to automatic installation flow with initial status context
+          await attemptAutoInstallation(missingDependencies, initialStatus);
           return;
         }
         
@@ -217,7 +249,7 @@ export const StartupDependencyChecker: React.FC = () => {
     }
   };
 
-  const attemptAutoInstallation = async (missingDependencies: string[] = ['Ollama']) => {
+  const attemptAutoInstallation = async (missingDependencies: string[] = ['Ollama'], initialStatus?: { ollama: boolean; python: boolean }) => {
     // Check if installation attempt is already in progress
     if (isAttemptingInstallRef.current) {
       return;
@@ -245,7 +277,8 @@ export const StartupDependencyChecker: React.FC = () => {
         ...prev,
         isCheckingDependencies: false,
         isInstalling: true,
-        installationProgress: `Starting installation of: ${missingDependencies.join(', ')}...`
+        installationProgress: `🚀 Starting sequential installation: ${missingDependencies.join(', ')}...`,
+        error: null
       }));
 
       // Listen for installation progress
@@ -260,105 +293,246 @@ export const StartupDependencyChecker: React.FC = () => {
         window.electronAPI.onInstallProgress(progressHandler);
       }
 
-      // Execute sequential installations
+      // Execute sequential installations with verification
       let installationResults = [];
       
-      for (const dependency of missingDependencies) {
+      // Install dependencies in logical order (ensuring prereqs are met)
+      const sortedDependencies = [...missingDependencies].sort((a, b) => {
+        // Python should be installed first if both are missing (less likely to have complex dependencies)
+        if (a === 'Python' && b === 'Ollama') return -1;
+        if (a === 'Ollama' && b === 'Python') return 1;
+        return 0;
+      });
+      
+      for (let i = 0; i < sortedDependencies.length; i++) {
+        const dependency = sortedDependencies[i];
+        const isLast = i === sortedDependencies.length - 1;
+        
         setState(prev => ({
           ...prev,
-          installationProgress: `Installing ${dependency}...`
+          installationProgress: `📦 Installing ${dependency} (${i + 1}/${sortedDependencies.length})...`
         }));
         
         try {
+          console.log(`🔄 [StartupDependencyChecker] Starting installation of ${dependency}`);
+          
           if (dependency === 'Ollama' && window.electronAPI.installOllama) {
-            await window.electronAPI.installOllama();
-            installationResults.push({ dependency: 'Ollama', success: true });
+            // Check if was already installed (should not happen if we reached here, but double-check)
+            if (initialStatus?.ollama) {
+              console.log('⚠️ [StartupDependencyChecker] Ollama was already installed, skipping installation');
+              installationResults.push({ dependency: 'Ollama', success: true, wasAlreadyInstalled: true });
+              setState(prev => ({ ...prev, installationProgress: '✅ Ollama was already installed!' }));
+            } else {
+              setState(prev => ({ ...prev, installationProgress: '🦙 Installing Ollama...' }));
+              
+              try {
+                await window.electronAPI.installOllama();
+                
+                // Verify installation
+                setState(prev => ({ ...prev, installationProgress: '🔍 Verifying Ollama installation...' }));
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Allow time for system to register
+                
+                const ollamaCheck = await window.electronAPI.checkDependencies();
+                if (!ollamaCheck.ollama?.installed) {
+                  throw new Error('Ollama installation verification failed');
+                }
+                
+                installationResults.push({ dependency: 'Ollama', success: true, wasAlreadyInstalled: false });
+                setState(prev => ({ ...prev, installationProgress: '✅ Ollama installed and verified!' }));
+              } catch (installError) {
+                console.error(`❌ [StartupDependencyChecker] Ollama installation failed:`, installError);
+                installationResults.push({ dependency: 'Ollama', success: false, error: installError });
+                // Don't throw here - continue with other dependencies
+                const errorMessage = installError instanceof Error ? installError.message : String(installError);
+                setState(prev => ({ ...prev, installationProgress: `❌ Ollama installation failed: ${errorMessage}` }));
+              }
+            }
+            
           } else if (dependency === 'Python' && window.electronAPI.installPython) {
-            await window.electronAPI.installPython();
-            installationResults.push({ dependency: 'Python', success: true });
+            // Check if was already installed (should not happen if we reached here, but double-check)
+            if (initialStatus?.python) {
+              console.log('⚠️ [StartupDependencyChecker] Python was already installed, skipping installation');
+              installationResults.push({ dependency: 'Python', success: true, wasAlreadyInstalled: true });
+              setState(prev => ({ ...prev, installationProgress: '✅ Python was already installed!' }));
+            } else {
+              setState(prev => ({ ...prev, installationProgress: '🐍 Installing Python...' }));
+              
+              try {
+                await window.electronAPI.installPython();
+                
+                // Verify installation
+                setState(prev => ({ ...prev, installationProgress: '🔍 Verifying Python installation...' }));
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Allow time for system to register
+                
+                const pythonCheck = await window.electronAPI.checkDependencies();
+                const pythonCheckTyped = pythonCheck as unknown as AllDependenciesStatus;
+                if (!pythonCheckTyped.python?.installed) {
+                  throw new Error('Python installation verification failed');
+                }
+                
+                installationResults.push({ dependency: 'Python', success: true, wasAlreadyInstalled: false });
+                setState(prev => ({ ...prev, installationProgress: '✅ Python installed and verified!' }));
+              } catch (installError) {
+                console.error(`❌ [StartupDependencyChecker] Python installation failed:`, installError);
+                installationResults.push({ dependency: 'Python', success: false, error: installError });
+                // Don't throw here - continue with other dependencies
+                const errorMessage = installError instanceof Error ? installError.message : String(installError);
+                setState(prev => ({ ...prev, installationProgress: `❌ Python installation failed: ${errorMessage}` }));
+              }
+            }
+            
           } else {
             console.warn(`⚠️ [StartupDependencyChecker] No installation API available for ${dependency}`);
             installationResults.push({ dependency, success: false, error: 'API not available' });
           }
+          
+          // Add delay between installations to allow system to stabilize
+          if (!isLast) {
+            setState(prev => ({ ...prev, installationProgress: '⏳ Allowing system to stabilize...' }));
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+          
         } catch (installError) {
           console.error(`❌ [StartupDependencyChecker] ${dependency} installation failed:`, installError);
+          const errorMessage = installError instanceof Error ? installError.message : String(installError);
+          
+          // Check for Homebrew lock error specifically
+          if (isHomebrewLockError(errorMessage)) {
+            setState(prev => ({
+              ...prev,
+              isInstalling: false,
+              isBrewLocked: true,
+              error: 'Homebrew installation process already in progress'
+            }));
+            return;
+          }
+          
           installationResults.push({ dependency, success: false, error: installError });
+          
+          // Continue with other dependencies instead of throwing
+          setState(prev => ({ ...prev, installationProgress: `❌ ${dependency} installation failed: ${errorMessage}` }));
         }
       }
       
-      // Verify post-installation status
-      const postInstallStatus = await window.electronAPI.checkDependencies();
+      // Final comprehensive verification
+      setState(prev => ({ ...prev, installationProgress: '🔍 Final verification of all dependencies...' }));
       
-
+      const postInstallStatus = await window.electronAPI.checkDependencies();
+      const postInstallStatusTyped = postInstallStatus as unknown as AllDependenciesStatus;
+      
       const finalStatus = {
         ollama: {
-          requested: missingDependencies.includes('Ollama'),
-          installed: postInstallStatus.ollama?.installed || false
+          requested: sortedDependencies.includes('Ollama'),
+          installed: postInstallStatusTyped.ollama?.installed || false,
+          success: installationResults.find(r => r.dependency === 'Ollama')?.success || false
         },
         python: {
-          requested: missingDependencies.includes('Python'),
-          installed: (postInstallStatus as any).python?.installed || false
+          requested: sortedDependencies.includes('Python'),
+          installed: postInstallStatusTyped.python?.installed || false,
+          success: installationResults.find(r => r.dependency === 'Python')?.success || false
         }
       };
       
-      // If Python was requested and installed successfully, no service verification needed
-      // If Ollama was requested and installed, need to verify if service is running
-      if (finalStatus.ollama.requested && finalStatus.ollama.installed) {
-        
-        // Check if Ollama service is working (might not be after Homebrew install)
-        setState(prev => ({ ...prev, installationProgress: 'Checking if Ollama service is active...' }));
-        
-        try {
-          // Attempt auto-start immediately after installation
-          setState(prev => ({ ...prev, installationProgress: 'Starting Ollama service automatically...' }));
+      // Check if all requested dependencies are now installed
+      const allRequestedInstalled = sortedDependencies.every(dep => {
+        if (dep === 'Ollama') return finalStatus.ollama.installed;
+        if (dep === 'Python') return finalStatus.python.installed;
+        return false;
+      });
+      
+      console.log('📊 [StartupDependencyChecker] Final installation status:', {
+        requested: sortedDependencies,
+        finalStatus,
+        allRequestedInstalled,
+        installationResults
+      });
+      
+      // Handle final results based on what was requested and what succeeded
+      if (allRequestedInstalled) {
+        // All dependencies are installed - check if Ollama service needs verification
+        if (finalStatus.ollama.requested && finalStatus.ollama.installed) {
           
-          // Check if auto-start API is available
-          if (window.electronAPI?.startService) {
-            const startResult = await window.electronAPI.startService();
+          // Check if Ollama service is working (might not be after Homebrew install)
+          setState(prev => ({ ...prev, installationProgress: '🔍 Verifying Ollama service is accessible...' }));
+          
+          try {
+            // Attempt auto-start immediately after installation
+            setState(prev => ({ ...prev, installationProgress: '🚀 Starting Ollama service automatically...' }));
             
-            if (startResult.success) {
-              // Wait for service to stabilize
-              await new Promise(resolve => setTimeout(resolve, 2000));
+            // Check if auto-start API is available
+            if (window.electronAPI?.startService) {
+              const startResult = await window.electronAPI.startService();
               
-              // Service auto-started successfully
-              setState(prev => ({
-                ...prev,
-                isInstalling: false,
-                allDependenciesValid: true,
-                installationProgress: 'Installation and initialization completed successfully!',
-                error: null
-              }));
-              return; // Success! Exit function
+              if (startResult.success) {
+                // Wait for service to stabilize
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Service auto-started successfully
+                setState(prev => ({
+                  ...prev,
+                  isInstalling: false,
+                  allDependenciesValid: true,
+                  installationProgress: '✅ All dependencies installed and services started successfully!',
+                  error: null
+                }));
+                return; // Success! Exit function
+              } else {
+                console.error('❌ [StartupDependencyChecker] Auto-start failed:', startResult.error);
+                throw new Error(startResult.error || 'Failed to start Ollama service automatically');
+              }
             } else {
-              console.error('❌ [StartupDependencyChecker] Auto-start failed:', startResult.error);
-              throw new Error(startResult.error || 'Falha ao iniciar serviço automaticamente');
+              console.log('⚠️ [StartupDependencyChecker] Auto-start API not available, falling back to manual instructions');
+              throw new Error('Service control APIs not available');
             }
-          } else {
-            console.log('⚠️ [StartupDependencyChecker] Auto-start API not available, falling back to manual instructions');
-            throw new Error('Service control APIs not available');
+          } catch (serviceError) {
+            console.error('❌ [StartupDependencyChecker] Service check failed:', serviceError);
+            const errorMessage = serviceError instanceof Error ? serviceError.message : String(serviceError);
+            
+            // Ollama installed but service issue - provide helpful error
+            setState(prev => ({
+              ...prev,
+              isInstalling: false,
+              error: `Ollama was installed successfully, but the service is not accessible. Please run "ollama serve" in terminal to start the service. Error: ${errorMessage}`,
+              allDependenciesValid: false
+            }));
+            return;
           }
-        } catch (serviceError) {
-          console.error('❌ [StartupDependencyChecker] Service check failed:', serviceError);
-          throw new Error('Ollama was installed but the service is not accessible. Run "ollama serve" in terminal to start the service, then click "Try Again".');
-        }
-      } else {
-        // Se Ollama não foi solicitado ou não foi instalado, verificar se todas as outras dependências estão OK
-        const ollamaOK = (!finalStatus.ollama.requested || finalStatus.ollama.installed);
-        const pythonOK = (!finalStatus.python.requested || finalStatus.python.installed);
-        const allRequestedInstalled = ollamaOK && pythonOK;
-        
-        if (allRequestedInstalled) {
+        } else {
+          // Only Python was installed or no service verification needed
           setState(prev => ({
             ...prev,
             isInstalling: false,
             allDependenciesValid: true,
-            installationProgress: 'All dependencies installed successfully!',
+            installationProgress: `✅ All dependencies (${sortedDependencies.join(', ')}) installed successfully!`,
             error: null
           }));
           return;
-        } else {
-          throw new Error('Post-installation verification failed - some dependencies were not installed');
         }
+      } else {
+        // Some installations failed
+        const failedDeps = sortedDependencies.filter(dep => {
+          if (dep === 'Ollama') return !finalStatus.ollama.installed;
+          if (dep === 'Python') return !finalStatus.python.installed;
+          return true;
+        });
+        
+        const successfulDeps = sortedDependencies.filter(dep => {
+          if (dep === 'Ollama') return finalStatus.ollama.installed;
+          if (dep === 'Python') return finalStatus.python.installed;
+          return false;
+        });
+        
+        const errorSummary = `Installation partially completed. ` +
+          (successfulDeps.length > 0 ? `✅ Successful: ${successfulDeps.join(', ')}. ` : '') +
+          `❌ Failed: ${failedDeps.join(', ')}. Please try manual installation for failed dependencies.`;
+        
+        setState(prev => ({
+          ...prev,
+          isInstalling: false,
+          error: errorSummary,
+          allDependenciesValid: false
+        }));
+        return;
       }
       
     } catch (error) {
@@ -368,15 +542,7 @@ export const StartupDependencyChecker: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.log('🦙 [StartupDependencyChecker] Full error message for analysis:', errorMessage);
       
-      const isBrewLocked = errorMessage.includes('brew install ollama') && 
-                          (errorMessage.includes('has already locked') || 
-                           errorMessage.includes('process has already locked') ||
-                           errorMessage.includes('Cellar/ollama') ||
-                           errorMessage.includes('.tar.gz.incomplete') ||
-                           errorMessage.includes('downloads/') ||
-                           errorMessage.includes('Please wait for it to finish'));
-      
-      if (isBrewLocked) {
+      if (isHomebrewLockError(errorMessage)) {
 
         setState(prev => ({
           ...prev,
