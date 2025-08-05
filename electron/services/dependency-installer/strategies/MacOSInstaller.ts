@@ -80,21 +80,28 @@ Alternative: Run 'brew install python@3.12' in Terminal`,
   }
 
   /**
-   * Install Homebrew on macOS
+   * Install Homebrew on macOS without sudo privileges
    */
   private async installHomebrew(
     onProgress?: (message: string) => void
   ): Promise<void> {
     this.progressReporter.reportDownloading(
       "homebrew",
-      "Installing Homebrew package manager..."
+      "Installing Homebrew package manager (no admin privileges required)..."
     );
 
-    onProgress?.("📦 Installing Homebrew - this may take a few minutes...");
+    onProgress?.("📦 Installing Homebrew in user directory - this may take a few minutes...");
 
     try {
-      // Official Homebrew installation script
-      const installCommand = `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
+      // Install Homebrew in user directory without sudo
+      // This method doesn't require admin privileges
+      const homeDir = process.env.HOME || '~';
+      
+      onProgress?.("📁 Creating Homebrew directory...");
+      await this.commandExecutor.execute(`mkdir -p ${homeDir}/homebrew`);
+      
+      onProgress?.("⬇️ Downloading Homebrew...");
+      const installCommand = `curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ${homeDir}/homebrew`;
       
       await this.executeWithProgress(
         installCommand,
@@ -102,16 +109,34 @@ Alternative: Run 'brew install python@3.12' in Terminal`,
         onProgress
       );
 
+      // Add Homebrew to PATH in current process
+      const homebrewBinPath = `${homeDir}/homebrew/bin`;
+      const currentPath = process.env.PATH || '';
+      if (!currentPath.includes(homebrewBinPath)) {
+        process.env.PATH = `${homebrewBinPath}:${currentPath}`;
+        onProgress?.("🔧 Updated PATH to include Homebrew");
+      }
+
+      // Persist PATH in shell configuration files
+      await this.addHomebrewToShellConfig(homebrewBinPath, onProgress);
+
       // Verify Homebrew was installed
       const homebrewInstalled = await this.commandExecutor.checkCommand("brew");
       if (!homebrewInstalled) {
-        throw new Error("Homebrew installation verification failed");
+        // Try direct path check
+        try {
+          await this.commandExecutor.execute(`${homebrewBinPath}/brew --version`);
+          onProgress?.("✅ Homebrew installed successfully (direct path verified)!");
+        } catch {
+          throw new Error("Homebrew installation verification failed");
+        }
+      } else {
+        onProgress?.("✅ Homebrew installed successfully!");
       }
 
-      onProgress?.("✅ Homebrew installed successfully!");
       this.progressReporter.reportCompleted(
         "homebrew",
-        "Homebrew package manager installed successfully!"
+        "Homebrew package manager installed successfully in user directory!"
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -122,6 +147,59 @@ Alternative: Run 'brew install python@3.12' in Terminal`,
         errorMessage
       );
       throw new Error(`Homebrew installation failed: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Add Homebrew to shell configuration files for persistent PATH
+   */
+  private async addHomebrewToShellConfig(
+    homebrewBinPath: string,
+    onProgress?: (message: string) => void
+  ): Promise<void> {
+    try {
+      const homeDir = process.env.HOME || '~';
+      const pathExport = `export PATH="${homebrewBinPath}:$PATH"`;
+      
+      // Common shell configuration files
+      const shellConfigs = [
+        `${homeDir}/.zshrc`,      // zsh (default on macOS Catalina+)
+        `${homeDir}/.bash_profile`, // bash
+        `${homeDir}/.bashrc`,      // bash alternative
+      ];
+      
+      onProgress?.("📝 Adding Homebrew to shell configuration...");
+      
+      for (const configFile of shellConfigs) {
+        try {
+          // Check if file exists
+          await this.commandExecutor.execute(`test -f ${configFile}`);
+          
+          // Check if PATH is already added
+          try {
+            await this.commandExecutor.execute(`grep -q "${homebrewBinPath}" ${configFile}`);
+            onProgress?.(`✅ Homebrew PATH already in ${configFile}`);
+            continue;
+          } catch {
+            // PATH not found, add it
+            await this.commandExecutor.execute(
+              `echo "\n# Added by Orch-Mind for Homebrew" >> ${configFile}`
+            );
+            await this.commandExecutor.execute(
+              `echo "${pathExport}" >> ${configFile}`
+            );
+            onProgress?.(`✅ Added Homebrew PATH to ${configFile}`);
+          }
+        } catch {
+          // File doesn't exist, skip
+          continue;
+        }
+      }
+      
+      onProgress?.("🔧 Homebrew will be available in new terminal sessions");
+    } catch (error) {
+      onProgress?.("⚠️ Could not update shell configuration - Homebrew may not be available in terminal");
+      console.log("Shell config update failed:", error);
     }
   }
 
@@ -149,7 +227,7 @@ Alternative: Run 'brew install python@3.12' in Terminal`,
       "Downloading Ollama for macOS..."
     );
 
-    // Try official install script first
+    // Try official install script first (doesn't require sudo)
     try {
       onProgress?.("📥 Trying official Ollama installer...");
       await this.executeWithProgress(
@@ -160,30 +238,64 @@ Alternative: Run 'brew install python@3.12' in Terminal`,
       onProgress?.("✅ Ollama installed via official installer!");
       return;
     } catch (error) {
-      onProgress?.("⚠️ Official script failed, trying Homebrew...");
-      console.log("Official script failed, trying homebrew...");
+      onProgress?.("⚠️ Official script failed, checking for Homebrew...");
+      console.log("Official script failed, checking homebrew availability...");
     }
 
-    // Ensure Homebrew is available before using it
-    await this.ensureHomebrew(onProgress);
+    // Check if Homebrew is already available
+    const hasHomebrew = await this.commandExecutor.checkCommand("brew");
+    
+    if (hasHomebrew) {
+      // Try homebrew installation with existing Homebrew
+      try {
+        onProgress?.("🍺 Installing Ollama via existing Homebrew...");
+        const success = await this.tryPackageManagers("ollama", [
+          {
+            name: "Homebrew",
+            checkCommand: "brew",
+            installCommand: "brew install ollama",
+          },
+        ]);
 
-    // Now try homebrew
-    onProgress?.("🍺 Installing Ollama via Homebrew...");
-    const success = await this.tryPackageManagers("ollama", [
-      {
-        name: "Homebrew",
-        checkCommand: "brew",
-        installCommand: "brew install ollama",
-      },
-    ]);
-
-    if (!success) {
-      throw new Error(
-        "Failed to install Ollama via Homebrew. Please try manual installation from https://ollama.com"
-      );
+        if (success) {
+          onProgress?.("✅ Ollama installed via Homebrew!");
+          return;
+        }
+      } catch (error) {
+        onProgress?.("⚠️ Existing Homebrew installation failed, trying fresh install...");
+        console.log("Existing Homebrew installation failed:", error);
+      }
     }
 
-    onProgress?.("✅ Ollama installed via Homebrew!");
+    // Try installing Homebrew without sudo and then install Ollama
+    try {
+      onProgress?.("🍺 Homebrew not available - installing automatically (no admin required)...");
+      await this.ensureHomebrew(onProgress);
+      
+      // Now try installing Ollama with fresh Homebrew
+      onProgress?.("🍺 Installing Ollama via fresh Homebrew...");
+      const success = await this.tryPackageManagers("ollama", [
+        {
+          name: "Homebrew",
+          checkCommand: "brew",
+          installCommand: "brew install ollama",
+        },
+      ]);
+
+      if (success) {
+        onProgress?.("✅ Ollama installed via fresh Homebrew!");
+        return;
+      }
+    } catch (error) {
+      onProgress?.("⚠️ Automatic Homebrew installation failed...");
+      console.log("Automatic Homebrew installation failed:", error);
+    }
+
+    // Final fallback: Guide user to manual installation
+    throw new Error(
+      "Automatic Ollama installation failed with all methods. " +
+      "Please install Ollama manually from https://ollama.com/download/mac"
+    );
   }
 
   /**

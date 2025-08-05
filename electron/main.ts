@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+// Fix PATH environment variable before any imports or operations
+// This ensures Homebrew and other CLI tools are properly detected when app is launched from GUI
+try {
+  // Only apply fix-path on macOS
+  if (process.platform === 'darwin') {
+    const fixPath = require('fix-path');
+    fixPath();
+    console.log('🔧 [PATH] PATH fixed for macOS GUI launch - Homebrew tools should now be detectable');
+  }
+} catch (error) {
+  console.warn('⚠️ [PATH] Failed to fix PATH:', error);
+}
+
 import dotenv from "dotenv";
 import {
   app,
