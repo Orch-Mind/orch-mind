@@ -1,6 +1,6 @@
 # Orch-Mind: IA para Todos 🇧🇷
 
-![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-green) ![Version](https://img.shields.io/badge/version-0.0.1-brightgreen) ![AI](https://img.shields.io/badge/AI-Federated-purple) ![LoRA](https://img.shields.io/badge/LoRA-P2P%20Sharing-orange) ![Gemma](https://img.shields.io/badge/Gemma-3%20%7C%203n-red) ![Platform](https://img.shields.io/badge/platform-Electron-lightgrey.svg) ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow.svg)
+![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-green) ![Version](https://img.shields.io/badge/version-0.0.1-brightgreen) ![AI](https://img.shields.io/badge/AI-Federated-purple) ![LoRA](https://img.shields.io/badge/LoRA-P2P%20Sharing-orange) ![Gemma](https://img.shields.io/badge/Gemma-3%20%7C%203n-red) ![Platform](https://img.shields.io/badge/platform-Electron-lightgrey.svg)
 
 **A Primeira Plataforma de IA Federada do Brasil, projetada para democratizar o acesso à Inteligência Artificial com total privacidade e controle para o usuário.**
 
