@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { P2PDownloadProgress } from "../types";
 
 interface P2PDownloadProgressProps {
@@ -16,6 +17,7 @@ interface P2PDownloadProgressProps {
 export const P2PDownloadProgressComponent: React.FC<
   P2PDownloadProgressProps
 > = ({ progress }) => {
+  const { t } = useTranslation();
   const {
     adapterName,
     progress: percentage,
@@ -29,21 +31,21 @@ export const P2PDownloadProgressComponent: React.FC<
 
   // Format bytes to human readable format
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return "0 B";
+    if (bytes === 0) return `0 ${t('download.bytes.b')}`;
     const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
+    const sizes = [t('download.bytes.b'), t('download.bytes.kb'), t('download.bytes.mb'), t('download.bytes.gb')];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   // Get contextual message during different phases
   const getProgressMessage = () => {
-    if (error) return `❌ ${error}`;
-    if (status === "completed") return "✅ Download completed";
-    if (status === "cancelled") return "⏹️ Download cancelled";
-    if (percentage === 0) return "🔗 Connecting to peer...";
-    if (percentage < 2) return "📋 Preparing download...";
-    if (percentage >= 100) return "💾 Finalizing...";
+    if (error) return `${t('download.status.error')} ${error}`;
+    if (status === "completed") return t('download.downloadCompleted');
+    if (status === "cancelled") return t('download.downloadCancelled');
+    if (percentage === 0) return t('download.connectingToPeer');
+    if (percentage < 2) return t('download.preparingDownload');
+    if (percentage >= 100) return t('download.finalizing');
     return null;
   };
 
@@ -76,12 +78,12 @@ export const P2PDownloadProgressComponent: React.FC<
           }`}
         >
           {status === "downloading"
-            ? "⬇️"
+            ? t('download.status.downloading')
             : status === "completed"
-            ? "✅"
+            ? t('download.status.completed')
             : status === "error"
-            ? "❌"
-            : "⏸️"}
+            ? t('download.status.error')
+            : t('download.status.paused')}
         </span>
       </div>
 
@@ -102,7 +104,7 @@ export const P2PDownloadProgressComponent: React.FC<
           {progressMessage || (
             <>
               {formatBytes(downloadedBytes)} / {formatBytes(totalBytes)}
-              {eta && ` • ETA: ${eta}`}
+              {eta && ` • ${t('download.eta')} ${eta}`}
             </>
           )}
         </span>

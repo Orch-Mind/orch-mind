@@ -105,7 +105,7 @@ export class DependencyInstaller extends EventEmitter {
   /**
    * Get manual installation instructions
    */
-  getManualInstructions(dependency: "ollama"): string {
+  getManualInstructions(dependency: "ollama" | "python"): string {
     const dep = this.dependencies.get(dependency);
     if (!dep) {
       return "Unknown dependency";

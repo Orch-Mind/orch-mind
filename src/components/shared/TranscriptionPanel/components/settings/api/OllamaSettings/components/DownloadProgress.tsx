@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { DownloadInfo } from "../types/ollama.types";
 
 interface DownloadProgressProps {
@@ -13,14 +14,15 @@ interface DownloadProgressProps {
  * Following best practices from UX loading patterns
  */
 export const DownloadProgress: React.FC<DownloadProgressProps> = ({ info }) => {
+  const { t } = useTranslation();
   const { progress, speed, eta, message } = info;
 
   // Show contextual message during initial phases
   const getProgressMessage = () => {
     if (message) return message;
-    if (progress === 0) return "🔗 Connecting...";
-    if (progress < 2 && speed === "Starting...")
-      return "📋 Preparing download...";
+    if (progress === 0) return t('download.connecting');
+    if (progress < 2 && speed === t('download.starting'))
+      return t('download.preparingDownload');
     return null;
   };
 
@@ -39,11 +41,11 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({ info }) => {
       {/* Progress info */}
       <div className="flex justify-between text-[10px] text-gray-400">
         <span>
-          {progress.toFixed(1)}% {speed !== "Starting..." && speed}
+          {progress.toFixed(1)}% {speed !== t('download.starting') && speed}
         </span>
         <span>
           {progressMessage ||
-            (eta !== "Preparing download..." && `ETA: ${eta}`)}
+            (eta !== t('download.preparingDownload') && `${t('download.eta')} ${eta}`)}
         </span>
       </div>
     </div>

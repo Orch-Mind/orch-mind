@@ -15,6 +15,9 @@ import {
   InstallProgress,
 } from "./services/DependencyInstaller";
 import { OllamaClient } from "./services/OllamaClient";
+import i18n from "../src/i18n";
+
+const t = i18n.t.bind(i18n);
 
 export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   console.log("Initializing IPC handlers");
@@ -997,6 +1000,27 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     try {
       console.log("🦙 [IPC] Starting Ollama installation...");
 
+      // Show restart dialog before installation on Windows
+      if (process.platform === 'win32') {
+        const mainWindow = deps.getMainWindow();
+        if (mainWindow) {
+          const result = await dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: t("api.ollama.installation.confirmTitle"),
+            message: t("api.ollama.installation.confirmMessage"),
+            detail: t("api.ollama.installation.confirmDetail"),
+            buttons: [t("api.ollama.installation.confirmContinue"), t("api.ollama.installation.confirmCancel")],
+            defaultId: 0,
+            cancelId: 1
+          });
+          
+          if (result.response === 1) {
+            // User cancelled
+            return;
+          }
+        }
+      }
+
       // Listen for progress updates
       const progressHandler = (progress: InstallProgress) => {
         event.sender.send("install-progress", progress);
@@ -1007,8 +1031,27 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       try {
         await dependencyInstaller.installOllama();
         console.log("🦙 [IPC] Ollama installation completed");
+        
+
       } finally {
-        dependencyInstaller.removeListener("progress", progressHandler);
+        if (process.platform === 'win32') {
+          const mainWindow = deps.getMainWindow();
+          if (mainWindow) {
+            const result = await dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: t("api.ollama.installation.completedTitle"),
+              message: t("api.ollama.installation.completedMessage"),
+              detail: t("api.ollama.installation.completedDetail"),
+              buttons: [t("api.ollama.installation.completedOk")],
+              defaultId: 0
+            });
+            
+            // Force immediate quit without waiting for any other processes
+            setImmediate(() => {
+              require('electron').app.quit();
+            });
+          }
+        }
       }
     } catch (error) {
       console.error("🦙 [IPC] Error installing Ollama:", error);
@@ -1021,6 +1064,27 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     try {
       console.log("🐍 [IPC] Starting Python installation...");
 
+      // Show restart dialog before installation on Windows
+      if (process.platform === 'win32') {
+        const mainWindow = deps.getMainWindow();
+        if (mainWindow) {
+          const result = await dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: t("api.python.installation.confirmTitle"),
+            message: t("api.python.installation.confirmMessage"),
+            detail: t("api.python.installation.confirmDetail"),
+            buttons: [t("api.python.installation.confirmContinue"), t("api.python.installation.confirmCancel")],
+            defaultId: 0,
+            cancelId: 1
+          });
+          
+          if (result.response === 1) {
+            // User cancelled
+            return;
+          }
+        }
+      }
+
       // Listen for progress updates
       const progressHandler = (progress: InstallProgress) => {
         event.sender.send("install-progress", progress);
@@ -1032,7 +1096,24 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         await dependencyInstaller.installPython();
         console.log("🐍 [IPC] Python installation completed");
       } finally {
-        dependencyInstaller.removeListener("progress", progressHandler);
+        if (process.platform === 'win32') {
+          const mainWindow = deps.getMainWindow();
+          if (mainWindow) {
+            const result = await dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: t("api.python.installation.completedTitle"),
+              message: t("api.python.installation.completedMessage"),
+              detail: t("api.python.installation.completedDetail"),
+              buttons: [t("api.python.installation.completedOk")],
+              defaultId: 0
+            });
+            
+            // Force immediate quit without waiting for any other processes
+            setImmediate(() => {
+              require('electron').app.quit();
+            });
+          }
+        }
       }
     } catch (error) {
       console.error("🐍 [IPC] Error installing Python:", error);

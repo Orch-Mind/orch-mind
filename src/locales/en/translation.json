@@ -24,7 +24,7 @@
   },
   "header": {
     "title": "Orch-Mind",
-    "importNeuralData": "Import Neural Data",
+    "importNeuralData": "Import Data",
     "cognitionLogs": "Cognition Logs",
     "openCognitionLogs": "Open Cognition Logs",
     "duckdbDebug": "DuckDB Debug (Dev Only)",
@@ -124,10 +124,54 @@
     "public": "👁️ Public"
   },
   "startup": {
-    "installed": "✅ Installed",
-    "notInstalled": "❌ Not Installed",
-    "initializingOllama": "Initializing Ollama service automatically...",
-    "serviceStartedSuccessfully": "Service auto-started successfully!"
+    "modelChecker": {
+      "downloadingModels": "Downloading required models…",
+      "starting": "Starting...",
+      "preparingDownload": "Preparing download...",
+      "done": "Done"
+    },
+    "dependencyChecker": {
+      "installed": "✅ Installed",
+      "notInstalled": "❌ Not Installed",
+      "initializingOllama": "Initializing Ollama service automatically...",
+      "serviceStartedSuccessfully": "Service auto-started successfully!",
+      "serviceStartedButNotAccessible": "Service started but still not accessible",
+      "failedToStartOllama": "Failed to start Ollama service",
+      "ollamaInstalledButServiceFailed": "Ollama was installed successfully, but the service could not be started automatically. Please run 'ollama serve' in terminal to start the service, then click 'Try Again'.",
+      "dependencyVerificationFailed": "Dependency verification failed",
+      "startingSequentialInstallation": "Starting sequential installation",
+      "installing": "Installing...",
+      "installingOllama": "Installing Ollama...",
+      "verifyingOllamaInstallation": "Verifying Ollama installation...",
+      "ollamaInstalledAndVerified": "Ollama installed and verified!",
+      "pythonAlreadyInstalled": "Python was already installed!",
+      "installingPython": "Installing Python...",
+      "verifyingPythonInstallation": "Verifying Python installation...",
+      "pythonInstalledAndVerified": "Python installed and verified!",
+      "allowingSystemToStabilize": "Allowing system to stabilize...",
+      "noInstallationApiAvailable": "No installation API available for",
+      "allDependenciesInstalled": "All dependencies installed successfully!",
+      "installationPartiallyCompleted": "Installation partially completed. ✅ Successful: {{successful}}. ❌ Failed: {{failed}}.",
+      "homebrewLockError": "Ollama installation process already in progress via Homebrew",
+      "installingDependencies": "Installing Dependencies...",
+      "checkingDependencies": "Checking Dependencies...",
+      "checkingIfInstalled": "Checking if Ollama and Python are installed and working",
+      "dependenciesNotFound": "Dependencies Not Found",
+      "installationInProgress": "Installation in Progress",
+      "dependencyStatus": "Dependency Status:",
+      "automaticInstallationAvailable": "Automatic Installation Available",
+      "missingDependenciesDetected": "Missing dependencies detected. We can install them automatically for you!",
+      "waitAndCheckAgain": "Wait and Check Again",
+      "tryAgain": "Try Again",
+      "checkingIfOllamaAndPythonInstalled": "Checking if Ollama and Python are installed and working",
+      "installingDependenciesAutomatically": "Installing dependencies automatically...",
+      "automaticInstallationFailed": "Automatic Ollama installation failed",
+      "ollamaInstallationInProgress": "Ollama installation process already in progress via Homebrew",
+      "homebrewInstallingDependencies": "Homebrew is installing dependencies",
+      "automaticallyDetectsOS": "Automatically detects your operating system",
+      "usesOfficialInstallers": "Uses official installers",
+      "configuresEverything": "Configures everything for you"
+    }
   },
   "api": {
     "deepgram": {
@@ -225,6 +269,30 @@
         "connectionFailed": "Could not connect to Ollama. Check if it's running.",
         "installationFailed": "Failed to install Ollama. Try manual installation.",
         "dependencyCheckFailed": "Failed to check dependencies"
+      },
+      "installation": {
+        "confirmTitle": "Ollama Installation",
+        "confirmMessage": "Ollama will be installed now.",
+        "confirmDetail": "After installation, the application will need to be restarted for changes to take effect. Do you want to continue?",
+        "confirmContinue": "Continue",
+        "confirmCancel": "Cancel",
+        "completedTitle": "Installation Completed",
+        "completedMessage": "Ollama has been successfully installed!",
+        "completedDetail": "The application will now restart to apply the changes.",
+        "completedOk": "OK"
+      }
+    },
+    "python": {
+      "installation": {
+        "confirmTitle": "Python Installation",
+        "confirmMessage": "Python will be installed now.",
+        "confirmDetail": "After installation, the application will need to be restarted for changes to take effect. Do you want to continue?",
+        "confirmContinue": "Continue",
+        "confirmCancel": "Cancel",
+        "completedTitle": "Installation Completed",
+        "completedMessage": "Python has been successfully installed!",
+        "completedDetail": "The application will now restart to apply the changes.",
+        "completedOk": "OK"
       }
     }
   },
@@ -333,7 +401,27 @@
     "noAdaptersAvailable": "No Adapters Available",
     "noAdaptersAvailableDescription": "No adapters found in the current room",
     "tryDifferentRoom": "Try connecting to a different room",
-    "noPeersConnected": "No peers connected - invite others!"
+    "noPeersConnected": "No peers connected - invite others!",
+    "connecting": "🔗 Connecting...",
+    "preparingDownload": "📋 Preparing download...",
+    "starting": "Starting...",
+    "eta": "ETA:",
+    "downloadCompleted": "✅ Download completed",
+    "downloadCancelled": "⏹️ Download cancelled",
+    "connectingToPeer": "🔗 Connecting to peer...",
+    "finalizing": "💾 Finalizing...",
+    "bytes": {
+      "b": "B",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB"
+    },
+    "status": {
+      "downloading": "⬇️",
+      "completed": "✅",
+      "error": "❌",
+      "paused": "⏸️"
+    }
   },
   "languageSwitcher": {
     "selectLanguage": "Select language",
@@ -341,7 +429,7 @@
   },
 
   "importModal": {
-    "title": "Import Neural Data",
+    "title": "Import Data",
     "closeModal": "Close modal",
     "importingAs": "Importing as:",
     "changeNameHint": "You can change your name in Settings → General",

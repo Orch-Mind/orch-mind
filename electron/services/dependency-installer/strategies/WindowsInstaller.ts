@@ -22,14 +22,6 @@ export class WindowsInstaller extends BasePlatformInstaller {
       "Detecting installation method for Windows..."
     );
 
-    // Check admin privileges
-    const hasAdmin = await this.checkPrivileges();
-    if (!hasAdmin) {
-      throw new Error(
-        "Administrator privileges required for installation on Windows"
-      );
-    }
-
     switch (dependency) {
       case "ollama":
         await this.installOllama(onProgress);
@@ -51,10 +43,11 @@ export class WindowsInstaller extends BasePlatformInstaller {
 2. Run the installer
 3. Follow the installation wizard
 Alternative: Run 'winget install Ollama.Ollama' in PowerShell`,
-      python: `1. Download from https://www.python.org/downloads/windows/
+      python: `Manual installation for Windows:
+1. Download from https://www.python.org/downloads/windows/
 2. Run the installer
 3. Check "Add Python to PATH" during installation
-Alternative: Run 'winget install Python.Python.3.12' in PowerShell`,
+Alternative: Run 'winget install Python.Python.3.11' in PowerShell`,
       winget: `Winget comes pre-installed with Windows 10 (1709+) and Windows 11.
 If missing:
 1. Install from Microsoft Store: "App Installer"
@@ -88,26 +81,25 @@ If missing:
    */
   private async ensurePackageManagers(
     onProgress?: (message: string) => void
-  ): Promise<boolean> {
+  ): Promise<void> {
     // Check if winget is available (comes with Windows 10 1709+ and Windows 11)
     const hasWinget = await this.commandExecutor.checkCommand("winget");
     if (hasWinget) {
       onProgress?.("📦 Winget package manager is available");
-      return true;
+      return;
     }
 
     // Check if Chocolatey is available
     const hasChoco = await this.commandExecutor.checkCommand("choco");
     if (hasChoco) {
       onProgress?.("🍫 Chocolatey package manager is available");
-      return true;
+      return;
     }
 
-    // Try to install Chocolatey as fallback
+    // Try to install Chocolatey as fallback (user-scope if possible)
     onProgress?.("📦 No package manager found - installing Chocolatey...");
     try {
       await this.installChocolatey(onProgress);
-      return true;
     } catch (error) {
       onProgress?.("❌ Failed to install package manager automatically");
       throw new Error(
@@ -117,20 +109,47 @@ If missing:
   }
 
   /**
-   * Install Chocolatey package manager
+   * Install Chocolatey package manager (user-scope when possible)
    */
   private async installChocolatey(
     onProgress?: (message: string) => void
   ): Promise<void> {
+    this.progressReporter.reportDownloading(
+      "chocolatey",
+      "Installing Chocolatey package manager..."
+    );
+
     onProgress?.("🍫 Installing Chocolatey package manager...");
     
-    const installCommand = `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))`;
-    
-    await this.executeWithProgress(
-      installCommand,
-      "chocolatey",
-      onProgress
-    );
+    try {
+      // Try user-scope installation first (no admin required)
+      const userInstallCommand = `[Environment]::SetEnvironmentVariable('ChocolateyInstall', '$env:USERPROFILE\\chocolatey', 'User'); Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))`;
+      
+      await this.executeWithProgress(
+        userInstallCommand,
+        "chocolatey",
+        onProgress
+      );
+    } catch (error) {
+      onProgress?.("⚠️ User-scope installation failed, trying system-wide...");
+      
+      // Check if we have admin privileges for system-wide installation
+      const hasAdmin = await this.checkPrivileges();
+      if (!hasAdmin) {
+        throw new Error(
+          "Chocolatey installation failed. Please run as administrator or install Winget from Microsoft Store."
+        );
+      }
+      
+      // Fallback to system-wide installation
+      const systemInstallCommand = `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))`;
+      
+      await this.executeWithProgress(
+        systemInstallCommand,
+        "chocolatey",
+        onProgress
+      );
+    }
 
     // Verify installation
     const hasChoco = await this.commandExecutor.checkCommand("choco");
@@ -139,6 +158,10 @@ If missing:
     }
 
     onProgress?.("✅ Chocolatey installed successfully!");
+    this.progressReporter.reportCompleted(
+      "chocolatey",
+      "Chocolatey package manager installed successfully!"
+    );
   }
 
   private async installOllama(
@@ -146,70 +169,123 @@ If missing:
   ): Promise<void> {
     this.progressReporter.reportDownloading(
       "ollama",
-      "Installing Ollama for Windows..."
+      "Downloading Ollama for Windows..."
     );
 
-    // Ensure package managers are available
-    await this.ensurePackageManagers(onProgress);
-
-    onProgress?.("🦙 Installing Ollama via package manager...");
-    const success = await this.tryPackageManagers("ollama", [
-      {
-        name: "winget",
-        checkCommand: "winget",
-        installCommand: "winget install --id Ollama.Ollama --accept-source-agreements --accept-package-agreements",
-      },
-      {
-        name: "Chocolatey",
-        checkCommand: "choco",
-        installCommand: "choco install ollama -y",
-      },
-    ]);
-
-    if (!success) {
-      throw new Error(
-        "Failed to install Ollama via package managers. Please download manually from https://ollama.com/download/windows"
+    // Try official install script first (if available)
+    try {
+      onProgress?.("📥 Trying official Ollama installer...");
+      await this.executeWithProgress(
+        "powershell -Command \"& {Invoke-WebRequest -Uri https://ollama.com/install.sh -OutFile $env:TEMP\\install-ollama.ps1; & $env:TEMP\\install-ollama.ps1}\"",
+        "ollama",
+        onProgress
       );
+      onProgress?.("✅ Ollama installed via official installer!");
+      return;
+    } catch (error) {
+      onProgress?.("⚠️ Official script failed, trying package managers...");
+      console.log("Official script failed, trying package managers...");
     }
 
-    onProgress?.("✅ Ollama installed successfully!");
+    // Try package managers
+    try {
+      await this.ensurePackageManagers(onProgress);
+      
+      onProgress?.("🦙 Installing Ollama via package manager...");
+      const success = await this.tryPackageManagers("ollama", [
+        {
+          name: "winget",
+          checkCommand: "winget",
+          installCommand: "winget install --id Ollama.Ollama --accept-source-agreements --accept-package-agreements",
+        },
+        {
+          name: "Chocolatey",
+          checkCommand: "choco",
+          installCommand: "choco install ollama -y",
+        },
+      ]);
+
+      if (success) {
+        onProgress?.("✅ Ollama installed via package manager!");
+        return;
+      }
+    } catch (error) {
+      onProgress?.("⚠️ Package manager installation failed...");
+      console.log("Package manager installation failed:", error);
+    }
+
+    // Final fallback: Direct download
+    try {
+      onProgress?.("⬇️ Downloading Ollama installer directly...");
+      const downloadCommand = `powershell -Command "Invoke-WebRequest -Uri 'https://ollama.com/download/OllamaSetup.exe' -OutFile '$env:TEMP\\OllamaSetup.exe'; Start-Process '$env:TEMP\\OllamaSetup.exe' -Wait"`;
+      await this.executeWithProgress(downloadCommand, "ollama", onProgress);
+      
+      onProgress?.("✅ Ollama installed successfully!");
+    } catch (error) {
+      throw new Error(
+        "Automatic Ollama installation failed with all methods. " +
+        "Please install Ollama manually from https://ollama.com/download/windows"
+      );
+    }
   }
 
   /**
-   * Install Python on Windows
+   * Install Python 3.11.9 on Windows (user-scope when possible)
    */
   private async installPython(
     onProgress?: (message: string) => void
   ): Promise<void> {
     this.progressReporter.reportDownloading(
       "python",
-      "Installing Python for Windows..."
+      "Installing Python 3.11.9 for Windows..."
     );
 
-    // Ensure package managers are available
-    await this.ensurePackageManagers(onProgress);
+    onProgress?.("🐍 Installing Python 3.11.9...");
 
-    onProgress?.("🐍 Installing Python via package manager...");
-    const success = await this.tryPackageManagers("python", [
-      {
-        name: "winget",
-        checkCommand: "winget",
-        installCommand: "winget install --id Python.Python.3.12 --accept-source-agreements --accept-package-agreements",
-      },
-      {
-        name: "Chocolatey",
-        checkCommand: "choco",
-        installCommand: "choco install python312 -y",
-      },
-    ]);
+    // Try package managers first
+    try {
+      await this.ensurePackageManagers(onProgress);
+      
+      onProgress?.("📦 Installing Python via package manager...");
+      const success = await this.tryPackageManagers("python", [
+        {
+          name: "winget",
+          checkCommand: "winget",
+          installCommand: "winget install --id Python.Python.3.11 --accept-source-agreements --accept-package-agreements",
+        },
+        {
+          name: "Chocolatey",
+          checkCommand: "choco",
+          installCommand: "choco install python311 -y",
+        },
+      ]);
 
-    if (!success) {
-      throw new Error(
-        "Failed to install Python via package managers. Please download manually from https://www.python.org/downloads/windows/"
-      );
+      if (success) {
+        onProgress?.("✅ Python installed via package manager!");
+        return;
+      }
+    } catch (error) {
+      onProgress?.("⚠️ Package manager installation failed, trying direct download...");
+      console.log("Package manager Python installation failed:", error);
     }
 
-    onProgress?.("✅ Python installed successfully!");
+    // Fallback: Direct download and installation
+    try {
+      onProgress?.("⬇️ Downloading Python 3.11.9 installer...");
+      const downloadCommand = `powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe' -OutFile '$env:TEMP\\python-3.11.9-installer.exe'"`;
+      await this.executeWithProgress(downloadCommand, "python", onProgress);
+      
+      onProgress?.("📦 Installing Python for current user...");
+      // Install Python for current user (no admin required)
+      const installCommand = `powershell -Command "Start-Process '$env:TEMP\\python-3.11.9-installer.exe' -ArgumentList '/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_test=0' -Wait"`;
+      await this.executeWithProgress(installCommand, "python", onProgress);
+      
+      onProgress?.("✅ Python 3.11.9 installed successfully!");
+    } catch (error) {
+      throw new Error(
+        "Failed to install Python automatically. Please download and install manually from https://www.python.org/downloads/windows/"
+      );
+    }
   }
 
   /**

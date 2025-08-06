@@ -70,15 +70,23 @@ export abstract class BasePlatformInstaller implements IPlatformInstaller {
       const hasManager = await this.commandExecutor.checkCommand(
         manager.checkCommand
       );
+      
       if (hasManager) {
         this.progressReporter.reportDownloading(
           dependency,
           `Installing ${dependency} using ${manager.name}...`
         );
-        await this.executeWithProgress(manager.installCommand, dependency);
-        return true;
+        
+        try {
+          await this.executeWithProgress(manager.installCommand, dependency);
+          return true;
+        } catch (installError) {
+          // Continue to next package manager
+          continue;
+        }
       }
     }
+    
     return false;
   }
 }

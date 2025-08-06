@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StartupModelChecker } from './StartupModelChecker';
 
 interface DependencyStatus {
@@ -39,6 +40,7 @@ const isHomebrewLockError = (errorMessage: string): boolean => {
 };
 
 export const StartupDependencyChecker: React.FC = () => {
+  const { t } = useTranslation();
   const [state, setState] = useState<StartupDependencyCheckerState>({
     isCheckingDependencies: true,
     dependencies: {
@@ -64,7 +66,7 @@ export const StartupDependencyChecker: React.FC = () => {
           ? 'text-green-600 dark:text-green-400' 
           : 'text-red-600 dark:text-red-400'
       }`}>
-        {installed ? '✅ Installed' : '❌ Not Installed'}
+        {installed ? t('startup.dependencyChecker.installed') : t('startup.dependencyChecker.notInstalled')}
       </span>
     </div>
   );
@@ -153,7 +155,7 @@ export const StartupDependencyChecker: React.FC = () => {
             console.error('❌ [StartupDependencyChecker] HTTP direct connection failed:', serviceError);
             
             // Tentar iniciar o serviço Ollama automaticamente
-            setState(prev => ({ ...prev, installationProgress: 'Inicializando serviço Ollama automaticamente...' }));
+            setState(prev => ({ ...prev, installationProgress: t('startup.dependencyChecker.initializingOllama') }));
             
             try {
               // Verificar se temos a API para iniciar serviços
@@ -179,7 +181,7 @@ export const StartupDependencyChecker: React.FC = () => {
                       ...prev,
                       isCheckingDependencies: false,
                       allDependenciesValid: true,
-                      installationProgress: 'Service auto-started successfully!',
+                      installationProgress: t('startup.dependencyChecker.serviceStartedSuccessfully'),
                       error: null
                     }));
                     return;
@@ -207,10 +209,10 @@ export const StartupDependencyChecker: React.FC = () => {
                     console.error('❌ [StartupDependencyChecker] Service started but still not accessible:', retryError);
                   }
                   
-                  throw new Error('Service started but did not respond to HTTP test');
+                  throw new Error(t('startup.dependencyChecker.serviceStartedButNotAccessible'));
                 }
               } else {
-                throw new Error(startResult.error || 'Failed to start Ollama service');
+                throw new Error(startResult.error || t('startup.dependencyChecker.failedToStartOllama'));
               }
               
             } catch (autoStartError) {
@@ -220,7 +222,7 @@ export const StartupDependencyChecker: React.FC = () => {
               setState(prev => ({
                 ...prev,
                 isCheckingDependencies: false,
-                error: 'Ollama was installed successfully, but the service could not be started automatically. Please run "ollama serve" in terminal to start the service, then click "Try Again".'
+                error: t('startup.dependencyChecker.ollamaInstalledButServiceFailed')
               }));
               console.log('⚠️ [StartupDependencyChecker] === AUTO-START FAILED - MANUAL INTERVENTION REQUIRED ===');
               return;
@@ -243,7 +245,7 @@ export const StartupDependencyChecker: React.FC = () => {
         isCheckingDependencies: false,
         allDependenciesValid: false,
         isInstalling: false,
-        error: 'Dependency verification failed',
+        error: t('startup.dependencyChecker.dependencyVerificationFailed'),
         showManualInstructions: true
       }));
     }
@@ -277,7 +279,7 @@ export const StartupDependencyChecker: React.FC = () => {
         ...prev,
         isCheckingDependencies: false,
         isInstalling: true,
-        installationProgress: `🚀 Starting sequential installation: ${missingDependencies.join(', ')}...`,
+        installationProgress: `🚀 ${t('startup.dependencyChecker.startingSequentialInstallation')}: ${missingDependencies.join(', ')}...`,
         error: null
       }));
 
@@ -285,7 +287,7 @@ export const StartupDependencyChecker: React.FC = () => {
       const progressHandler = (progress: any) => {
         setState(prev => ({
           ...prev,
-          installationProgress: progress.message || 'Installing...'
+          installationProgress: progress.message || t('startup.dependencyChecker.installing')
         }));
       };
 
@@ -310,7 +312,7 @@ export const StartupDependencyChecker: React.FC = () => {
         
         setState(prev => ({
           ...prev,
-          installationProgress: `📦 Installing ${dependency} (${i + 1}/${sortedDependencies.length})...`
+          installationProgress: `📦 ${t('startup.dependencyChecker.installing')} ${dependency} (${i + 1}/${sortedDependencies.length})...`
         }));
         
         try {
@@ -321,15 +323,15 @@ export const StartupDependencyChecker: React.FC = () => {
             if (initialStatus?.ollama) {
               console.log('⚠️ [StartupDependencyChecker] Ollama was already installed, skipping installation');
               installationResults.push({ dependency: 'Ollama', success: true, wasAlreadyInstalled: true });
-              setState(prev => ({ ...prev, installationProgress: '✅ Ollama was already installed!' }));
+              setState(prev => ({ ...prev, installationProgress: `✅ ${t('startup.dependencyChecker.ollamaInstalledAndVerified')}` }));
             } else {
-              setState(prev => ({ ...prev, installationProgress: '🦙 Installing Ollama...' }));
+              setState(prev => ({ ...prev, installationProgress: `🦙 ${t('startup.dependencyChecker.installingOllama')}` }));
               
               try {
                 await window.electronAPI.installOllama();
                 
                 // Verify installation
-                setState(prev => ({ ...prev, installationProgress: '🔍 Verifying Ollama installation...' }));
+                setState(prev => ({ ...prev, installationProgress: `🔍 ${t('startup.dependencyChecker.verifyingOllamaInstallation')}` }));
                 await new Promise(resolve => setTimeout(resolve, 2000)); // Allow time for system to register
                 
                 const ollamaCheck = await window.electronAPI.checkDependencies();
@@ -338,13 +340,13 @@ export const StartupDependencyChecker: React.FC = () => {
                 }
                 
                 installationResults.push({ dependency: 'Ollama', success: true, wasAlreadyInstalled: false });
-                setState(prev => ({ ...prev, installationProgress: '✅ Ollama installed and verified!' }));
+                setState(prev => ({ ...prev, installationProgress: `✅ ${t('startup.dependencyChecker.ollamaInstalledAndVerified')}` }));
               } catch (installError) {
                 console.error(`❌ [StartupDependencyChecker] Ollama installation failed:`, installError);
                 installationResults.push({ dependency: 'Ollama', success: false, error: installError });
                 // Don't throw here - continue with other dependencies
                 const errorMessage = installError instanceof Error ? installError.message : String(installError);
-                setState(prev => ({ ...prev, installationProgress: `❌ Ollama installation failed: ${errorMessage}` }));
+                setState(prev => ({ ...prev, installationProgress: `❌ ${t('startup.dependencyChecker.installingOllama')} failed: ${errorMessage}` }));
               }
             }
             
@@ -353,15 +355,15 @@ export const StartupDependencyChecker: React.FC = () => {
             if (initialStatus?.python) {
               console.log('⚠️ [StartupDependencyChecker] Python was already installed, skipping installation');
               installationResults.push({ dependency: 'Python', success: true, wasAlreadyInstalled: true });
-              setState(prev => ({ ...prev, installationProgress: '✅ Python was already installed!' }));
+              setState(prev => ({ ...prev, installationProgress: `✅ ${t('startup.dependencyChecker.pythonAlreadyInstalled')}` }));
             } else {
-              setState(prev => ({ ...prev, installationProgress: '🐍 Installing Python...' }));
+              setState(prev => ({ ...prev, installationProgress: `🐍 ${t('startup.dependencyChecker.installingPython')}` }));
               
               try {
                 await window.electronAPI.installPython();
                 
                 // Verify installation
-                setState(prev => ({ ...prev, installationProgress: '🔍 Verifying Python installation...' }));
+                setState(prev => ({ ...prev, installationProgress: `🔍 ${t('startup.dependencyChecker.verifyingPythonInstallation')}` }));
                 await new Promise(resolve => setTimeout(resolve, 2000)); // Allow time for system to register
                 
                 const pythonCheck = await window.electronAPI.checkDependencies();
@@ -371,24 +373,24 @@ export const StartupDependencyChecker: React.FC = () => {
                 }
                 
                 installationResults.push({ dependency: 'Python', success: true, wasAlreadyInstalled: false });
-                setState(prev => ({ ...prev, installationProgress: '✅ Python installed and verified!' }));
+                setState(prev => ({ ...prev, installationProgress: `✅ ${t('startup.dependencyChecker.pythonInstalledAndVerified')}` }));
               } catch (installError) {
                 console.error(`❌ [StartupDependencyChecker] Python installation failed:`, installError);
                 installationResults.push({ dependency: 'Python', success: false, error: installError });
                 // Don't throw here - continue with other dependencies
                 const errorMessage = installError instanceof Error ? installError.message : String(installError);
-                setState(prev => ({ ...prev, installationProgress: `❌ Python installation failed: ${errorMessage}` }));
+                setState(prev => ({ ...prev, installationProgress: `❌ ${t('startup.dependencyChecker.installingPython')} failed: ${errorMessage}` }));
               }
             }
             
           } else {
-            console.warn(`⚠️ [StartupDependencyChecker] No installation API available for ${dependency}`);
+            console.warn(`⚠️ [StartupDependencyChecker] ${t('startup.dependencyChecker.noInstallationApiAvailable')} ${dependency}`);
             installationResults.push({ dependency, success: false, error: 'API not available' });
           }
           
           // Add delay between installations to allow system to stabilize
           if (!isLast) {
-            setState(prev => ({ ...prev, installationProgress: '⏳ Allowing system to stabilize...' }));
+            setState(prev => ({ ...prev, installationProgress: `⏳ ${t('startup.dependencyChecker.allowingSystemToStabilize')}` }));
             await new Promise(resolve => setTimeout(resolve, 3000));
           }
           
@@ -402,7 +404,7 @@ export const StartupDependencyChecker: React.FC = () => {
               ...prev,
               isInstalling: false,
               isBrewLocked: true,
-              error: 'Homebrew installation process already in progress'
+              error: t('startup.dependencyChecker.homebrewLockError')
             }));
             return;
           }
@@ -415,7 +417,7 @@ export const StartupDependencyChecker: React.FC = () => {
       }
       
       // Final comprehensive verification
-      setState(prev => ({ ...prev, installationProgress: '🔍 Final verification of all dependencies...' }));
+      setState(prev => ({ ...prev, installationProgress: `🔍 ${t('startup.dependencyChecker.checkingDependencies')}...` }));
       
       const postInstallStatus = await window.electronAPI.checkDependencies();
       const postInstallStatusTyped = postInstallStatus as unknown as AllDependenciesStatus;
@@ -453,11 +455,11 @@ export const StartupDependencyChecker: React.FC = () => {
         if (finalStatus.ollama.requested && finalStatus.ollama.installed) {
           
           // Check if Ollama service is working (might not be after Homebrew install)
-          setState(prev => ({ ...prev, installationProgress: '🔍 Verifying Ollama service is accessible...' }));
+          setState(prev => ({ ...prev, installationProgress: `🔍 ${t('startup.dependencyChecker.verifyingOllamaInstallation')}...` }));
           
           try {
             // Attempt auto-start immediately after installation
-            setState(prev => ({ ...prev, installationProgress: '🚀 Starting Ollama service automatically...' }));
+            setState(prev => ({ ...prev, installationProgress: `🚀 ${t('startup.dependencyChecker.initializingOllama')}` }));
             
             // Check if auto-start API is available
             if (window.electronAPI?.startService) {
@@ -503,7 +505,7 @@ export const StartupDependencyChecker: React.FC = () => {
             ...prev,
             isInstalling: false,
             allDependenciesValid: true,
-            installationProgress: `✅ All dependencies (${sortedDependencies.join(', ')}) installed successfully!`,
+            installationProgress: `✅ ${t('startup.dependencyChecker.allDependenciesInstalled', { dependencies: sortedDependencies.join(', ') })}`,
             error: null
           }));
           return;
@@ -522,9 +524,11 @@ export const StartupDependencyChecker: React.FC = () => {
           return false;
         });
         
-        const errorSummary = `Installation partially completed. ` +
-          (successfulDeps.length > 0 ? `✅ Successful: ${successfulDeps.join(', ')}. ` : '') +
-          `❌ Failed: ${failedDeps.join(', ')}. Please try manual installation for failed dependencies.`;
+        const errorSummary = t('startup.dependencyChecker.installationPartiallyCompleted', {
+          successful: successfulDeps.join(', '),
+          failed: failedDeps.join(', '),
+          hasSuccessful: successfulDeps.length > 0
+        });
         
         setState(prev => ({
           ...prev,
@@ -550,7 +554,7 @@ export const StartupDependencyChecker: React.FC = () => {
           allDependenciesValid: false,
           isBrewLocked: true,
           skipAutoInstall: true, // Disable future automatic attempts
-          error: 'Ollama installation process already in progress via Homebrew',
+          error: t('startup.dependencyChecker.ollamaInstallationInProgress'),
           showManualInstructions: false
         }));
       } else {
@@ -559,7 +563,7 @@ export const StartupDependencyChecker: React.FC = () => {
           isInstalling: false,
           allDependenciesValid: false,
           isBrewLocked: false,
-          error: 'Automatic Ollama installation failed',
+          error: t('startup.dependencyChecker.automaticInstallationFailed'),
           showManualInstructions: true
         }));
       }
@@ -606,12 +610,12 @@ export const StartupDependencyChecker: React.FC = () => {
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {state.isInstalling ? 'Installing Dependencies...' : 'Checking Dependencies...'}
+              {state.isInstalling ? t('startup.dependencyChecker.installingDependencies') : t('startup.dependencyChecker.checkingDependencies')}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
               {state.isInstalling 
-                ? state.installationProgress || 'Installing dependencies automatically...'
-                : 'Checking if Ollama and Python are installed and working'
+                ? state.installationProgress || t('startup.dependencyChecker.installingDependenciesAutomatically')
+                : t('startup.dependencyChecker.checkingIfOllamaAndPythonInstalled')
               }
             </p>
 
@@ -639,7 +643,7 @@ export const StartupDependencyChecker: React.FC = () => {
           
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {state.isBrewLocked ? '⏳ Installation in Progress' : 'Dependencies Not Found'}
+              {state.isBrewLocked ? `⏳ ${t('startup.dependencyChecker.installationInProgress')}` : t('startup.dependencyChecker.dependenciesNotFound')}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               {state.error}
@@ -648,7 +652,7 @@ export const StartupDependencyChecker: React.FC = () => {
             {/* Dependency status */}
             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg w-full mb-4">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                📋 Dependency Status:
+                📋 {t('startup.dependencyChecker.dependencyStatus')}:
               </h4>
               <div className="space-y-1 text-xs">
                 {renderDependencyStatus('Ollama', state.dependencies.ollama.installed)}
@@ -660,10 +664,10 @@ export const StartupDependencyChecker: React.FC = () => {
           {state.isBrewLocked ? (
             <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg w-full border border-orange-200 dark:border-orange-800">
               <h4 className="font-medium text-orange-900 dark:text-orange-200 mb-2">
-                Installation in Progress
+                {t('startup.dependencyChecker.installationInProgress')}
               </h4>
               <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
-                Homebrew is installing dependencies
+                {t('startup.dependencyChecker.homebrewInstallingDependencies')}
               </p>
               <p className="text-sm text-orange-600 dark:text-orange-400 mb-3">
                 Please wait for the process to complete or resolve manually if needed.
@@ -677,15 +681,15 @@ export const StartupDependencyChecker: React.FC = () => {
           ) : (
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg w-full border border-blue-200 dark:border-blue-800">
               <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">
-                Automatic Installation Available
+                {t('startup.dependencyChecker.automaticInstallationAvailable')}
               </h4>
               <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                Missing dependencies detected. We can install them automatically for you!
+                {t('startup.dependencyChecker.missingDependenciesDetected')}
               </p>
               <div className="text-xs text-blue-600 dark:text-blue-400">
-                • Automatically detects your operating system<br/>
-                • Uses official installers<br/>
-                • Configures everything for you
+                • {t('startup.dependencyChecker.automaticallyDetectsOS')}<br/>
+                • {t('startup.dependencyChecker.usesOfficialInstallers')}<br/>
+                • {t('startup.dependencyChecker.configuresEverything')}
               </div>
             </div>
           )}
@@ -695,7 +699,7 @@ export const StartupDependencyChecker: React.FC = () => {
               onClick={handleRetry}
               className="flex-1 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
             >
-              {state.isBrewLocked ? '⏳ Wait and Check Again' : '🚀 Try Again'}
+              {state.isBrewLocked ? `⏳ ${t('startup.dependencyChecker.waitAndCheckAgain')}` : `🚀 ${t('startup.dependencyChecker.tryAgain')}`}
             </button>
           </div>
         </div>

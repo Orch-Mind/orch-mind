@@ -14,6 +14,7 @@
 */
 
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { OllamaService } from "../shared/TranscriptionPanel/components/settings/api/OllamaSettings/services/ollamaService";
 import { setOption } from "../../services/StorageService";
 import {
@@ -42,6 +43,7 @@ function getRequiredModels(): string[] {
 }
 
 export const StartupModelChecker: React.FC = () => {
+  const { t } = useTranslation();
   const [downloads, setDownloads] = useState<Map<string, DownloadInfo>>(new Map());
   const [initialized, setInitialized] = useState(false);
   // Prevent unmounted-state updates
@@ -102,8 +104,8 @@ export const StartupModelChecker: React.FC = () => {
       const newMap = new Map(prev);
       const current = newMap.get(modelId) || {
         progress: 0,
-        speed: "Starting...",
-        eta: "Preparing download...",
+        speed: t('startup.modelChecker.starting'),
+        eta: t('startup.modelChecker.preparingDownload'),
       };
       newMap.set(modelId, { ...current, ...info });
       return newMap;
@@ -128,7 +130,7 @@ export const StartupModelChecker: React.FC = () => {
         }
         
         // Mark as completed and remove after delay
-        updateDownloadInfo(modelId, { progress: 100, speed: "", eta: "Done" });
+        updateDownloadInfo(modelId, { progress: 100, speed: "", eta: t('startup.modelChecker.done') });
         setTimeout(() => {
           setDownloads((prev) => {
             const newMap = new Map(prev);
@@ -143,7 +145,11 @@ export const StartupModelChecker: React.FC = () => {
       // PRESERVE existing downloads instead of replacing the entire Map
       setDownloads((prev) => {
         const newMap = new Map(prev);
-        newMap.set(modelId, { progress: 0, speed: "Starting...", eta: "Preparing download..." });
+        newMap.set(modelId, { 
+          progress: 0, 
+          speed: t('startup.modelChecker.starting'), 
+          eta: t('startup.modelChecker.preparingDownload') 
+        });
         return newMap;
       });
 
@@ -190,7 +196,7 @@ export const StartupModelChecker: React.FC = () => {
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-auto px-4">
       <div className="w-full max-w-sm mx-auto space-y-4 bg-gray-800/90 rounded-xl p-6 border border-gray-700 shadow-lg pointer-events-auto">
         <h4 className="text-sm font-medium text-gray-100 flex items-center gap-2">
-          <span>Downloading required models…</span>
+          <span>{t('startup.modelChecker.downloadingModels')}</span>
         </h4>
         {Array.from(downloads.entries()).map(([id, info]) => (
           <div key={id} className="space-y-1">

@@ -48,7 +48,7 @@ Alternative: Run 'brew install ollama' in Terminal`,
 1. Download from https://www.python.org/downloads/macos/
 2. Run the installer package
 3. Follow the installation wizard
-Alternative: Run 'brew install python@3.12' in Terminal`,
+Alternative: Run 'brew install python@3.11' in Terminal`,
       homebrew: `Manual installation for Homebrew:
 1. Open Terminal
 2. Run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -299,35 +299,56 @@ Alternative: Run 'brew install python@3.12' in Terminal`,
   }
 
   /**
-   * Install Python on macOS
+   * Install Python on macOS (user-scope, no admin required)
    */
   private async installPython(
     onProgress?: (message: string) => void
   ): Promise<void> {
     this.progressReporter.reportDownloading(
       "python",
-      "Installing Python for macOS..."
+      "Installing Python for macOS (user-scope)..."
     );
 
-    // Ensure Homebrew is available before using it
-    await this.ensureHomebrew(onProgress);
+    onProgress?.("🐍 Installing Python in user directory...");
 
-    // Install Python via Homebrew
-    onProgress?.("🐍 Installing Python via Homebrew...");
-    const success = await this.tryPackageManagers("python", [
-      {
-        name: "Homebrew",
-        checkCommand: "brew",
-        installCommand: "brew install python@3.12",
-      },
-    ]);
+    // Try Homebrew first (existing or new installation)
+    try {
+      await this.ensureHomebrew(onProgress);
+      
+      onProgress?.("🍺 Installing Python via Homebrew...");
+      const success = await this.tryPackageManagers("python", [
+        {
+          name: "Homebrew",
+          checkCommand: "brew",
+          installCommand: "brew install python@3.11",
+        },
+      ]);
 
-    if (!success) {
-      throw new Error(
-        "Failed to install Python via Homebrew. Please install manually from https://www.python.org/downloads/"
-      );
+      if (success) {
+        onProgress?.("✅ Python installed via Homebrew!");
+        return;
+      }
+    } catch (error) {
+      onProgress?.("⚠️ Homebrew installation failed, trying direct download...");
+      console.log("Homebrew Python installation failed:", error);
     }
 
-    onProgress?.("✅ Python installed via Homebrew!");
+    // Fallback: Direct download and installation (like Windows approach)
+    try {
+      onProgress?.("⬇️ Downloading Python installer for macOS...");
+      const downloadCommand = `curl -o /tmp/python-installer.pkg https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg`;
+      await this.executeWithProgress(downloadCommand, "python", onProgress);
+      
+      onProgress?.("📦 Installing Python for current user...");
+      // Install Python package for current user
+      const installCommand = `installer -pkg /tmp/python-installer.pkg -target CurrentUserHomeDirectory`;
+      await this.executeWithProgress(installCommand, "python", onProgress);
+      
+      onProgress?.("✅ Python installed successfully!");
+    } catch (error) {
+      throw new Error(
+        "Failed to install Python automatically. Please download and install manually from https://www.python.org/downloads/"
+      );
+    }
   }
 }
