@@ -2,20 +2,27 @@
 // Hook for managing training progress - Following SRP
 // Single responsibility: Handle training progress, status, and execution
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import type { TrainingRequest, TrainingResult } from "../types";
+import { usePersistedTrainingState } from "./usePersistedTrainingState";
 
 export const useTrainingProgress = () => {
-  const [isTraining, setIsTraining] = useState(false);
-  const [trainingProgress, setTrainingProgress] = useState(0);
-  const [trainingStatus, setTrainingStatus] = useState<string>("");
-  const [trainingStartTime, setTrainingStartTime] = useState<number | null>(
-    null
-  );
-  const [estimatedTime, setEstimatedTime] = useState<string>("");
-  const [trainingResult, setTrainingResult] = useState<TrainingResult | null>(
-    null
-  );
+  // Use persistent training state hook
+  const {
+    isTraining,
+    trainingProgress,
+    trainingStatus,
+    trainingStartTime,
+    estimatedTime,
+    trainingResult,
+    setIsTraining,
+    setProgress,
+    setStatus,
+    setStartTime,
+    setEstimatedTime,
+    setResult,
+    resetTrainingState
+  } = usePersistedTrainingState();
 
   // Set up real-time progress listener
   useEffect(() => {
@@ -29,8 +36,8 @@ export const useTrainingProgress = () => {
         `[Training] Real progress: ${data.progress}% - ${data.message}`
       );
 
-      setTrainingProgress(data.progress);
-      setTrainingStatus(data.message);
+      setProgress(data.progress);
+      setStatus(data.message);
 
       // Update time estimate based on real progress
       if (trainingStartTime && data.progress > 0 && data.progress < 100) {
@@ -49,7 +56,7 @@ export const useTrainingProgress = () => {
     });
 
     return cleanup;
-  }, [trainingStartTime]);
+  }, [trainingStartTime, setProgress, setStatus, setEstimatedTime]);
 
   const startTraining = useCallback(
     async (
@@ -58,10 +65,10 @@ export const useTrainingProgress = () => {
       onError: (error: string) => void
     ) => {
       setIsTraining(true);
-      setTrainingProgress(0);
-      setTrainingStatus("Preparing training data...");
-      setTrainingStartTime(Date.now());
-      setTrainingResult(null);
+      setProgress(0);
+      setStatus("Preparing training data...");
+      setStartTime(Date.now());
+      setResult(null);
 
       // Use the provided outputName from the request (generated in TrainingSettings)
       const baseModelClean = request.baseModel.replace(":latest", "");
@@ -88,24 +95,24 @@ export const useTrainingProgress = () => {
         });
 
         if (result?.success) {
-          setTrainingProgress(100);
-          setTrainingStatus(
+          setProgress(100);
+          setStatus(
             `✅ Training completed! Model: ${expectedModelName}`
           );
-          setTrainingResult(result);
+          setResult(result);
           onSuccess(result);
         } else {
-          setTrainingProgress(0);
-          setTrainingStatus(
+          setProgress(0);
+          setStatus(
             `❌ Training failed: ${result?.error || "Unknown error"}`
           );
           onError(result?.error || "Unknown error");
         }
       } catch (error) {
-        setTrainingProgress(0);
+        setProgress(0);
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        setTrainingStatus(`❌ Training error: ${errorMessage}`);
+        setStatus(`❌ Training error: ${errorMessage}`);
         onError(errorMessage);
       } finally {
         setIsTraining(false);
@@ -114,21 +121,16 @@ export const useTrainingProgress = () => {
         setEstimatedTime(`Completed in ${Math.round(duration / 1000)}s`);
       }
     },
-    [trainingStartTime]
+    [trainingStartTime, setIsTraining, setProgress, setStatus, setStartTime, setResult, setEstimatedTime]
   );
 
   const resetProgress = useCallback(() => {
-    setIsTraining(false);
-    setTrainingProgress(0);
-    setTrainingStatus("");
-    setTrainingStartTime(null);
-    setEstimatedTime("");
-    setTrainingResult(null);
-  }, []);
+    resetTrainingState();
+  }, [resetTrainingState]);
 
   const clearStatus = useCallback(() => {
-    setTrainingStatus("");
-  }, []);
+    setStatus("");
+  }, [setStatus]);
 
   return {
     isTraining,
@@ -140,6 +142,6 @@ export const useTrainingProgress = () => {
     startTraining,
     resetProgress,
     clearStatus,
-    setTrainingStatus,
+    setTrainingStatus: setStatus,
   };
 };

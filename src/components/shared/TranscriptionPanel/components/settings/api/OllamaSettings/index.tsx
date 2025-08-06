@@ -48,7 +48,6 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
     error,
     setError,
     downloadingModels,
-    setDownloadingModels,
     addDownloadingModel,
     removeDownloadingModel,
     refreshData,
@@ -57,13 +56,13 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
   } = useOllamaModels();
 
   const { downloadModel, cancelDownload, removeModel } = useModelDownload({
-    addDownloadingModel,
-    removeDownloadingModel,
     fetchInstalledModels,
-    downloadingModels,
-    setDownloadingModels,
     setInstalledModels,
     setError,
+    currentMainModel: ollamaModel,
+    currentEmbeddingModel: ollamaEmbeddingModel,
+    onMainModelChange: setOllamaModel,
+    onEmbeddingModelChange: setOllamaEmbeddingModel,
   });
 
   // Model lists by category

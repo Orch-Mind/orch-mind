@@ -11,6 +11,7 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { OllamaModel } from "../types/ollama.types";
+import { isProtectedModel } from "../constants/protectedModels.constants";
 
 interface ModelRadioSelectorProps {
   mainValue: string;
@@ -78,17 +79,24 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
 
       if (model.isDownloaded) {
         const isDisabled = hasActiveDownloads && !model.isDownloading;
+        const isProtected = isProtectedModel(model.id);
+        const cannotDelete = isDisabled || isProtected;
+        
         return (
           <button
             onClick={(e) =>
-              !isDisabled && handleAction(e, () => onRemove(model.id))
+              !cannotDelete && handleAction(e, () => onRemove(model.id))
             }
-            disabled={isDisabled}
-            className={`p-1.5 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors ${
-              isDisabled ? "opacity-50 cursor-not-allowed" : ""
+            disabled={cannotDelete}
+            className={`p-1.5 rounded-md transition-colors ${
+              cannotDelete 
+                ? "bg-gray-500/20 text-gray-400 opacity-50 cursor-not-allowed" 
+                : "bg-red-500/20 hover:bg-red-500/30 text-red-400"
             }`}
             title={
-              isDisabled
+              isProtected
+                ? t('api.ollama.protectedModel')
+                : isDisabled
                 ? t('api.ollama.waitForDownloads')
                 : t('api.ollama.removeModel')
             }

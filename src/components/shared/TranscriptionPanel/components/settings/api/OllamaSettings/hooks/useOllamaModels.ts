@@ -6,6 +6,7 @@ import { OllamaService } from "../services/ollamaService";
 import { DownloadInfo, OllamaModel } from "../types/ollama.types";
 import { MODEL_EVENTS, modelEvents } from "../utils/modelEvents";
 import { getInitialModels, updateModelsWithStatus } from "../utils/modelUtils";
+import { usePersistedDownloadState } from "./usePersistedDownloadState";
 
 // Interface for detailed model info
 interface OllamaModelDetails {
@@ -32,9 +33,13 @@ export const useOllamaModels = () => {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingModels, setDownloadingModels] = useState<
-    Map<string, DownloadInfo>
-  >(new Map());
+  
+  // Use persistent download state
+  const {
+    downloadingModels,
+    addDownloadingModel,
+    removeDownloadingModel
+  } = usePersistedDownloadState();
 
   // Fetch installed models
   const fetchInstalledModels = useCallback(async (isInitialLoad = false) => {
@@ -143,23 +148,7 @@ export const useOllamaModels = () => {
     };
   }, [fetchInstalledModels, downloadingModels]);
 
-  // Add download info
-  const addDownloadingModel = useCallback(
-    (modelId: string, info: DownloadInfo) => {
-      setDownloadingModels((prev) => new Map(prev).set(modelId, info));
-      modelEvents.emit(MODEL_EVENTS.DOWNLOAD_STARTED);
-    },
-    []
-  );
-
-  // Remove download info
-  const removeDownloadingModel = useCallback((modelId: string) => {
-    setDownloadingModels((prev) => {
-      const newMap = new Map(prev);
-      newMap.delete(modelId);
-      return newMap;
-    });
-  }, []);
+  // Note: addDownloadingModel and removeDownloadingModel are now provided by usePersistedDownloadState
 
   // Refresh all data
   const refreshData = useCallback(async () => {
@@ -234,7 +223,6 @@ export const useOllamaModels = () => {
     error,
     setError,
     downloadingModels,
-    setDownloadingModels,
     addDownloadingModel,
     removeDownloadingModel,
     refreshData,

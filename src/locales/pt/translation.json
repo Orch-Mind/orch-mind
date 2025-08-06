@@ -205,6 +205,7 @@
       "noEmbeddingModelsAvailable": "Nenhum modelo de embedding disponível. Verifique a instalação do Ollama.",
       "cancelDownload": "Cancelar download",
       "removeModel": "Remover modelo",
+      "protectedModel": "Modelo essencial - não pode ser deletado",
       "waitForDownloads": "Aguarde os downloads ativos terminarem",
       "downloadModel": "Baixar modelo",
       "installed": "Instalado",
