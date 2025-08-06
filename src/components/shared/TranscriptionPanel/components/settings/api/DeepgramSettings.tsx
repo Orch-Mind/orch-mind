@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   setOption,
   STORAGE_KEYS,
@@ -25,6 +26,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
     deepgramLanguage,
     setDeepgramLanguage,
   }) => {
+    const { t } = useTranslation();
     // Hook para gerenciar compatibilidade entre modelo e idioma
     const { getCompatibleLanguages, getLanguageDisplay } =
       useDeepgramLanguageCompatibility();
@@ -43,7 +45,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
         deepgramLanguage !== fallbackLanguage
       ) {
         console.log(
-          `🌐 Modelo ${deepgramModel} não suporta idioma ${deepgramLanguage}, alterando para ${fallbackLanguage}`
+          `🌐 ${t('api.deepgram.warnings.languageNotSupported')}`
         );
         setDeepgramLanguage(fallbackLanguage);
       }
@@ -70,7 +72,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
     return (
       <div className="p-3 rounded-md bg-black/20 mb-3 animate-fade-in">
         <h3 className="text-lg text-cyan-300 mb-2">
-          Deepgram Voice Transcription
+          {t('api.deepgram.title')}
         </h3>
         <div className="space-y-3">
           <div>
@@ -78,7 +80,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
               htmlFor="deepgramApiKey"
               className="block text-sm text-cyan-200/70 mb-1"
             >
-              Deepgram API Key
+              {t('api.deepgram.apiKey')}
             </label>
             <input
               type="password"
@@ -89,7 +91,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
                 setDeepgramApiKey(e.target.value);
                 setOption(STORAGE_KEYS.DEEPGRAM_API_KEY, e.target.value);
               }}
-              placeholder="Enter your Deepgram API key"
+              placeholder={t('api.deepgram.apiKeyPlaceholder')}
             />
           </div>
 
@@ -98,7 +100,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
               htmlFor="deepgramModel"
               className="block text-sm text-cyan-200/70 mb-1"
             >
-              Deepgram Model
+              {t('api.deepgram.model')}
             </label>
             <select
               id="deepgramModel"
@@ -109,42 +111,42 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
                 setDeepgramModel(e.target.value);
                 setOption(STORAGE_KEYS.DEEPGRAM_MODEL, e.target.value);
               }}
-              title="Select Deepgram Model"
+              title={t('api.deepgram.selectModel')}
             >
               {/* Nova-3 - Latest and most advanced */}
-              <optgroup label="Nova-3 Models">
-                <option value="nova-3">Nova-3 General</option>
-                <option value="nova-3-medical">Nova-3 Medical</option>
+              <optgroup label={t('api.deepgram.models.nova3')}>
+                <option value="nova-3">{t('api.deepgram.models.nova3General')}</option>
+                <option value="nova-3-medical">{t('api.deepgram.models.nova3Medical')}</option>
               </optgroup>
 
               {/* Nova-2 - Second generation */}
-              <optgroup label="Nova-2 Models">
-                <option value="nova-2">Nova-2 General (Recommended)</option>
-                <option value="nova-2-meeting">Nova-2 Meeting</option>
-                <option value="nova-2-phonecall">Nova-2 Phone Call</option>
-                <option value="nova-2-video">Nova-2 Video</option>
+              <optgroup label={t('api.deepgram.models.nova2')}>
+                <option value="nova-2">{t('api.deepgram.models.nova2General')}</option>
+                <option value="nova-2-meeting">{t('api.deepgram.models.nova2Meeting')}</option>
+                <option value="nova-2-phonecall">{t('api.deepgram.models.nova2Phonecall')}</option>
+                <option value="nova-2-video">{t('api.deepgram.models.nova2Video')}</option>
               </optgroup>
 
               {/* Nova - First generation */}
-              <optgroup label="Nova Models">
-                <option value="nova">Nova General</option>
-                <option value="nova-phonecall">Nova Phone Call</option>
+              <optgroup label={t('api.deepgram.models.nova')}>
+                <option value="nova">{t('api.deepgram.models.novaGeneral')}</option>
+                <option value="nova-phonecall">{t('api.deepgram.models.novaPhonecall')}</option>
               </optgroup>
 
               {/* Enhanced - Legacy models */}
-              <optgroup label="Enhanced Models">
-                <option value="enhanced">Enhanced General</option>
-                <option value="enhanced-meeting">Enhanced Meeting</option>
-                <option value="enhanced-phonecall">Enhanced Phone Call</option>
-                <option value="enhanced-finance">Enhanced Finance</option>
+              <optgroup label={t('api.deepgram.models.enhanced')}>
+                <option value="enhanced">{t('api.deepgram.models.enhancedGeneral')}</option>
+                <option value="enhanced-meeting">{t('api.deepgram.models.enhancedMeeting')}</option>
+                <option value="enhanced-phonecall">{t('api.deepgram.models.enhancedPhonecall')}</option>
+                <option value="enhanced-finance">{t('api.deepgram.models.enhancedFinance')}</option>
               </optgroup>
 
               {/* Base - Basic models */}
-              <optgroup label="Base Models">
-                <option value="base">Base General</option>
-                <option value="base-meeting">Base Meeting</option>
-                <option value="base-phonecall">Base Phone Call</option>
-                <option value="base-finance">Base Finance</option>
+              <optgroup label={t('api.deepgram.models.base')}>
+                <option value="base">{t('api.deepgram.models.baseGeneral')}</option>
+                <option value="base-meeting">{t('api.deepgram.models.baseMeeting')}</option>
+                <option value="base-phonecall">{t('api.deepgram.models.basePhonecall')}</option>
+                <option value="base-finance">{t('api.deepgram.models.baseFinance')}</option>
               </optgroup>
             </select>
           </div>
@@ -155,7 +157,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
               htmlFor="deepgramLanguage"
               className="block text-sm text-cyan-200/70 mb-1"
             >
-              Transcription Language
+              {t('api.deepgram.language')}
             </label>
 
             {/* Seletor de idioma filtrado por compatibilidade com o modelo */}
@@ -168,7 +170,7 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
                 setDeepgramLanguage(newValue);
                 setOption(STORAGE_KEYS.DEEPGRAM_LANGUAGE, newValue);
               }}
-              title="Select Transcription Language"
+              title={t('api.deepgram.selectLanguage')}
             >
               {compatibleLanguages.map((langCode) => (
                 <option key={langCode} value={langCode}>
@@ -181,12 +183,12 @@ const DeepgramSettings: React.FC<DeepgramSettingsProps> = React.memo(
             {compatibleLanguages.length === 1 &&
               compatibleLanguages[0] === "en" && (
                 <p className="text-xs text-amber-400 mt-1">
-                  Este modelo suporta apenas inglês.
+                  {t('api.deepgram.warnings.languageNotSupported')}
                 </p>
               )}
             {compatibleLanguages.includes("multi") && (
               <p className="text-xs text-cyan-400/60 mt-1">
-                Este modelo suporta detecção automática de idioma.
+                {t('api.deepgram.warnings.multilingualSupport')}
               </p>
             )}
           </div>

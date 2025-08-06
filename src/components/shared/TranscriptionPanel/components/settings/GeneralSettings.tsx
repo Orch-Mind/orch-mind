@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import LanguageSelector from "../LanguageSelector";
 
 /**
@@ -24,24 +25,25 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   language,
   setLanguage,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       {/* Nome de usuário - identidade simbólica */}
       <div>
-        <h3 className="text-cyan-300 mb-2">User Name</h3>
+        <h3 className="text-cyan-300 mb-2">{t('general.userName')}</h3>
         <input
           type="text"
           id="userName"
           className="w-full p-2 rounded-lg bg-black/30 border-2 border-cyan-400/40 text-white focus:outline-none focus:border-cyan-400"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
+          placeholder={t('general.userNamePlaceholder')}
         />
       </div>
 
       {/* Language Selection */}
       <div className="pt-1">
-        <h3 className="text-cyan-300 mb-2">Language</h3>
+        <h3 className="text-cyan-300 mb-2">{t('general.language')}</h3>
         <LanguageSelector language={language} setLanguage={setLanguage} />
       </div>
     </div>

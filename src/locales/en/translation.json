@@ -1,0 +1,643 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "apply": "Apply Changes",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search...",
+    "clear": "Clear",
+    "done": "Done",
+    "status": "Status:",
+    "name": "Name",
+    "type": "Type",
+    "size": "Size:",
+    "settings": "Settings",
+    "minimize": "Minimize"
+  },
+  "header": {
+    "title": "Orch-Mind",
+    "importNeuralData": "Import Neural Data",
+    "cognitionLogs": "Cognition Logs",
+    "openCognitionLogs": "Open Cognition Logs",
+    "duckdbDebug": "DuckDB Debug (Dev Only)",
+    "openDuckdbDebug": "Open DuckDB Debug",
+    "debug": "Debug",
+    "logs": "Logs"
+  },
+  "settings": {
+    "title": "Settings",
+    "closeSettings": "Close Settings",
+    "navigation": {
+      "general": "General",
+      "advanced": "Advanced",
+      "training": "Training",
+      "share": "Share",
+      "download": "Download",
+      "deploy": "Deploy",
+      "beta": "Beta"
+    },
+    "descriptions": {
+      "general": "Basic application settings and preferences",
+      "advanced": "Advanced configuration and API settings",
+      "training": "LoRA training configuration and data management",
+      "share": "P2P sharing and network settings",
+      "download": "Download adapters from the P2P network",
+      "deploy": "Deploy and manage your LoRA adapters",
+      "beta": "Experimental features and cutting-edge technology"
+    }
+  },
+  "naming": {
+    "adapter": {
+      "placeholder": "my-custom-adapter",
+      "label": "Adapter Name",
+      "helpText": "Use only letters, numbers, hyphen (-) and underscore (_). Min. 3 characters.",
+      "invalidText": "Invalid name. Use only letters, numbers, hyphen (-) and underscore (_).",
+      "startTraining": "Start Training",
+      "training": "Training..."
+    },
+    "deploy": {
+      "placeholder": "my-custom-model:latest",
+      "label": "Model Name",
+      "helpText": "Follow Ollama conventions. Use letters, numbers, dots, hyphen and underscore. Min. 3 characters.",
+      "invalidText": "Invalid name. Follow Ollama conventions for model names.",
+      "deployModel": "Deploy Model",
+      "deploying": "Deploying..."
+    },
+    "cancel": "Cancel",
+    "closeModal": "Close modal"
+  },
+  "share": {
+    "title": "P2P Sharing Center",
+    "smartConnect": "🌐 Smart Connect",
+    "connection": "Connection",
+    "networkStatus": "P2P Network Status",
+    "global": "Global",
+    "room": "Room",
+    "disconnected": "Disconnected",
+    "specialPeerTooltip": "Receiving data through a special peer (like Docker) that isn't counted in the peer list",
+    "offline": "Offline",
+    "sharing": "Sharing",
+    "adaptersDownloadsMerge": "Adapters, Downloads & Merge",
+    "adapterFusionAndDownloads": "Adapter Fusion and Downloads",
+    "available": "available",
+    "howItWorksTitle": "How it Works: ",
+    "globalRoomDescription": "Global room connects you to the global Orch-Mind community. Share your adapters with the world! Check the Download tab to discover adapters from other users.",
+    "privateRoomDescription": "Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to collaborate securely. Visit the Download tab to get shared adapters.",
+    "peer": "peer",
+    "peers": "peers",
+    "previousSession": "Previous Session",
+    "reconnect": "🔄 Reconnect",
+    "joinGlobalCommunity": "Join Global Community",
+    "enterCodePlaceholder": "Enter code to join or leave empty to create",
+    "lookForRoom": "Look for room: {{roomCode}}",
+    "createNewPrivateRoom": "Create new private room",
+    "recentRooms": "Recent rooms:",
+    "useRoomCode": "Use room code: {{code}}",
+    "willLookForRoom": "Will look for room \"{{roomCode}}\", create if not found",
+    "willCreateNewRoom": "Will create new room with random code",
+    "communityRoom": "🌍 Community Room",
+    "localNetwork": "📡 Local Network",
+    "privateRoomCode": "🔒 Room {{roomCode}}",
+    "connected": "Connected",
+    "shareCode": "Share Code:",
+    "copyRoomCodeTooltip": "Copy room code to clipboard",
+    "copying": "Copying...",
+    "disconnecting": "🔄 Disconnecting...",
+    "disconnect": "🚫 Disconnect",
+    "roomCodeCopied": "Room code {{code}} copied! Share with others.",
+    "yourAdapters": "📦 Your Adapters",
+    "noTrainedAdapters": "No trained adapters found",
+    "trainModelFirst": "Train a model first!",
+    "private": "Private",
+    "publicInGeneral": "Public in General",
+    "sharedLocally": "Shared Locally",
+    "sharedInRoom": "Shared in {{roomCode}}",
+    "shared": "Shared",
+    "public": "👁️ Public"
+  },
+  "startup": {
+    "installed": "✅ Installed",
+    "notInstalled": "❌ Not Installed",
+    "initializingOllama": "Initializing Ollama service automatically...",
+    "serviceStartedSuccessfully": "Service auto-started successfully!"
+  },
+  "api": {
+    "deepgram": {
+      "title": "Deepgram Integration",
+      "apiKey": "Deepgram API Key",
+      "apiKeyPlaceholder": "Enter your Deepgram API key",
+      "model": "Deepgram Model",
+      "selectModel": "Select Deepgram Model",
+      "language": "Transcription Language",
+      "selectLanguage": "Select Transcription Language",
+      "models": {
+        "nova3": "Nova-3 Models",
+        "nova3General": "Nova-3 General",
+        "nova3Medical": "Nova-3 Medical",
+        "nova2": "Nova-2 Models",
+        "nova2General": "Nova-2 General (Recommended)",
+        "nova2Meeting": "Nova-2 Meeting",
+        "nova2Phonecall": "Nova-2 Phone Call",
+        "nova2Video": "Nova-2 Video",
+        "nova": "Nova Models",
+        "novaGeneral": "Nova General",
+        "novaPhonecall": "Nova Phone Call",
+        "enhanced": "Enhanced Models",
+        "enhancedGeneral": "Enhanced General",
+        "enhancedMeeting": "Enhanced Meeting",
+        "enhancedPhonecall": "Enhanced Phone Call",
+        "enhancedFinance": "Enhanced Finance",
+        "base": "Base Models",
+        "baseGeneral": "Base General",
+        "baseMeeting": "Base Meeting",
+        "basePhonecall": "Base Phone Call",
+        "baseFinance": "Base Finance"
+      },
+      "warnings": {
+        "languageNotSupported": "This model does not support the selected language. Switching to English.",
+        "multilingualSupport": "This model supports multilingual detection."
+      }
+    },
+    "pinecone": {
+      "title": "Pinecone Vector Database",
+      "apiKey": "Pinecone API Key",
+      "apiKeyPlaceholder": "Enter your Pinecone API key",
+      "helpText": "Used for advanced vector search and semantic memory."
+    },
+    "chatgpt": {
+      "title": "ChatGPT Integration",
+      "apiKey": "ChatGPT API Key",
+      "apiKeyPlaceholder": "Enter your ChatGPT API key",
+      "model": "ChatGPT Model",
+      "selectModel": "Select ChatGPT Model",
+      "embeddingModel": "OpenAI Embedding Model",
+      "selectEmbeddingModel": "Select OpenAI Embedding Model",
+      "advancedMode": "(Advanced Mode)",
+      "helpText": "Configure your OpenAI API integration for enhanced AI responses."
+    },
+    "ollama": {
+      "title": "Ollama Settings",
+      "selectModel": "Select a model...",
+      "installedModels": "Installed Models",
+      "availableModels": "Available Models",
+      "downloadProgress": "Download Progress",
+      "starting": "Starting...",
+      "preparingDownload": "Preparing download...",
+      "storage": "Storage:",
+      "storagePlaceholder": "Storage path...",
+      "browse": "Browse",
+      "checkingDependencies": "Checking if Ollama and Python are installed",
+      "dependenciesNotFound": "Dependencies Not Found",
+      "installationInProgress": "Installation in Progress",
+      "dependenciesInstalled": "Dependencies Installed",
+      "modelSelectionManagement": "Model Selection & Management",
+      "mainModel": "Main Model",
+      "embeddingModel": "Embedding Model",
+      "noMainModelsAvailable": "No main models available. Please check Ollama installation.",
+      "noEmbeddingModelsAvailable": "No embedding models available. Please check Ollama installation.",
+      "cancelDownload": "Cancel download",
+      "removeModel": "Remove model",
+      "waitForDownloads": "Wait for active downloads to complete",
+      "downloadModel": "Download model",
+      "installed": "Installed",
+      "downloading": "Downloading",
+      "available": "Available",
+      "downloadRequired": "Download required",
+      "modelMustBeDownloaded": "This model must be downloaded before it can be selected",
+      "infoText": "Only installed models can be selected. Use the download button to install a model before selecting it. You can remove installed models with the trash button.",
+      "ollamaModels": "Ollama Models",
+      "downloadingStatus": "downloading",
+      "refreshModels": "Refresh models",
+      "error": "Error",
+      "downloadInProgress": "Download in Progress",
+      "downloadsDisabled": "Other downloads and deletions are temporarily disabled to prevent conflicts",
+      "errors": {
+        "ollamaNotRunning": "Ollama is not running or not accessible",
+        "connectionFailed": "Could not connect to Ollama. Check if it's running.",
+        "installationFailed": "Failed to install Ollama. Try manual installation.",
+        "dependencyCheckFailed": "Failed to check dependencies"
+      }
+    }
+  },
+  "general": {
+    "userName": "User Name",
+    "userNamePlaceholder": "Enter your name",
+    "language": "Language",
+    "audioSettings": "Audio Settings"
+  },
+  "advanced": {
+    "title": "Advanced Settings",
+    "duckdbPath": "DuckDB Path",
+    "selectDirectory": "Select Directory",
+    "changeDirectory": "Change Directory"
+  },
+  "training": {
+    "title": "LoRA Training Center",
+    "dataOverview": "Data Overview",
+    "adapters": "Adapters",
+    "conversations": "Conversations",
+    "messages": "Messages",
+    "validPairs": "Valid Pairs",
+    "quality": "Quality",
+    "baseModel": "Base Model:",
+    "active": "Active",
+    "notSet": "Not Set",
+    "configureInBeta": "Configure in Beta settings",
+    "deleteAdapters": "Delete Adapters",
+    "noAdaptersToDelete": "No adapters to delete",
+    "deleteAllAdapters": "Delete all LoRA adapters",
+    "loraAdaptersControl": "LoRA Adapters Control",
+    "foundValidPairs": "Found {{count}} valid training pairs. Starting training...",
+    "adaptersDeletedSuccessfully": "{{count}} LoRA adapters deleted successfully. Conversations preserved.",
+    "downloaded": "Downloaded",
+    "chat": "Chat",
+    "control": "Training Control",
+    "duration": "Duration:",
+    "strategy": "Strategy: PEFT-only → Virtual Env → Simplified Fallback",
+    "details": "Training Details",
+    "adapterName": "Adapter Name",
+    "adapterNameDescription": "Choose a custom name for your LoRA adapter that will be created with {{count}} selected conversations.",
+    "progress": "Training Progress",
+    "currentStatus": "Current Status:",
+    "examplesFromConversations": "{{examples}} examples from {{count}} conversations",
+    "configuration": "Training Configuration",
+    "loraRank": "LoRA Rank",
+    "alpha": "Alpha",
+    "dropout": "Dropout",
+    "learningRate": "Learning Rate",
+    "selectConversationsFirst": "Select Conversations First",
+    "startTraining": "🚀 Start Training ({{count}} conversations)",
+    "trainingDescription": "Training will create a new LoRA adapter for your selected conversations",
+    "selectConversations": "Select Conversations",
+    "chooseQualityPairs": "Choose quality user/assistant pairs",
+    "noConversations": "No Conversations",
+    "startChattingToCreateData": "Start chatting to create data",
+    "deselect": "Deselect",
+    "selectAll": "Select All",
+    "trained": "Trained",
+    "stats": "Training Stats",
+    "totalAvailable": "Total available",
+    "avgPerConv": "avg per conv",
+    "lastTraining": "Last Training",
+    "mostRecentAdapterCreation": "Most recent adapter creation",
+    "qualityAnalysis": "Quality Analysis:",
+    "conversationsWith": "conversations with",
+    "trainingPairsQuality": "training pairs. Quality:",
+    "qualityBasedOn": "based on pair density, conversation length, and data completeness.",
+    "qualityExcellent": "Excellent",
+    "qualityGood": "Good",
+    "qualityFair": "Fair",
+    "qualityPoor": "Poor",
+    "qualityVeryPoor": "Very Poor",
+    "errors": {
+      "selectConversations": "Please select at least one conversation to train on.",
+      "selectBaseModel": "Please select a base model in Beta settings.",
+      "noValidPairs": "No valid training pairs found. Please ensure conversations have user/assistant messages. Check console for details."
+    }
+  },
+
+  "download": {
+    "title": "📥 Adapter Downloads",
+    "subtitle": "Discover and download LoRA adapters shared by other users in your P2P network",
+    "notConnected": "Not connected to P2P network",
+    "notConnectedDescription": "Connect to a P2P network to discover adapters",
+    "connected": "Connected to",
+    "globalRoom": "Global",
+    "privateRoom": "Room",
+    "adaptersAvailable": "adapter(s) available for download",
+    "scrollToSeeMore": "Scroll to see more adapters",
+    "unknown": "Unknown",
+    "unknownSize": "Unknown size",
+    "own": "Own",
+    "downloading": "Downloading...",
+    "download": "Download",
+    "goToShareTab": "Go to the Share tab to join a room",
+    "noCommunityAdapters": "No Community Adapters",
+    "noCommunityAdaptersDescription": "The community hasn't shared any adapters yet",
+    "checkBackLater": "Check back later or try a different room",
+    "noLocalAdapters": "No Local Adapters",
+    "noLocalAdaptersDescription": "No adapters shared on your local network",
+    "makeSurePeersSharing": "Make sure peers are sharing adapters",
+    "noAdaptersInRoom": "No Adapters in Room",
+    "noAdaptersInRoomDescription": "This private room has no shared adapters",
+    "shareRoomCode": "Share the room code with peers who have adapters",
+    "noAdaptersAvailable": "No Adapters Available",
+    "noAdaptersAvailableDescription": "No adapters found in the current room",
+    "tryDifferentRoom": "Try connecting to a different room",
+    "noPeersConnected": "No peers connected - invite others!"
+  },
+  "languageSwitcher": {
+    "selectLanguage": "Select language",
+    "switchTo": "Switch to"
+  },
+
+  "importModal": {
+    "title": "Import Neural Data",
+    "closeModal": "Close modal",
+    "importingAs": "Importing as:",
+    "changeNameHint": "You can change your name in Settings → General",
+    "selectFile": "Select file",
+    "chooseFile": "Choose file",
+    "importMode": "Import mode",
+    "increment": "Increment",
+    "overwrite": "Overwrite",
+    "startImport": "Start Import",
+    "importing": "Importing...",
+    "preparing": "Preparing...",
+    "processingHistory": "Processing your chat history...",
+    "status": "Status:"
+  },
+  "diagnosticsPanel": {
+    "title": "Connection Diagnostics",
+    "connectionState": "Conn. state:",
+    "selfState": "Self state:",
+    "connectionObject": "Conn. obj.:",
+    "microphoneState": "Mic state:",
+    "connectionActive": "Conn. active:",
+    "states": {
+      "open": "OPEN",
+      "closed": "CLOSED",
+      "connecting": "CONNECTING",
+      "error": "ERROR",
+      "ready": "READY",
+      "opening": "OPENING",
+      "notSetup": "NO",
+      "unknown": "UNKNOWN",
+      "available": "AVAILABLE",
+      "yes": "YES",
+      "no": "NO ✗"
+    },
+    "disconnect": "Disconnect",
+    "forceReconnect": "Force Reconnect"
+  },
+  "connectionDiagnostics": {
+    "title": "Connection Diagnostics",
+    "checkNow": "Check Now",
+    "currentState": "Current state:",
+    "stateRef": "State (ref):",
+    "connectionObject": "Connection object:",
+    "webSocketReadyState": "WebSocket ReadyState:",
+    "connectionActive": "Connection active:",
+    "available": "Available",
+    "notAvailable": "Not available",
+    "yes": "Yes ✅",
+    "no": "No ❌",
+    "readyStates": {
+      "connecting": "0 (CONNECTING)",
+      "open": "1 (OPEN)",
+      "closing": "2 (CLOSING)",
+      "closed": "3 (CLOSED)",
+      "unknown": "Unknown",
+      "na": "N/A"
+    },
+    "disconnect": "Disconnect",
+    "forceReconnect": "Force Reconnect",
+    "clickToView": "Click on \"Check Now\" to view connection details",
+    "messages": {
+      "connectionActive": "Connection is active and ready to use",
+      "connectionExists": "Connection exists but ReadyState = {readyState} (expected: 1)",
+      "stateInconsistent": "State inconsistent: marked as OPEN but connection is null",
+      "connectionNotActive": "Connection is not active ({state})",
+      "reconnectionSuccessful": "Reconnection successful",
+      "reconnectionFailed": "Reconnection failed",
+      "errorReconnecting": "Error forcing reconnection"
+    }
+  },
+  "cognitionDetailModal": {
+    "closeModal": "Close modal",
+    "eventTypes": {
+      "rawPrompt": "Raw Prompt",
+      "temporaryContext": "Temporary Context",
+      "neuralSignal": "Neural Signal",
+      "emergentPatterns": "Emergent Patterns",
+      "symbolicRetrieval": "Symbolic Retrieval",
+      "neuralCollapse": "Neural Collapse",
+      "symbolicContextSynthesized": "Symbolic Context Synthesized",
+      "gptResponse": "GPT Response",
+      "fusionInitiated": "Fusion Process Initiated"
+    },
+    "fields": {
+      "core": "Core",
+      "intensity": "Intensity",
+      "topK": "Top K",
+      "symbolicQuery": "Symbolic Query",
+      "parameters": "Parameters",
+      "archetypalStability": "Archetypal Stability",
+      "cycleEntropy": "Cycle Entropy",
+      "insightDepth": "Insight Depth",
+      "detectedPatterns": "Detected Patterns",
+      "memoryMatches": "Memory Matches",
+      "duration": "Duration",
+      "insights": "Insights",
+      "keywords": "Keywords",
+      "selectedCore": "Selected Core",
+      "process": "Process",
+      "candidates": "Candidates",
+      "emotionalWeight": "Emotional Weight",
+      "contradictionScore": "Contradiction Score",
+      "temperature": "Temperature",
+      "justification": "Justification",
+      "emergentProperties": "Emergent Properties",
+      "symbolicTopics": "Symbolic Topics"
+    },
+    "values": {
+      "deterministic": "Deterministic",
+      "stochastic": "Stochastic",
+      "emptyResponse": "(Empty response)",
+      "noPatternsDetected": "No patterns detected",
+      "unknownEventType": "Unknown event type:",
+      "fusionProcessTriggered": "The neural-symbolic fusion process has been triggered"
+    }
+  },
+  "deploy": {
+    "title": "🚀 Deploy Center",
+    "subtitle": "Deploy and manage your LoRA adapters",
+    "baseModel": "Base Model:",
+    "deleteConfirmation": "Are you sure you want to delete adapter \"{adapterId}\"?",
+    "adapters": {
+      "title": "LoRA Adapters",
+      "actions": {
+        "deploy": "Deploy",
+        "merge": "Merge",
+        "manage": "Manage"
+      },
+      "selectForMerge": "Select for merge",
+      "deployTooltip": "Deploy adapter to Ollama model",
+      "deleteTooltip": "Delete adapter",
+      "empty": {
+        "title": "No adapters yet",
+        "description": "Train conversations or download from P2P to create LoRA adapters"
+      },
+      "labels": {
+        "p2p": "P2P",
+        "merged": "MERGED"
+      },
+      "buttons": {
+        "deploy": "Deploy",
+        "delete": "Delete",
+        "deploying": "Deploying...",
+        "merge": "Merge",
+        "merging": "Merging..."
+      },
+      "status": {
+        "training": "Training...",
+        "error": "Error",
+        "downloaded": "Downloaded",
+        "from": "from",
+        "merged": "Merged from {{count}} adapters"
+      },
+      "messages": {
+        "deploySuccess": "Adapter deployed successfully as model: {{modelName}}",
+        "deployError": "Deploy failed: {{error}}",
+        "mergeSuccess": "{{type}} successfully!",
+        "mergeError": "Error: {{error}}",
+        "incompatibleModels": "Cannot merge adapters with different base models: {{models}}\nPlease select adapters with the same base model."
+      },
+      "mergedSources": "Sources"
+    },
+    "merge": {
+      "title": "Merge Adapters",
+      "selected": "selected",
+      "placeholder": "merged_adapter_name",
+      "selectStrategy": "Select merge strategy",
+      "strategies": {
+        "svd": "SVD Merge (Best)",
+        "arithmetic": "Arithmetic Mean",
+        "weighted": "Weighted Average"
+      },
+      "info": {
+        "selectSameModel": "Select adapters with the same base model to merge",
+        "configure": "Select adapters above and configure merge settings",
+        "compatibleAdapters": "{{count}} compatible adapter",
+        "compatibleAdapters_other": "{{count}} compatible adapters"
+      }
+    },
+    "quickGuide": {
+       "deploy": "Deploy",
+       "deployDescription": "Create Ollama model",
+       "merge": "Merge",
+       "mergeDescription": "Combine adapters",
+       "delete": "Delete",
+       "deleteDescription": "Remove adapter",
+       "info": "🚀 Deploy creates Ollama model with LoRA adapter • 🔗 Merge combines multiple adapters"
+     }
+  },
+  "beta": {
+    "title": "🧪 Beta Feature Center",
+    "quantumProcessing": {
+      "title": "⚛️ Quantum Processing (Orch-OS Theory)",
+      "description": "Experimental quantum-inspired processing for enhanced neural computation. Implements theoretical quantum consciousness principles.",
+      "ariaLabel": "Enable Quantum Processing",
+      "warning": {
+        "title": "Experimental Feature",
+        "description": "Highly experimental - may affect system performance. Based on Orch-OS theoretical frameworks."
+      },
+      "console": {
+        "enabled": "🧠 Quantum Processing enabled",
+        "disabled": "🧠 Quantum Processing disabled"
+      }
+    },
+    "quantumVisualization": {
+      "title": "🌌 Quantum Visualization (Matrix)",
+      "description": "Enables quantum consciousness matrix visualization overlay. Displays real-time neural signal processing patterns.",
+      "ariaLabel": "Enable Quantum Visualization",
+      "info": {
+        "title": "Visual Feature",
+        "description": "Adds immersive quantum matrix effects. May increase GPU usage."
+      },
+      "console": {
+        "enabled": "🌌 Quantum Visualization enabled",
+        "disabled": "🌌 Quantum Visualization disabled"
+      }
+    },
+    "about": {
+      "title": "🔬 About Beta Features",
+      "description": "Beta features are experimental implementations of theoretical concepts in AI and consciousness research. May be unstable or change significantly. Not recommended for production environments."
+    }
+  },
+  "p2pStatus": {
+    "title": "P2P Status",
+    "status": "Status:",
+    "room": "Room:",
+    "peers": "Peers:",
+    "error": "Error:",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "global": "Global",
+    "private": "Private",
+    "connectingToP2P": "Connecting to P2P...",
+    "connectedTo": "Connected to {{roomName}}",
+    "p2pDisconnected": "P2P Disconnected",
+    "clickToOpenSettings": "Click anywhere on this popup to open P2P settings"
+  },
+  "chatSidebar": {
+    "title": "Chat",
+    "newChat": "New chat",
+    "search": "Search...",
+    "waitProcessing": "Wait for the processing to finish",
+    "noConversationsFound": "No conversations found",
+    "noConversationsYet": "No conversations yet",
+    "noMessagesYet": "No messages yet",
+    "deleteConversation": "Delete this conversation?",
+    "deleteConversationTitle": "Delete conversation",
+    "hideSidebar": "Hide sidebar",
+    "showSidebar": "Show sidebar",
+    "toggleSidebar": "Toggle sidebar",
+    "chatHistory": "Chat History",
+    "timeFormats": {
+      "now": "Now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    }
+  },
+  "chatInput": {
+    "placeholder": "Type your message or use voice transcription...",
+    "sendMessage": "Send message",
+    "addContext": "Add context",
+    "hideContext": "Hide context field",
+    "enableWebSearch": "Enable web search",
+    "disableWebSearch": "Disable web search",
+    "removeContext": "Remove context",
+    "contextLabel": "Context (will be included with next message)",
+    "contextPlaceholder": "Add situational context...",
+    "startRecording": "Start recording",
+    "stopRecording": "Stop recording",
+    "audioSettings": "Audio settings",
+    "console": {
+      "webSearchEnabled": "Web Search Enabled",
+      "webSearchDisabled": "Web Search Disabled"
+    }
+  },
+  "chatMessages": {
+    "thinking": "Thinking...",
+    "generatingResponse": "🎯 Generating response",
+    "generatingResponseEllipsis": "🎯 Generating response...",
+    "processing": "Processing...",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "welcome": {
+      "title": "Welcome to Orch-Mind Neural Chat",
+      "subtitle": "Start a conversation by typing a message."
+    },
+    "import": {
+      "readingMessages": "Reading messages",
+      "checkingDuplicates": "Checking duplicates",
+      "generatingEmbeddings": "Generating embeddings",
+      "savingToDatabase": "Saving to database"
+    },
+    "errors": {
+      "processingInProgress": "A processing is already in progress. Please wait for completion.",
+      "unknownError": "Unknown error occurred while processing the prompt"
+    }
+  }
+}

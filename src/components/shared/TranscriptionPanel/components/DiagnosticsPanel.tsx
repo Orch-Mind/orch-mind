@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConnectionState, MicrophoneState } from '../../../context';
 import styles from './DiagnosticsPanel.module.css';
 
@@ -25,6 +26,7 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
   onDisconnect,
   onReconnect
 }) => {
+  const { t } = useTranslation();
   // Determina o estado geral do sistema baseado nos estados dos componentes
   const isFullyConnected = 
     connectionState === ConnectionState.OPEN && 
@@ -34,32 +36,32 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
   const getConnectionStateText = (state: ConnectionState): string => {
     switch (state) {
       case ConnectionState.OPEN:
-        return 'OPEN';
+        return t('diagnosticsPanel.states.open');
       case ConnectionState.CLOSED:
-        return 'CLOSED';
+        return t('diagnosticsPanel.states.closed');
       case ConnectionState.CONNECTING:
-        return 'CONNECTING';
+        return t('diagnosticsPanel.states.connecting');
       case ConnectionState.ERROR:
-        return 'ERROR';
+        return t('diagnosticsPanel.states.error');
       default:
-        return 'UNKNOWN';
+        return t('diagnosticsPanel.states.unknown');
     }
   };
 
   const getMicStateText = (state: MicrophoneState): string => {
     switch (state) {
       case MicrophoneState.Open:
-        return 'OPEN';
+        return t('diagnosticsPanel.states.open');
       case MicrophoneState.Ready:
-        return 'READY';
+        return t('diagnosticsPanel.states.ready');
       case MicrophoneState.Opening:
-        return 'OPENING';
+        return t('diagnosticsPanel.states.opening');
       case MicrophoneState.Error:
-        return 'ERROR';
+        return t('diagnosticsPanel.states.error');
       case MicrophoneState.NotSetup:
-        return 'NO';
+        return t('diagnosticsPanel.states.notSetup');
       default:
-        return 'UNKNOWN';
+        return t('diagnosticsPanel.states.unknown');
     }
   };
 
@@ -106,13 +108,13 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
 
   return (
     <div className={styles.diagnosticsPanel}>
-      <h3 className={styles.panelTitle}>Connection Diagnostics</h3>
+      <h3 className={styles.panelTitle}>{t('diagnosticsPanel.title')}</h3>
       
       <table className={styles.statusTable}>
         <tbody>
           <tr className={styles.statusRow}>
             <td className={styles.statusCell}>
-              <span className={styles.statusLabel}>Conn. state:</span>
+              <span className={styles.statusLabel}>{t('diagnosticsPanel.connectionState')}</span>
             </td>
             <td className={styles.statusCell}>
               <span className={`${styles.statusValue} ${getConnectionStateClass(connectionState)}`}>
@@ -122,7 +124,7 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
           </tr>
           <tr className={styles.statusRow}>
             <td className={styles.statusCell}>
-              <span className={styles.statusLabel}>Self state:</span>
+              <span className={styles.statusLabel}>{t('diagnosticsPanel.selfState')}</span>
             </td>
             <td className={styles.statusCell}>
               <span className={`${styles.statusValue} ${getConnectionStateClass(connectionState)}`}>
@@ -132,17 +134,17 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
           </tr>
           <tr className={styles.statusRow}>
             <td className={styles.statusCell}>
-              <span className={styles.statusLabel}>Conn. obj.:</span>
+              <span className={styles.statusLabel}>{t('diagnosticsPanel.connectionObject')}</span>
             </td>
             <td className={styles.statusCell}>
               <span className={`${styles.statusValue} ${styles.statusYes}`}>
-                {connectionState !== ConnectionState.ERROR ? 'AVAILABLE' : 'ERROR'}
+                {connectionState !== ConnectionState.ERROR ? t('diagnosticsPanel.states.available') : t('diagnosticsPanel.states.error')}
               </span>
             </td>
           </tr>
           <tr className={styles.statusRow}>
             <td className={styles.statusCell}>
-              <span className={styles.statusLabel}>Mic state:</span>
+              <span className={styles.statusLabel}>{t('diagnosticsPanel.microphoneState')}</span>
             </td>
             <td className={styles.statusCell}>
               <span className={`${styles.statusValue} ${getMicStateClass(microphoneState)}`}>
@@ -152,11 +154,11 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
           </tr>
           <tr className={styles.statusRow}>
             <td className={styles.statusCell}>
-              <span className={styles.statusLabel}>Conn. active:</span>
+              <span className={styles.statusLabel}>{t('diagnosticsPanel.connectionActive')}</span>
             </td>
             <td className={styles.statusCell}>
               <span className={`${styles.statusValue} ${isFullyConnected ? styles.statusYes : styles.statusNo}`}>
-                {isFullyConnected ? 'YES' : 'NO ✗'}
+                {isFullyConnected ? t('diagnosticsPanel.states.yes') : t('diagnosticsPanel.states.no')}
               </span>
             </td>
           </tr>
@@ -168,13 +170,13 @@ const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
           className={`${styles.button} ${styles.disconnectButton}`}
           onClick={handleDisconnect}
         >
-          Disconnect
+          {t('diagnosticsPanel.disconnect')}
         </button>
         <button 
           className={`${styles.button} ${styles.reconnectButton}`}
           onClick={handleReconnect}
         >
-          Force Reconnect
+          {t('diagnosticsPanel.forceReconnect')}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getOption, STORAGE_KEYS } from "../../../../services/StorageService";
 import { ToastVariant } from "../../../ui/toast";
 import { ImportMode } from "../types/interfaces";
@@ -10,6 +11,7 @@ import { ImportMode } from "../types/interfaces";
 export const useChatGptImport = (
   showToast: (title: string, description: string, variant: ToastVariant) => void
 ) => {
+  const { t } = useTranslation();
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importMode, setImportMode] = useState<ImportMode>("increment");
   const [importProgress, setImportProgress] = useState<number>(0);
@@ -164,15 +166,15 @@ export const useChatGptImport = (
   const getStageText = (stage: string): string => {
     switch (stage) {
       case "parsing":
-        return "Reading messages";
+        return t('chatMessages.readingMessages');
       case "deduplicating":
-        return "Checking duplicates";
+        return t('chatMessages.checkingDuplicates');
       case "generating_embeddings":
-        return "Generating embeddings";
+        return t('chatMessages.generatingEmbeddings');
       case "saving":
-        return "Saving to database";
+        return t('chatMessages.savingToDatabase');
       default:
-        return stage || "Processing...";
+        return stage || t('chatMessages.processing');
     }
   };
 

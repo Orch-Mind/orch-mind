@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChatConversation } from "../types/ChatHistoryTypes";
 
 interface ChatHistorySidebarProps {
@@ -23,6 +24,7 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   onSearchConversations,
   isProcessing = false,
 }) => {
+  const { t, i18n } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -39,12 +41,13 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t('chatSidebar.timeFormats.now');
+    if (diffMins < 60) return t('chatSidebar.timeFormats.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('chatSidebar.timeFormats.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('chatSidebar.timeFormats.daysAgo', { count: diffDays });
 
-    return date.toLocaleDateString("pt-BR", {
+    const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
+    return date.toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
     });
@@ -54,13 +57,13 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     <div className="chat-history-sidebar">
       {/* Header */}
       <div className="sidebar-header">
-        <h2 className="sidebar-title">Chat</h2>
+        <h2 className="sidebar-title">{t('chatSidebar.title')}</h2>
         <button
           className={`new-chat-button ${isProcessing ? "disabled" : ""}`}
           onClick={onCreateNewConversation}
           disabled={isProcessing}
           title={
-            isProcessing ? "Wait for the processing to finish" : "New chat"
+            isProcessing ? t('chatSidebar.waitProcessing') : t('chatSidebar.newChat')
           }
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -78,7 +81,7 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       <div className="sidebar-search">
         <input
           type="text"
-          placeholder="Search..."
+          placeholder={t('chatSidebar.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="search-input"
@@ -105,8 +108,8 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
         {displayedConversations.length === 0 ? (
           <div className="no-conversations">
             {searchQuery
-              ? "No conversations found"
-              : "No conversations yet"}
+              ? t('chatSidebar.noConversationsFound')
+              : t('chatSidebar.noConversationsYet')}
           </div>
         ) : (
           displayedConversations.map((conv) => (
@@ -130,14 +133,14 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
               onMouseLeave={() => setHoveredId(null)}
               title={
                 isProcessing && conv.id !== currentConversationId
-                  ? "Wait for the processing to finish"
+                  ? t('chatSidebar.waitProcessing')
                   : undefined
               }
             >
               <div className="conversation-content">
                 <h3 className="conversation-title">{conv.title}</h3>
                 <p className="conversation-preview">
-                  {conv.lastMessage || "No messages yet"}
+                  {conv.lastMessage || t('chatSidebar.noMessagesYet')}
                 </p>
                 <span className="conversation-time">
                   {formatDate(conv.lastMessageTime)}
@@ -150,11 +153,11 @@ export const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                   className="delete-button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("Delete this conversation?")) {
+                    if (window.confirm(t('chatSidebar.deleteConversation'))) {
                       onDeleteConversation(conv.id);
                     }
                   }}
-                  title="Delete conversation"
+                  title={t('chatSidebar.deleteConversationTitle')}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path

@@ -3,6 +3,7 @@
 
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 // Types
 import { OllamaModel, OllamaSettingsProps } from "./types/ollama.types";
@@ -36,6 +37,7 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
   storagePath = DEFAULT_STORAGE_PATH,
   setStoragePath,
 }) => {
+  const { t } = useTranslation();
   // Custom hooks for state management
   const {
     availableModels,
@@ -97,13 +99,13 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <span className="text-sm">🦙</span>
-          <h3 className="text-sm font-medium text-cyan-300">Ollama Models</h3>
+          <h3 className="text-sm font-medium text-cyan-300">{t('api.ollama.ollamaModels')}</h3>
           {isRefreshing && (
             <div className="animate-spin inline-block w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full ml-2"></div>
           )}
           {hasActiveDownloads && (
             <span className="text-[10px] text-yellow-400">
-              ({downloadingModels.size} downloading)
+              ({downloadingModels.size} {t('api.ollama.downloadingStatus')})
             </span>
           )}
         </div>
@@ -125,8 +127,8 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
           className="bg-cyan-600/30 hover:bg-cyan-500/40 text-cyan-300 rounded px-2 py-1 transition-colors disabled:opacity-50 text-xs"
           title={
             hasActiveDownloads
-              ? "Wait for downloads to complete"
-              : "Refresh models"
+              ? t('api.ollama.waitForDownloads')
+              : t('api.ollama.refreshModels')
           }
         >
           <span className={`${isRefreshing ? "animate-spin" : ""}`}>🔄</span>
@@ -139,7 +141,7 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
           <div className="flex items-center">
             <ExclamationTriangleIcon className="w-3 h-3 text-red-400 mr-1" />
             <div>
-              <h4 className="text-red-400 font-medium text-[10px]">Erro</h4>
+              <h4 className="text-red-400 font-medium text-[10px]">{t('api.ollama.error')}</h4>
               <p className="text-red-400/70 text-[10px]">{error}</p>
             </div>
           </div>
@@ -153,11 +155,10 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
             <div className="animate-spin w-3 h-3 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full mr-1"></div>
             <div>
               <h4 className="text-yellow-400 font-medium text-[10px]">
-                Download in Progress
+                {t('api.ollama.downloadInProgress')}
               </h4>
               <p className="text-yellow-400/70 text-[10px]">
-                Other downloads and deletions are temporarily disabled to
-                prevent conflicts
+                {t('api.ollama.downloadsDisabled')}
               </p>
             </div>
           </div>

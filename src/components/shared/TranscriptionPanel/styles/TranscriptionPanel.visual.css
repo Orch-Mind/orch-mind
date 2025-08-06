@@ -858,26 +858,6 @@ body.mobile-sidebar-open::before {
   opacity: 1;
 }
 
-/* Keyboard shortcut hint - appears on hover after delay */
-.desktop-sidebar-toggle::after {
-  content: attr(title);
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 8px;
-  padding: 6px 12px;
-  background: rgba(9, 9, 11, 0.95);
-  border: 1px solid rgba(124, 77, 255, 0.3);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease 0.5s; /* Delay before showing */
-}
-
 .desktop-sidebar-toggle:hover::after {
   opacity: 1;
 }

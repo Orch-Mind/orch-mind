@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./ShareSettings/styles.css";
 
 // SRP: Imports segregados por responsabilidade
@@ -14,6 +15,7 @@ import {
 
 // KISS: Componente principal focado APENAS em orquestração
 const ShareSettings: React.FC = () => {
+  const { t } = useTranslation();
   const [roomCode, setRoomCode] = useState("");
 
   // Use global P2P context - single source of truth for ALL P2P state
@@ -72,13 +74,16 @@ const ShareSettings: React.FC = () => {
 };
 
 // SRP: Componente focado apenas no header
-const ShareHeader: React.FC = () => (
-  <div className="text-center pb-2 border-b border-cyan-400/20">
-    <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
-      🌐 P2P Sharing Center
-    </h2>
-  </div>
-);
+const ShareHeader: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="text-center pb-2 border-b border-cyan-400/20">
+      <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
+        {t('share.title')}
+      </h2>
+    </div>
+  );
+};
 
 // SRP: Componente focado apenas nas estatísticas
 const ConnectionStats: React.FC<{
@@ -103,13 +108,14 @@ const ConnectionStats: React.FC<{
 // Helper function for more informative peer status
 const getPeerStatus = (
   peersCount: number,
-  incomingAdaptersCount: number = 0
+  incomingAdaptersCount: number = 0,
+  t: (key: string) => string
 ): string => {
   // Calculate total peers including special peers (like Docker) that provide incoming adapters
   const totalPeers = peersCount + (peersCount === 0 && incomingAdaptersCount > 0 ? 1 : 0);
   
   // Use correct singular/plural form
-  return totalPeers === 1 ? `${totalPeers} peer` : `${totalPeers} peers`;
+  return totalPeers === 1 ? `${totalPeers} ${t('share.peer')}` : `${totalPeers} ${t('share.peers')}`;
 };
 
 // SRP: Card focado apenas no status de conexão
@@ -117,7 +123,9 @@ const ConnectionStatusCard: React.FC<{
   currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
   isSharing: boolean;
   incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
-}> = ({ currentRoom, isSharing, incomingAdapters }) => (
+}> = ({ currentRoom, isSharing, incomingAdapters }) => {
+  const { t } = useTranslation();
+  return (
   <div className="bg-gradient-to-r from-slate-900/50 to-gray-900/50 backdrop-blur-sm rounded-md p-3 border border-slate-400/20">
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
@@ -137,17 +145,17 @@ const ConnectionStatusCard: React.FC<{
           </svg>
         </div>
         <div>
-          <h3 className="text-xs font-semibold text-white">Connection</h3>
-          <p className="text-slate-400 text-[9px]">P2P Network Status</p>
+          <h3 className="text-xs font-semibold text-white">{t('share.connection')}</h3>
+          <p className="text-slate-400 text-[9px]">{t('share.networkStatus')}</p>
         </div>
       </div>
       <div className="text-right">
         <p className="text-xs font-mono text-cyan-400 truncate max-w-32">
           {isSharing
             ? currentRoom?.type === "general"
-              ? "Global"
-              : `Room: ${currentRoom?.code}`
-            : "Disconnected"}
+              ? t('share.global')
+              : `${t('share.room')}: ${currentRoom?.code}`
+            : t('share.disconnected')}
         </p>
         <div
           className={`flex items-center text-[9px] ${
@@ -159,7 +167,7 @@ const ConnectionStatusCard: React.FC<{
           }`}
           title={
             currentRoom?.peersCount === 0 && incomingAdapters.length > 0
-              ? "Receiving data through a special peer (like Docker) that isn't counted in the peer list"
+              ? t('share.specialPeerTooltip')
               : undefined
           }
         >
@@ -173,20 +181,24 @@ const ConnectionStatusCard: React.FC<{
           {isSharing
             ? getPeerStatus(
                 currentRoom?.peersCount || 0,
-                incomingAdapters.length
+                incomingAdapters.length,
+                t
               )
-            : "Offline"}
+            : t('share.offline')}
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // SRP: Card focado apenas nas estatísticas de sharing
 const SharingStatsCard: React.FC<{
   sharedAdapters: ReturnType<typeof useP2PContext>["sharedAdapters"];
   incomingAdapters: ReturnType<typeof useP2PContext>["incomingAdapters"];
-}> = ({ sharedAdapters, incomingAdapters }) => (
+}> = ({ sharedAdapters, incomingAdapters }) => {
+  const { t } = useTranslation();
+  return (
   <div className="bg-gradient-to-r from-cyan-900/50 to-blue-900/50 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20">
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
@@ -206,9 +218,9 @@ const SharingStatsCard: React.FC<{
           </svg>
         </div>
         <div>
-          <h3 className="text-xs font-semibold text-white">Sharing</h3>
+          <h3 className="text-xs font-semibold text-white">{t('share.sharing')}</h3>
           <p className="text-slate-400 text-[9px]">
-            Adapters, Downloads & Merge
+            {t('share.adapterFusionAndDownloads')}
           </p>
         </div>
       </div>
@@ -218,12 +230,13 @@ const SharingStatsCard: React.FC<{
           {sharedAdapters.length}
         </p>
         <div className="flex items-center text-cyan-400 text-[9px]">
-          <span>{incomingAdapters.length} available</span>
+          <span>{incomingAdapters.length} {t('share.available')}</span>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // SRP: Seção principal focada no layout
 const MainSharingSection: React.FC<{
@@ -262,14 +275,16 @@ const MainSharingSection: React.FC<{
   reconnectToLastSession,
   resetP2PState,
   shouldShowReconnectPanel,
-}) => (
-  <div className="flex gap-3 justify-between">
-    {/* KISS: Layout flexbox com distribuição igual de espaço */}
-    <div className="flex-1 min-w-0">
-      <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full">
-        <h3 className="text-sm font-semibold text-cyan-400 mb-3">
-          🌐 Smart Connect
-        </h3>
+}) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex gap-3 justify-between">
+      {/* KISS: Layout flexbox com distribuição igual de espaço */}
+      <div className="flex-1 min-w-0">
+        <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full">
+          <h3 className="text-sm font-semibold text-cyan-400 mb-3">
+            {t('share.smartConnect')}
+          </h3>
 
         {!isSharing ? (
           <SmartConnectComponent
@@ -302,20 +317,24 @@ const MainSharingSection: React.FC<{
       />
     </div>
   </div>
-);
+  );
+};
 
 // SRP: Footer focado apenas em informações
 const InfoFooter: React.FC<{
   currentRoom: ReturnType<typeof useP2PContext>["status"]["currentRoom"];
-}> = ({ currentRoom }) => (
-  <div className="p-2 bg-amber-500/10 rounded border border-amber-400/30">
-    <p className="text-[10px] text-amber-400">
-      <strong>💡 How it works:</strong>
-      {currentRoom?.type === "general"
-        ? " Global room connects you to the global Orch-Mind community. Share your adapters with the world! Check the Download tab to discover adapters from other users."
-        : " Private rooms use simple codes like PIZZA-123. Share the code with trusted peers to collaborate securely. Visit the Download tab to get shared adapters."}
-    </p>
-  </div>
-);
+}> = ({ currentRoom }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="p-2 bg-amber-500/10 rounded border border-amber-400/30">
+      <p className="text-[10px] text-amber-400">
+        <strong>{t('share.howItWorksTitle')}</strong>
+        {currentRoom?.type === "general"
+          ? t('share.globalRoomDescription')
+          : t('share.privateRoomDescription')}
+      </p>
+    </div>
+  );
+};
 
 export default ShareSettings;

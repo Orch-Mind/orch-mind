@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../../../../App";
 import {
   ConnectionState,
@@ -19,6 +20,7 @@ export const useTranscriptionManager = () => {
   if (!transcriptionContext) return null;
 
   const { texts, setTexts } = transcriptionContext;
+  const { t } = useTranslation();
 
   // Always use LanguageContext, which now syncs with storage
   const { language, setLanguage } = useContext(LanguageContext);
@@ -248,9 +250,9 @@ export const useTranscriptionManager = () => {
         const errorMessage =
           error instanceof Error
             ? error.message === "PROCESSING_IN_PROGRESS"
-              ? "Um processamento já está em andamento. Aguarde a conclusão."
+              ? t('chatMessages.processingInProgress')
               : error.message
-            : "Erro desconhecido ao processar o prompt";
+            : t('chatMessages.unknownError');
 
         console.error("❌ [SEND_PROMPT] Error sending prompt:", error);
         showToast("Erro", errorMessage, "error");
@@ -344,7 +346,7 @@ export const useTranscriptionManager = () => {
 
         setTexts((prev) => ({
           ...prev,
-          aiResponse: "Processando...",
+          aiResponse: t('chatMessages.processing'),
         }));
       };
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ContextInputProps } from "../types/ChatTypes";
 
 /**
@@ -14,6 +15,8 @@ export const ContextInput: React.FC<ContextInputProps> = ({
   onClose,
   show,
 }) => {
+  const { t } = useTranslation();
+  
   if (!show && !value) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -32,11 +35,11 @@ export const ContextInput: React.FC<ContextInputProps> = ({
             strokeLinecap="round"
           />
         </svg>
-        Context (will be included with next message)
+        {t('chatInput.contextLabel')}
         <button
           className="context-close-btn"
           onClick={onClose}
-          title="Remove context"
+          title={t('chatInput.removeContext')}
           type="button"
         >
           ×
@@ -46,7 +49,7 @@ export const ContextInput: React.FC<ContextInputProps> = ({
         className="context-input"
         value={value}
         onChange={handleChange}
-        placeholder="Add situational context..."
+        placeholder={t('chatInput.contextPlaceholder')}
         rows={2}
         autoFocus={show}
       />

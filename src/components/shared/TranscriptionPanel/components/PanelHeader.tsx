@@ -2,7 +2,9 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ConnectionState, MicrophoneState } from "../../../context";
+import LanguageSwitcher from "../../LanguageSwitcher";
 import styles from "./PanelHeader.module.css";
 import QuantumSettingsIcon from "./QuantumSettingsIcon";
 import WifiStatusConnection from "./WifiStatusConnection";
@@ -38,6 +40,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onWifiStatusClick,
   showLogsButton = false,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="orchos-header-glass flex justify-between items-center mb-4 h-14 px-4">
       {/* Logo e Título */}
@@ -48,7 +51,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             <circle cx="10" cy="10" r="3" fill="#8F00FF" />
           </svg>
         </span>
-        Orch-Mind
+        {t('header.title')}
       </h3>
 
       {/* Espaço flex para empurrar os elementos para a direita */}
@@ -58,7 +61,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
       <div className="flex items-center gap-4 mr-2">
         {/* Botão Import Neural Data */}
         <button
-          title="Import Neural Data"
+          title={t('header.importNeuralData')}
           onClick={onShowImportModal}
           className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10"
         >
@@ -78,14 +81,14 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
               strokeLinejoin="round"
             />
           </svg>
-          Import Neural Data
+          {t('header.importNeuralData')}
         </button>
 
         {/* Botão Logs - só aparece se processamento orch-os estiver habilitado */}
         {showLogsButton && (
           <button
-            title="Cognition Logs"
-            aria-label="Open Cognition Logs"
+            title={t('header.cognitionLogs')}
+            aria-label={t('header.openCognitionLogs')}
             onClick={onShowLogsModal}
             className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10"
           >
@@ -107,15 +110,15 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
               />
               <circle cx="10" cy="10" r="3" fill="#8F00FF" />
             </svg>
-            Logs
+            {t('header.logs')}
           </button>
         )}
 
         {/* Botão Debug DuckDB - apenas em desenvolvimento */}
         {onShowDebugModal && process.env.NODE_ENV === "development" && (
           <button
-            title="DuckDB Debug (Dev Only)"
-            aria-label="Open DuckDB Debug"
+            title={t('header.duckdbDebug')}
+            aria-label={t('header.openDuckdbDebug')}
             onClick={onShowDebugModal}
             className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-orange-400/20 via-red-500/20 to-purple-600/20 shadow-lg hover:shadow-orange-400/30 hover:scale-105 transition-all duration-200 border border-orange-400/30 hover:border-orange-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-400/60 h-10"
           >
@@ -142,20 +145,23 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
                 strokeLinecap="round"
               />
             </svg>
-            Debug
+            {t('header.debug')}
           </button>
         )}
 
         {/* Botão de Configurações */}
         {onShowSettings && (
           <button
-            title="Settings"
+            title={t('common.settings')}
             onClick={onShowSettings}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-cyan-400/10 via-blue-700/10 to-purple-600/10 border border-cyan-500/40 hover:border-cyan-400/70 hover:scale-105 hover:shadow-cyan-400/20 shadow-md transition-all duration-200 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
           >
             <QuantumSettingsIcon size={26} />
           </button>
         )}
+
+        {/* Language Switcher */}
+        <LanguageSwitcher />
 
         {/* Indicador P2P Status - agora usa useP2PStatus internamente */}
         <WifiStatusConnection
@@ -167,7 +173,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         <div className="flex items-center gap-2 ml-4">
           {onMinimize && (
             <button
-              title="Minimize"
+              title={t('common.minimize')}
               onClick={onMinimize}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-cyan-400/10 via-blue-700/10 to-purple-600/10 border border-cyan-500/40 hover:border-cyan-400/70 hover:scale-105 hover:shadow-cyan-400/20 shadow-md transition-all duration-200 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
             >
@@ -193,7 +199,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             </button>
           )}
           <button
-            title="Close"
+            title={t('common.close')}
             onClick={onClose}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-red-500/10 via-pink-700/10 to-purple-600/10 border border-red-500/40 hover:border-red-400/70 hover:scale-105 hover:shadow-red-400/20 shadow-md transition-all duration-200 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
           >

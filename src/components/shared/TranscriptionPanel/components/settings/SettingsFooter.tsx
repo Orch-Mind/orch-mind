@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { SettingsFooterProps } from "./types";
 
 /**
@@ -13,6 +14,8 @@ const SettingsFooter: React.FC<SettingsFooterProps> = ({
   onClose,
   saveSettings,
 }) => {
+  const { t } = useTranslation();
+  
   // Handler para salvar configurações e fechar
   const handleApplyChanges = () => {
     saveSettings();
@@ -41,7 +44,7 @@ const SettingsFooter: React.FC<SettingsFooterProps> = ({
         }}
         onClick={onClose}
       >
-        Cancel
+        {t('common.cancel')}
       </button>
       <button
         className="px-6 py-2 text-cyan-300 rounded-lg transition-all"
@@ -72,7 +75,7 @@ const SettingsFooter: React.FC<SettingsFooterProps> = ({
         }}
         onClick={handleApplyChanges}
       >
-        Apply Changes
+        {t('common.apply')}
       </button>
     </div>
   );

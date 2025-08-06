@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../../../App";
 import { useCognitionLog } from "../../context/CognitionLogContext";
 import AudioControls from "./components/AudioControls";
@@ -49,6 +50,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   onClose,
   width,
 }) => {
+  const { t } = useTranslation();
   const transcriptionManager = useTranscriptionManager();
   const { showToast } = useToast();
 
@@ -95,18 +97,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     localStorage.setItem("orchos-sidebar-open", String(isSidebarOpen));
   }, [isSidebarOpen]);
 
-  // Keyboard shortcut for toggling sidebar (Cmd/Ctrl + B)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-        e.preventDefault();
-        setIsSidebarOpen((prev) => !prev);
-      }
-    };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   // Mobile soft dismiss - close sidebar when clicking outside
   useEffect(() => {
@@ -423,10 +414,7 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           <button
             className="desktop-sidebar-toggle"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            title={`${isSidebarOpen ? "Hide" : "Show"} sidebar (${
-              navigator.platform.includes("Mac") ? "⌘" : "Ctrl"
-            }+B)`}
-            aria-label={`${isSidebarOpen ? "Hide" : "Show"} sidebar`}
+            title={isSidebarOpen ? t('chatSidebar.hideSidebar') : t('chatSidebar.showSidebar')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               {isSidebarOpen ? (
@@ -589,7 +577,8 @@ const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
         <button
           className="mobile-sidebar-toggle"
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-          title="Chat History"
+          title={t('chatSidebar.chatHistory')}
+          aria-label={t('chatSidebar.toggleSidebar')}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path

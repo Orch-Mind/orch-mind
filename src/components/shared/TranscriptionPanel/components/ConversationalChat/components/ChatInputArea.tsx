@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getOption,
   setOption,
@@ -55,6 +56,8 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   // showAudioSettings,
   // audioSettingsButtonRef,
 }) => {
+  const { t } = useTranslation();
+  
   // Web Search state management
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(
     () => getOption<boolean>(STORAGE_KEYS.WEB_SEARCH_ENABLED) || false
@@ -66,7 +69,7 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
     setWebSearchEnabled(newState);
     setOption(STORAGE_KEYS.WEB_SEARCH_ENABLED, newState);
     
-    console.log(`🌐 [Web Search] ${newState ? "Enabled" : "Disabled"}`);
+    console.log(`🌐 [Web Search] ${newState ? t('chatInput.console.webSearchEnabled') : t('chatInput.console.webSearchDisabled')}`);
   };
 
   const canSend =
@@ -110,7 +113,7 @@ export const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               onChange={chatState.setInputMessage}
               onSend={onSendMessage}
               onKeyPress={onKeyPress}
-              placeholder="Type your message or use voice transcription..."
+              placeholder={t('chatInput.placeholder')}
               disabled={chatState.isProcessing}
             />
 

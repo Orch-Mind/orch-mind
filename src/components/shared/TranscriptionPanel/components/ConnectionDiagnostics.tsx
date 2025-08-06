@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConnectionDiagnosticsProps } from '../types/interfaces';
 
 const ConnectionDiagnostics: React.FC<ConnectionDiagnosticsProps> = ({
@@ -15,19 +16,20 @@ const ConnectionDiagnostics: React.FC<ConnectionDiagnosticsProps> = ({
   hasActiveConnection,
   ConnectionState
 }) => {
+  const { t } = useTranslation();
   const checkConnectionStatus = () => {
     if (getConnectionStatus) {
       const status = getConnectionStatus();
       setConnectionDetails(status);
 
       if (status.active) {
-        showToast("Diagnostics", "Connection is active and ready to use", "success");
+        showToast("Diagnostics", t('connectionDiagnostics.messages.connectionActive'), "success");
       } else if (status.hasConnectionObject && status.readyState !== 1) {
-        showToast("Diagnostics", `Connection exists but ReadyState = ${status.readyState} (expected: 1)`, "error");
+        showToast("Diagnostics", t('connectionDiagnostics.messages.connectionExists', { readyState: status.readyState }), "error");
       } else if (!status.hasConnectionObject && status.stateRef === 'OPEN') {
-        showToast("Diagnostics", "State inconsistent: marked as OPEN but connection is null", "error");
+        showToast("Diagnostics", t('connectionDiagnostics.messages.stateInconsistent'), "error");
       } else {
-        showToast("Diagnostics", `Connection is not active (${status.stateRef})`, "error");
+        showToast("Diagnostics", t('connectionDiagnostics.messages.connectionNotActive', { state: status.stateRef }), "error");
       }
     }
   };
@@ -39,31 +41,31 @@ const ConnectionDiagnostics: React.FC<ConnectionDiagnosticsProps> = ({
       await connectToDeepgram();
       const connected = await waitForConnectionState(ConnectionState.OPEN, 5000);
       if (connected && hasActiveConnection()) {
-        showToast("Diagnostics", "Reconnection successful", "success");
+        showToast("Diagnostics", t('connectionDiagnostics.messages.reconnectionSuccessful'), "success");
       } else {
-        showToast("Diagnostics", "Reconnection failed", "error");
+        showToast("Diagnostics", t('connectionDiagnostics.messages.reconnectionFailed'), "error");
       }
     } catch (error) {
       console.error("Error forcing reconnection:", error);
-      showToast("Diagnostics", "Error forcing reconnection", "error");
+      showToast("Diagnostics", t('connectionDiagnostics.messages.errorReconnecting'), "error");
     }
   };
 
   return (
     <div className="mt-4 p-3 bg-gray-800 rounded-md text-xs">
       <div className="flex justify-between items-center mb-2">
-        <div className="font-medium">Connection Diagnostics</div>
+        <div className="font-medium">{t('connectionDiagnostics.title')}</div>
         <button
           onClick={checkConnectionStatus}
           className="text-xs bg-blue-600 px-2 py-1 rounded hover:bg-blue-700"
         >
-          Check Now
+          {t('connectionDiagnostics.checkNow')}
         </button>
       </div>
       {(connectionDetails && typeof connectionDetails === "object" && connectionDetails !== null && "state" in connectionDetails) ? (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-x-2">
-            <div>Current state:</div>
+            <div>{t('connectionDiagnostics.currentState')}</div>
             <div className={
               typeof connectionDetails.state === 'string' && connectionDetails.state === 'OPEN' ? 'text-green-400' :
                 typeof connectionDetails.state === 'string' && connectionDetails.state === 'CONNECTING' ? 'text-yellow-400' :
@@ -71,7 +73,7 @@ const ConnectionDiagnostics: React.FC<ConnectionDiagnosticsProps> = ({
             }>
               {typeof connectionDetails.state === 'string' ? connectionDetails.state : ''}
             </div>
-            <div>State (ref):</div>
+            <div>{t('connectionDiagnostics.stateRef')}</div>
             <div className={
               typeof connectionDetails.stateRef === 'string' && connectionDetails.stateRef === 'OPEN' ? 'text-green-400' :
                 typeof connectionDetails.stateRef === 'string' && connectionDetails.stateRef === 'CONNECTING' ? 'text-yellow-400' :
@@ -79,25 +81,25 @@ const ConnectionDiagnostics: React.FC<ConnectionDiagnosticsProps> = ({
             }>
               {typeof connectionDetails.stateRef === 'string' ? connectionDetails.stateRef : ''}
             </div>
-            <div>Connection object:</div>
+            <div>{t('connectionDiagnostics.connectionObject')}</div>
             <div className={connectionDetails.hasConnectionObject ? 'text-green-400' : 'text-red-400'}>
-              {connectionDetails.hasConnectionObject ? 'Available' : 'Not available'}
+              {connectionDetails.hasConnectionObject ? t('connectionDiagnostics.available') : t('connectionDiagnostics.notAvailable')}
             </div>
-            <div>WebSocket ReadyState:</div>
+            <div>{t('connectionDiagnostics.webSocketReadyState')}</div>
             <div className={
               connectionDetails.readyState === 1 ? 'text-green-400' :
                 connectionDetails.readyState === 0 ? 'text-yellow-400' :
                   'text-red-400'
             }>
-              {connectionDetails.readyState === null ? 'N/A' :
-                connectionDetails.readyState === 0 ? '0 (CONNECTING)' :
-                  connectionDetails.readyState === 1 ? '1 (OPEN)' :
-                    connectionDetails.readyState === 2 ? '2 (CLOSING)' :
-                      connectionDetails.readyState === 3 ? '3 (CLOSED)' : 'Unknown'}
+              {connectionDetails.readyState === null ? t('connectionDiagnostics.readyStates.na') :
+                connectionDetails.readyState === 0 ? t('connectionDiagnostics.readyStates.connecting') :
+                  connectionDetails.readyState === 1 ? t('connectionDiagnostics.readyStates.open') :
+                    connectionDetails.readyState === 2 ? t('connectionDiagnostics.readyStates.closing') :
+                      connectionDetails.readyState === 3 ? t('connectionDiagnostics.readyStates.closed') : t('connectionDiagnostics.readyStates.unknown')}
             </div>
-            <div>Connection active:</div>
+            <div>{t('connectionDiagnostics.connectionActive')}</div>
             <div className={connectionDetails.active ? 'text-green-400' : 'text-red-400'}>
-              {connectionDetails.active ? 'Yes ✅' : 'No ❌'}
+              {connectionDetails.active ? t('connectionDiagnostics.yes') : t('connectionDiagnostics.no')}
             </div>
           </div>
           <div className="pt-2 flex space-x-2">
@@ -105,18 +107,18 @@ const ConnectionDiagnostics: React.FC<ConnectionDiagnosticsProps> = ({
               onClick={disconnectFromDeepgram}
               className="flex-1 bg-red-700 p-2 rounded hover:bg-red-800"
             >
-              Disconnect
+              {t('connectionDiagnostics.disconnect')}
             </button>
             <button
               onClick={forceReconnect}
               className="flex-1 bg-green-700 p-2 rounded hover:bg-green-800"
             >
-              Force Reconnect
+              {t('connectionDiagnostics.forceReconnect')}
             </button>
           </div>
         </div>
       ) : (
-        <div className="text-gray-400">Click on &quot;Check Now&quot; to view connection details</div>
+        <div className="text-gray-400">{t('connectionDiagnostics.clickToView')}</div>
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 interface SettingsNavigationProps {
   activeTab:
@@ -28,14 +29,16 @@ const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
   activeTab,
   onTabChange,
 }) => {
+  const { t } = useTranslation();
+  
   const tabs = [
-    { id: "general" as const, label: "General", icon: "⚙️" },
-    { id: "advanced" as const, label: "Advanced", icon: "🔧" },
-    { id: "training" as const, label: "Training", icon: "🎯" },
-    { id: "share" as const, label: "Share", icon: "🔗" },
-    { id: "download" as const, label: "Download", icon: "📥" },
-    { id: "deploy" as const, label: "Deploy", icon: "🚀" },
-    { id: "beta" as const, label: "Beta", icon: "🧪" },
+    { id: "general" as const, label: t('settings.navigation.general'), icon: "⚙️" },
+    { id: "advanced" as const, label: t('settings.navigation.advanced'), icon: "🔧" },
+    { id: "training" as const, label: t('settings.navigation.training'), icon: "🎯" },
+    { id: "share" as const, label: t('settings.navigation.share'), icon: "🔗" },
+    { id: "download" as const, label: t('settings.navigation.download'), icon: "📥" },
+    { id: "deploy" as const, label: t('settings.navigation.deploy'), icon: "🚀" },
+    { id: "beta" as const, label: t('settings.navigation.beta'), icon: "🧪" },
   ];
 
   return (
@@ -77,17 +80,13 @@ const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
       {/* Optional: Tab description */}
       <div className="mt-2 text-center">
         <p className="text-xs text-gray-500">
-          {activeTab === "general" &&
-            "Basic application settings and preferences"}
-          {activeTab === "advanced" &&
-            "Advanced configuration and API settings"}
-          {activeTab === "training" &&
-            "LoRA training configuration and data management"}
-          {activeTab === "share" && "P2P sharing and network settings"}
-          {activeTab === "download" && "Download adapters from the P2P network"}
-          {activeTab === "deploy" && "Deploy and manage your LoRA adapters"}
-          {activeTab === "beta" &&
-            "Experimental features and cutting-edge technology"}
+          {activeTab === "general" && t('settings.descriptions.general')}
+          {activeTab === "advanced" && t('settings.descriptions.advanced')}
+          {activeTab === "training" && t('settings.descriptions.training')}
+          {activeTab === "share" && t('settings.descriptions.share')}
+          {activeTab === "download" && t('settings.descriptions.download')}
+          {activeTab === "deploy" && t('settings.descriptions.deploy')}
+          {activeTab === "beta" && t('settings.descriptions.beta')}
         </p>
       </div>
     </div>

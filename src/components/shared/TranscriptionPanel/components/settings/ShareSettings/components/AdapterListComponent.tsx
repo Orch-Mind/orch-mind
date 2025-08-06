@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { AdapterListProps } from "../types";
 
 // SRP: Componente responsável APENAS por listar adapters do usuário
@@ -12,10 +13,12 @@ export const AdapterListComponent: React.FC<AdapterListProps> = ({
   onToggleSharing,
   isSharing,
 }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-full">
       <h3 className="text-sm font-semibold text-cyan-400 mb-3">
-        📦 Your Adapters
+        {t('share.yourAdapters')}
       </h3>
 
       {adapters.length === 0 ? (
@@ -33,12 +36,16 @@ export const AdapterListComponent: React.FC<AdapterListProps> = ({
 };
 
 // SRP: Componente focado apenas em mostrar estado vazio
-const EmptyAdaptersList: React.FC = () => (
-  <div className="text-center py-4">
-    <p className="text-gray-400 text-[10px] mb-1">No trained adapters found</p>
-    <p className="text-gray-500 text-[9px]">Train a model first!</p>
-  </div>
-);
+const EmptyAdaptersList: React.FC = () => {
+  const { t } = useTranslation();
+  
+  return (
+    <div className="text-center py-4">
+      <p className="text-gray-400 text-[10px] mb-1">{t('share.noTrainedAdapters')}</p>
+      <p className="text-gray-500 text-[9px]">{t('share.trainModelFirst')}</p>
+    </div>
+  );
+};
 
 // SRP: Componente focado apenas em renderizar lista de adapters
 const AdaptersList: React.FC<AdapterListProps> = ({
@@ -71,17 +78,19 @@ const AdapterItem: React.FC<{
 }> = ({ adapter, index, currentRoom, onToggleSharing, isSharing }) => {
   // KISS: Lógica simples para determinar status
   const getAdapterStatus = (): string => {
-    if (!adapter.shared) return "Private";
+    const { t } = useTranslation();
+    
+    if (!adapter.shared) return t('share.private');
 
     switch (currentRoom?.type) {
       case "general":
-        return "Public in General";
+        return t('share.publicInGeneral');
       case "local":
-        return "Shared Locally";
+        return t('share.sharedLocally');
       case "private":
-        return `Shared in ${currentRoom.code}`;
+        return t('share.sharedInRoom', { roomCode: currentRoom.code });
       default:
-        return "Shared";
+        return t('share.shared');
     }
   };
 
@@ -137,12 +146,16 @@ const ShareToggleButton: React.FC<{
   onToggle: () => void;
   isSharing: boolean;
   buttonStyle: string;
-}> = ({ adapter, onToggle, isSharing, buttonStyle }) => (
-  <button
-    onClick={onToggle}
-    disabled={!isSharing}
-    className={`ml-2 px-2 py-0.5 rounded text-[9px] font-medium transition-colors border ${buttonStyle} disabled:opacity-50`}
-  >
-    {adapter.shared ? "👁️ Public" : "🔒 Private"}
-  </button>
-);
+}> = ({ adapter, onToggle, isSharing, buttonStyle }) => {
+  const { t } = useTranslation();
+  
+  return (
+    <button
+      onClick={onToggle}
+      disabled={!isSharing}
+      className={`ml-2 px-2 py-0.5 rounded text-[9px] font-medium transition-colors border ${buttonStyle} disabled:opacity-50`}
+    >
+      {adapter.shared ? t('share.public') : t('share.private')}
+    </button>
+  );
+};

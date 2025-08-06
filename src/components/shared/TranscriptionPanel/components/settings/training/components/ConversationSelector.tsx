@@ -3,6 +3,7 @@
 // Single responsibility: Handle conversation selection UI
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import type { ConversationStatus } from "../types";
 
 interface ConversationSelectorProps {
@@ -20,6 +21,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
   onSelectConversation,
   onSelectAll,
 }) => {
+  const { t } = useTranslation();
   const unprocessedCount = conversations.filter((c) => !c.isProcessed).length;
   const isAllSelected = selectedCount === unprocessedCount;
 
@@ -29,10 +31,10 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
         <div className="flex justify-between items-center mb-2">
           <div>
             <h3 className="text-sm font-semibold text-cyan-400">
-              Select Conversations
+              {t('training.selectConversations')}
             </h3>
             <p className="text-gray-400 text-[9px]">
-              Choose quality user/assistant pairs
+              {t('training.chooseQualityPairs')}
             </p>
           </div>
         </div>
@@ -52,10 +54,10 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
             />
           </svg>
           <h4 className="text-gray-400 font-medium text-xs">
-            No Conversations
+            {t('training.noConversations')}
           </h4>
           <p className="text-gray-500 text-[9px]">
-            Start chatting to create data
+            {t('training.startChattingToCreateData')}
           </p>
         </div>
       </div>
@@ -67,10 +69,10 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
       <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className="text-sm font-semibold text-cyan-400">
-            Select Conversations
+            {t('training.selectConversations')}
           </h3>
           <p className="text-gray-400 text-[9px]">
-            Choose quality user/assistant pairs
+            {t('training.chooseQualityPairs')}
           </p>
         </div>
         <button
@@ -78,7 +80,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
           className="px-2 py-1 text-[10px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 rounded transition-all duration-200 border border-cyan-400/30"
           disabled={isTraining}
         >
-          {isAllSelected ? "Deselect" : "Select All"}
+          {isAllSelected ? t('training.deselect') : t('training.selectAll')}
         </button>
       </div>
 
@@ -176,7 +178,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                     clipRule="evenodd"
                   />
                 </svg>
-                Trained
+                {t('training.trained')}
               </span>
             )}
           </div>

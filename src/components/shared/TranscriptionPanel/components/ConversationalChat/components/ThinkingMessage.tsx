@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./MessageItem.css";
 import "./ThinkingMessage.css";
 
@@ -16,6 +17,7 @@ interface ThinkingMessageProps {
 export const ThinkingMessage: React.FC<ThinkingMessageProps> = ({
   thinkingContent,
 }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const messageId = `thinking-${Date.now()}`;
   const gradientId = `gradient-thinking-${messageId}`;
@@ -45,10 +47,10 @@ export const ThinkingMessage: React.FC<ThinkingMessageProps> = ({
             onClick={() => setIsExpanded(!isExpanded)}
           >
             <span className="thinking-icon">🧠</span>
-            <span className="thinking-label">Thinking...</span>
+            <span className="thinking-label">{t('chatMessages.thinking')}</span>
             <button
               className="expand-button"
-              aria-label={isExpanded ? "Collapse" : "Expand"}
+              aria-label={isExpanded ? t('chatMessages.collapse') : t('chatMessages.expand')}
             >
               <svg
                 width="16"

@@ -10,6 +10,7 @@ import {
   getOption,
   STORAGE_KEYS,
 } from "./../../../../../services/StorageService";
+import i18n from "../../../../../i18n";
 
 // Services interfaces
 import { IMemoryService } from "../../interfaces/memory/IMemoryService";
@@ -170,10 +171,10 @@ export class SimplePromptProcessor {
     const messages = this._buildMessages(prompt, memoryContext, webContext, temporaryContext, conversationMessages);
     
     // Show "Generating response" status using both methods for guaranteed visibility
-    this.updateStatus("🎯 Generating response");
+    this.updateStatus(i18n.t('chatMessages.generatingResponse'));
     
     // Fallback: Also show in UI response area if status bar doesn't work
-    this.uiService.updateUI({ aiResponse: "🎯 Generating response..." });
+    this.uiService.updateUI({ aiResponse: i18n.t('chatMessages.generatingResponseEllipsis') });
 
     // Execute streaming with first chunk handling (like backup)
     let accumulatedResponse = "";

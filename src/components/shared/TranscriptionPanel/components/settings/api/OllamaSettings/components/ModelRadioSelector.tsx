@@ -9,6 +9,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { OllamaModel } from "../types/ollama.types";
 
 interface ModelRadioSelectorProps {
@@ -46,6 +47,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
   isEmbeddingLoading = false,
   hasActiveDownloads = false,
 }) => {
+  const { t } = useTranslation();
   const renderModelOption = (
     model: OllamaModel,
     isSelected: boolean,
@@ -67,7 +69,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
           <button
             onClick={(e) => handleAction(e, () => onCancelDownload(model.id))}
             className="p-1.5 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
-            title="Cancel download"
+            title={t('api.ollama.cancelDownload')}
           >
             <XMarkIcon className="w-4 h-4" />
           </button>
@@ -87,8 +89,8 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
             }`}
             title={
               isDisabled
-                ? "Wait for active downloads to complete"
-                : "Remove model"
+                ? t('api.ollama.waitForDownloads')
+                : t('api.ollama.removeModel')
             }
           >
             <TrashIcon className="w-4 h-4" />
@@ -108,8 +110,8 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
           }`}
           title={
             isDisabled
-              ? "Wait for active downloads to complete"
-              : "Download model"
+              ? t('api.ollama.waitForDownloads')
+              : t('api.ollama.downloadModel')
           }
         >
           <CloudArrowDownIcon className="w-4 h-4" />
@@ -124,17 +126,17 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
     ) : null;
 
     const statusText = model.isDownloaded
-      ? "Installed"
+      ? t('api.ollama.installed')
       : model.isDownloading
-      ? `Downloading ${(model.downloadInfo?.progress || 0).toFixed(1)}%`
-      : "Available";
+      ? `${t('api.ollama.downloading')} ${(model.downloadInfo?.progress || 0).toFixed(1)}%`
+      : t('api.ollama.available');
 
     return (
       <label
         key={model.id}
         title={
           !model.isDownloaded && !model.isDownloading
-            ? "This model must be downloaded before it can be selected"
+            ? t('api.ollama.modelMustBeDownloaded')
             : ""
         }
         className={`
@@ -196,7 +198,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
                   <>
                     <span className="text-gray-400/40">•</span>
                     <span className="text-xs text-orange-400">
-                      Download required
+                      {t('api.ollama.downloadRequired')}
                     </span>
                   </>
                 )}
@@ -228,7 +230,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
       {/* Header */}
       <div className="flex items-center gap-2 text-sm text-cyan-400">
         <span>💎</span>
-        <h3 className="font-medium">Model Selection & Management</h3>
+        <h3 className="font-medium">{t('api.ollama.modelSelectionManagement')}</h3>
       </div>
 
       {/* Two Column Layout */}
@@ -237,7 +239,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-cyan-300">
-              Main Model
+              {t('api.ollama.mainModel')}
               {isMainLoading && (
                 <span className="ml-2 animate-spin inline-block">🔄</span>
               )}
@@ -254,7 +256,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
               <div className="flex items-center gap-2">
                 <ExclamationTriangleIcon className="w-4 h-4 text-red-400" />
                 <p className="text-red-400 text-xs">
-                  No main models available. Please check Ollama installation.
+                  {t('api.ollama.noMainModelsAvailable')}
                 </p>
               </div>
             </div>
@@ -276,7 +278,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-cyan-300">
-              Embedding Model
+              {t('api.ollama.embeddingModel')}
               {isEmbeddingLoading && (
                 <span className="ml-2 animate-spin inline-block">🔄</span>
               )}
@@ -293,8 +295,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
               <div className="flex items-center gap-2">
                 <ExclamationTriangleIcon className="w-4 h-4 text-red-400" />
                 <p className="text-red-400 text-xs">
-                  No embedding models available. Please check Ollama
-                  installation.
+                  {t('api.ollama.noEmbeddingModelsAvailable')}
                 </p>
               </div>
             </div>
@@ -316,11 +317,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
       {/* Info Section */}
       <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
         <p className="text-xs text-cyan-300">
-          <strong>Info:</strong> Only installed models can be selected. Use the
-          download button (<CloudArrowDownIcon className="w-3 h-3 inline" />) to
-          install a model before selecting it. You can remove installed models
-          with the trash button (<TrashIcon className="w-3 h-3 inline" />
-          ).
+          <strong>Info:</strong> {t('api.ollama.infoText')}
         </p>
       </div>
     </div>

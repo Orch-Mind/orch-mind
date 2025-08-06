@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 import React, { useState } from "react";
 import { NamingModal } from "./NamingModal";
+import { useTranslation } from "react-i18next";
 
 interface LoRAAdapter {
   id: string;
@@ -55,6 +56,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
   );
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [deployingAdapterId, setDeployingAdapterId] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const formatDate = (dateString: string) => {
     try {
@@ -87,15 +89,15 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
   const getStatusText = (adapter: LoRAAdapter) => {
     switch (adapter.status) {
       case "training":
-        return "Training...";
+        return t('deploy.adapters.status.training');
       case "error":
-        return "Error";
+        return t('deploy.adapters.status.error');
       case "downloaded":
-        return `Downloaded${
-          adapter.downloadedFrom ? ` from ${adapter.downloadedFrom}` : ""
+        return `${t('deploy.adapters.status.downloaded')}${
+          adapter.downloadedFrom ? ` ${t('deploy.adapters.status.from')} ${adapter.downloadedFrom}` : ""
         }`;
       case "merged":
-        return `Merged from ${adapter.mergedWith?.length || 0} adapters`;
+        return t('deploy.adapters.status.merged', { count: adapter.mergedWith?.length || 0 });
       default:
         // Remove "Enabled/Disabled" text - will show only date
         return "";
@@ -142,10 +144,8 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
 
     if (baseModels.length > 1) {
       alert(
-        `❌ Cannot merge adapters with different base models: ${baseModels.join(
-          ", "
-        )}\nPlease select adapters with the same base model.`
-      );
+          `❌ ${t('deploy.adapters.messages.incompatibleModels', { models: baseModels.join(', ') })}`
+        );
       return;
     }
 
@@ -161,17 +161,15 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
         setSelectedForMerge([]);
         setMergeOutputName("");
         alert(
-          `✅ ${
-            selectedForMerge.length === 1
-              ? "Adapter deployed"
-              : "Adapters merged"
-          } successfully!`
+          `✅ ${t('deploy.adapters.messages.mergeSuccess', { 
+            type: selectedForMerge.length === 1 ? 'deployed' : 'merged'
+          })}`
         );
       } else {
-        alert(`❌ Error: ${result.error}`);
+        alert(`❌ ${t('deploy.adapters.messages.mergeError', { error: result.error })}`);
       }
     } catch (error) {
-      alert(`❌ Error: ${error}`);
+      alert(`❌ ${t('deploy.adapters.messages.mergeError', { error: error })}`);
     } finally {
       setIsMerging(false);
     }
@@ -199,12 +197,12 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     try {
       const result = await onDeployAdapter(deployingAdapterId, customModelName);
       if (result.success) {
-        alert(`✅ Adapter deployed successfully as model: ${result.modelName || customModelName}`);
+        alert(`✅ ${t('deploy.adapters.messages.deploySuccess', { modelName: result.modelName || customModelName })}`);
       } else {
-        alert(`❌ Deploy failed: ${result.error}`);
+        alert(`❌ ${t('deploy.adapters.messages.deployError', { error: result.error })}`);
       }
     } catch (error) {
-      alert(`❌ Deploy error: ${error}`);
+      alert(`❌ ${t('deploy.adapters.messages.deployError', { error: error })}`);
     } finally {
       setDeployingAdapters((prev) => {
         const newSet = new Set(prev);
@@ -260,7 +258,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     <div className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <h3 className="text-lg font-semibold text-cyan-400">LoRA Adapters</h3>
+          <h3 className="text-lg font-semibold text-cyan-400">{t('deploy.adapters.title')}</h3>
           <span className="bg-cyan-600/20 text-cyan-300 px-2 py-1 rounded-full text-xs font-medium">
             {adapters.length}
           </span>
@@ -277,10 +275,10 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
               title="Toggle merge mode"
             >
               <span className="text-base">🔗</span>
-              <span>Merge</span>
+              <span>{t('deploy.adapters.actions.merge')}</span>
             </button>
           )}
-          <div className="text-xs text-gray-400">Deploy • Merge • Manage</div>
+          <div className="text-xs text-gray-400">{t('deploy.adapters.actions.deploy')} • {t('deploy.adapters.actions.merge')} • {t('deploy.adapters.actions.manage')}</div>
         </div>
       </div>
 
@@ -289,7 +287,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
         <div className="mb-3 p-3 bg-purple-900/20 border border-purple-400/30 rounded-lg">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-purple-400">
-              🔗 Merge Adapters ({selectedForMerge.length} selected)
+              🔗 {t('deploy.merge.title')} ({selectedForMerge.length} {t('deploy.merge.selected')})
             </h4>
             <button
               onClick={() => {
@@ -309,7 +307,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   type="text"
                   value={mergeOutputName}
                   onChange={(e) => setMergeOutputName(e.target.value)}
-                  placeholder="merged_adapter_name"
+                  placeholder={t('deploy.merge.placeholder')}
                   className="w-full px-2 py-1 bg-slate-800/50 border border-slate-600/50 rounded text-xs text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
                 />
               </div>
@@ -317,12 +315,12 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                 <select
                   value={mergeStrategy}
                   onChange={(e) => setMergeStrategy(e.target.value as any)}
-                  title="Select merge strategy"
+                  title={t('deploy.merge.selectStrategy')}
                   className="w-full px-2 py-1 bg-slate-800/50 border border-slate-600/50 rounded text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
-                  <option value="svd_merge">SVD Merge (Best)</option>
-                  <option value="arithmetic_mean">Arithmetic Mean</option>
-                  <option value="weighted_average">Weighted Average</option>
+                  <option value="svd_merge">{t('deploy.merge.strategies.svd')}</option>
+                  <option value="arithmetic_mean">{t('deploy.merge.strategies.arithmetic')}</option>
+                  <option value="weighted_average">{t('deploy.merge.strategies.weighted')}</option>
                 </select>
               </div>
             </div>
@@ -347,11 +345,11 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                 <span>
                   {isMerging
                     ? selectedForMerge.length === 1
-                      ? "Deploying..."
-                      : "Merging..."
+                      ? t('deploy.adapters.buttons.deploying')
+                      : t('deploy.adapters.buttons.merging')
                     : selectedForMerge.length === 1
-                    ? "Deploy"
-                    : "Merge"}{" "}
+                    ? t('deploy.adapters.buttons.deploy')
+                    : t('deploy.adapters.buttons.merge')}{" "}
                   ({selectedForMerge.length})
                 </span>
               </button>
@@ -378,9 +376,9 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                 />
               </svg>
             </div>
-            <p className="text-xs text-gray-400 mb-1">No adapters yet</p>
+            <p className="text-xs text-gray-400 mb-1">{t('deploy.adapters.empty.title')}</p>
             <p className="text-xs text-gray-500">
-              Train conversations or download from P2P to create LoRA adapters
+              {t('deploy.adapters.empty.description')}
             </p>
           </div>
         ) : (
@@ -404,7 +402,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                         checked={selectedForMerge.includes(adapter.id)}
                         onChange={() => handleMergeToggle(adapter.id)}
                         className="w-3 h-3 text-purple-400 rounded"
-                        title="Select for merge"
+                        title={t('deploy.adapters.selectForMerge')}
                       />
                     )}
 
@@ -420,12 +418,12 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                       </h4>
                       {adapter.source === "p2p" && (
                         <span className="text-[8px] bg-cyan-600/20 text-cyan-300 px-1 rounded">
-                          P2P
+                          {t('deploy.adapters.labels.p2p')}
                         </span>
                       )}
                       {adapter.status === "merged" && (
                         <span className="text-[8px] bg-purple-600/20 text-purple-300 px-1 rounded">
-                          MERGED
+                          {t('deploy.adapters.labels.merged')}
                         </span>
                       )}
                     </div>
@@ -454,14 +452,14 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                       onClick={() => handleDeployClick(adapter.id)}
                       disabled={deployingAdapters.has(adapter.id) || isTraining}
                       className="px-3 py-1.5 bg-green-600/30 border border-green-400/50 text-green-300 rounded-lg hover:bg-green-600/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium min-w-[60px] flex items-center justify-center"
-                      title="Deploy adapter to Ollama model"
+                      title={t('deploy.adapters.deployTooltip')}
                     >
                       {deployingAdapters.has(adapter.id) ? (
                         <span className="text-sm">⏳</span>
                       ) : (
                         <span className="flex items-center space-x-1">
                           <span className="text-sm">🚀</span>
-                          <span>Deploy</span>
+                          <span>{t('deploy.adapters.buttons.deploy')}</span>
                         </span>
                       )}
                     </button>
@@ -472,11 +470,11 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                     onClick={() => onDeleteAdapter(adapter.id)}
                     disabled={isDeleting || isTraining}
                     className="px-3 py-1.5 bg-red-600/30 border border-red-400/50 text-red-300 rounded-lg hover:bg-red-600/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium min-w-[60px] flex items-center justify-center"
-                    title="Delete adapter"
+                    title={t('deploy.adapters.deleteTooltip')}
                   >
                     <span className="flex items-center space-x-1">
                       <span className="text-sm">🗑️</span>
-                      <span>Delete</span>
+                      <span>{t('deploy.adapters.buttons.delete')}</span>
                     </span>
                   </button>
                 </div>
@@ -502,7 +500,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
               {adapter.status === "merged" && adapter.mergedWith && (
                 <div className="mt-1 pt-1 border-t border-purple-400/20">
                   <p className="text-[8px] text-purple-300">
-                    🔗 Sources:{" "}
+                    🔗 {t('deploy.adapters.mergedSources')}:{" "}
                     {adapter.mergedWith
                       .map(
                         (id) => adapters.find((a) => a.id === id)?.name || id
@@ -521,7 +519,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
         {showMergeSection && hasCompatibleAdapters ? (
           <div className="space-y-1">
             <p className="text-xs text-gray-500 text-center">
-              Select adapters with the same base model to merge
+              {t('deploy.merge.info.selectSameModel')}
             </p>
             {Object.entries(adaptersByBaseModel).map(
               ([baseModel, compatibleAdapters]) => (
@@ -529,8 +527,7 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
                   key={baseModel}
                   className="text-xs text-cyan-400 text-center"
                 >
-                  📋 {baseModel}: {compatibleAdapters.length} compatible adapter
-                  {compatibleAdapters.length !== 1 ? "s" : ""}
+                  📋 {baseModel}: {t('deploy.merge.info.compatibleAdapters', { count: compatibleAdapters.length })}
                 </p>
               )
             )}
@@ -538,8 +535,8 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
         ) : (
           <p className="text-xs text-gray-500 text-center">
             {showMergeSection
-              ? "Select adapters above and configure merge settings"
-              : "🚀 Deploy creates Ollama model with LoRA adapter • 🔗 Merge combines multiple adapters"}
+              ? t('deploy.merge.info.configure')
+              : t('deploy.quickGuide.info')}
           </p>
         )}
       </div>
@@ -550,8 +547,8 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
           isOpen={showDeployModal}
           type="deploy"
           defaultName={generateDefaultModelName(adapters.find(a => a.id === deployingAdapterId)!)}
-          title="Nome do Modelo"
-          description={`Escolha um nome personalizado para o modelo Ollama que será criado com este adapter LoRA.`}
+          title={t('deploy.baseModel.label')}
+          description={t('deploy.confirmation.message')}
           onConfirm={handleDeployConfirm}
           onCancel={handleDeployCancel}
           isLoading={deployingAdapters.has(deployingAdapterId)}

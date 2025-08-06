@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import "./ShareSettings/styles.css";
 
 // SRP: Import only download-related components
@@ -43,17 +44,20 @@ const DownloadSettings: React.FC = () => {
 };
 
 // SRP: Header component focused only on download information - Compact
-const DownloadHeader: React.FC = () => (
-  <div className="text-center mb-4">
-    <h2 className="text-lg font-bold text-cyan-400 mb-1">
-      📥 Adapter Downloads
-    </h2>
-    <p className="text-xs text-gray-400">
-      Discover and download LoRA adapters shared by other users in your P2P
-      network
-    </p>
-  </div>
-);
+const DownloadHeader: React.FC = () => {
+  const { t } = useTranslation();
+  
+  return (
+    <div className="text-center mb-4">
+      <h2 className="text-lg font-bold text-cyan-400 mb-1">
+        {t('download.title')}
+      </h2>
+      <p className="text-xs text-gray-400">
+        {t('download.subtitle')}
+      </p>
+    </div>
+  );
+};
 
 // SRP: Connection status component focused on download context - Compact
 const ConnectionStatus: React.FC<{
@@ -61,6 +65,8 @@ const ConnectionStatus: React.FC<{
   isConnected: boolean;
   incomingAdapters: any[];
 }> = ({ currentRoom, isConnected, incomingAdapters }) => {
+  const { t } = useTranslation();
+  
   if (!isConnected) {
     return (
       <div className="bg-yellow-900/20 border border-yellow-400/30 rounded-lg p-3 text-center">
@@ -79,11 +85,11 @@ const ConnectionStatus: React.FC<{
             />
           </svg>
           <p className="text-yellow-400 font-medium text-sm">
-            Not connected to P2P network
+            {t('download.notConnectedDescription')}
           </p>
         </div>
         <p className="text-yellow-300 text-xs">
-          Go to the Share tab to connect and discover adapters
+          {t('download.goToShareTab')}
         </p>
       </div>
     );
@@ -106,15 +112,14 @@ const ConnectionStatus: React.FC<{
           />
         </svg>
         <p className="text-green-400 font-medium text-sm">
-          Connected to{" "}
+          {t('download.connectedTo')}{" "}
           {currentRoom?.type === "general"
-            ? "Global"
-            : `Room ${currentRoom?.code}`}
+            ? t('download.globalRoom')
+            : `${t('download.privateRoom')} ${currentRoom?.code}`}
         </p>
       </div>
       <p className="text-green-300 text-xs">
-        {incomingAdapters.length} adapter
-        {incomingAdapters.length !== 1 ? "s" : ""} available for download
+        {incomingAdapters.length} {t('download.adaptersAvailable')}
       </p>
     </div>
   );

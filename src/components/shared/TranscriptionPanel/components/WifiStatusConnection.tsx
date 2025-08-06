@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ConnectionState, MicrophoneState } from "../../../context";
 import { useP2PContext } from "../context/P2PContext";
 import styles from "./WifiStatusConnection.module.css";
@@ -25,6 +26,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
   className = "",
   onStatusClick,
 }) => {
+  const { t } = useTranslation();
   // Use global P2P context instead of local hook
   const { status: p2pStatus } = useP2PContext();
 
@@ -61,15 +63,15 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
   // Convert P2P status to user-friendly message
   const getConnectionStatusText = () => {
     if (p2pStatus.isLoading) {
-      return "Connecting to P2P...";
+      return t('p2pStatus.connectingToP2P');
     } else if (p2pStatus.isConnected && p2pStatus.currentRoom) {
       const roomName =
         p2pStatus.currentRoom.type === "general"
-          ? "Global"
+          ? t('p2pStatus.global')
           : `Room ${p2pStatus.currentRoom.code}`;
-      return `Connected to ${roomName}`;
+      return t('p2pStatus.connectedTo', { roomName });
     } else {
-      return "P2P Disconnected";
+      return t('p2pStatus.p2pDisconnected');
     }
   };
 
@@ -169,13 +171,13 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
                   }}
                 ></div>
                 <h3 className="text-sm font-semibold text-cyan-400">
-                  P2P Status
+                  {t('p2pStatus.title')}
                 </h3>
               </div>
 
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Status:</span>
+                  <span className="text-gray-400">{t('p2pStatus.status')}</span>
                   <span
                     className={`font-mono ${
                       p2pStatus.isConnected
@@ -186,26 +188,26 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
                     }`}
                   >
                     {p2pStatus.isLoading
-                      ? "Connecting..."
+                      ? t('p2pStatus.connecting')
                       : p2pStatus.isConnected
-                      ? "Connected"
-                      : "Disconnected"}
+                      ? t('p2pStatus.connected')
+                      : t('p2pStatus.disconnected')}
                   </span>
                 </div>
 
                 {p2pStatus.isConnected && p2pStatus.currentRoom && (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Room:</span>
+                      <span className="text-gray-400">{t('p2pStatus.room')}</span>
                       <span className="text-cyan-400 font-mono">
                         {p2pStatus.currentRoom.type === "general"
-                          ? "Global"
-                          : p2pStatus.currentRoom.code || "Private"}
+                          ? t('p2pStatus.global')
+                          : p2pStatus.currentRoom.code || t('p2pStatus.private')}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Peers:</span>
+                      <span className="text-gray-400">{t('p2pStatus.peers')}</span>
                       <span className="text-cyan-400 font-mono">
                         {p2pStatus.currentRoom.peersCount}
                       </span>
@@ -215,7 +217,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
 
                 {p2pStatus.lastError && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Error:</span>
+                    <span className="text-gray-400">{t('p2pStatus.error')}</span>
                     <span className="text-red-400 font-mono text-[10px]">
                       {p2pStatus.lastError}
                     </span>
@@ -225,7 +227,7 @@ const WifiStatusConnection: React.FC<WifiStatusConnectionProps> = ({
 
               <div className="pt-2 border-t border-cyan-400/20">
                 <p className="text-[10px] text-gray-500">
-                  Click anywhere on this popup to open P2P settings
+                  {t('p2pStatus.clickToOpenSettings')}
                 </p>
               </div>
             </div>

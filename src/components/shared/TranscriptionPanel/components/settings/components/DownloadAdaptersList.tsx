@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Download Adapters List Component
@@ -28,6 +29,8 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
   isDownloading,
   getProgress,
 }) => {
+  const { t } = useTranslation();
+  
   if (!isConnected) {
     return <NotConnectedState />;
   }
@@ -55,15 +58,14 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
             />
           </svg>
           <h3 className="text-sm font-semibold text-green-400">
-            Connected to{" "}
+            {t('download.connectedTo')}{" "}
             {currentRoom?.type === "general"
-              ? "Global"
-              : `Room ${currentRoom?.code}`}
+              ? t('download.globalRoom')
+              : `${t('download.privateRoom')} ${currentRoom?.code}`}
           </h3>
         </div>
         <span className="text-xs text-gray-400 bg-cyan-900/20 px-2 py-0.5 rounded-full">
-          {adapters.length} adapter{adapters.length !== 1 ? "s" : ""} available
-          for download
+          {adapters.length} {t('download.adaptersAvailable')}
         </span>
       </div>
 
@@ -97,7 +99,7 @@ export const DownloadAdaptersList: React.FC<DownloadAdaptersListProps> = ({
                 d="M19 14l-7 7m0 0l-7-7m7 7V3"
               />
             </svg>
-            Scroll to see more adapters
+            {t('download.scrollToSeeMore')}
           </p>
         </div>
       )}
@@ -112,6 +114,8 @@ const AdapterListItem: React.FC<{
   isDownloading: boolean;
   downloadProgress?: any;
 }> = ({ adapter, onDownload, isDownloading, downloadProgress }) => {
+  const { t } = useTranslation();
+  
   // Check if this is user's own adapter
   const isOwnAdapter =
     !adapter.from || adapter.from.trim() === "" || adapter.from === "local";
@@ -140,7 +144,7 @@ const AdapterListItem: React.FC<{
                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-                {adapter.from || "Unknown"}
+                {adapter.from || t('download.unknown')}
               </span>
               <span className="flex items-center">
                 <svg
@@ -156,7 +160,7 @@ const AdapterListItem: React.FC<{
                     d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
                   />
                 </svg>
-                {adapter.size || "Unknown size"}
+                {adapter.size || t('download.unknownSize')}
               </span>
             </div>
           </div>
@@ -184,7 +188,7 @@ const AdapterListItem: React.FC<{
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              Own
+              {t('download.own')}
             </span>
           ) : isDownloading ? (
             <span className="text-xs text-yellow-400 flex items-center px-2 py-1">
@@ -201,13 +205,13 @@ const AdapterListItem: React.FC<{
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              Downloading...
+              {t('download.downloading')}
             </span>
           ) : (
             <button
               onClick={() => onDownload(adapter)}
               className="download-btn bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 px-3 py-1.5 rounded border border-cyan-400/30 hover:border-cyan-400/50 transition-all duration-200 text-xs font-medium flex items-center"
-              title={`Download ${adapter.name} from ${adapter.from}`}
+              title={`${t('download.download')} ${adapter.name} from ${adapter.from}`}
             >
               <svg
                 className="w-3 h-3 mr-1"
@@ -222,7 +226,7 @@ const AdapterListItem: React.FC<{
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
                 />
               </svg>
-              Download
+              {t('download.download')}
             </button>
           )}
         </div>
@@ -281,33 +285,39 @@ const DownloadProgressIndicator: React.FC<{ progress: any }> = ({
 };
 
 // State when not connected - Compact version
-const NotConnectedState: React.FC = () => (
-  <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-cyan-400/20 text-center">
-    <div className="mb-3">
-      <svg
-        className="w-8 h-8 text-gray-500 mx-auto"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
-        />
-      </svg>
+const NotConnectedState: React.FC = () => {
+  const { t } = useTranslation();
+  
+  return (
+    <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-cyan-400/20 text-center">
+      <div className="mb-3">
+        <svg
+          className="w-8 h-8 text-gray-500 mx-auto"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+          />
+        </svg>
+      </div>
+      <h3 className="text-base font-medium text-gray-400 mb-1">{t('download.notConnected')}</h3>
+      <p className="text-sm text-gray-500 mb-2">
+        {t('download.notConnectedDescription')}
+      </p>
+      <p className="text-xs text-gray-600">{t('download.goToShareTab')}</p>
     </div>
-    <h3 className="text-base font-medium text-gray-400 mb-1">Not Connected</h3>
-    <p className="text-sm text-gray-500 mb-2">
-      Connect to a P2P network to discover adapters
-    </p>
-    <p className="text-xs text-gray-600">Go to the Share tab to join a room</p>
-  </div>
-);
+  );
+};
 
 // State when no adapters available - Compact version
 const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
+  const { t } = useTranslation();
+  
   const getMessage = (): {
     title: string;
     subtitle: string;
@@ -316,27 +326,27 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
     switch (currentRoom?.type) {
       case "local":
         return {
-          title: "No Local Adapters",
-          subtitle: "No adapters shared on your local network",
-          suggestion: "Make sure peers are sharing adapters",
+          title: t('download.noLocalAdapters'),
+          subtitle: t('download.noLocalAdaptersDescription'),
+          suggestion: t('download.makeSurePeersSharing'),
         };
       case "general":
         return {
-          title: "No Community Adapters",
-          subtitle: "The community hasn't shared any adapters yet",
-          suggestion: "Check back later or try a different room",
+          title: t('download.noCommunityAdapters'),
+          subtitle: t('download.noCommunityAdaptersDescription'),
+          suggestion: t('download.checkBackLater'),
         };
       case "private":
         return {
-          title: "No Adapters in Room",
-          subtitle: "This private room has no shared adapters",
-          suggestion: "Share the room code with peers who have adapters",
+          title: t('download.noAdaptersInRoom'),
+          subtitle: t('download.noAdaptersInRoomDescription'),
+          suggestion: t('download.shareRoomCode'),
         };
       default:
         return {
-          title: "No Adapters Available",
-          subtitle: "No adapters found in the current room",
-          suggestion: "Try connecting to a different room",
+          title: t('download.noAdaptersAvailable'),
+          subtitle: t('download.noAdaptersAvailableDescription'),
+          suggestion: t('download.tryDifferentRoom'),
         };
     }
   };
@@ -379,7 +389,7 @@ const NoAdaptersState: React.FC<{ currentRoom?: any }> = ({ currentRoom }) => {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            No peers connected - invite others!
+            {t('download.noPeersConnected')}
           </p>
         </div>
       )}

@@ -3,6 +3,7 @@
 // Single responsibility: Handle training controls and progress display
 
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   formatLearningRate,
   useTrainingConfig,
@@ -29,6 +30,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
   trainingDetails,
   onStartTraining,
 }) => {
+  const { t } = useTranslation();
   const canStartTraining = !isTraining && selectedCount > 0;
   const { config } = useTrainingConfig(); // No loading/error since it's synchronous
   
@@ -80,7 +82,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
   return (
     <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-52 flex flex-col overflow-hidden">
       <h3 className="text-sm font-semibold text-cyan-400 mb-2">
-        Training Control
+        {t('training.control')}
       </h3>
 
       <div className="flex-1 flex flex-col justify-between min-h-0">
@@ -107,8 +109,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
         isOpen={showNamingModal}
         type="adapter"
         defaultName={generateDefaultAdapterName()}
-        title="Nome do Adapter"
-        description={`Escolha um nome personalizado para seu adapter LoRA que será criado com ${selectedCount} conversas selecionadas.`}
+        title={t('training.adapterName')}
+        description={t('training.adapterNameDescription', { count: selectedCount })}
         onConfirm={handleNameConfirm}
         onCancel={handleNameCancel}
         isLoading={isStartingTraining}
@@ -130,11 +132,14 @@ const TrainingProgressDisplay: React.FC<TrainingProgressDisplayProps> = ({
   status,
   selectedCount,
   trainingDetails,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="space-y-2 h-full flex flex-col justify-between">
     <div className="flex items-center justify-between">
       <span className="text-cyan-400 text-sm font-medium">
-        Training Progress
+        {t('training.progress')}
       </span>
       <span className="text-cyan-400 font-mono text-lg font-bold">
         {Math.round(progress)}%
@@ -154,12 +159,12 @@ const TrainingProgressDisplay: React.FC<TrainingProgressDisplayProps> = ({
     <div className="bg-gray-800/50 rounded-lg p-2 flex-1">
       <div className="text-sm text-gray-300">
         <div className="font-medium text-cyan-300 mb-1 text-xs">
-          Current Status:
+          {t('training.currentStatus')}:
         </div>
         <div className="text-xs truncate">{status}</div>
       </div>
       <div className="text-xs text-cyan-400 border-t border-gray-600 pt-1 mt-1">
-        Strategy: PEFT-only → Virtual Env → Simplified Fallback
+        {t('training.strategy')}
       </div>
     </div>
 
@@ -167,21 +172,20 @@ const TrainingProgressDisplay: React.FC<TrainingProgressDisplayProps> = ({
       <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border border-cyan-400/20 rounded-lg p-1.5">
         <div className="text-center">
           <div className="text-cyan-300 font-medium mb-0.5 text-xs">
-            Training Details
+            {t('training.details')}
           </div>
           <div className="text-gray-300 text-xs">
-            <span className="text-cyan-400 font-mono">
-              {trainingDetails.trainingExamples}
-            </span>{" "}
-            examples from{" "}
-            <span className="text-cyan-400 font-mono">{selectedCount}</span>{" "}
-            conversations
+            {t('training.examplesFromConversations', { 
+              examples: trainingDetails.trainingExamples, 
+              count: selectedCount 
+            })}
           </div>
         </div>
       </div>
     )}
   </div>
-);
+  );
+};
 
 // Separate component for ready state (SRP)
 interface TrainingReadyDisplayProps {
@@ -198,31 +202,34 @@ const TrainingReadyDisplay: React.FC<TrainingReadyDisplayProps> = ({
   canStartTraining,
   onStartTraining,
   config,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="space-y-2 h-full flex flex-col justify-between">
     {/* Training Information */}
     <div className="bg-gray-800/50 rounded-lg p-2 flex-1">
       <div className="text-sm text-gray-300">
         <div className="font-medium text-cyan-300 mb-1.5 text-sm">
-          Training Configuration
+          {t('training.configuration')}
         </div>
         <div className="grid grid-cols-2 gap-1.5 text-xs">
           <div className="flex justify-between">
-            <span>LoRA Rank:</span>
+            <span>{t('training.loraRank')}:</span>
             <span className="text-cyan-400 font-mono">{config.lora.rank}</span>
           </div>
           <div className="flex justify-between">
-            <span>Alpha:</span>
+            <span>{t('training.alpha')}:</span>
             <span className="text-cyan-400 font-mono">{config.lora.alpha}</span>
           </div>
           <div className="flex justify-between">
-            <span>Dropout:</span>
+            <span>{t('training.dropout')}:</span>
             <span className="text-cyan-400 font-mono">
               {config.lora.dropout}
             </span>
           </div>
           <div className="flex justify-between">
-            <span>Learning Rate:</span>
+            <span>{t('training.learningRate')}:</span>
             <span className="text-cyan-400 font-mono">
               {formatLearningRate(config.lora.learningRate)}
             </span>
@@ -243,16 +250,16 @@ const TrainingReadyDisplay: React.FC<TrainingReadyDisplayProps> = ({
         }`}
       >
         {selectedCount === 0
-          ? "Select Conversations First"
-          : `🚀 Start Training (${selectedCount} conversations)`}
+          ? t('training.selectConversationsFirst')
+          : t('training.startTraining', { count: selectedCount })}
       </button>
 
       {canStartTraining && (
         <div className="text-xs text-gray-400 text-center leading-tight">
-          Training will create a new LoRA adapter for your selected
-          conversations
+          {t('training.trainingDescription')}
         </div>
       )}
     </div>
   </div>
-);
+  );
+};

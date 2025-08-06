@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { OllamaService } from "../services/ollamaService";
 
 interface StoragePathInputProps {
@@ -17,6 +18,7 @@ export const StoragePathInput: React.FC<StoragePathInputProps> = ({
   value,
   onChange,
 }) => {
+  const { t } = useTranslation();
   const handleBrowse = async () => {
     try {
       const path = await OllamaService.selectDirectory();
@@ -46,19 +48,19 @@ export const StoragePathInput: React.FC<StoragePathInputProps> = ({
 
   return (
     <div className="flex items-center space-x-2">
-      <span className="text-xs text-purple-400">🧠 Storage:</span>
+      <span className="text-xs text-purple-400">{t('api.ollama.storage')}</span>
       <input
         type="text"
         value={value}
         readOnly
         className="flex-1 bg-black/30 text-purple-300 rounded px-2 py-1 text-xs border border-purple-500/20 focus:outline-none focus:border-purple-400/50 cursor-default"
-        placeholder="Storage path..."
+        placeholder={t('api.ollama.storagePlaceholder')}
       />
       <button
         onClick={handleBrowse}
         className="bg-blue-600/30 hover:bg-blue-500/40 text-blue-300 rounded px-2 py-1 text-xs transition-colors"
       >
-        📁
+        {t('api.ollama.browse')}
       </button>
     </div>
   );

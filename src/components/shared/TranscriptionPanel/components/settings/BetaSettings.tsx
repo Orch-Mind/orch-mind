@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 interface BetaSettingsProps {
   quantumProcessing: boolean;
@@ -16,6 +17,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
   quantumVisualization,
   setQuantumVisualization,
 }) => {
+  const { t } = useTranslation();
   const handleQuantumProcessingChange = (enabled: boolean) => {
     setQuantumProcessing(enabled);
     // Auto-save the setting immediately
@@ -23,7 +25,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
       if (typeof window !== "undefined" && window.electronAPI) {
         // Settings will be auto-saved by the useBetaSettings hook
         console.log(
-          `🧠 Quantum Processing ${enabled ? "enabled" : "disabled"}`
+          enabled ? t('beta.quantumProcessing.console.enabled') : t('beta.quantumProcessing.console.disabled')
         );
       }
     }, 100);
@@ -36,7 +38,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
       if (typeof window !== "undefined" && window.electronAPI) {
         // Settings will be auto-saved by the useBetaSettings hook
         console.log(
-          `🌌 Quantum Visualization ${enabled ? "enabled" : "disabled"}`
+          enabled ? t('beta.quantumVisualization.console.enabled') : t('beta.quantumVisualization.console.disabled')
         );
       }
     }, 100);
@@ -46,7 +48,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
       {/* Header - Padrão das outras abas */}
       <div className="text-center pb-2 border-b border-cyan-400/20">
         <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
-          🧪 Beta Feature Center
+          {t('beta.title')}
         </h2>
       </div>
 
@@ -55,12 +57,10 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h4 className="text-sm font-medium text-white mb-1">
-              ⚛️ Quantum Processing (Orch-OS Theory)
+              {t('beta.quantumProcessing.title')}
             </h4>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Experimental quantum-inspired processing for enhanced neural
-              computation. Implements theoretical quantum consciousness
-              principles.
+              {t('beta.quantumProcessing.description')}
             </p>
           </div>
 
@@ -73,7 +73,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
                   handleQuantumProcessingChange(e.target.checked)
                 }
                 className="sr-only peer"
-                aria-label="Enable Quantum Processing"
+                aria-label={t('beta.quantumProcessing.ariaLabel')}
               />
               <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
             </label>
@@ -85,10 +85,9 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
           <div className="flex items-start space-x-1.5">
             <span className="text-yellow-400 text-xs">⚠️</span>
             <div className="text-[10px] text-yellow-300">
-              <p className="font-medium">Experimental Feature</p>
+              <p className="font-medium">{t('beta.quantumProcessing.warning.title')}</p>
               <p className="mt-0.5 leading-tight">
-                Highly experimental - may affect system performance. Based on
-                Orch-OS theoretical frameworks.
+                {t('beta.quantumProcessing.warning.description')}
               </p>
             </div>
           </div>
@@ -100,11 +99,10 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h4 className="text-sm font-medium text-white mb-1">
-              🌌 Quantum Visualization (Matrix)
+              {t('beta.quantumVisualization.title')}
             </h4>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Enables quantum consciousness matrix visualization overlay.
-              Displays real-time neural signal processing patterns.
+              {t('beta.quantumVisualization.description')}
             </p>
           </div>
 
@@ -117,7 +115,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
                   handleQuantumVisualizationChange(e.target.checked)
                 }
                 className="sr-only peer"
-                aria-label="Enable Quantum Visualization"
+                aria-label={t('beta.quantumVisualization.ariaLabel')}
               />
               <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cyan-300 dark:peer-focus:ring-cyan-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-cyan-600"></div>
             </label>
@@ -129,9 +127,9 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
           <div className="flex items-start space-x-1.5">
             <span className="text-blue-400 text-xs">ℹ️</span>
             <div className="text-[10px] text-blue-300">
-              <p className="font-medium">Visual Feature</p>
+              <p className="font-medium">{t('beta.quantumVisualization.info.title')}</p>
               <p className="mt-0.5 leading-tight">
-                Adds immersive quantum matrix effects. May increase GPU usage.
+                {t('beta.quantumVisualization.info.description')}
               </p>
             </div>
           </div>
@@ -141,12 +139,10 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
       {/* Additional Info - Compacto */}
       <div className="bg-slate-800/50 rounded-lg p-2.5 border border-slate-600/30">
         <h4 className="text-xs font-medium text-gray-300 mb-1">
-          🔬 About Beta Features
+          {t('beta.about.title')}
         </h4>
         <p className="text-[10px] text-gray-400 leading-tight">
-          Beta features are experimental implementations of theoretical concepts
-          in AI and consciousness research. May be unstable or change
-          significantly. Not recommended for production environments.
+          {t('beta.about.description')}
         </p>
       </div>
     </div>

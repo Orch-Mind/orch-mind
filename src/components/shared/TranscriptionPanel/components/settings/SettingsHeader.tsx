@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { SettingsHeaderProps } from "./types";
 
 /**
@@ -9,6 +10,7 @@ import { SettingsHeaderProps } from "./types";
  * Separado seguindo o princípio de responsabilidade única (SRP)
  */
 const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onClose }) => {
+  const { t } = useTranslation();
   return (
     <>
       <button
@@ -73,9 +75,9 @@ const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onClose }) => {
           const btn = e.currentTarget;
           btn.style.boxShadow = "none";
         }}
-        title="Close settings"
+        title={t('settings.closeSettings')}
         type="button"
-        aria-label="Close settings modal"
+        aria-label={t('settings.closeSettings')}
         role="button"
         tabIndex={0}
       >
@@ -95,7 +97,7 @@ const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onClose }) => {
       </button>
 
       <h2 className="text-2xl font-bold mb-4 text-center tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)] orchos-title">
-        System Settings
+        {t('settings.title')}
       </h2>
     </>
   );

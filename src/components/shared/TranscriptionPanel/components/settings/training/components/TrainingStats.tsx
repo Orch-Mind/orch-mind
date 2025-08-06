@@ -3,6 +3,7 @@
 // Single responsibility: Display comprehensive training statistics
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 interface TrainingStatsData {
   totalConversations: number;
@@ -23,8 +24,9 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
   stats,
   adaptersCount,
 }) => {
+  const { t } = useTranslation();
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "Never";
+    if (!dateString) return t('training.never');
     try {
       return new Date(dateString).toLocaleDateString("en-US", {
         month: "short",
@@ -95,11 +97,11 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
 
   // Get quality rating based on score
   const getQualityRating = (score: number) => {
-    if (score >= 80) return { label: "Excellent", color: "text-green-400" };
-    if (score >= 65) return { label: "Good", color: "text-blue-400" };
-    if (score >= 50) return { label: "Fair", color: "text-yellow-400" };
-    if (score >= 30) return { label: "Poor", color: "text-orange-400" };
-    return { label: "Very Poor", color: "text-red-400" };
+    if (score >= 80) return { label: t('training.qualityExcellent'), color: "text-green-400" };
+    if (score >= 65) return { label: t('training.qualityGood'), color: "text-blue-400" };
+    if (score >= 50) return { label: t('training.qualityFair'), color: "text-yellow-400" };
+    if (score >= 30) return { label: t('training.qualityPoor'), color: "text-orange-400" };
+    return { label: t('training.qualityVeryPoor'), color: "text-red-400" };
   };
 
   const qualityRating = getQualityRating(conversationQuality);
@@ -157,13 +159,13 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Training Stats</h3>
-            <p className="text-blue-300 text-[8px]">Data Overview</p>
+            <h3 className="text-sm font-semibold text-white">{t('training.stats')}</h3>
+            <p className="text-blue-300 text-[8px]">{t('training.dataOverview')}</p>
           </div>
         </div>
         <div className="text-right">
           <div className="text-xs font-mono text-cyan-400">{adaptersCount}</div>
-          <div className="text-[7px] text-gray-400">Adapters</div>
+          <div className="text-[7px] text-gray-400">{t('training.adapters')}</div>
         </div>
       </div>
 
@@ -173,46 +175,46 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
           {/* Total Conversations */}
           <div className="bg-blue-500/10 rounded p-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-blue-300 font-medium">Conversations</span>
+              <span className="text-blue-300 font-medium">{t('training.conversations')}</span>
               <span className="text-white font-mono text-sm">
                 {stats.totalConversations}
               </span>
             </div>
             <div className="text-[7px] text-gray-400 mt-0.5">
-              Total available
+              {t('training.totalAvailable')}
             </div>
           </div>
 
           {/* Total Messages */}
           <div className="bg-yellow-500/10 rounded p-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-yellow-300 font-medium">Messages</span>
+              <span className="text-yellow-300 font-medium">{t('training.messages')}</span>
               <span className="text-white font-mono text-sm">
                 {stats.totalMessages}
               </span>
             </div>
             <div className="text-[7px] text-gray-400 mt-0.5">
-              ~{avgMessagesPerConv} avg per conv
+              ~{avgMessagesPerConv} {t('training.avgPerConv')}
             </div>
           </div>
 
           {/* Valid Pairs */}
           <div className="bg-green-500/10 rounded p-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-green-300 font-medium">Valid Pairs</span>
+              <span className="text-green-300 font-medium">{t('training.validPairs')}</span>
               <span className="text-white font-mono text-sm">
                 {stats.validPairs}
               </span>
             </div>
             <div className="text-[7px] text-gray-400 mt-0.5">
-              ~{avgPairsPerConv} avg per conv
+              ~{avgPairsPerConv} {t('training.avgPerConv')}
             </div>
           </div>
 
           {/* Enhanced Quality Score */}
           <div className="bg-cyan-500/10 rounded p-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-cyan-300 font-medium">Quality</span>
+              <span className="text-cyan-300 font-medium">{t('training.quality')}</span>
               <span className={`font-mono text-sm ${qualityRating.color}`}>
                 {conversationQuality}%
               </span>
@@ -230,7 +232,7 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-xs text-gray-300 font-medium">
-                  Last Training
+                  {t('training.lastTraining')}
                 </span>
               </div>
               <span className="text-xs text-cyan-400 font-mono">
@@ -238,7 +240,7 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
               </span>
             </div>
             <div className="text-[7px] text-gray-400 mt-0.5">
-              Most recent adapter creation
+              {t('training.mostRecentAdapterCreation')}
             </div>
           </div>
         )}
@@ -247,15 +249,15 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
         <div className="bg-gray-800/30 rounded-lg p-2">
           <div className="text-xs text-gray-300 mb-1">
             <div className="font-medium text-cyan-300 mb-0.5 text-[9px]">
-              Quality Analysis:
+              {t('training.qualityAnalysis')}:
             </div>
             <div className="text-[8px] text-gray-400">
-              {stats.totalConversations} conversations with {stats.validPairs}{" "}
-              training pairs. Quality:{" "}
+              {stats.totalConversations} {t('training.conversationsWith')} {stats.validPairs}{" "}
+              {t('training.trainingPairsQuality')}{" "}
               <span className={qualityRating.color}>
                 {conversationQuality}% ({qualityRating.label})
               </span>{" "}
-              based on pair density, conversation length, and data completeness.
+              {t('training.qualityBasedOn')}
             </div>
           </div>
         </div>

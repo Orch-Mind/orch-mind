@@ -14,6 +14,7 @@
 // - From complex state to focused hooks
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   ConversationSelector,
   TrainingControls,
@@ -37,6 +38,7 @@ import {
 interface TrainingSettingsProps {}
 
 const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
+  const { t } = useTranslation();
   // === CUSTOM HOOKS (Following SRP) ===
   const {
     conversations,
@@ -126,13 +128,13 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     testValidation();
 
     if (selectedConversationsList.length === 0) {
-      setTrainingStatus("Please select at least one conversation to train on.");
+      setTrainingStatus(t('training.errors.selectConversations'));
       setTimeout(clearStatus, 3000);
       return;
     }
 
     if (!selectedBaseModel) {
-      setTrainingStatus("Please select a base model in Beta settings.");
+      setTrainingStatus(t('training.errors.selectBaseModel'));
       setTimeout(clearStatus, 3000);
       return;
     }
@@ -164,7 +166,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     if (validation.totalValidPairs === 0) {
       console.log("[Training] Validation results:", validation);
       setTrainingStatus(
-        "No valid training pairs found. Please ensure conversations have user/assistant messages. Check console for details."
+        t('training.errors.noValidPairs')
       );
       setTimeout(clearStatus, 8000);
       return;
@@ -174,7 +176,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       `[Training] Found ${validation.totalValidPairs} valid training pairs`
     );
     setTrainingStatus(
-      `Found ${validation.totalValidPairs} valid training pairs. Starting training...`
+      `${t('training.foundValidPairs', { count: validation.totalValidPairs })}`
     );
     setTimeout(() => setTrainingStatus(""), 2000);
 
@@ -226,7 +228,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     resetAdapters();
     localStorage.removeItem("orch-training-status");
     setTrainingStatus(
-      `${adapters.length} LoRA adapters deleted successfully. Conversations preserved.`
+      t('training.adaptersDeletedSuccessfully', { count: adapters.length })
     );
     setTimeout(clearStatus, 4000);
     hideResetModal();
@@ -238,7 +240,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       {/* Header */}
       <div className="text-center pb-2 border-b border-cyan-400/20">
         <h2 className="text-lg font-bold text-cyan-400 mb-0.5">
-          LoRA Training Center
+          {t('training.title')}
         </h2>
       </div>
 
@@ -273,10 +275,10 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-white">
-                    Base Model
+                    {t('training.baseModel')}
                   </h3>
                   <p className="text-slate-400 text-[9px]">
-                    Active for training
+                    {t('training.active')}
                   </p>
                 </div>
               </div>
@@ -296,7 +298,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  {selectedBaseModel ? "Active" : "Not Set"}
+                  {selectedBaseModel ? t('training.active') : t('training.notSet')}
                 </div>
               </div>
             </div>
@@ -309,7 +311,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                   <div className="bg-slate-500/10 rounded p-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-slate-300 font-medium text-xs">
-                        Details
+                        {t('training.dataOverview')}
                       </span>
                       <span className="text-green-400 text-[9px] flex items-center">
                         <svg
@@ -323,12 +325,12 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                             clipRule="evenodd"
                           />
                         </svg>
-                        Downloaded
+                        {t('training.downloaded')}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[9px] mt-1">
                       <div className="flex justify-between">
-                        <span className="text-gray-400 font-medium">Size:</span>
+                        <span className="text-gray-400 font-medium">{t('api.ollama.storage')}</span>
                         <span className="text-slate-300 font-semibold">
                           {selectedBaseModel.includes("7b")
                             ? "~4GB"
@@ -340,9 +342,9 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400 font-medium">Type:</span>
+                        <span className="text-gray-400 font-medium">{t('training.quality')}:</span>
                         <span className="text-slate-300 font-semibold">
-                          Chat
+                          {t('training.chat')}
                         </span>
                       </div>
                     </div>
@@ -364,7 +366,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
                       />
                     </svg>
-                    <p className="text-[9px]">Configure in Beta settings</p>
+                    <p className="text-[9px]">{t('training.configureInBeta')}</p>
                   </div>
                 </div>
               )}
@@ -398,10 +400,10 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-yellow-400">
-                    Management
+                    {t('training.adapters')}
                   </h3>
                   <p className="text-yellow-300/60 text-[8px]">
-                    LoRA Adapters Control
+                    {t('training.loraAdaptersControl')}
                   </p>
                 </div>
               </div>
@@ -411,8 +413,8 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                 className="px-3 py-1.5 bg-red-600/20 border border-red-400/40 text-red-300 rounded hover:bg-red-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-medium flex items-center space-x-1"
                 title={
                   adapters.length === 0
-                    ? "No adapters to delete"
-                    : "Delete all LoRA adapters"
+                    ? t('training.noAdaptersToDelete')
+                    : t('training.deleteAllAdapters')
                 }
               >
                 <svg
@@ -428,7 +430,7 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
-                <span>Delete Adapters</span>
+                <span>{t('training.deleteAdapters')}</span>
               </button>
             </div>
           </div>

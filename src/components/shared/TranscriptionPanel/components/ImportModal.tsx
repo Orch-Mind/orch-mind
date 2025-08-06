@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { getOption, STORAGE_KEYS } from "../../../../services/StorageService";
 import { ImportModalProps } from "../types/interfaces";
 
@@ -22,6 +23,8 @@ const ImportModal: React.FC<ImportModalProps> = ({
   handleStartImport,
   handleCloseImportModal,
 }) => {
+  const { t } = useTranslation();
+  
   if (!show) return null;
 
   // Get the userName from settings to display
@@ -51,12 +54,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
             className="text-2xl font-bold tracking-wide bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]"
             style={{ fontFamily: "Orbitron, Inter, sans-serif" }}
           >
-            Import Neural Data
+            {t('importModal.title')}
           </h2>
           <button
             onClick={handleCloseImportModal}
             className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-full p-1"
-            aria-label="Close modal"
+            aria-label={t('importModal.closeModal')}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -95,18 +98,18 @@ const ImportModal: React.FC<ImportModalProps> = ({
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            Importing as:{" "}
+            {t('importModal.importingAs')}{" "}
             <span className="text-cyan-400 font-semibold">{userName}</span>
           </p>
           <p className="text-cyan-200/60 text-xs mt-1">
-            You can change your name in Settings → General
+            {t('importModal.changeNameHint')}
           </p>
         </div>
 
         {/* File selection */}
         <label className="block mb-6">
           <span className="block text-cyan-200/80 mb-2 font-medium">
-            Select file
+            {t('importModal.selectFile')}
           </span>
           <div className="flex items-center gap-3">
             <input
@@ -138,7 +141,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                   strokeLinejoin="round"
                 />
               </svg>
-              {importFile ? importFile.name : "Choose file"}
+              {importFile ? importFile.name : t('importModal.chooseFile')}
             </label>
           </div>
         </label>
@@ -146,7 +149,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
         {/* Import mode selection */}
         <div className="mb-6">
           <span className="block text-cyan-200/80 mb-2 font-medium">
-            Import mode
+            {t('importModal.importMode')}
           </span>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer group">
@@ -161,7 +164,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 disabled={isImporting}
               />
               <span className="text-white group-hover:text-cyan-300 transition-colors">
-                Increment
+                {t('importModal.increment')}
               </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer group">
@@ -176,7 +179,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 disabled={isImporting}
               />
               <span className="text-white group-hover:text-cyan-300 transition-colors">
-                Overwrite
+                {t('importModal.overwrite')}
               </span>
             </label>
           </div>
@@ -207,7 +210,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
               strokeLinejoin="round"
             />
           </svg>
-          {isImporting ? "Importing..." : "Start Import"}
+          {isImporting ? t('importModal.importing') : t('importModal.startImport')}
         </button>
 
         {/* Progress bar */}
@@ -242,10 +245,10 @@ const ImportModal: React.FC<ImportModalProps> = ({
             </div>
             <div className="flex flex-col items-center gap-2 mt-2">
               <span className="text-cyan-300 text-lg font-semibold drop-shadow animate-pulse">
-                {importStage || "Preparing..."}
+                {importStage || t('importModal.preparing')}
               </span>
               <span className="text-cyan-400/70 text-xs">
-                Processing your chat history...
+                {t('importModal.processingHistory')}
               </span>
             </div>
           </div>
@@ -254,7 +257,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
         {/* Status display when not importing */}
         {!isImporting && importStage && (
           <div className="mb-2 flex items-center justify-center text-base">
-            <span className="mr-2 text-white/70 font-medium">Status:</span>
+            <span className="mr-2 text-white/70 font-medium">{t('importModal.status')}</span>
             <span className="font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(0,240,255,0.3)]">
               {importStage}
             </span>

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ChatMessagesContainerProps } from "../types/ChatTypes";
 import { MessageItem } from "./MessageItem";
 import { ScrollToBottomButton } from "./ScrollToBottomButton";
@@ -96,6 +97,7 @@ const WelcomeMessage: React.FC<{
   onResetState: () => void;
   onClearMessages: () => void;
 }> = React.memo(({ onAddTestMessage, onResetState, onClearMessages }) => {
+  const { t } = useTranslation();
   const gradientId = `gradient-welcome-${Date.now()}`;
 
   return (
@@ -124,9 +126,9 @@ const WelcomeMessage: React.FC<{
           />
         </svg>
       </div>
-      <h3>Welcome to Orch-Mind Neural Chat</h3>
+      <h3>{t('chatMessages.welcome.title')}</h3>
       <p>
-        Start a conversation by typing a message.
+        {t('chatMessages.welcome.subtitle')}
       </p>
 
       {/* Debug buttons removed for cleaner UI */}

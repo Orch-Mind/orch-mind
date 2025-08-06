@@ -1,0 +1,643 @@
+{
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "apply": "Aplicar Alterações",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "search": "Pesquisar...",
+    "clear": "Limpar",
+    "done": "Concluído",
+    "status": "Status:",
+    "name": "Nome",
+    "type": "Tipo",
+    "size": "Tamanho:",
+    "settings": "Configurações",
+    "minimize": "Minimizar"
+  },
+  "header": {
+    "title": "Orch-Mind",
+    "importNeuralData": "Importar Dados Neurais",
+    "cognitionLogs": "Logs de Cognição",
+    "openCognitionLogs": "Abrir Logs de Cognição",
+    "duckdbDebug": "Debug DuckDB (Apenas Dev)",
+    "openDuckdbDebug": "Abrir Debug DuckDB",
+    "debug": "Debug",
+    "logs": "Logs"
+  },
+  "settings": {
+    "title": "Configurações",
+    "closeSettings": "Fechar Configurações",
+    "navigation": {
+      "general": "Geral",
+      "advanced": "Avançado",
+      "training": "Treinamento",
+      "share": "Compartilhar",
+      "download": "Download",
+      "deploy": "Deploy",
+      "beta": "Beta"
+    },
+    "descriptions": {
+      "general": "Configurações básicas da aplicação e preferências",
+      "advanced": "Configuração avançada e configurações de API",
+      "training": "Configuração de treinamento LoRA e gerenciamento de dados",
+      "share": "Configurações de compartilhamento P2P e rede",
+      "download": "Baixar adaptadores da rede P2P",
+      "deploy": "Deploy e gerenciar seus adaptadores LoRA",
+      "beta": "Recursos experimentais e tecnologia de ponta"
+    }
+  },
+  "naming": {
+    "adapter": {
+      "placeholder": "meu-adapter-personalizado",
+      "label": "Nome do Adapter",
+      "helpText": "Use apenas letras, números, hífen (-) e underscore (_). Mín. 3 caracteres.",
+      "invalidText": "Nome inválido. Use apenas letras, números, hífen (-) e underscore (_).",
+      "startTraining": "Iniciar Treinamento",
+      "training": "Treinando..."
+    },
+    "deploy": {
+      "placeholder": "meu-modelo-personalizado:latest",
+      "label": "Nome do Modelo",
+      "helpText": "Siga as convenções do Ollama. Use letras, números, pontos, hífen e underscore. Mín. 3 caracteres.",
+      "invalidText": "Nome inválido. Siga as convenções do Ollama para nomes de modelos.",
+      "deployModel": "Deploy Modelo",
+      "deploying": "Deployando..."
+    },
+    "cancel": "Cancelar",
+    "closeModal": "Fechar modal"
+  },
+  "share": {
+    "title": "Centro de Compartilhamento P2P",
+    "smartConnect": "🌐 Conexão Inteligente",
+    "connection": "Conexão",
+    "networkStatus": "Status da Rede P2P",
+    "global": "Global",
+    "room": "Sala",
+    "disconnected": "Desconectado",
+    "specialPeerTooltip": "Recebendo dados através de um peer especial (como Docker) que não é contado na lista de peers",
+    "offline": "Offline",
+    "sharing": "Compartilhamento",
+    "adaptersDownloadsMerge": "Adaptadores, Downloads e Merge",
+    "adapterFusionAndDownloads": "Fusão de Adaptadores e Downloads",
+    "available": "disponível",
+    "howItWorksTitle": "Como Funciona: ",
+    "globalRoomDescription": "A sala global conecta você à comunidade global Orch-Mind. Compartilhe seus adaptadores com o mundo! Verifique a aba Download para descobrir adaptadores de outros usuários.",
+    "privateRoomDescription": "Salas privadas usam códigos simples como PIZZA-123. Compartilhe o código com pares confiáveis para colaborar com segurança. Visite a aba Download para obter adaptadores compartilhados.",
+    "peer": "peer",
+    "peers": "peers",
+    "previousSession": "Sessão Anterior",
+    "reconnect": "🔄 Reconectar",
+    "joinGlobalCommunity": "Entrar na Comunidade Global",
+    "enterCodePlaceholder": "Digite o código para entrar ou deixe vazio para criar",
+    "lookForRoom": "Procurar sala: {{roomCode}}",
+    "createNewPrivateRoom": "Criar nova sala privada",
+    "recentRooms": "Salas recentes:",
+    "useRoomCode": "Usar código da sala: {{code}}",
+    "willLookForRoom": "Procurará pela sala \"{{roomCode}}\", criará se não encontrar",
+    "willCreateNewRoom": "Criará nova sala com código aleatório",
+    "communityRoom": "🌍 Sala da Comunidade",
+    "localNetwork": "📡 Rede Local",
+    "privateRoomCode": "🔒 Sala {{roomCode}}",
+    "connected": "Conectado",
+    "shareCode": "Código de Compartilhamento:",
+    "copyRoomCodeTooltip": "Copiar código da sala para área de transferência",
+    "copying": "Copiando...",
+    "disconnecting": "🔄 Desconectando...",
+    "disconnect": "🚫 Desconectar",
+    "roomCodeCopied": "Código da sala {{code}} copiado! Compartilhe com outros.",
+    "yourAdapters": "📦 Seus Adaptadores",
+    "noTrainedAdapters": "Nenhum adaptador treinado encontrado",
+    "trainModelFirst": "Treine um modelo primeiro!",
+    "private": "Privado",
+    "publicInGeneral": "Público em Geral",
+    "sharedLocally": "Compartilhado Localmente",
+    "sharedInRoom": "Compartilhado em {{roomCode}}",
+    "shared": "Compartilhado",
+    "public": "👁️ Público"
+  },
+  "startup": {
+    "installed": "✅ Instalado",
+    "notInstalled": "❌ Não Instalado",
+    "initializingOllama": "Inicializando serviço Ollama automaticamente...",
+    "serviceStartedSuccessfully": "Serviço iniciado automaticamente com sucesso!"
+  },
+  "api": {
+    "deepgram": {
+      "title": "Integração Deepgram",
+      "apiKey": "Chave API Deepgram",
+      "apiKeyPlaceholder": "Digite sua chave API Deepgram",
+      "model": "Modelo Deepgram",
+      "selectModel": "Selecionar Modelo Deepgram",
+      "language": "Idioma de Transcrição",
+      "selectLanguage": "Selecionar Idioma de Transcrição",
+      "models": {
+        "nova3": "Modelos Nova-3",
+        "nova3General": "Nova-3 Geral",
+        "nova3Medical": "Nova-3 Médico",
+        "nova2": "Modelos Nova-2",
+        "nova2General": "Nova-2 Geral (Recomendado)",
+        "nova2Meeting": "Nova-2 Reunião",
+        "nova2Phonecall": "Nova-2 Chamada Telefônica",
+        "nova2Video": "Nova-2 Vídeo",
+        "nova": "Modelos Nova",
+        "novaGeneral": "Nova Geral",
+        "novaPhonecall": "Nova Chamada Telefônica",
+        "enhanced": "Modelos Aprimorados",
+        "enhancedGeneral": "Aprimorado Geral",
+        "enhancedMeeting": "Aprimorado Reunião",
+        "enhancedPhonecall": "Aprimorado Chamada Telefônica",
+        "enhancedFinance": "Aprimorado Financeiro",
+        "base": "Modelos Base",
+        "baseGeneral": "Base Geral",
+        "baseMeeting": "Base Reunião",
+        "basePhonecall": "Base Chamada Telefônica",
+        "baseFinance": "Base Financeiro"
+      },
+      "warnings": {
+        "languageNotSupported": "Este modelo não suporta o idioma selecionado. Alterando para inglês.",
+        "multilingualSupport": "Este modelo suporta detecção multilíngue."
+      }
+    },
+    "pinecone": {
+      "title": "Banco de Dados Vetorial Pinecone",
+      "apiKey": "Chave API Pinecone",
+      "apiKeyPlaceholder": "Digite sua chave API Pinecone",
+      "helpText": "Usado para busca vetorial avançada e memória semântica."
+    },
+    "chatgpt": {
+      "title": "Integração ChatGPT",
+      "apiKey": "Chave API ChatGPT",
+      "apiKeyPlaceholder": "Digite sua chave API ChatGPT",
+      "model": "Modelo ChatGPT",
+      "selectModel": "Selecionar Modelo ChatGPT",
+      "embeddingModel": "Modelo de Embedding OpenAI",
+      "selectEmbeddingModel": "Selecionar Modelo de Embedding OpenAI",
+      "advancedMode": "(Modo Avançado)",
+      "helpText": "Configure sua integração com a API OpenAI para respostas de IA aprimoradas."
+    },
+    "ollama": {
+      "title": "Configurações Ollama",
+      "selectModel": "Selecione um modelo...",
+      "installedModels": "Modelos Instalados",
+      "availableModels": "Modelos Disponíveis",
+      "downloadProgress": "Progresso do Download",
+      "starting": "Iniciando...",
+      "preparingDownload": "Preparando download...",
+      "storage": "Armazenamento:",
+      "storagePlaceholder": "Caminho de armazenamento...",
+      "browse": "Navegar",
+      "checkingDependencies": "Verificando se Ollama e Python estão instalados",
+      "dependenciesNotFound": "Dependências Não Encontradas",
+      "installationInProgress": "Instalação em Progresso",
+      "dependenciesInstalled": "Dependências Instaladas",
+      "modelSelectionManagement": "Seleção e Gerenciamento de Modelos",
+      "mainModel": "Modelo Principal",
+      "embeddingModel": "Modelo de Embedding",
+      "noMainModelsAvailable": "Nenhum modelo principal disponível. Verifique a instalação do Ollama.",
+      "noEmbeddingModelsAvailable": "Nenhum modelo de embedding disponível. Verifique a instalação do Ollama.",
+      "cancelDownload": "Cancelar download",
+      "removeModel": "Remover modelo",
+      "waitForDownloads": "Aguarde os downloads ativos terminarem",
+      "downloadModel": "Baixar modelo",
+      "installed": "Instalado",
+      "downloading": "Baixando",
+      "available": "Disponível",
+      "downloadRequired": "Download necessário",
+      "modelMustBeDownloaded": "Este modelo deve ser baixado antes de poder ser selecionado",
+      "infoText": "Apenas modelos instalados podem ser selecionados. Use o botão de download para instalar um modelo antes de selecioná-lo. Você pode remover modelos instalados com o botão da lixeira.",
+      "ollamaModels": "Modelos Ollama",
+      "downloadingStatus": "baixando",
+      "refreshModels": "Atualizar modelos",
+      "error": "Erro",
+      "downloadInProgress": "Download em Progresso",
+      "downloadsDisabled": "Outros downloads e exclusões estão temporariamente desabilitados para evitar conflitos",
+      "errors": {
+        "ollamaNotRunning": "Ollama não está rodando ou não está acessível",
+        "connectionFailed": "Não foi possível conectar ao Ollama. Verifique se está rodando.",
+        "installationFailed": "Falha ao instalar Ollama. Tente instalação manual.",
+        "dependencyCheckFailed": "Falha ao verificar dependências"
+      }
+    }
+  },
+  "general": {
+    "userName": "Nome do Usuário",
+    "userNamePlaceholder": "Digite seu nome",
+    "language": "Idioma",
+    "audioSettings": "Configurações de Áudio"
+  },
+  "advanced": {
+    "title": "Configurações Avançadas",
+    "duckdbPath": "Caminho DuckDB",
+    "selectDirectory": "Selecionar Diretório",
+    "changeDirectory": "Alterar Diretório"
+  },
+  "training": {
+    "title": "Centro de Treinamento LoRA",
+    "dataOverview": "Visão Geral dos Dados",
+    "adapters": "Adaptadores",
+    "conversations": "Conversas",
+    "messages": "Mensagens",
+    "validPairs": "Pares Válidos",
+    "quality": "Qualidade",
+    "baseModel": "Modelo Base:",
+    "active": "Ativo",
+    "notSet": "Não Definido",
+    "configureInBeta": "Configurar nas configurações Beta",
+    "deleteAdapters": "Excluir Adaptadores",
+    "noAdaptersToDelete": "Nenhum adaptador para excluir",
+    "deleteAllAdapters": "Excluir todos os adaptadores LoRA",
+    "loraAdaptersControl": "Controle de Adaptadores LoRA",
+     "foundValidPairs": "Encontrados {{count}} pares de treinamento válidos. Iniciando treinamento...",
+     "adaptersDeletedSuccessfully": "{{count}} adaptadores LoRA excluídos com sucesso. Conversas preservadas.",
+     "downloaded": "Baixado",
+     "chat": "Chat",
+    "control": "Controle de Treinamento",
+    "duration": "Duração:",
+    "strategy": "Estratégia: PEFT-only → Virtual Env → Simplified Fallback",
+    "details": "Detalhes do Treinamento",
+    "adapterName": "Nome do Adaptador",
+    "adapterNameDescription": "Escolha um nome personalizado para seu adaptador LoRA que será criado com {{count}} conversas selecionadas.",
+    "progress": "Progresso do Treinamento",
+    "currentStatus": "Status Atual:",
+    "examplesFromConversations": "{{examples}} exemplos de {{count}} conversas",
+    "configuration": "Configuração de Treinamento",
+    "loraRank": "LoRA Rank",
+    "alpha": "Alpha",
+    "dropout": "Dropout",
+    "learningRate": "Taxa de Aprendizado",
+    "selectConversationsFirst": "Selecione Conversas Primeiro",
+    "startTraining": "🚀 Iniciar Treinamento ({{count}} conversas)",
+    "trainingDescription": "O treinamento criará um novo adaptador LoRA para suas conversas selecionadas",
+    "selectConversations": "Selecionar Conversas",
+    "chooseQualityPairs": "Escolha pares de qualidade usuário/assistente",
+    "noConversations": "Nenhuma Conversa",
+    "startChattingToCreateData": "Comece a conversar para criar dados",
+    "deselect": "Desmarcar",
+    "selectAll": "Selecionar Tudo",
+    "trained": "Treinado",
+    "stats": "Estatísticas de Treinamento",
+    "totalAvailable": "Total disponível",
+    "avgPerConv": "média por conv",
+    "lastTraining": "Último Treinamento",
+    "mostRecentAdapterCreation": "Criação de adaptador mais recente",
+    "qualityAnalysis": "Análise de Qualidade:",
+    "conversationsWith": "conversas com",
+    "trainingPairsQuality": "pares de treinamento. Qualidade:",
+    "qualityBasedOn": "baseado na densidade de pares, comprimento da conversa e completude dos dados.",
+    "qualityExcellent": "Excelente",
+    "qualityGood": "Boa",
+    "qualityFair": "Razoável",
+    "qualityPoor": "Ruim",
+    "qualityVeryPoor": "Muito Ruim",
+    "errors": {
+      "selectConversations": "Por favor, selecione pelo menos uma conversa para treinar.",
+      "selectBaseModel": "Por favor, selecione um modelo base nas configurações Beta.",
+      "noValidPairs": "Nenhum par de treinamento válido encontrado. Certifique-se de que as conversas tenham mensagens de usuário/assistente. Verifique o console para detalhes."
+    }
+  },
+
+  "download": {
+    "title": "📥 Downloads de Adaptadores",
+    "subtitle": "Descubra e baixe adaptadores LoRA compartilhados por outros usuários em sua rede P2P",
+    "notConnected": "Não conectado à rede P2P",
+    "notConnectedDescription": "Conecte-se a uma rede P2P para descobrir adaptadores",
+    "connected": "Conectado a",
+    "globalRoom": "Global",
+    "privateRoom": "Sala",
+    "adaptersAvailable": "adaptador(es) disponível(eis) para download",
+    "scrollToSeeMore": "Role para ver mais adaptadores",
+    "unknown": "Desconhecido",
+    "unknownSize": "Tamanho desconhecido",
+    "own": "Próprio",
+    "downloading": "Baixando...",
+    "download": "Baixar",
+    "goToShareTab": "Vá para a aba Compartilhar para entrar em uma sala",
+    "noCommunityAdapters": "Nenhum Adaptador da Comunidade",
+    "noCommunityAdaptersDescription": "A comunidade ainda não compartilhou nenhum adaptador",
+    "checkBackLater": "Verifique novamente mais tarde ou tente uma sala diferente",
+    "noLocalAdapters": "Nenhum Adaptador Local",
+    "noLocalAdaptersDescription": "Nenhum adaptador compartilhado em sua rede local",
+    "makeSurePeersSharing": "Certifique-se de que os pares estão compartilhando adaptadores",
+    "noAdaptersInRoom": "Nenhum Adaptador na Sala",
+    "noAdaptersInRoomDescription": "Esta sala privada não possui adaptadores compartilhados",
+    "shareRoomCode": "Compartilhe o código da sala com pares que possuem adaptadores",
+    "noAdaptersAvailable": "Nenhum Adaptador Disponível",
+    "noAdaptersAvailableDescription": "Nenhum adaptador encontrado na sala atual",
+    "tryDifferentRoom": "Tente conectar-se a uma sala diferente",
+    "noPeersConnected": "Nenhum par conectado - convide outros!"
+  },
+  "languageSwitcher": {
+    "selectLanguage": "Selecionar idioma",
+    "switchTo": "Alternar para"
+  },
+
+  "importModal": {
+    "title": "Importar Dados Neurais",
+    "closeModal": "Fechar modal",
+    "importingAs": "Importando como:",
+    "changeNameHint": "Você pode alterar seu nome em Configurações → Geral",
+    "selectFile": "Selecionar arquivo",
+    "chooseFile": "Escolher arquivo",
+    "importMode": "Modo de importação",
+    "increment": "Incremental",
+    "overwrite": "Sobrescrever",
+    "startImport": "Iniciar Importação",
+    "importing": "Importando...",
+    "preparing": "Preparando...",
+    "processingHistory": "Processando seu histórico de conversas...",
+    "status": "Status:"
+  },
+  "diagnosticsPanel": {
+    "title": "Diagnósticos de Conexão",
+    "connectionState": "Estado da conexão:",
+    "selfState": "Estado próprio:",
+    "connectionObject": "Obj. conexão:",
+    "microphoneState": "Estado do mic:",
+    "connectionActive": "Conexão ativa:",
+    "states": {
+      "open": "ABERTO",
+      "closed": "FECHADO",
+      "connecting": "CONECTANDO",
+      "error": "ERRO",
+      "ready": "PRONTO",
+      "opening": "ABRINDO",
+      "notSetup": "NÃO",
+      "unknown": "DESCONHECIDO",
+      "available": "DISPONÍVEL",
+      "yes": "SIM",
+      "no": "NÃO ✗"
+    },
+    "disconnect": "Desconectar",
+    "forceReconnect": "Forçar Reconexão"
+  },
+  "connectionDiagnostics": {
+    "title": "Diagnósticos de Conexão",
+    "checkNow": "Verificar Agora",
+    "currentState": "Estado atual:",
+    "stateRef": "Estado (ref):",
+    "connectionObject": "Objeto de conexão:",
+    "webSocketReadyState": "WebSocket ReadyState:",
+    "connectionActive": "Conexão ativa:",
+    "available": "Disponível",
+    "notAvailable": "Não disponível",
+    "yes": "Sim ✅",
+    "no": "Não ❌",
+    "readyStates": {
+      "connecting": "0 (CONECTANDO)",
+      "open": "1 (ABERTO)",
+      "closing": "2 (FECHANDO)",
+      "closed": "3 (FECHADO)",
+      "unknown": "Desconhecido",
+      "na": "N/A"
+    },
+    "disconnect": "Desconectar",
+    "forceReconnect": "Forçar Reconexão",
+    "clickToView": "Clique em \"Verificar Agora\" para ver detalhes da conexão",
+    "messages": {
+      "connectionActive": "Conexão está ativa e pronta para uso",
+      "connectionExists": "Conexão existe mas ReadyState = {readyState} (esperado: 1)",
+      "stateInconsistent": "Estado inconsistente: marcado como ABERTO mas conexão é nula",
+      "connectionNotActive": "Conexão não está ativa ({state})",
+      "reconnectionSuccessful": "Reconexão bem-sucedida",
+      "reconnectionFailed": "Falha na reconexão",
+      "errorReconnecting": "Erro ao forçar reconexão"
+    }
+  },
+  "cognitionDetailModal": {
+    "closeModal": "Fechar modal",
+    "eventTypes": {
+      "rawPrompt": "Prompt Bruto",
+      "temporaryContext": "Contexto Temporário",
+      "neuralSignal": "Sinal Neural",
+      "emergentPatterns": "Padrões Emergentes",
+      "symbolicRetrieval": "Recuperação Simbólica",
+      "neuralCollapse": "Colapso Neural",
+      "symbolicContextSynthesized": "Contexto Simbólico Sintetizado",
+      "gptResponse": "Resposta GPT",
+      "fusionInitiated": "Processo de Fusão Iniciado"
+    },
+    "fields": {
+      "core": "Núcleo",
+      "intensity": "Intensidade",
+      "topK": "Top K",
+      "symbolicQuery": "Consulta Simbólica",
+      "parameters": "Parâmetros",
+      "archetypalStability": "Estabilidade Arquetípica",
+      "cycleEntropy": "Entropia do Ciclo",
+      "insightDepth": "Profundidade do Insight",
+      "detectedPatterns": "Padrões Detectados",
+      "memoryMatches": "Correspondências de Memória",
+      "duration": "Duração",
+      "insights": "Insights",
+      "keywords": "Palavras-chave",
+      "selectedCore": "Núcleo Selecionado",
+      "process": "Processo",
+      "candidates": "Candidatos",
+      "emotionalWeight": "Peso Emocional",
+      "contradictionScore": "Pontuação de Contradição",
+      "temperature": "Temperatura",
+      "justification": "Justificativa",
+      "emergentProperties": "Propriedades Emergentes",
+      "symbolicTopics": "Tópicos Simbólicos"
+    },
+    "values": {
+      "deterministic": "Determinístico",
+      "stochastic": "Estocástico",
+      "emptyResponse": "(Resposta vazia)",
+      "noPatternsDetected": "Nenhum padrão detectado",
+      "unknownEventType": "Tipo de evento desconhecido:",
+      "fusionProcessTriggered": "O processo de fusão neural-simbólica foi acionado"
+    }
+  },
+  "deploy": {
+    "title": "🚀 Centro de Deploy",
+    "subtitle": "Implante e gerencie seus adaptadores LoRA",
+    "baseModel": "Modelo Base:",
+    "deleteConfirmation": "Tem certeza que deseja excluir o adaptador \"{adapterId}\"?",
+    "adapters": {
+      "title": "Adaptadores LoRA",
+      "actions": {
+        "deploy": "Deploy",
+        "merge": "Merge",
+        "manage": "Gerenciar"
+      },
+      "selectForMerge": "Selecionar para merge",
+      "deployTooltip": "Implantar adaptador no modelo Ollama",
+      "deleteTooltip": "Excluir adaptador",
+      "empty": {
+        "title": "Nenhum adaptador ainda",
+        "description": "Treine conversas ou baixe do P2P para criar adaptadores LoRA"
+      },
+      "labels": {
+        "p2p": "P2P",
+        "merged": "MERGED"
+      },
+      "buttons": {
+        "deploy": "Deploy",
+        "delete": "Excluir",
+        "deploying": "Implantando...",
+        "merge": "Merge",
+        "merging": "Fazendo merge..."
+      },
+      "status": {
+        "training": "Treinando...",
+        "error": "Erro",
+        "downloaded": "Baixado",
+        "from": "de",
+        "merged": "Merged de {{count}} adaptadores"
+      },
+      "messages": {
+        "deploySuccess": "Adaptador implantado com sucesso como modelo: {{modelName}}",
+        "deployError": "Falha no deploy: {{error}}",
+        "mergeSuccess": "{{type}} com sucesso!",
+        "mergeError": "Erro: {{error}}",
+        "incompatibleModels": "Não é possível fazer merge de adaptadores com modelos base diferentes: {{models}}\nPor favor, selecione adaptadores com o mesmo modelo base."
+      },
+      "mergedSources": "Fontes"
+    },
+    "merge": {
+      "title": "Merge de Adaptadores",
+      "selected": "selecionados",
+      "placeholder": "nome_adaptador_merged",
+      "selectStrategy": "Selecionar estratégia de merge",
+      "strategies": {
+        "svd": "SVD Merge (Melhor)",
+        "arithmetic": "Média Aritmética",
+        "weighted": "Média Ponderada"
+      },
+      "info": {
+        "selectSameModel": "Selecione adaptadores com o mesmo modelo base para fazer merge",
+        "configure": "Selecione adaptadores acima e configure as opções de merge",
+        "compatibleAdapters": "{{count}} adaptador compatível",
+        "compatibleAdapters_other": "{{count}} adaptadores compatíveis"
+      }
+    },
+    "quickGuide": {
+       "deploy": "Deploy",
+       "deployDescription": "Criar modelo Ollama",
+       "merge": "Merge",
+       "mergeDescription": "Combinar adaptadores",
+       "delete": "Excluir",
+       "deleteDescription": "Remover adaptador",
+       "info": "🚀 Deploy cria modelo Ollama com adaptador LoRA • 🔗 Merge combina múltiplos adaptadores"
+     }
+  },
+  "beta": {
+    "title": "🧪 Centro de Recursos Beta",
+    "quantumProcessing": {
+      "title": "⚛️ Processamento Quântico (Teoria Orch-OS)",
+      "description": "Processamento experimental inspirado em quântica para computação neural aprimorada. Implementa princípios teóricos de consciência quântica.",
+      "ariaLabel": "Habilitar Processamento Quântico",
+      "warning": {
+        "title": "Recurso Experimental",
+        "description": "Altamente experimental - pode afetar o desempenho do sistema. Baseado em frameworks teóricos Orch-OS."
+      },
+      "console": {
+        "enabled": "🧠 Processamento Quântico habilitado",
+        "disabled": "🧠 Processamento Quântico desabilitado"
+      }
+    },
+    "quantumVisualization": {
+      "title": "🌌 Visualização Quântica (Matrix)",
+      "description": "Habilita sobreposição de visualização de matriz de consciência quântica. Exibe padrões de processamento de sinais neurais em tempo real.",
+      "ariaLabel": "Habilitar Visualização Quântica",
+      "info": {
+        "title": "Recurso Visual",
+        "description": "Adiciona efeitos imersivos de matriz quântica. Pode aumentar o uso da GPU."
+      },
+      "console": {
+        "enabled": "🌌 Visualização Quântica habilitada",
+        "disabled": "🌌 Visualização Quântica desabilitada"
+      }
+    },
+    "about": {
+      "title": "🔬 Sobre Recursos Beta",
+      "description": "Recursos beta são implementações experimentais de conceitos teóricos em pesquisa de IA e consciência. Podem ser instáveis ou mudar significativamente. Não recomendado para ambientes de produção."
+    }
+  },
+  "p2pStatus": {
+    "title": "Status P2P",
+    "status": "Status:",
+    "room": "Sala:",
+    "peers": "Peers:",
+    "error": "Erro:",
+    "connecting": "Conectando...",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "global": "Global",
+    "private": "Privada",
+    "connectingToP2P": "Conectando ao P2P...",
+    "connectedTo": "Conectado a {{roomName}}",
+    "p2pDisconnected": "P2P Desconectado",
+    "clickToOpenSettings": "Clique em qualquer lugar neste popup para abrir as configurações P2P"
+  },
+  "chatSidebar": {
+    "title": "Chat",
+    "newChat": "Novo chat",
+    "search": "Pesquisar...",
+    "waitProcessing": "Aguarde o processamento terminar",
+    "noConversationsFound": "Nenhuma conversa encontrada",
+    "noConversationsYet": "Nenhuma conversa ainda",
+    "noMessagesYet": "Nenhuma mensagem ainda",
+    "deleteConversation": "Excluir esta conversa?",
+    "deleteConversationTitle": "Excluir conversa",
+    "hideSidebar": "Ocultar barra lateral",
+    "showSidebar": "Mostrar barra lateral",
+    "toggleSidebar": "Alternar barra lateral",
+    "chatHistory": "Histórico do Chat",
+    "timeFormats": {
+      "now": "Agora",
+      "minutesAgo": "{{count}}m atrás",
+      "hoursAgo": "{{count}}h atrás",
+      "daysAgo": "{{count}}d atrás"
+    }
+  },
+  "chatInput": {
+    "placeholder": "Digite sua mensagem ou use transcrição de voz...",
+    "sendMessage": "Enviar mensagem",
+    "addContext": "Adicionar contexto",
+    "hideContext": "Ocultar campo de contexto",
+    "enableWebSearch": "Habilitar busca na web",
+    "disableWebSearch": "Desabilitar busca na web",
+    "removeContext": "Remover contexto",
+    "contextLabel": "Contexto (será incluído na próxima mensagem)",
+    "contextPlaceholder": "Adicione contexto situacional...",
+    "startRecording": "Iniciar gravação",
+    "stopRecording": "Parar gravação",
+    "audioSettings": "Configurações de áudio",
+    "console": {
+      "webSearchEnabled": "Busca na Web Habilitada",
+      "webSearchDisabled": "Busca na Web Desabilitada"
+    }
+  },
+  "chatMessages": {
+    "thinking": "Pensando...",
+    "generatingResponse": "🎯 Gerando resposta",
+    "generatingResponseEllipsis": "🎯 Gerando resposta...",
+    "processing": "Processando...",
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "welcome": {
+      "title": "Bem-vindo ao Chat Neural Orch-Mind",
+      "subtitle": "Inicie uma conversa digitando uma mensagem."
+    },
+    "import": {
+      "readingMessages": "Lendo mensagens",
+      "checkingDuplicates": "Verificando duplicatas",
+      "generatingEmbeddings": "Gerando embeddings",
+      "savingToDatabase": "Salvando no banco de dados"
+    },
+    "errors": {
+      "processingInProgress": "Um processamento já está em andamento. Aguarde a conclusão.",
+      "unknownError": "Erro desconhecido ao processar o prompt"
+    }
+  }
+}

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ChatControlsProps } from "../types/ChatTypes";
 
 /**
@@ -23,13 +24,14 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
   // showAudioSettings,
   // audioSettingsButtonRef,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="input-controls">
       {/* Context Toggle Button - Modern design */}
       <button
         className={`control-btn context-btn ${showContext ? "active" : ""}`}
         onClick={onToggleContext}
-        title={showContext ? "Hide context field" : "Add context"}
+        title={showContext ? t('chatInput.hideContext') : t('chatInput.addContext')}
         type="button"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -60,7 +62,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
           webSearchEnabled ? "active" : ""
         }`}
         onClick={onToggleWebSearch}
-        title={webSearchEnabled ? "Disable web search" : "Enable web search"}
+        title={webSearchEnabled ? t('chatInput.disableWebSearch') : t('chatInput.enableWebSearch')}
         type="button"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -257,7 +259,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
           showAudioSettings ? "active" : ""
         }`}
         onClick={onToggleAudioSettings}
-        title="Audio settings"
+        title={t('chatInput.audioSettings')}
         type="button"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -287,8 +289,8 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         onClick={onToggleRecording}
         title={
           microphoneState === MicrophoneState.Open
-            ? "Stop recording"
-            : "Start recording"
+            ? t('chatInput.stopRecording')
+            : t('chatInput.startRecording')
         }
         type="button"
       >
@@ -358,7 +360,7 @@ export const ChatControls: React.FC<ChatControlsProps> = ({
         className={`control-btn send-btn ${canSend ? "ready" : ""}`}
         onClick={onSend}
         disabled={!canSend}
-        title="Send message"
+        title={t('chatInput.sendMessage')}
         type="button"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
