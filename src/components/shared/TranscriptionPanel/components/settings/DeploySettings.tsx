@@ -47,7 +47,7 @@ const DeploySettings: React.FC<DeploySettingsProps> = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-cyan-400">🎯</span>
-              <span className="text-sm text-gray-300">{t('deploy.baseModel')}</span>
+              <span className="text-sm text-gray-300">{t('deploy.baseModelLabel')}</span>
             </div>
             <span className="text-sm font-mono text-cyan-400">
               {selectedBaseModel}

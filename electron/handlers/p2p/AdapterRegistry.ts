@@ -215,61 +215,13 @@ export class AdapterRegistry {
             for (const filename of safetensorsFiles) {
               const safetensorsPath = path.join(adapterDir, filename);
               if (await this.checkPathExists(safetensorsPath)) {
-                // ENHANCED: Cache comprehensive naming variations to handle localStorage/filesystem inconsistency
-                // Example: "gemma3-adapter-1751636717504_adapter" (filesystem) needs to be found by "gemma3_adapter_1751636717504_adapter" (localStorage)
-
-                const baseDirName = dirName.replace(/_adapter$/, "");
+                // Cache the adapter using its original directory name
                 const possibleNames = [
-                  // 1. Original directory name
+                  // Use the original directory name as-is
                   dirName,
-                  baseDirName,
-
-                  // 2. Convert hyphens to underscores (filesystem -> localStorage)
-                  // "gemma3-adapter-1751636717504_adapter" -> "gemma3_adapter_1751636717504_adapter"
+                  // Also handle basic hyphen/underscore variations for compatibility
                   dirName.replace(/-/g, "_"),
-                  baseDirName.replace(/-/g, "_"),
-
-                  // 3. Convert underscores to hyphens (localStorage -> filesystem)
                   dirName.replace(/_/g, "-"),
-                  baseDirName.replace(/_/g, "-"),
-
-                  // 4. Handle specific pattern: "model-adapter-timestamp" -> "model_adapter_timestamp"
-                  dirName.replace(
-                    /^([^-]+)-adapter-(.+)_adapter$/,
-                    "$1_adapter_$2_adapter"
-                  ),
-                  dirName.replace(
-                    /^([^-]+)-adapter-(.+)_adapter$/,
-                    "$1_adapter_$2"
-                  ),
-                  baseDirName.replace(
-                    /^([^-]+)-adapter-(.+)$/,
-                    "$1_adapter_$2"
-                  ),
-
-                  // 5. Handle reverse pattern: "model_adapter_timestamp" -> "model-adapter-timestamp"
-                  dirName.replace(
-                    /^([^_]+)_adapter_(.+)_adapter$/,
-                    "$1-adapter-$2_adapter"
-                  ),
-                  dirName.replace(
-                    /^([^_]+)_adapter_(.+)_adapter$/,
-                    "$1-adapter-$2"
-                  ),
-                  baseDirName.replace(
-                    /^([^_]+)_adapter_(.+)$/,
-                    "$1-adapter-$2"
-                  ),
-
-                  // 6. Additional mixed patterns
-                  dirName.replace(/-adapter$/, "_adapter"),
-                  dirName.replace(/_adapter$/, "-adapter"),
-                  baseDirName.replace(/-adapter$/, "_adapter"),
-                  baseDirName.replace(/_adapter$/, "-adapter"),
-                  baseDirName + "_adapter",
-                  baseDirName + "-adapter",
-                  baseDirName.replace(/-/g, "_") + "_adapter",
-                  baseDirName.replace(/_/g, "-") + "-adapter",
                 ];
 
                 // Remove duplicates and cache all variations
@@ -352,66 +304,13 @@ export class AdapterRegistry {
         "registry"
       );
 
-      // Clean adapter name - remove _adapter suffix if present
-      const cleanAdapterName = adapterName.replace(/_adapter$/, "");
-
-      // ENHANCED: Handle localStorage/filesystem naming inconsistency for registry files
-      // Example: "gemma3_adapter_1751636717504_adapter" (localStorage) -> "gemma3-adapter-1751636717504_adapter.json" (filesystem)
-
-      // Try multiple possible registry file names with comprehensive naming conventions
+      // Try to find registry file using original adapter name
       const possibleRegistryFiles = [
-        // 1. Original naming
-        path.join(adapterRegistryDir, `${adapterName}_adapter.json`),
+        // 1. Original adapter name
         path.join(adapterRegistryDir, `${adapterName}.json`),
-
-        // 2. Clean naming
-        path.join(adapterRegistryDir, `${cleanAdapterName}_adapter.json`),
-        path.join(adapterRegistryDir, `${cleanAdapterName}.json`),
-
-        // 3. CRITICAL: Handle localStorage underscore -> filesystem hyphen conversion
-        // "gemma3_adapter_1751636717504" -> "gemma3-adapter-1751636717504"
-        path.join(
-          adapterRegistryDir,
-          `${cleanAdapterName.replace(/_/g, "-")}_adapter.json`
-        ),
-        path.join(
-          adapterRegistryDir,
-          `${cleanAdapterName.replace(/_/g, "-")}.json`
-        ),
-
-        // 4. Handle full name underscore -> hyphen conversion
-        // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
-        path.join(
-          adapterRegistryDir,
-          `${adapterName.replace(/_/g, "-")}_adapter.json`
-        ),
+        // 2. Basic hyphen/underscore variations for compatibility
+        path.join(adapterRegistryDir, `${adapterName.replace(/-/g, "_")}.json`),
         path.join(adapterRegistryDir, `${adapterName.replace(/_/g, "-")}.json`),
-
-        // 5. Handle specific pattern: "model_adapter_timestamp" -> "model-adapter-timestamp"
-        path.join(
-          adapterRegistryDir,
-          `${cleanAdapterName.replace(
-            /^([^_]+)_adapter_(.+)$/,
-            "$1-adapter-$2"
-          )}_adapter.json`
-        ),
-        path.join(
-          adapterRegistryDir,
-          `${cleanAdapterName.replace(
-            /^([^_]+)_adapter_(.+)$/,
-            "$1-adapter-$2"
-          )}.json`
-        ),
-
-        // 6. Handle mixed patterns (common issue)
-        path.join(
-          adapterRegistryDir,
-          `${adapterName.replace(/_adapter/g, "-adapter")}.json`
-        ),
-        path.join(
-          adapterRegistryDir,
-          `${cleanAdapterName.replace(/_/g, "-")}-adapter.json`
-        ),
       ];
 
       console.log(
@@ -470,16 +369,11 @@ export class AdapterRegistry {
       }
 
       // Try to find by similar names in cache
-      const cleanCacheName = adapterName.replace(/_adapter$/, "");
       const possibleCacheNames = [
         adapterName,
-        cleanCacheName,
-        cleanCacheName.replace(/_/g, "-"),
-        cleanCacheName.replace(/_/g, "-") + "_adapter",
-        cleanCacheName + "_adapter",
-        // Add the pattern that works: underscores to hyphens for the full name
+        // Basic hyphen/underscore variations for compatibility
         adapterName.replace(/_/g, "-"),
-        cleanCacheName.replace(/_/g, "-") + "-adapter",
+        adapterName.replace(/-/g, "_"),
       ];
 
       for (const cacheName of possibleCacheNames) {
@@ -511,62 +405,13 @@ export class AdapterRegistry {
         `[AdapterRegistry] Looking in weights dir: ${adapterWeightsDir}`
       );
 
-      // Clean adapter name - remove _adapter suffix if present
-      const cleanAdapterName = adapterName.replace(/_adapter$/, "");
-
-      // CRITICAL FIX: Handle the naming inconsistency between localStorage (underscores) and filesystem (hyphens)
-      // Example: "gemma3_adapter_1751636717504_adapter" (localStorage) -> "gemma3-adapter-1751636717504_adapter" (filesystem)
-
-      // Try multiple adapter directory names with comprehensive naming conventions
+      // Try to find adapter directory using original name
       const possibleAdapterDirs = [
-        // 1. Original naming (with _adapter suffix)
-        path.join(adapterWeightsDir, `${adapterName}_adapter`),
+        // 1. Original adapter name
         path.join(adapterWeightsDir, adapterName),
-
-        // 2. Clean naming (without _adapter suffix, then add _adapter)
-        path.join(adapterWeightsDir, `${cleanAdapterName}_adapter`),
-        path.join(adapterWeightsDir, cleanAdapterName),
-
-        // 3. CRITICAL: Handle localStorage underscore -> filesystem hyphen conversion
-        // "gemma3_adapter_1751636717504" -> "gemma3-adapter-1751636717504"
-        path.join(
-          adapterWeightsDir,
-          `${cleanAdapterName.replace(/_/g, "-")}_adapter`
-        ),
-        path.join(adapterWeightsDir, cleanAdapterName.replace(/_/g, "-")),
-
-        // 4. Handle full name underscore -> hyphen conversion
-        // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
+        // 2. Basic hyphen/underscore variations for compatibility
         path.join(adapterWeightsDir, adapterName.replace(/_/g, "-")),
-        path.join(
-          adapterWeightsDir,
-          `${adapterName.replace(/_/g, "-")}_adapter`
-        ),
-
-        // 5. Handle mixed patterns (common issue)
-        path.join(
-          adapterWeightsDir,
-          `${adapterName.replace(/_adapter/g, "-adapter")}`
-        ),
-        path.join(
-          adapterWeightsDir,
-          `${cleanAdapterName.replace(/_/g, "-")}-adapter`
-        ),
-
-        // 6. SPECIFIC FIX: Handle the exact pattern we're seeing
-        // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
-        // This handles cases where localStorage has "model_adapter_timestamp_adapter" format
-        path.join(
-          adapterWeightsDir,
-          cleanAdapterName.replace(
-            /^([^_]+)_adapter_(.+)$/,
-            "$1-adapter-$2_adapter"
-          )
-        ),
-        path.join(
-          adapterWeightsDir,
-          cleanAdapterName.replace(/^([^_]+)_adapter_(.+)$/, "$1-adapter-$2")
-        ),
+        path.join(adapterWeightsDir, adapterName.replace(/-/g, "_")),
       ];
 
       console.log(

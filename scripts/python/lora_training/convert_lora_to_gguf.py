@@ -314,11 +314,7 @@ def deploy_lora_adapter(
         possible_adapter_paths = [
             # Registry structure
             os.path.join(project_root, "lora_adapters", "registry", adapter_id),
-            # Weights structure - both naming conventions
-            os.path.join(project_root, "lora_adapters", "weights", f"{adapter_id}_adapter"),
-            os.path.join(project_root, "lora_adapters", "weights", f"{adapter_id.replace('_', '-')}_adapter"),
-            os.path.join(project_root, "lora_adapters", "weights", f"{adapter_id.replace('-', '_')}_adapter"),
-            # Weights structure without suffix
+            # Weights structure
             os.path.join(project_root, "lora_adapters", "weights", adapter_id),
             os.path.join(project_root, "lora_adapters", "weights", adapter_id.replace('_', '-')),
             os.path.join(project_root, "lora_adapters", "weights", adapter_id.replace('-', '_')),
@@ -454,4 +450,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -50,7 +50,7 @@ def find_existing_adapters():
             
             # Look for adapter JSON files
             for file in os.listdir(old_path):
-                if file.endswith('_adapter.json'):
+                if file.endswith('.json'):
                     adapter_path = os.path.join(old_path, file)
                     try:
                         with open(adapter_path, 'r') as f:
@@ -109,7 +109,7 @@ def migrate_adapters():
             old_adapter_path = adapter_info.get('adapter_path', '')
             if old_adapter_path and os.path.exists(old_adapter_path):
                 # Copy adapter weights to new location
-                new_adapter_path = os.path.join(new_weights_dir, f"{adapter_id}_adapter")
+                new_adapter_path = os.path.join(new_weights_dir, adapter_id)
                 
                 if os.path.exists(new_adapter_path):
                     print(f"   ⚠️ Adapter weights already exist at: {new_adapter_path}")
@@ -129,7 +129,7 @@ def migrate_adapters():
             adapter_info['migration_version'] = '1.0'
             
             # Save to new location
-            new_adapter_file = os.path.join(new_registry_dir, f"{adapter_id}_adapter.json")
+            new_adapter_file = os.path.join(new_registry_dir, f"{adapter_id}.json")
             with open(new_adapter_file, 'w') as f:
                 json.dump(adapter_info, f, indent=2)
             
@@ -166,7 +166,7 @@ def list_adapters():
         print(f"   ❌ Registry directory not found: {registry_dir}")
         return
     
-    adapter_files = [f for f in os.listdir(registry_dir) if f.endswith('_adapter.json')]
+    adapter_files = [f for f in os.listdir(registry_dir) if f.endswith('.json')]
     
     if not adapter_files:
         print(f"   📂 No adapters found in: {registry_dir}")
@@ -198,4 +198,4 @@ if __name__ == "__main__":
         list_adapters()
     else:
         success = migrate_adapters()
-        sys.exit(0 if success else 1) 
+        sys.exit(0 if success else 1)

@@ -335,7 +335,7 @@
     "adapterName": "Nome do Adaptador",
     "adapterNameDescription": "Escolha um nome personalizado para seu adaptador LoRA que será criado com {{count}} conversas selecionadas.",
     "progress": "Progresso do Treinamento",
-    "currentStatus": "Status Atual:",
+    "currentStatus": "Status Atual",
     "examplesFromConversations": "{{examples}} exemplos de {{count}} conversas",
     "configuration": "Configuração de Treinamento",
     "loraRank": "LoRA Rank",
@@ -367,15 +367,15 @@
     "qualityPoor": "Ruim",
     "qualityVeryPoor": "Muito Ruim",
     "successModal": {
-        "title": "Adaptador LoRA Criado!",
-        "description": "Seu adaptador LoRA",
-        "descriptionEnd": "foi criado com sucesso.",
-        "trainingExamples": "Exemplos de Treinamento:",
-        "duration": "Duração:",
-        "ready": "O adaptador está pronto para ser habilitado/desabilitado no painel de Adaptadores LoRA.",
-        "continue": "Continuar"
-      },
-      "resetModal": {
+      "title": "Adaptador LoRA Criado!",
+      "description": "Seu adaptador LoRA",
+      "descriptionEnd": "foi criado com sucesso.",
+      "trainingExamples": "Exemplos de Treinamento:",
+      "duration": "Duração:",
+      "readyMessage": "O adaptador está pronto para ser habilitado/desabilitado no painel de Adaptadores LoRA.",
+      "continue": "Continuar"
+    },
+    "resetModal": {
         "title": "Excluir Todos os Adaptadores LoRA?",
         "description": "Isso excluirá permanentemente todos os seus adaptadores LoRA. Suas conversas serão preservadas.",
         "actionWillLabel": "Esta ação irá:",
@@ -387,7 +387,7 @@
         "notDeleteFiles": "excluir arquivos reais do adaptador do disco",
         "cancel": "Cancelar",
         "deleteAdaptersButton": "Excluir Adaptadores"
-      },
+    },
       "deleteModal": {
         "title": "Excluir Adaptador LoRA?",
         "description": "Tem certeza de que deseja excluir o adaptador LoRA",
@@ -403,7 +403,8 @@
       "selectConversations": "Por favor, selecione pelo menos uma conversa para treinar.",
       "selectBaseModel": "Por favor, selecione um modelo base nas configurações Beta.",
       "noValidPairs": "Nenhum par de treinamento válido encontrado. Certifique-se de que as conversas tenham mensagens de usuário/assistente. Verifique o console para detalhes."
-    }
+    },
+    "trainingCompleted": "Treinamento concluído! Modelo:"
   },
 
   "download": {
@@ -582,7 +583,13 @@
   "deploy": {
     "title": "🚀 Centro de Deploy",
     "subtitle": "Implante e gerencie seus adaptadores LoRA",
-    "baseModel": "Modelo Base:",
+    "baseModelLabel": "Modelo Base:",
+    "baseModel": {
+      "label": "Nome do Modelo de Deploy"
+    },
+    "confirmation": {
+      "message": "Digite um nome personalizado para seu modelo implantado:"
+    },
     "deleteConfirmation": "Tem certeza que deseja excluir o adaptador \"{adapterId}\"?",
     "adapters": {
       "title": "Adaptadores LoRA",

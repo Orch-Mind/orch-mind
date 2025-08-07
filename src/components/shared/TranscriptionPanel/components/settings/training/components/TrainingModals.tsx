@@ -93,7 +93,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          LoRA Adapter Created!
+          {t("training.successModal.title", "LoRA Adapter Created!")}
         </h3>
         <p className="text-gray-300 mb-4">
           {t("training.successModal.description", "Your LoRA adapter")}{" "}
@@ -105,14 +105,14 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
           <div className="mb-4 p-3 bg-gray-800/50 rounded-lg text-sm">
             <div className="text-gray-300">
               <div className="flex justify-between">
-                <span>Training Examples:</span>
+                <span>{t("training.successModal.trainingExamples", "Training Examples:")}</span>
                 <span className="text-cyan-400">
                   {trainingDetails.trainingExamples}
                 </span>
               </div>
               {trainingDetails.trainingDuration && (
                 <div className="flex justify-between">
-                  <span>Duration:</span>
+                  <span>{t("training.successModal.duration", "Duration:")}</span>
                   <span className="text-cyan-400">
                     {Math.round(trainingDetails.trainingDuration / 1000)}s
                   </span>
@@ -123,8 +123,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         )}
 
         <p className="text-sm text-gray-400 mb-6">
-          The adapter is ready to be enabled/disabled from the LoRA Adapters
-          panel.
+          {t("training.successModal.readyMessage", "The adapter is ready to be enabled/disabled from the LoRA Adapters panel.")}
         </p>
 
         <div className="flex justify-center">
@@ -132,7 +131,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
             onClick={onClose}
             className="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
           >
-            Continue
+            {t("training.successModal.continue", "Continue")}
           </button>
         </div>
       </div>

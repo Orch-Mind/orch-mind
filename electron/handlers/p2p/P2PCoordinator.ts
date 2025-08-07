@@ -496,7 +496,7 @@ export class P2PCoordinator {
     await fs.mkdir(registryDir, { recursive: true });
 
     // Create adapter directory
-    const adapterDir = path.join(weightsDir, `${metadata.name}_adapter`);
+    const adapterDir = path.join(weightsDir, metadata.name);
     await fs.mkdir(adapterDir, { recursive: true });
 
     // Determine file extension based on metadata
@@ -544,7 +544,7 @@ export class P2PCoordinator {
     // Create registry metadata
     const registryMetadata = {
       adapter_id: metadata.metadata?.adapter_id || metadata.name,
-      adapter_name: `${metadata.name}_adapter`,
+      adapter_name: metadata.name,
       base_model: metadata.metadata?.base_model || "unknown",
       hf_model: metadata.metadata?.hf_model || "unknown",
       adapter_path: adapterDir,
@@ -562,7 +562,7 @@ export class P2PCoordinator {
     // Save registry file
     const registryFilePath = path.join(
       registryDir,
-      `${metadata.name}_adapter.json`
+      `${metadata.name}.json`
     );
     await fs.writeFile(
       registryFilePath,

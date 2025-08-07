@@ -39,7 +39,7 @@ class AdapterManager(IAdapterManager):
             os.makedirs(persistent_adapter_dir, exist_ok=True)
             
             persistent_adapter_path = os.path.join(
-                persistent_adapter_dir, f"{adapter_id_clean}_adapter"
+                persistent_adapter_dir, adapter_id_clean
             )
             
             # Copy adapter weights to persistent location
@@ -63,7 +63,7 @@ class AdapterManager(IAdapterManager):
             
             # Save adapter info to registry
             adapter_info_path = os.path.join(
-                self.registry_dir, f"{adapter_id_clean}_adapter.json"
+                self.registry_dir, f"{adapter_id_clean}.json"
             )
             with open(adapter_info_path, 'w') as f:
                 json.dump(adapter_info.to_dict(), f, indent=2)
@@ -193,7 +193,7 @@ class AdapterManager(IAdapterManager):
         """Get adapter information. Handles both original and sanitized adapter names."""
         # Try original adapter_id first
         adapter_info_path = os.path.join(
-            self.registry_dir, f"{adapter_id}_adapter.json"
+            self.registry_dir, f"{adapter_id}.json"
         )
         
         print(f"[SEARCH] Looking for adapter: {adapter_id}")
@@ -212,7 +212,7 @@ class AdapterManager(IAdapterManager):
         sanitized_adapter_id = sanitize_model_name(adapter_id)
         if sanitized_adapter_id != adapter_id:
             sanitized_adapter_info_path = os.path.join(
-                self.registry_dir, f"{sanitized_adapter_id}_adapter.json"
+                self.registry_dir, f"{sanitized_adapter_id}.json"
             )
             
             print(f"   • Trying sanitized name: {sanitized_adapter_id}")
@@ -230,7 +230,7 @@ class AdapterManager(IAdapterManager):
         # If not found, list available adapters for debugging
         print(f"[ERROR] Adapter '{adapter_id}' not found in registry")
         try:
-            available_files = [f for f in os.listdir(self.registry_dir) if f.endswith('_adapter.json')]
+            available_files = [f for f in os.listdir(self.registry_dir) if f.endswith('.json')]
             if available_files:
                 print(f"   • Available adapters: {available_files}")
             else:
@@ -248,8 +248,8 @@ class AdapterManager(IAdapterManager):
             return adapters
         
         for filename in os.listdir(self.registry_dir):
-            if filename.endswith('_adapter.json'):
-                adapter_id = filename.replace('_adapter.json', '')
+            if filename.endswith('.json'):
+                adapter_id = filename.replace('.json', '')
                 adapter_info = self.get_adapter_info(adapter_id)
                 if adapter_info:
                     adapters.append(adapter_info)
@@ -266,7 +266,7 @@ class AdapterManager(IAdapterManager):
     def _save_adapter_info(self, adapter_info: Any) -> None:
         """Save adapter info to registry."""
         adapter_info_path = os.path.join(
-            self.registry_dir, f"{adapter_info.adapter_id}_adapter.json"
+            self.registry_dir, f"{adapter_info.adapter_id}.json"
         )
         with open(adapter_info_path, 'w') as f:
             json.dump(adapter_info.to_dict(), f, indent=2)
@@ -311,7 +311,7 @@ PARAMETER repeat_penalty 1.1
 """
             
             # Save Modelfile in current directory (best practice)
-            modelfile_path = os.path.join(os.getcwd(), f"{adapter_info.adapter_id}_adapter_Modelfile")
+            modelfile_path = os.path.join(os.getcwd(), f"{adapter_info.adapter_id}_Modelfile")
             
             with open(modelfile_path, 'w') as f:
                 f.write(modelfile_content)
