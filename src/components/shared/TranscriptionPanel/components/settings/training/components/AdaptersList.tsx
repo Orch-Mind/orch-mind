@@ -278,7 +278,6 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
               <span>{t('deploy.adapters.actions.merge')}</span>
             </button>
           )}
-          <div className="text-xs text-gray-400">{t('deploy.adapters.actions.deploy')} • {t('deploy.adapters.actions.merge')} • {t('deploy.adapters.actions.manage')}</div>
         </div>
       </div>
 

@@ -28,9 +28,9 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
   if (conversations.length === 0) {
     return (
       <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20">
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-1">
           <div>
-            <h3 className="text-sm font-semibold text-cyan-400">
+            <h3 className="text-xs font-semibold text-cyan-400">
               {t('training.selectConversations')}
             </h3>
             <p className="text-gray-400 text-[9px]">
@@ -65,7 +65,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
   }
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20 h-52">
+    <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20">
       <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className="text-sm font-semibold text-cyan-400">
@@ -84,7 +84,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
         </button>
       </div>
 
-      <div className="space-y-1 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
+      <div className="space-y-1 max-h-28 overflow-y-auto pr-1 custom-scrollbar">
         {conversations.map((conv) => (
           <ConversationItem
             key={conv.id}
@@ -110,6 +110,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   isTraining,
   onSelect,
 }) => {
+  const { t } = useTranslation();
   const handleSelect = () => {
     if (!conversation.isProcessed && !isTraining) {
       onSelect(conversation.id);
@@ -139,7 +140,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
   return (
     <div
-      className={`group relative p-2 rounded transition-all duration-200 cursor-pointer border text-xs ${
+      className={`group relative p-1.5 rounded transition-all duration-200 cursor-pointer border text-xs ${
         conversation.isProcessed
           ? "bg-green-900/10 border-green-400/30 cursor-not-allowed"
           : conversation.isSelected
@@ -162,7 +163,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <h4 className="text-white text-xs font-medium truncate">
+            <h4 className="text-white text-[10px] font-medium truncate">
               {conversation.title}
             </h4>
             {conversation.isProcessed && (
