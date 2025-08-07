@@ -143,7 +143,7 @@ def svd_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torc
             U, S, V = torch.svd(concatenated)
             
             # Keep top-k singular values (rank preservation)
-            k = min(16, min(concatenated.shape))  # Typical LoRA rank
+            k = min(8, min(concatenated.shape))  # Typical LoRA rank
             merged_param = U[:, :k] @ torch.diag(S[:k]) @ V[:, :k].T
             
             # Resize back to original shape

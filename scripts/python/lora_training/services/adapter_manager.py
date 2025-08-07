@@ -343,8 +343,8 @@ PARAMETER repeat_penalty 1.1
         # Check if this is a Unsloth model by examining the HF model name
         is_unsloth_model = False
         unsloth_indicators = [
-            'unsloth/', 'gemma-3', 'gemma-2', 'Qwen3', 'mistral-7b-v0.3', 
-            'Mistral-Nemo', 'Llama-3.1', 'Llama-3'
+            'unsloth/', 'gemma-3', 'gemma-3n', 'Qwen3', 'mistral-7b-v0.3', 
+            'Mistral-Nemo', 'Llama-3.1', 'Llama-3', 'gpt-oss'
         ]
         
         for indicator in unsloth_indicators:

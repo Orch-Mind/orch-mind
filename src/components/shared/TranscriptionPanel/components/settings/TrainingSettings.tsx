@@ -119,9 +119,6 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
   // === EVENT HANDLERS (Following SRP) ===
   const handleTraining = async (customAdapterName?: string) => {
     // Debug conversation format to help diagnose issues
-    console.log(
-      "[Training] Starting training process, debugging conversation format..."
-    );
     debugConversationFormat();
 
     // Test validation logic with sample data
@@ -172,9 +169,6 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       return;
     }
 
-    console.log(
-      `[Training] Found ${validation.totalValidPairs} valid training pairs`
-    );
     setTrainingStatus(
       `${t('training.foundValidPairs', { count: validation.totalValidPairs })}`
     );
@@ -184,29 +178,17 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
     const originalBaseModel = extractBaseModel(selectedBaseModel);
     const adapterName = customAdapterName || generateOutputName(originalBaseModel);
 
-    console.log("[Training] LoRA Adapter training logic:");
-    console.log(`  - Base model: ${originalBaseModel}`);
-    console.log(`  - New adapter: ${adapterName}`);
-
     const request: TrainingRequest = {
       conversations: trainingConversations,
       baseModel: originalBaseModel,
       outputName: adapterName, // Use full adapter name for consistency
     };
 
-    console.log("[Training] Starting LoRA adapter training for:", adapterName);
-
     // Start training with callbacks (Following SRP)
     await startTraining(
       request,
       (result) => {
         // Success callback - Save new adapter
-        console.log("[Training] LoRA adapter created:", adapterName);
-        console.log(
-          "[Training] Backend returned adapter ID:",
-          result.details?.adapterId || result.details?.modelName
-        );
-
         // Save the new adapter
         const adapterId = result.details?.adapterId || adapterName;
         saveAdapter(adapterId, originalBaseModel);
@@ -218,7 +200,6 @@ const TrainingSettings: React.FC<TrainingSettingsProps> = () => {
       },
       (error) => {
         // Error callback
-        console.error("Training failed:", error);
       }
     );
   };

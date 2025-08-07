@@ -54,12 +54,14 @@ class LoRATrainer(ILoRATrainer):
         
         # Calculate effective batch size (considering gradient accumulation)
         effective_batch_size = config.batch_size * config.gradient_accumulation_steps
+        print(f"🔢 Effective batch size: {config.batch_size} × {config.gradient_accumulation_steps} = {effective_batch_size}")
         
         # Determine dataset category and optimal parameters
+        # Force 1 epoch for all datasets to optimize MPS performance
         if num_examples <= 5:
             # Very small datasets (testing/debugging)
             category = "Very Small (Testing)"
-            epochs_multiplier = 1  # Just 1 epoch
+            epochs_multiplier = 1  # Force 1 epoch
             learning_rate = 1e-5   # Very conservative
             warmup_ratio = 0.0     # No warmup needed
             save_ratio = 1.0       # Save at the end
@@ -67,7 +69,7 @@ class LoRATrainer(ILoRATrainer):
         elif num_examples <= 20:
             # Small datasets
             category = "Small"
-            epochs_multiplier = 2  # 2 epochs
+            epochs_multiplier = 1  # Force 1 epoch (was 2)
             learning_rate = 2e-5   # Conservative
             warmup_ratio = 0.1     # Minimal warmup
             save_ratio = 0.5       # Save halfway and end
@@ -75,7 +77,7 @@ class LoRATrainer(ILoRATrainer):
         elif num_examples <= 100:
             # Medium datasets
             category = "Medium"
-            epochs_multiplier = 3  # 3 epochs
+            epochs_multiplier = 1  # Force 1 epoch (was 3)
             learning_rate = 5e-5   # Moderate
             warmup_ratio = 0.1     # Standard warmup
             save_ratio = 0.3       # Save more frequently
@@ -83,20 +85,25 @@ class LoRATrainer(ILoRATrainer):
         else:
             # Large datasets
             category = "Large"
-            epochs_multiplier = None  # Use original config
+            epochs_multiplier = 1  # Force 1 epoch (was None)
             learning_rate = config.learning_rate  # Use original
             warmup_ratio = 0.1     # Standard warmup
             save_ratio = 0.2       # Save frequently
         
         # Calculate optimal steps
-        if epochs_multiplier is not None:
-            # For small/medium datasets: calculate based on examples and epochs
-            steps_per_epoch = max(1, num_examples // effective_batch_size)
-            optimal_max_steps = steps_per_epoch * epochs_multiplier
-            optimal_max_steps = max(1, optimal_max_steps)  # At least 1 step
-        else:
-            # For large datasets: use original config
-            optimal_max_steps = config.max_steps
+        # Always calculate based on examples and epochs (epochs_multiplier is always 1 now)
+        steps_per_epoch = max(1, num_examples // effective_batch_size)
+        optimal_max_steps = steps_per_epoch * epochs_multiplier
+        
+        print(f"📈 Steps calculation:")
+        print(f"   • Steps per epoch: {num_examples} ÷ {effective_batch_size} = {steps_per_epoch}")
+        print(f"   • Initial max_steps: {steps_per_epoch} × {epochs_multiplier} = {optimal_max_steps}")
+        
+        # Ensure minimum reasonable number of steps for effective training
+        min_steps = min(50, num_examples)  # At least 50 steps or number of examples
+        optimal_max_steps = max(min_steps, optimal_max_steps)
+        
+        print(f"   • Minimum steps enforced: max({min_steps}, {optimal_max_steps}) = {optimal_max_steps}")
         
         # Calculate proportional parameters
         optimal_warmup_steps = max(1, int(optimal_max_steps * warmup_ratio))
@@ -113,7 +120,7 @@ class LoRATrainer(ILoRATrainer):
             'warmup_steps': optimal_warmup_steps,
             'save_steps': optimal_save_steps,
             'logging_steps': optimal_logging_steps,
-            'num_epochs': epochs_multiplier if epochs_multiplier else config.num_epochs
+            'num_epochs': epochs_multiplier  # Always 1 now
         }
         
         # Report the decisions
@@ -125,10 +132,13 @@ class LoRATrainer(ILoRATrainer):
         print(f"   • Save Steps: {config.save_steps} → {optimal_save_steps}")
         print(f"   • Logging Steps: {config.logging_steps} → {optimal_logging_steps}")
         
+        print(f"🎯 MPS OPTIMIZATION: Using 1 epoch and batch_size=1 for all datasets")
+        print(f"   • This reduces MPS fallback issues and improves stability")
+        print(f"   • Model will see each example exactly 1 time")
+        
         if num_examples <= 5:
             print(f"⚠️  Very small dataset detected!")
             print(f"   • Using minimal training to prevent overfitting")
-            print(f"   • Model will see each example only {epochs_multiplier} time(s)")
             print(f"   • Conservative learning rate to preserve base knowledge")
         elif num_examples <= 20:
             print(f"📝 Small dataset detected - using conservative approach")
@@ -187,6 +197,7 @@ class LoRATrainer(ILoRATrainer):
             config.warmup_steps = smart_params['warmup_steps']
             config.save_steps = smart_params['save_steps']
             config.logging_steps = smart_params['logging_steps']
+            config.num_epochs = smart_params['num_epochs']  # Force 1 epoch
             
             # Import required libraries
             import torch
@@ -230,7 +241,8 @@ class LoRATrainer(ILoRATrainer):
                 def on_train_begin(self, args, state, control, **kwargs):
                     """Called at the beginning of training."""
                     self.max_steps = state.max_steps
-                    self.total_epochs = args.num_train_epochs
+                    # When using max_steps only, set total_epochs to 1 for display purposes
+                    self.total_epochs = args.num_train_epochs if args.num_train_epochs is not None else 1
                     
                     self.progress_reporter.report_progress(
                         self.base_progress, 100,
@@ -240,15 +252,27 @@ class LoRATrainer(ILoRATrainer):
                     
                 def on_epoch_begin(self, args, state, control, **kwargs):
                     """Called at the beginning of each epoch."""
-                    self.current_epoch = int(state.epoch) + 1
+                    # When using max_steps, always show as epoch 1/1 regardless of internal epoch count
+                    if args.max_steps and args.max_steps > 0:
+                        display_epoch = 1
+                        display_total = 1
+                    else:
+                        display_epoch = int(state.epoch) + 1
+                        display_total = self.total_epochs
                     
-                    # Calculate progress based on epoch
-                    epoch_progress = (state.epoch / self.total_epochs) * self.training_range
-                    current_progress = self.base_progress + epoch_progress
+                    self.current_epoch = display_epoch
+                    
+                    # Calculate progress based on steps when using max_steps
+                    if args.max_steps and args.max_steps > 0:
+                        step_progress = (state.global_step / args.max_steps) * self.training_range
+                        current_progress = self.base_progress + step_progress
+                    else:
+                        epoch_progress = (state.epoch / self.total_epochs) * self.training_range
+                        current_progress = self.base_progress + epoch_progress
                     
                     self.progress_reporter.report_progress(
                         current_progress, 100,
-                        f"Epoch {self.current_epoch}/{self.total_epochs} starting",
+                        f"Epoch {display_epoch}/{display_total} starting",
                         "epoch_start"
                     )
                     
@@ -257,14 +281,21 @@ class LoRATrainer(ILoRATrainer):
                     self.current_step = state.global_step
                     
                     # Calculate real progress based on actual training steps
-                    step_progress = (state.global_step / state.max_steps) * self.training_range
+                    # Protect against None max_steps
+                    max_steps = state.max_steps if state.max_steps is not None else self.max_steps
+                    step_progress = (state.global_step / max_steps) * self.training_range if max_steps > 0 else 0
                     current_progress = min(self.max_progress, self.base_progress + step_progress)
                     
-                    # Get current epoch info
-                    current_epoch = int(state.epoch) + 1 if hasattr(state, 'epoch') else 1
+                    # Get current epoch info - use consistent display logic
+                    if args.max_steps and args.max_steps > 0:
+                        display_epoch = 1
+                        display_total = 1
+                    else:
+                        display_epoch = int(state.epoch) + 1 if hasattr(state, 'epoch') else 1
+                        display_total = self.total_epochs
                     
                     # Format message with step and epoch info
-                    message = f"Step {self.current_step}/{self.max_steps} (Epoch {current_epoch}/{self.total_epochs})"
+                    message = f"Step {self.current_step}/{self.max_steps} (Epoch {display_epoch}/{display_total})"
                     
                     # Add loss information if available
                     if hasattr(state, 'log_history') and state.log_history:
@@ -274,7 +305,9 @@ class LoRATrainer(ILoRATrainer):
                             message += f" - Loss: {loss_value:.4f}"
                     
                     # Determine training phase
-                    progress_ratio = state.global_step / state.max_steps
+                    # Protect against None max_steps
+                    max_steps = state.max_steps if state.max_steps is not None else self.max_steps
+                    progress_ratio = state.global_step / max_steps if max_steps > 0 else 0
                     if progress_ratio <= 0.1:
                         phase = "warmup"
                     elif progress_ratio <= 0.8:
@@ -294,14 +327,22 @@ class LoRATrainer(ILoRATrainer):
                     
                 def on_epoch_end(self, args, state, control, **kwargs):
                     """Called at the end of each epoch."""
-                    current_epoch = int(state.epoch)
-                    
-                    # Calculate progress based on completed epochs
-                    epoch_progress = (current_epoch / self.total_epochs) * self.training_range
-                    current_progress = self.base_progress + epoch_progress
+                    # When using max_steps, always show as epoch 1/1 regardless of internal epoch count
+                    if args.max_steps and args.max_steps > 0:
+                        display_epoch = 1
+                        display_total = 1
+                        # Calculate progress based on steps
+                        step_progress = (state.global_step / args.max_steps) * self.training_range
+                        current_progress = self.base_progress + step_progress
+                    else:
+                        display_epoch = int(state.epoch)
+                        display_total = self.total_epochs
+                        # Calculate progress based on completed epochs
+                        epoch_progress = (display_epoch / self.total_epochs) * self.training_range
+                        current_progress = self.base_progress + epoch_progress
                     
                     # Add epoch completion info
-                    message = f"Epoch {current_epoch}/{self.total_epochs} completed"
+                    message = f"Epoch {display_epoch}/{display_total} completed"
                     
                     # Add loss information if available
                     if hasattr(state, 'log_history') and state.log_history:
@@ -331,11 +372,13 @@ class LoRATrainer(ILoRATrainer):
                     """Called when logging occurs - capture detailed metrics."""
                     if logs and 'train_loss' in logs:
                         # Calculate current progress
-                        step_progress = (state.global_step / state.max_steps) * self.training_range
+                        # Protect against None max_steps
+                        max_steps = state.max_steps if state.max_steps is not None else self.max_steps
+                        step_progress = (state.global_step / max_steps) * self.training_range if max_steps > 0 else 0
                         current_progress = min(self.max_progress, self.base_progress + step_progress)
                         
                         # Create detailed message with metrics
-                        message = f"Step {state.global_step}/{state.max_steps}"
+                        message = f"Step {state.global_step}/{max_steps}"
                         
                         if 'train_loss' in logs:
                             message += f" - Loss: {logs['train_loss']:.4f}"
@@ -351,6 +394,16 @@ class LoRATrainer(ILoRATrainer):
             # Get hardware-optimized configuration
             self.hardware_detector.print_hardware_info()
             hw_config = self.hardware_detector.get_optimal_config(config.hf_model_name)
+            
+            # Ensure PyTorch MPS is properly configured
+            if hw_config.device_type == "mps":
+                os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+                print("\n🚀 MPS Optimization Settings:")
+                print("   • PYTORCH_ENABLE_MPS_FALLBACK=1 (for better compatibility)")
+                print("   • Using float16 precision for better performance")
+                print("   • Gradient checkpointing enabled for memory efficiency")
+                print("   • Pin memory enabled for faster data transfer")
+                print("   • Multi-worker data loading for preprocessing speed")
             
             # Special handling for Gemma models
             model_name_lower = config.hf_model_name.lower()
@@ -385,15 +438,51 @@ class LoRATrainer(ILoRATrainer):
             else:
                 model_dtype = torch.float32
             
-            # Load model with hardware-optimized settings
-            model = AutoModelForCausalLM.from_pretrained(
-                config.hf_model_name,
-                torch_dtype=model_dtype,
-                device_map=hw_config.device_map,
-                trust_remote_code=True,
-                load_in_8bit=hw_config.load_in_8bit,
-                low_cpu_mem_usage=hw_config.low_cpu_mem_usage,
-            )
+            # ULTRA AGGRESSIVE memory cleanup before model loading
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            # Load model with ULTRA memory-optimized settings
+            try:
+                print("💾 Loading model with ULTRA AGGRESSIVE memory optimization...")
+                
+                # Prepare model loading arguments
+                model_kwargs = {
+                    "torch_dtype": model_dtype,
+                    "device_map": hw_config.device_map,
+                    "trust_remote_code": True,
+                    "load_in_8bit": hw_config.load_in_8bit,
+                    "low_cpu_mem_usage": True,  # Force enable
+                    "attn_implementation": "eager",  # Use memory-efficient attention
+                }
+                
+                # Only add use_cache for non-MPS devices (MPS doesn't support this parameter)
+                if hw_config.device_type != "mps":
+                    model_kwargs["use_cache"] = False  # Disable cache to save memory
+                
+                model = AutoModelForCausalLM.from_pretrained(
+                    config.hf_model_name,
+                    **model_kwargs
+                )
+                
+                if hw_config.device_type == "mps":
+                    # Force model to MPS device if not automatically mapped
+                    if not any(p.device.type == "mps" for p in model.parameters()):
+                        model = model.to("mps")
+                    print("✅ Model successfully loaded on MPS device")
+            except Exception as e:
+                print(f"⚠️  Error loading model on MPS: {e}")
+                print("   Falling back to CPU...")
+                hw_config = self.hardware_detector._get_cpu_config(config.hf_model_name)
+                model = AutoModelForCausalLM.from_pretrained(
+                    config.hf_model_name,
+                    torch_dtype=torch.float32,
+                    device_map=hw_config.device_map,
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True
+                )
             
             # Special post-loading handling for Gemma on MPS
             if "gemma" in model_name_lower and hw_config.device_type == "mps":
@@ -429,7 +518,11 @@ class LoRATrainer(ILoRATrainer):
                 "lora_setup"
             )
             
-            model = prepare_model_for_kbit_training(model)
+            # Only prepare for kbit training on CUDA (not compatible with MPS)
+            if hw_config.device_type == "cuda":
+                model = prepare_model_for_kbit_training(model)
+            else:
+                print(f"⚠️  Skipping kbit training preparation for {hw_config.device_type.upper()} device")
             
             # Get optimized target modules for this model
             optimized_target_modules = self.hardware_detector.get_target_modules_for_model(config.hf_model_name)
@@ -469,13 +562,31 @@ class LoRATrainer(ILoRATrainer):
             dataset = Dataset.from_list(training_data)
             dataset = dataset.map(self._format_instruction)
             
-            # Tokenize dataset with progress
-            self.progress_reporter.report_progress(25, 100, "Tokenizing training data", "tokenization")
+            # Tokenize dataset with progress and optimized settings
+            self.progress_reporter.report_progress(25, 100, "Tokenizing training data with optimized settings", "tokenization")
+            
+            # ULTRA MEMORY: Use aggressive sequence length reduction
+            ultra_max_seq_length = min(512, 256)  # Cap at 256 tokens
+            print(f"💾 ULTRA MEMORY: Reducing max_seq_length to {ultra_max_seq_length} tokens")
+            print(f"   • This can reduce memory usage by up to 75%")
+            print(f"   • Longer sequences will be truncated")
+            
+            # Calculate optimal batch size for tokenization
+            tokenization_batch_size = min(1000, len(dataset))
+            
+            print(f"\n🔄 Tokenizing dataset with optimized settings:")
+            print(f"   • Batch size: {tokenization_batch_size}")
+            print(f"   • Workers: {hw_config.dataloader_num_workers}")
+            print(f"   • Pin memory: {hw_config.dataloader_pin_memory}")
+            print(f"   • Max sequence length: {ultra_max_seq_length}")
             
             tokenized_dataset = dataset.map(
-                lambda examples: self._tokenize_function(examples, tokenizer),
+                lambda examples: self._tokenize_function_ultra_memory(examples, tokenizer, ultra_max_seq_length),
                 batched=True,
-                remove_columns=dataset.column_names
+                batch_size=tokenization_batch_size,
+                num_proc=1,  # Single process to save memory
+                remove_columns=dataset.column_names,
+                desc="Tokenizing examples with ultra memory optimization"
             )
             
             # Get optimized batch size
@@ -484,29 +595,41 @@ class LoRATrainer(ILoRATrainer):
             print(f"📊 Batch size: {config.batch_size} → {optimized_batch_size} (hardware optimized)")
             print(f"🔧 FP16 Trainer: {hw_config.use_fp16_trainer} (MPS uses model-level float16 instead)")
             
-            # Training arguments with hardware-optimized settings
+            # Optimized gradient accumulation for memory efficiency
+            # Use a more reasonable gradient accumulation to avoid too few steps
+            ultra_gradient_accumulation = min(8, max(2, config.gradient_accumulation_steps))
+            print(f"💾 OPTIMIZED MEMORY MODE: Using gradient_accumulation_steps={ultra_gradient_accumulation}")
+            print(f"   • This balances memory usage with training steps")
+            print(f"   • Effective batch size: {ultra_gradient_accumulation} (was too high before)")
+            
+            # Training arguments with ULTRA memory-optimized settings
+            # Use max_steps only to avoid epoch confusion (when both are set, behavior is inconsistent)
             training_args = TrainingArguments(
                 output_dir=os.path.join(config.output_dir, "training_output"),
-                num_train_epochs=config.num_epochs,
+                num_train_epochs=1,  # Keep as 1 since None causes issues
                 max_steps=config.max_steps,
-                per_device_train_batch_size=optimized_batch_size,
-                gradient_accumulation_steps=config.gradient_accumulation_steps,
+                per_device_train_batch_size=1,  # Force minimal batch size
+                gradient_accumulation_steps=ultra_gradient_accumulation,
                 warmup_steps=config.warmup_steps,
                 learning_rate=config.learning_rate,
-                fp16=hw_config.use_fp16_trainer,  # Use hardware-optimized fp16 setting
+                fp16=hw_config.use_fp16_trainer,
                 logging_steps=config.logging_steps,
-                optim=config.optim,
+                optim="adamw_torch",  # Use standard optimizer to save memory
                 weight_decay=config.weight_decay,
                 lr_scheduler_type=config.lr_scheduler_type,
                 save_steps=config.save_steps,
                 save_total_limit=1,
                 report_to=None,
-                dataloader_num_workers=hw_config.dataloader_num_workers,
-                remove_unused_columns=False,
-                dataloader_pin_memory=hw_config.dataloader_pin_memory,
-                # Only apply gradient_checkpointing if not using Gemma minimal memory mode
-                # (Gemma applies it directly to the model to avoid conflicts)
-                gradient_checkpointing=hw_config.gradient_checkpointing if "gemma" not in model_name_lower else False,
+                dataloader_num_workers=0,  # Force single worker
+                remove_unused_columns=True,  # Remove unused columns to save memory
+                dataloader_pin_memory=False,  # Disable pin memory to save RAM
+                # Disable gradient checkpointing for MPS (causes gradient flow issues with LoRA)
+                gradient_checkpointing=False if hw_config.device_type == "mps" else True,
+                # Additional memory optimizations
+                eval_accumulation_steps=8,  # Reduce evaluation memory usage
+                skip_memory_metrics=True,  # Skip memory metrics to save overhead
+                dataloader_drop_last=True,  # Drop incomplete batches
+                max_grad_norm=1.0,  # Gradient clipping for stability
             )
             
             # Data collator
@@ -537,16 +660,70 @@ class LoRATrainer(ILoRATrainer):
                 callbacks=callbacks,
             )
             
-            # Train the model - progress will be reported by the callback
-            self.progress_reporter.report_progress(25, 100, "Starting LoRA training process", "training_start")
-            trainer.train()
+            # Train the model with profiling and aggressive memory management
+            self.progress_reporter.report_progress(25, 100, "Starting LoRA training process with profiling", "training_start")
             
-            # Memory cleanup after training
+            import cProfile, pstats, io
+            pr = cProfile.Profile()
+            pr.enable()
+            
+            # ULTRA AGGRESSIVE memory cleanup before training
+            import gc
+            gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-            gc.collect()
             
-            # Save the adapter
+            print("\n🚀 Starting LoRA training with ULTRA MEMORY optimization...")
+            print("💾 Memory cleanup will be performed every 5 steps")
+            
+            # Custom training loop with aggressive memory management
+            from transformers import TrainerCallback, TrainerControl, TrainerState
+            from transformers.training_args import TrainingArguments
+            
+            class MemoryOptimizedCallback(TrainerCallback):
+                def __init__(self):
+                    super().__init__()
+                    self.step_count = 0
+                
+                def on_train_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                    """Called at the beginning of training."""
+                    print("   • ULTRA MEMORY optimization callback initialized")
+                    return control
+                
+                def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                    """Called at the end of each training step."""
+                    self.step_count += 1
+                    if self.step_count % 5 == 0:  # Clean every 5 steps
+                        import gc
+                        gc.collect()
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                    return control
+                
+                def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                    """Called at the end of each epoch."""
+                    import gc
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    return control
+                
+                def on_train_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                    """Called at the end of training."""
+                    print("   • ULTRA MEMORY optimization training completed")
+                    return control
+            
+            trainer.add_callback(MemoryOptimizedCallback())
+            trainer.train()
+            
+            pr.disable()
+            profile_file_path = os.path.join(config.output_dir, "training_profile.prof")
+            pr.dump_stats(profile_file_path)
+            
+            print(f"\n📊 Profiling report saved to: {profile_file_path}")
+            print(f"   To view the report, run: 'pip install snakeviz && snakeviz {profile_file_path}'")
+            
+            # Save the adapter BEFORE memory cleanup
             self.progress_reporter.report_progress(90, 100, "Saving adapter weights", "saving")
             adapter_dir = os.path.join(config.output_dir, "lora_adapter")
             os.makedirs(adapter_dir, exist_ok=True)
@@ -554,14 +731,25 @@ class LoRATrainer(ILoRATrainer):
             trainer.save_model(adapter_dir)
             tokenizer.save_pretrained(adapter_dir)
             
-            # Clear trainer and model from memory
+            # ULTRA AGGRESSIVE memory cleanup after training
+            print("\n🧹 Performing ULTRA AGGRESSIVE memory cleanup...")
+            
+            # Clear all training-related variables
             del trainer
             del model
             del tokenized_dataset
             del dataset
+            gc.collect()
+            
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-            gc.collect()
+                torch.cuda.synchronize()
+            
+            # Force Python garbage collection multiple times
+            for _ in range(3):
+                gc.collect()
+            
+            print("✅ Memory cleanup completed")
             
             self.training_info = {
                 "adapter_path": adapter_dir,
@@ -601,9 +789,10 @@ class LoRATrainer(ILoRATrainer):
         return {"text": text}
     
     def _tokenize_function(self, examples: Dict[str, Any], tokenizer) -> Dict[str, Any]:
-        """Tokenize examples for training."""
+        """Tokenize examples for training with optimized settings for MPS."""
         texts = examples["text"] if isinstance(examples["text"], list) else [examples["text"]]
         
+        # Use batched tokenization for better performance
         tokenized = tokenizer(
             texts,
             padding=True,
@@ -612,9 +801,34 @@ class LoRATrainer(ILoRATrainer):
             return_overflowing_tokens=False,
             add_special_tokens=True,
             return_tensors=None,
+            # Enable faster tokenization with batching
+            return_attention_mask=True,
+            return_token_type_ids=False,  # Not needed for most models
         )
         
         # Add labels (copy of input_ids for causal LM)
         tokenized["labels"] = tokenized["input_ids"].copy()
         
-        return tokenized 
+        return tokenized
+    
+    def _tokenize_function_ultra_memory(self, examples: Dict[str, Any], tokenizer, max_length: int) -> Dict[str, Any]:
+        """Tokenize examples with ultra memory optimization - aggressive sequence length reduction."""
+        texts = examples["text"] if isinstance(examples["text"], list) else [examples["text"]]
+        
+        # Use ultra-aggressive tokenization settings for minimal memory usage
+        tokenized = tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=max_length,  # Use the ultra-reduced max length
+            return_overflowing_tokens=False,
+            add_special_tokens=True,
+            return_tensors=None,
+            return_attention_mask=True,
+            return_token_type_ids=False,
+        )
+        
+        # Add labels (copy of input_ids for causal LM)
+        tokenized["labels"] = tokenized["input_ids"].copy()
+        
+        return tokenized

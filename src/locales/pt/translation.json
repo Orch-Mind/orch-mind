@@ -366,6 +366,39 @@
     "qualityFair": "Razoável",
     "qualityPoor": "Ruim",
     "qualityVeryPoor": "Muito Ruim",
+    "successModal": {
+        "title": "Adaptador LoRA Criado!",
+        "description": "Seu adaptador LoRA",
+        "descriptionEnd": "foi criado com sucesso.",
+        "trainingExamples": "Exemplos de Treinamento:",
+        "duration": "Duração:",
+        "ready": "O adaptador está pronto para ser habilitado/desabilitado no painel de Adaptadores LoRA.",
+        "continue": "Continuar"
+      },
+      "resetModal": {
+        "title": "Excluir Todos os Adaptadores LoRA?",
+        "description": "Isso excluirá permanentemente todos os seus adaptadores LoRA. Suas conversas serão preservadas.",
+        "actionWillLabel": "Esta ação irá:",
+        "deleteAdapters": "Excluir todos os adaptadores LoRA do localStorage",
+        "clearHistory": "Limpar histórico de status de treinamento",
+        "preserve": "PRESERVAR",
+        "preserveConversations": "todas as conversas e histórico de chat",
+        "notDelete": "NÃO",
+        "notDeleteFiles": "excluir arquivos reais do adaptador do disco",
+        "cancel": "Cancelar",
+        "deleteAdaptersButton": "Excluir Adaptadores"
+      },
+      "deleteModal": {
+        "title": "Excluir Adaptador LoRA?",
+        "description": "Tem certeza de que deseja excluir o adaptador LoRA",
+        "actionWillLabel": "Esta ação irá:",
+        "deleteFiles": "Excluir permanentemente os arquivos do adaptador",
+        "removeFromList": "Remover o adaptador da sua lista de adaptadores",
+        "disableAdapter": "Desabilitar o adaptador se estiver habilitado",
+        "cancel": "Cancelar",
+        "deleting": "Excluindo...",
+        "deleteButton": "Excluir Adaptador"
+      },
     "errors": {
       "selectConversations": "Por favor, selecione pelo menos uma conversa para treinar.",
       "selectBaseModel": "Por favor, selecione um modelo base nas configurações Beta.",

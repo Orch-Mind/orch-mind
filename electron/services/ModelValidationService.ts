@@ -93,8 +93,8 @@ export class ModelValidationService {
     try {
       // Models that support tools/function calling (filtered by user)
       const recommendedModels = [
-        { name: "gemma3n:latest", minRam: 4 },
-        { name: "gemma3:latest", minRam: 4 },
+        { name: "gemma3n:latest", minRam: 8 },
+        { name: "gemma3:latest", minRam: 8 },
       ];
 
       const installedModels = await this.getInstalledModels();

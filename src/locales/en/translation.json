@@ -366,6 +366,39 @@
     "qualityFair": "Fair",
     "qualityPoor": "Poor",
     "qualityVeryPoor": "Very Poor",
+    "successModal": {
+        "title": "LoRA Adapter Created!",
+        "description": "Your LoRA adapter",
+        "descriptionEnd": "has been created successfully.",
+        "trainingExamples": "Training Examples:",
+        "duration": "Duration:",
+        "ready": "The adapter is ready to be enabled/disabled from the LoRA Adapters panel.",
+        "continue": "Continue"
+      },
+      "resetModal": {
+        "title": "Delete All LoRA Adapters?",
+        "description": "This will permanently delete all your LoRA adapters. Your conversations will be preserved.",
+        "actionWillLabel": "This action will:",
+        "deleteAdapters": "Delete all LoRA adapters from localStorage",
+        "clearHistory": "Clear training status history",
+        "preserve": "PRESERVE",
+        "preserveConversations": "all conversations and chat history",
+        "notDelete": "NOT",
+        "notDeleteFiles": "delete actual adapter files from disk",
+        "cancel": "Cancel",
+        "deleteAdaptersButton": "Delete Adapters"
+      },
+      "deleteModal": {
+        "title": "Delete LoRA Adapter?",
+        "description": "Are you sure you want to delete the LoRA adapter",
+        "actionWillLabel": "This action will:",
+        "deleteFiles": "Permanently delete the adapter files",
+        "removeFromList": "Remove the adapter from your adapters list",
+        "disableAdapter": "Disable the adapter if currently enabled",
+        "cancel": "Cancel",
+        "deleting": "Deleting...",
+        "deleteButton": "Delete Adapter"
+      },
     "errors": {
       "selectConversations": "Please select at least one conversation to train on.",
       "selectBaseModel": "Please select a base model in Beta settings.",

@@ -9,8 +9,8 @@ from collections import Counter
 
 def calculate_optimal_steps(
     dataset_size: int,
-    lora_rank: int = 16,
-    learning_rate: float = 3e-4,
+    lora_rank: int = 8,
+    learning_rate: float = 2e-5,
     is_incremental: bool = False,
     task_complexity: str = "medium"
 ) -> Dict[str, Any]:
@@ -115,7 +115,7 @@ def calculate_rank_modifier(lora_rank: int) -> float:
     Lower rank trains faster, higher rank needs more precision.
     """
     if lora_rank <= 8:
-        return 0.85  # Low rank trains faster
+        return 0.75  # Low rank trains faster
     elif lora_rank <= 16:
         return 1.0   # Standard
     elif lora_rank <= 32:
@@ -129,7 +129,7 @@ def calculate_lr_modifier(learning_rate: float) -> float:
     High LR = fewer steps, Low LR = more steps.
     """
     if learning_rate >= 5e-4:
-        return 0.8  # High LR converges faster
+        return 0.75  # High LR converges faster
     elif learning_rate >= 3e-4:
         return 1.0  # Standard
     elif learning_rate >= 1e-4:
