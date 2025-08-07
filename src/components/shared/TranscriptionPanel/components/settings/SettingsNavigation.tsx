@@ -44,12 +44,12 @@ const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
   return (
     <div className="mb-6">
       {/* Tab Navigation with improved aesthetics */}
-      <div className="flex flex-wrap gap-1 bg-gradient-to-r from-slate-900/60 to-gray-900/60 backdrop-blur-sm rounded-xl p-1.5 border border-cyan-400/10 justify-center">
+      <div className="flex gap-1 bg-gradient-to-r from-slate-900/60 to-gray-900/60 backdrop-blur-sm rounded-xl p-1 border border-cyan-400/10 justify-center">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`group relative flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 min-w-[100px] justify-center ${
+            className={`group relative flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 justify-center ${
               activeTab === tab.id
                 ? "bg-gradient-to-r from-cyan-600/40 to-blue-600/40 text-cyan-200 border border-cyan-400/50 shadow-lg shadow-cyan-500/20"
                 : "text-gray-400 hover:text-cyan-300 hover:bg-gradient-to-r hover:from-slate-800/50 hover:to-gray-800/50 border border-transparent hover:border-cyan-400/20"

@@ -65,7 +65,7 @@ export const ConversationSelector: React.FC<ConversationSelectorProps> = ({
   }
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20">
+    <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20 h-full">
       <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className="text-sm font-semibold text-cyan-400">
