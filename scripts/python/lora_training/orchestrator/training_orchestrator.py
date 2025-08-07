@@ -543,7 +543,7 @@ class TrainingOrchestrator:
                 self.memory_monitor.monitor_training_phase("after GGUF conversion")
                 
                 # Create final model name
-                final_model_name = f"{config.output_name}-final"
+                final_model_name = f"{config.output_name}"
                 
                 self.progress_reporter.report_progress(99, 100, "Deploying final model to Ollama")
                 
