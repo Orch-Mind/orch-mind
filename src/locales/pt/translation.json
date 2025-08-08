@@ -730,7 +730,7 @@
     }
   },
   "chatInput": {
-    "placeholder": "Digite sua mensagem ou use transcrição de voz...",
+    "placeholder": "Digite sua mensagem...",
     "sendMessage": "Enviar mensagem",
     "addContext": "Adicionar contexto",
     "hideContext": "Ocultar campo de contexto",

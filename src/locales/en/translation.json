@@ -730,7 +730,7 @@
     }
   },
   "chatInput": {
-    "placeholder": "Type your message or use voice transcription...",
+    "placeholder": "Type your message...",
     "sendMessage": "Send message",
     "addContext": "Add context",
     "hideContext": "Hide context field",

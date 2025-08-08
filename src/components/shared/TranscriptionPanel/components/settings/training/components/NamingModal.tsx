@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Naming Modal Component - For customizing adapter and model names
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 interface NamingModalProps {
@@ -28,9 +28,10 @@ export const NamingModal: React.FC<NamingModalProps> = ({
   const [name, setName] = useState(defaultName);
   const [isValid, setIsValid] = useState(false);
 
+
   useEffect(() => {
     setName(defaultName);
-  }, [defaultName, isOpen]);
+  }, [defaultName]);
 
   useEffect(() => {
     // Validate name: should not be empty and follow naming conventions
@@ -66,6 +67,15 @@ export const NamingModal: React.FC<NamingModalProps> = ({
       onCancel();
     }
   };
+  
+  // Handler para garantir que o input sempre funcione
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setName(value);
+    console.log("[NamingModal] Input value changed:", value);
+  }, []);
+  
+
 
   if (!isOpen) return null;
 
@@ -136,7 +146,7 @@ export const NamingModal: React.FC<NamingModalProps> = ({
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleInputChange}
                 placeholder={getPlaceholder()}
                 className={`w-full px-3 py-2.5 bg-slate-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
                   name.trim() === "" 
@@ -147,6 +157,8 @@ export const NamingModal: React.FC<NamingModalProps> = ({
                 }`}
                 disabled={isLoading}
                 autoFocus
+                style={{ userSelect: 'text', pointerEvents: 'auto' }}
+                title="Clique para editar o nome"
               />
               
               {/* Help text */}
