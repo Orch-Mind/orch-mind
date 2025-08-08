@@ -457,7 +457,6 @@ class LoRATrainer(ILoRATrainer):
             if is_windows:
                 print("🪟 Applying Windows-specific HuggingFace optimizations...")
                 # Force use of standard HTTP transport instead of hf_transfer for Windows
-                import os
                 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"  # Reduce memory usage
                 os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"     # Disable telemetry
                 os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
@@ -669,9 +668,6 @@ class LoRATrainer(ILoRATrainer):
             if is_windows and num_examples < 50:
                 print("🪟 Applying Windows small dataset optimizations...")
                 windows_training_optimizations.update({
-                    'max_grad_norm': 0.3,  # Lower gradient clipping for stability
-                    'dataloader_num_workers': 0,  # Force single-threaded on Windows for stability
-                    'dataloader_pin_memory': False,  # Critical: disable pin memory on Windows
                     'fp16_full_eval': False,  # Disable FP16 evaluation on Windows for small datasets
                     'save_safetensors': True,  # Use safetensors format for better Windows compatibility
                     'prediction_loss_only': True,  # Only compute prediction loss to save memory
