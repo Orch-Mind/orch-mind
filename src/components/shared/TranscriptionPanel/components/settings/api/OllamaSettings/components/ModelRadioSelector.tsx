@@ -128,9 +128,9 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
     };
 
     const statusIcon = model.isDownloaded ? (
-      <CheckCircleIcon className="w-4 h-4 text-green-400" />
+      <CheckCircleIcon className="w-3 h-3 text-green-400" />
     ) : model.isDownloading ? (
-      <div className="animate-spin w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full" />
+      <div className="animate-spin w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full" />
     ) : null;
 
     const statusText = model.isDownloaded
@@ -148,7 +148,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
             : ""
         }
         className={`
-          flex items-start p-3 rounded-lg transition-all group
+          flex items-start p-2 rounded-lg transition-all group
           ${
             isSelected
               ? "bg-cyan-500/20 border-cyan-400"
@@ -174,7 +174,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <div
-                  className={`font-medium text-sm break-words overflow-hidden ${
+                  className={`font-medium text-xs break-words overflow-hidden ${
                     model.isDownloaded ? "text-white/90" : "text-gray-400"
                   }`}
                 >
@@ -184,7 +184,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
               </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span
-                  className={`text-xs ${
+                  className={`text-[10px] ${
                     model.isDownloaded ? "text-cyan-400/60" : "text-gray-400/60"
                   }`}
                 >
@@ -192,7 +192,7 @@ export const ModelRadioSelector: React.FC<ModelRadioSelectorProps> = ({
                 </span>
                 <span className="text-cyan-400/40">•</span>
                 <span
-                  className={`text-xs ${
+                  className={`text-[10px] ${
                     model.isDownloaded
                       ? "text-green-400"
                       : model.isDownloading

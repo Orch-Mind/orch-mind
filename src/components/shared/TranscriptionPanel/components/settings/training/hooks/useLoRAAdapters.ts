@@ -97,16 +97,10 @@ export const useLoRAAdapters = () => {
       const existingAdapter = adapters.find((a) => a.id === adapterId);
 
       if (!existingAdapter) {
-        // CRITICAL FIX: Use the exact same name that will be used in filesystem
-        // The backend expects and saves adapters with "_adapter" suffix
-        // So we need to ensure localStorage uses the same naming convention
-        const filesystemAdapterName = adapterId.endsWith("_adapter")
-          ? adapterId
-          : `${adapterId}_adapter`;
-
+        // Use the original adapter name without any automatic suffix
         const newAdapter: LoRAAdapter = {
           id: adapterId, // Keep original ID for tracking
-          name: filesystemAdapterName, // Use filesystem-compatible name
+          name: adapterId, // Use original name as chosen by user
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),
@@ -118,9 +112,9 @@ export const useLoRAAdapters = () => {
         trainingHistory.adapters = updatedAdapters;
         saveToStorage("orch-lora-adapters", trainingHistory);
         setAdapters(updatedAdapters);
-        console.log("[LoRA] Saved adapter with filesystem-compatible name:", {
+        console.log("[LoRA] Saved adapter with original name:", {
           id: adapterId,
-          name: filesystemAdapterName,
+          name: adapterId,
           baseModel: baseModel,
         });
       }
@@ -145,25 +139,12 @@ export const useLoRAAdapters = () => {
       const existingAdapter = adapters.find((a) => a.id === adapterId);
 
       if (!existingAdapter) {
-        // CRITICAL FIX: Ensure downloaded adapters also use filesystem-compatible names
-        // Use the provided adapterName if available, otherwise generate from adapterId
-        let filesystemAdapterName: string;
-
-        if (adapterName) {
-          // If adapterName is provided, ensure it has the _adapter suffix for filesystem compatibility
-          filesystemAdapterName = adapterName.endsWith("_adapter")
-            ? adapterName
-            : `${adapterName}_adapter`;
-        } else {
-          // Fallback: generate name from adapterId
-          filesystemAdapterName = adapterId.endsWith("_adapter")
-            ? adapterId
-            : `${adapterId}_downloaded_adapter`;
-        }
+        // Use the provided adapterName if available, otherwise use adapterId
+        const finalAdapterName = adapterName || adapterId;
 
         const newAdapter: LoRAAdapter = {
           id: adapterId, // Keep original ID for tracking
-          name: filesystemAdapterName, // Use filesystem-compatible name
+          name: finalAdapterName, // Use original name without suffix
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),
@@ -177,10 +158,10 @@ export const useLoRAAdapters = () => {
         saveToStorage("orch-lora-adapters", trainingHistory);
         setAdapters(updatedAdapters);
         console.log(
-          "[LoRA] Added downloaded adapter with filesystem-compatible name:",
+          "[LoRA] Added downloaded adapter with original name:",
           {
             id: adapterId,
-            name: filesystemAdapterName,
+            name: finalAdapterName,
             downloadedFrom: downloadedFrom,
             baseModel: baseModel,
           }
@@ -396,7 +377,7 @@ export const useLoRAAdapters = () => {
       }
 
       const baseModel = baseModels[0];
-      const mergedAdapterId = `${outputName}_merged_${Date.now()}`;
+      const mergedAdapterId = outputName; // Use clean output name without timestamp suffix
 
       // Chamar o serviço de merge via Electron API
       if (!window.electronAPI?.mergeLoRAAdapters) {
@@ -421,21 +402,14 @@ export const useLoRAAdapters = () => {
       const result = await window.electronAPI.mergeLoRAAdapters(mergeRequest);
 
       if (result.success) {
-        // CRITICAL FIX: Use the correct adapter name that matches filesystem
-        // The LoRAMergeService registers merged adapters with "_adapter" suffix in filesystem
-        // We need to use this same name in localStorage for Share tab to find it
-        const filesystemAdapterName = `${mergedAdapterId}_adapter`;
-
+        // Use the original merged adapter name without automatic suffix
         console.log(`✅ [LoRA Merge] Merge completed successfully`);
-        console.log(
-          `📁 [LoRA Merge] Filesystem adapter name: ${filesystemAdapterName}`
-        );
-        console.log(`🔗 [LoRA Merge] Original output name: ${outputName}`);
+        console.log(`🔗 [LoRA Merge] Output name: ${mergedAdapterId}`);
 
-        // Adicionar o adapter merged à lista usando o nome correto do filesystem
+        // Add the merged adapter to the list using the original name
         const mergedAdapter: LoRAAdapter = {
-          id: filesystemAdapterName, // Use filesystem name as ID
-          name: filesystemAdapterName, // Use filesystem name to match AdapterRegistry
+          id: mergedAdapterId, // Use original merged ID
+          name: mergedAdapterId, // Use original name without suffix
           baseModel: baseModel,
           enabled: false,
           createdAt: new Date().toISOString(),
@@ -466,8 +440,8 @@ export const useLoRAAdapters = () => {
         window.dispatchEvent(
           new CustomEvent("adapter-merged", {
             detail: {
-              adapterId: filesystemAdapterName,
-              adapterName: filesystemAdapterName,
+              adapterId: mergedAdapterId,
+              adapterName: mergedAdapterId,
               displayName: outputName,
               baseModel: baseModel,
               source: "local-merge",
@@ -482,7 +456,7 @@ export const useLoRAAdapters = () => {
 
         return {
           success: true,
-          mergedAdapterId: filesystemAdapterName, // Return filesystem name for consistency
+          mergedAdapterId: mergedAdapterId, // Return original name
         };
       } else {
         console.error(`❌ [LoRA Merge] Merge failed:`, result.error);
@@ -531,14 +505,14 @@ export const useLoRAAdapters = () => {
 
       console.log(`🎯 [LoRA Deploy] Target model name: ${deployedModelName}`);
 
-      // Preparar request de deploy seguindo o fluxo Unsloth
+      // Prepare deploy request using original adapter name
       const deployRequest = {
-        adapterId: adapter.name, // CRITICAL FIX: Use adapter.name instead of adapterId for filesystem lookup
+        adapterId: adapter.name, // Use original adapter name
         adapterName: adapter.name,
         baseModel: adapter.baseModel,
         outputModelName: deployedModelName,
-        deploymentType: "unsloth_gguf" as const, // Usar conversão GGUF conforme docs
-        adapterPath: `/lora_adapters/registry/${adapter.name}`, // Use adapter.name for path resolution
+        deploymentType: "unsloth_gguf" as const, // Use GGUF conversion as per docs
+        adapterPath: `/lora_adapters/registry/${adapter.name}`, // Use original adapter name for path resolution
       };
 
       console.log(`📤 [LoRA Deploy] Sending deploy request:`, deployRequest);
@@ -599,52 +573,7 @@ export const useLoRAAdapters = () => {
     }
   };
 
-  // MIGRATION FUNCTION: Fix adapter names to be filesystem-compatible
-  const migrateAdapterNames = () => {
-    try {
-      const trainingHistory = loadFromStorage("orch-lora-adapters", {
-        adapters: [] as LoRAAdapter[],
-      });
-      const adapters = trainingHistory.adapters || [];
 
-      let migrationCount = 0;
-      const migratedAdapters = adapters.map((adapter) => {
-        // Check if adapter name needs migration (doesn't end with _adapter)
-        if (!adapter.name.endsWith("_adapter")) {
-          migrationCount++;
-          const migratedName = `${adapter.name}_adapter`;
-          console.log(
-            `[LoRA] Migrating adapter name: ${adapter.name} → ${migratedName}`
-          );
-
-          return {
-            ...adapter,
-            name: migratedName,
-          };
-        }
-        return adapter;
-      });
-
-      if (migrationCount > 0) {
-        trainingHistory.adapters = migratedAdapters;
-        saveToStorage("orch-lora-adapters", trainingHistory);
-        setAdapters(migratedAdapters);
-        console.log(
-          `[LoRA] Migration completed: ${migrationCount} adapters migrated to filesystem-compatible names`
-        );
-        return { success: true, migrated: migrationCount };
-      } else {
-        console.log("[LoRA] No adapters need migration");
-        return { success: true, migrated: 0 };
-      }
-    } catch (error) {
-      console.error("[LoRA] Error during adapter name migration:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  };
 
   return {
     adapters,
@@ -658,7 +587,6 @@ export const useLoRAAdapters = () => {
     mergeAdapters,
     deployAdapter,
     resetAdapters,
-    migrateAdapterNames, // New migration function
     setSelectedBaseModel,
   };
 };

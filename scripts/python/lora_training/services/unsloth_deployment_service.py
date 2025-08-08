@@ -375,4 +375,4 @@ PARAMETER repeat_penalty 1.1
             
         except Exception as e:
             print(f"❌ Failed to create Ollama base model: {e}")
-            return False 
+            return False

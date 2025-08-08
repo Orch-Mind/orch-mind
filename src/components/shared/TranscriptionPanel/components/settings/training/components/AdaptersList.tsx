@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { NamingModal } from "./NamingModal";
 import { useTranslation } from "react-i18next";
+import { NotificationService } from "../../../../../../../shared/services/NotificationService";
 
 interface LoRAAdapter {
   id: string;
@@ -143,9 +144,9 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     const baseModels = [...new Set(selectedAdapters.map((a) => a.baseModel))];
 
     if (baseModels.length > 1) {
-      alert(
-          `❌ ${t('deploy.adapters.messages.incompatibleModels', { models: baseModels.join(', ') })}`
-        );
+      NotificationService.error(
+        `❌ ${t('deploy.adapters.messages.incompatibleModels', { models: baseModels.join(', ') })}`
+      );
       return;
     }
 
@@ -160,16 +161,16 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
         setShowMergeSection(false);
         setSelectedForMerge([]);
         setMergeOutputName("");
-        alert(
+        NotificationService.success(
           `✅ ${t('deploy.adapters.messages.mergeSuccess', { 
             type: selectedForMerge.length === 1 ? 'deployed' : 'merged'
           })}`
         );
       } else {
-        alert(`❌ ${t('deploy.adapters.messages.mergeError', { error: result.error })}`);
+        NotificationService.error(`❌ ${t('deploy.adapters.messages.mergeError', { error: result.error })}`);
       }
     } catch (error) {
-      alert(`❌ ${t('deploy.adapters.messages.mergeError', { error: error })}`);
+      NotificationService.error(`❌ ${t('deploy.adapters.messages.mergeError', { error: error })}`);
     } finally {
       setIsMerging(false);
     }
@@ -197,12 +198,21 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
     try {
       const result = await onDeployAdapter(deployingAdapterId, customModelName);
       if (result.success) {
-        alert(`✅ ${t('deploy.adapters.messages.deploySuccess', { modelName: result.modelName || customModelName })}`);
+        NotificationService.deploy(
+          `✅ ${t('deploy.adapters.messages.deploySuccess', { modelName: result.modelName || customModelName })}`,
+          'success'
+        );
       } else {
-        alert(`❌ ${t('deploy.adapters.messages.deployError', { error: result.error })}`);
+        NotificationService.deploy(
+          `❌ ${t('deploy.adapters.messages.deployError', { error: result.error })}`,
+          'error'
+        );
       }
     } catch (error) {
-      alert(`❌ ${t('deploy.adapters.messages.deployError', { error: error })}`);
+      NotificationService.deploy(
+        `❌ ${t('deploy.adapters.messages.deployError', { error: error })}`,
+        'error'
+      );
     } finally {
       setDeployingAdapters((prev) => {
         const newSet = new Set(prev);
@@ -278,7 +288,6 @@ const AdaptersList: React.FC<AdaptersListProps> = ({
               <span>{t('deploy.adapters.actions.merge')}</span>
             </button>
           )}
-          <div className="text-xs text-gray-400">{t('deploy.adapters.actions.deploy')} • {t('deploy.adapters.actions.merge')} • {t('deploy.adapters.actions.manage')}</div>
         </div>
       </div>
 

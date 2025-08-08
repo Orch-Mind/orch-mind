@@ -37,7 +37,7 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/10 px-4">
       <div
-        className="rounded-2xl p-6 w-full max-w-4xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="rounded-2xl p-6 w-full max-w-4xl relative overflow-hidden"
         style={{
           background:
             "linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
@@ -62,7 +62,7 @@ const SettingsModal: React.FC<SettingsModalProps & { initialTab?: string }> = ({
         />
 
         {/* Conteúdo das abas */}
-        <div className="mb-4">
+        <div>
           {/* General Tab */}
           {settings.activeTab === "general" && (
             <GeneralSettings

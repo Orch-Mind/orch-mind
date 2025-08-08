@@ -140,8 +140,8 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
   const lastTrainingDate = getLastTrainingDate();
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/50 to-indigo-900/50 backdrop-blur-sm rounded-md p-3 border border-blue-400/20 h-52 overflow-hidden">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-gradient-to-r from-blue-900/50 to-indigo-900/50 backdrop-blur-sm rounded-md p-2 border border-blue-400/20">
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center space-x-2">
           <div className="w-5 h-5 bg-blue-500/20 rounded-sm flex items-center justify-center">
             <svg
@@ -159,7 +159,7 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">{t('training.stats')}</h3>
+            <h3 className="text-xs font-semibold text-white">{t('training.stats')}</h3>
             <p className="text-blue-300 text-[8px]">{t('training.dataOverview')}</p>
           </div>
         </div>
@@ -169,14 +169,14 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         {/* General Statistics Grid */}
-        <div className="grid grid-cols-2 gap-2 text-[9px]">
+        <div className="grid grid-cols-2 gap-1 text-[8px]">
           {/* Total Conversations */}
-          <div className="bg-blue-500/10 rounded p-1.5">
+          <div className="bg-blue-500/10 rounded p-1">
             <div className="flex items-center justify-between">
               <span className="text-blue-300 font-medium">{t('training.conversations')}</span>
-              <span className="text-white font-mono text-sm">
+              <span className="text-white font-mono text-xs">
                 {stats.totalConversations}
               </span>
             </div>
@@ -186,10 +186,10 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
           </div>
 
           {/* Total Messages */}
-          <div className="bg-yellow-500/10 rounded p-1.5">
+          <div className="bg-yellow-500/10 rounded p-1">
             <div className="flex items-center justify-between">
               <span className="text-yellow-300 font-medium">{t('training.messages')}</span>
-              <span className="text-white font-mono text-sm">
+              <span className="text-white font-mono text-xs">
                 {stats.totalMessages}
               </span>
             </div>
@@ -244,23 +244,6 @@ const TrainingStats: React.FC<TrainingStatsProps> = ({
             </div>
           </div>
         )}
-
-        {/* Enhanced Data Summary */}
-        <div className="bg-gray-800/30 rounded-lg p-2">
-          <div className="text-xs text-gray-300 mb-1">
-            <div className="font-medium text-cyan-300 mb-0.5 text-[9px]">
-              {t('training.qualityAnalysis')}:
-            </div>
-            <div className="text-[8px] text-gray-400">
-              {stats.totalConversations} {t('training.conversationsWith')} {stats.validPairs}{" "}
-              {t('training.trainingPairsQuality')}{" "}
-              <span className={qualityRating.color}>
-                {conversationQuality}% ({qualityRating.label})
-              </span>{" "}
-              {t('training.qualityBasedOn')}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

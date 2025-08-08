@@ -127,7 +127,7 @@ export class LoRAMergeService {
           );
 
           // Clean adapter name - remove _adapter suffix if present
-          const cleanAdapterName = adapterName.replace(/_adapter$/, "");
+          const cleanAdapterName = adapterName;
 
           // CRITICAL FIX: Use EXACT same logic as AdapterRegistry.findModelPath()
           // Handle the naming inconsistency between localStorage (underscores) and filesystem (hyphens)
@@ -135,54 +135,12 @@ export class LoRAMergeService {
 
           // Try multiple adapter directory names with comprehensive naming conventions
           const possibleAdapterDirs = [
-            // 1. Original naming (with _adapter suffix)
-            path.join(adapterWeightsDir, `${adapterName}_adapter`),
+            // 1. Original naming
             path.join(adapterWeightsDir, adapterName),
 
-            // 2. Clean naming (without _adapter suffix, then add _adapter)
-            path.join(adapterWeightsDir, `${cleanAdapterName}_adapter`),
-            path.join(adapterWeightsDir, cleanAdapterName),
-
-            // 3. CRITICAL: Handle localStorage underscore -> filesystem hyphen conversion
-            // "gemma3_adapter_1751636717504" -> "gemma3-adapter-1751636717504"
-            path.join(
-              adapterWeightsDir,
-              `${cleanAdapterName.replace(/_/g, "-")}_adapter`
-            ),
-            path.join(adapterWeightsDir, cleanAdapterName.replace(/_/g, "-")),
-
-            // 4. Handle full name underscore -> hyphen conversion
-            // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
+            // 2. Handle underscore to hyphen conversion
             path.join(adapterWeightsDir, adapterName.replace(/_/g, "-")),
-            path.join(
-              adapterWeightsDir,
-              `${adapterName.replace(/_/g, "-")}_adapter`
-            ),
-
-            // 5. Handle mixed patterns (common issue)
-            path.join(
-              adapterWeightsDir,
-              `${adapterName.replace(/_adapter/g, "-adapter")}`
-            ),
-            path.join(
-              adapterWeightsDir,
-              `${cleanAdapterName.replace(/_/g, "-")}-adapter`
-            ),
-
-            // 6. SPECIFIC FIX: Handle the exact pattern we're seeing
-            // "gemma3_adapter_1751636717504_adapter" -> "gemma3-adapter-1751636717504_adapter"
-            // This handles cases where localStorage has "model_adapter_timestamp_adapter" format
-            path.join(
-              adapterWeightsDir,
-              cleanAdapterName.replace(
-                /^([^_]+)_adapter_(.+)$/,
-                "$1-adapter-$2_adapter"
-              )
-            ),
-            path.join(
-              adapterWeightsDir,
-              cleanAdapterName.replace(/^([^_]+)_adapter_(.+)$/, "$1-adapter-$2")
-            ),
+            path.join(adapterWeightsDir, adapterName.replace(/-/g, "_")),
           ];
 
           console.log(
@@ -743,7 +701,7 @@ export class LoRAMergeService {
       await fs.mkdir(registryDir, { recursive: true });
 
       // Create symlink or copy merged adapter to weights directory
-      const targetWeightsDir = path.join(weightsDir, `${adapterName}_adapter`);
+      const targetWeightsDir = path.join(weightsDir, adapterName);
 
       // SECURITY FIX: Always copy instead of symlink to avoid "insecure path" errors
       // Symlinks can create relative paths that Ollama considers insecure
@@ -775,7 +733,7 @@ export class LoRAMergeService {
       // Create registry metadata for the merged adapter
       const registryMetadata = {
         adapter_id: adapterName,
-        adapter_name: `${adapterName}_adapter`,
+        adapter_name: adapterName,
         base_model: metadata.targetBaseModel,
         hf_model: metadata.targetBaseModel,
         adapter_path: targetWeightsDir,
@@ -796,7 +754,7 @@ export class LoRAMergeService {
       // Save registry file
       const registryFilePath = path.join(
         registryDir,
-        `${adapterName}_adapter.json`
+        `${adapterName}.json`
       );
       await fs.writeFile(
         registryFilePath,
@@ -806,7 +764,7 @@ export class LoRAMergeService {
       console.log(
         `📋 Registered merged adapter in main system: ${registryFilePath}`
       );
-      console.log(`🎯 Deploy system can now find: ${adapterName}_adapter`);
+      console.log(`🎯 Deploy system can now find: ${adapterName}`);
     } catch (error) {
       console.error(
         `❌ Failed to register merged adapter in main system:`,

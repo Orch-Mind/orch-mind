@@ -496,7 +496,7 @@ export class P2PCoordinator {
     await fs.mkdir(registryDir, { recursive: true });
 
     // Create adapter directory
-    const adapterDir = path.join(weightsDir, `${metadata.name}_adapter`);
+    const adapterDir = path.join(weightsDir, metadata.name);
     await fs.mkdir(adapterDir, { recursive: true });
 
     // Determine file extension based on metadata
@@ -519,16 +519,16 @@ export class P2PCoordinator {
       layers_pattern: null,
       layers_to_transform: null,
       loftq_config: {},
-      lora_alpha: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_alpha' in metadata.metadata) ? (metadata.metadata as { lora_alpha: number }).lora_alpha : 32,
-      lora_dropout: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_dropout' in metadata.metadata) ? (metadata.metadata as { lora_dropout: number }).lora_dropout : 0.1,
+      lora_alpha: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_alpha' in metadata.metadata) ? (metadata.metadata as { lora_alpha: number }).lora_alpha : 16,
+      lora_dropout: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_dropout' in metadata.metadata) ? (metadata.metadata as { lora_dropout: number }).lora_dropout : 0.05,
       megatron_config: null,
       megatron_core: "megatron.core",
       modules_to_save: null,
       peft_type: "LORA",
-      r: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_rank' in metadata.metadata) ? (metadata.metadata as { lora_rank: number }).lora_rank : 16,
+      r: (metadata.metadata && typeof metadata.metadata === 'object' && 'lora_rank' in metadata.metadata) ? (metadata.metadata as { lora_rank: number }).lora_rank : 8,
       rank_pattern: {},
       revision: null,
-      target_modules: (metadata.metadata && typeof metadata.metadata === 'object' && 'target_modules' in metadata.metadata) ? (metadata.metadata as { target_modules: string[] }).target_modules : ["q_proj", "v_proj"],
+      target_modules: (metadata.metadata && typeof metadata.metadata === 'object' && 'target_modules' in metadata.metadata) ? (metadata.metadata as { target_modules: string[] }).target_modules : ["q_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
       task_type: "CAUSAL_LM",
       use_dora: false,
       use_rslora: false
@@ -544,7 +544,7 @@ export class P2PCoordinator {
     // Create registry metadata
     const registryMetadata = {
       adapter_id: metadata.metadata?.adapter_id || metadata.name,
-      adapter_name: `${metadata.name}_adapter`,
+      adapter_name: metadata.name,
       base_model: metadata.metadata?.base_model || "unknown",
       hf_model: metadata.metadata?.hf_model || "unknown",
       adapter_path: adapterDir,
@@ -562,7 +562,7 @@ export class P2PCoordinator {
     // Save registry file
     const registryFilePath = path.join(
       registryDir,
-      `${metadata.name}_adapter.json`
+      `${metadata.name}.json`
     );
     await fs.writeFile(
       registryFilePath,

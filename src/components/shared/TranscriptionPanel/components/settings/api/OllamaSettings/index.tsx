@@ -93,12 +93,12 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
   const hasActiveDownloads = downloadingModels.size > 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <span className="text-sm">🦙</span>
-          <h3 className="text-sm font-medium text-cyan-300">{t('api.ollama.ollamaModels')}</h3>
+          <h3 className="text-xs font-medium text-cyan-300">{t('api.ollama.ollamaModels')}</h3>
           {isRefreshing && (
             <div className="animate-spin inline-block w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full ml-2"></div>
           )}
@@ -136,12 +136,12 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded p-2">
+        <div className="bg-red-500/10 border border-red-500/30 rounded p-1">
           <div className="flex items-center">
             <ExclamationTriangleIcon className="w-3 h-3 text-red-400 mr-1" />
             <div>
-              <h4 className="text-red-400 font-medium text-[10px]">{t('api.ollama.error')}</h4>
-              <p className="text-red-400/70 text-[10px]">{error}</p>
+              <h4 className="text-red-400 font-medium text-[9px]">{t('api.ollama.error')}</h4>
+              <p className="text-red-400/70 text-[9px]">{error}</p>
             </div>
           </div>
         </div>
@@ -149,14 +149,14 @@ export const OllamaSettings: React.FC<OllamaSettingsProps> = ({
 
       {/* Active Downloads Warning */}
       {hasActiveDownloads && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-1">
           <div className="flex items-center">
             <div className="animate-spin w-3 h-3 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full mr-1"></div>
             <div>
-              <h4 className="text-yellow-400 font-medium text-[10px]">
+              <h4 className="text-yellow-400 font-medium text-[9px]">
                 {t('api.ollama.downloadInProgress')}
               </h4>
-              <p className="text-yellow-400/70 text-[10px]">
+              <p className="text-yellow-400/70 text-[9px]">
                 {t('api.ollama.downloadsDisabled')}
               </p>
             </div>

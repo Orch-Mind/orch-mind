@@ -17,25 +17,26 @@ class TrainingConfig:
     data_file: str
     max_steps: int
     
-    # Optional parameters with defaults
-    learning_rate: float = 2e-4
-    lora_rank: int = 16
-    lora_alpha: int = 32
-    lora_dropout: float = 0.05
-    batch_size: int = 1
-    gradient_accumulation_steps: int = 8
+    # Optional parameters with ULTRA MEMORY defaults
+    learning_rate: float = 2e-5
+    lora_rank: int = 8  # Reduced from 8 to save memory
+    lora_alpha: int = 16  # Reduced from 16 to match rank
+    lora_dropout: float = 0.1  # Increased for regularization
+    batch_size: int = 1  # Force minimal batch size
+    gradient_accumulation_steps: int = 4  # Balanced for memory efficiency and training steps
     warmup_steps: Optional[int] = None
     
     # Model-specific parameters
     hf_model_name: Optional[str] = None
     target_modules: Optional[list] = None
     
-    # Training parameters
+    # Training parameters - ULTRA MEMORY optimized
     num_epochs: int = 1
-    fp16: bool = False
-    optim: str = "adamw_torch"
+    fp16: bool = True  # Enable FP16 for memory savings
+    optim: str = "adamw_torch"  # Memory-efficient optimizer
     weight_decay: float = 0.01
     lr_scheduler_type: str = "cosine"
+    max_seq_length: int = 512  # Reduced from default 2048 to save memory
     
     # Output parameters
     output_dir: Optional[str] = None
@@ -84,4 +85,4 @@ class TrainingConfig:
             "output_dir": self.output_dir,
             "save_steps": self.save_steps,
             "logging_steps": self.logging_steps
-        } 
+        }

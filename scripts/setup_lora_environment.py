@@ -367,4 +367,4 @@ if __name__ == "__main__":
         sys.exit(1)
     except Exception as e:
         log(f"Erro inesperado: {e}", Colors.RED)
-        sys.exit(1) 
+        sys.exit(1)

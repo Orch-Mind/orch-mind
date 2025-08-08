@@ -230,9 +230,17 @@ export class SimplePromptProcessor {
 
     // Add conversation history
     if (conversationMessages?.length) {
-      messages.push(...conversationMessages);
+      // Convert ChatMessage[] to LLM format
+      const convertedMessages = conversationMessages.map((msg: any) => ({
+        role: msg.type === "user" ? "user" : "assistant",
+        content: msg.content
+      }));
+      
+      LoggingUtils.logInfo(`📝 [CONTEXT] Adding ${convertedMessages.length} conversation messages to context`);
+      messages.push(...convertedMessages);
     } else {
       const history = this.memoryService.getConversationHistory();
+      LoggingUtils.logInfo(`📝 [CONTEXT] Adding ${history.length} history messages to context`);
       messages.push(...history);
     }
 

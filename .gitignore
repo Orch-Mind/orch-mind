@@ -48,6 +48,7 @@ llama.cpp/**
 
 # IDE and development
 .VSCodeCounter
+.trae
 out/
 
 # Debug and log files

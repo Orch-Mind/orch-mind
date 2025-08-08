@@ -80,8 +80,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
   };
 
   return (
-    <div className="bg-black/20 backdrop-blur-sm rounded-md p-3 border border-cyan-400/20 h-52 flex flex-col overflow-hidden">
-      <h3 className="text-sm font-semibold text-cyan-400 mb-2">
+    <div className="bg-black/20 backdrop-blur-sm rounded-md p-2 border border-cyan-400/20 flex flex-col overflow-hidden h-full">
+      <h3 className="text-xs font-semibold text-cyan-400 mb-1">
         {t('training.control')}
       </h3>
 
@@ -253,12 +253,6 @@ const TrainingReadyDisplay: React.FC<TrainingReadyDisplayProps> = ({
           ? t('training.selectConversationsFirst')
           : t('training.startTraining', { count: selectedCount })}
       </button>
-
-      {canStartTraining && (
-        <div className="text-xs text-gray-400 text-center leading-tight">
-          {t('training.trainingDescription')}
-        </div>
-      )}
     </div>
   </div>
   );

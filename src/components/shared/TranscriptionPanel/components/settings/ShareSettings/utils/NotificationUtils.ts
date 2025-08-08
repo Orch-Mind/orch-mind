@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
+import { NotificationService } from "../../../../../../../shared/services/NotificationService";
+
 /**
  * Utility class for showing notifications in the ShareSettings components
  * Provides consistent notification handling across the P2P sharing system
+ * UPDATED: Now uses react-toastify for non-blocking notifications
  */
 export class NotificationUtils {
   /**
@@ -11,13 +14,7 @@ export class NotificationUtils {
    */
   static showSuccess(message: string): void {
     console.log(`✅ SUCCESS: ${message}`);
-
-    // In a real implementation, this would integrate with a toast system
-    // For now, we'll use console logging with visual indicators
-    if (typeof window !== "undefined" && window.alert) {
-      // Temporary implementation using alert for immediate feedback
-      window.alert(`✅ ${message}`);
-    }
+    NotificationService.success(`✅ ${message}`);
   }
 
   /**
@@ -25,13 +22,7 @@ export class NotificationUtils {
    */
   static showError(message: string): void {
     console.error(`❌ ERROR: ${message}`);
-
-    // In a real implementation, this would integrate with a toast system
-    // For now, we'll use console logging with visual indicators
-    if (typeof window !== "undefined" && window.alert) {
-      // Temporary implementation using alert for immediate feedback
-      window.alert(`❌ ${message}`);
-    }
+    NotificationService.error(`❌ ${message}`);
   }
 
   /**
@@ -39,13 +30,7 @@ export class NotificationUtils {
    */
   static showInfo(message: string): void {
     console.info(`ℹ️ INFO: ${message}`);
-
-    // In a real implementation, this would integrate with a toast system
-    // For now, we'll use console logging with visual indicators
-    if (typeof window !== "undefined" && window.alert) {
-      // Temporary implementation using alert for immediate feedback
-      window.alert(`ℹ️ ${message}`);
-    }
+    NotificationService.info(`ℹ️ ${message}`);
   }
 
   /**
@@ -53,12 +38,6 @@ export class NotificationUtils {
    */
   static showWarning(message: string): void {
     console.warn(`⚠️ WARNING: ${message}`);
-
-    // In a real implementation, this would integrate with a toast system
-    // For now, we'll use console logging with visual indicators
-    if (typeof window !== "undefined" && window.alert) {
-      // Temporary implementation using alert for immediate feedback
-      window.alert(`⚠️ ${message}`);
-    }
+    NotificationService.warning(`⚠️ ${message}`);
   }
 }

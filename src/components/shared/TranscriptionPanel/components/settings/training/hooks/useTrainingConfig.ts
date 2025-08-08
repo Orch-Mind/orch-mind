@@ -43,12 +43,12 @@ interface UseTrainingConfigReturn {
 // Source: scripts/python/lora_training/models/training_config.py
 const BACKEND_CONFIG: TrainingConfigData = {
   lora: {
-    rank: 16, // scripts/python/lora_training/models/training_config.py:22
-    alpha: 32, // scripts/python/lora_training/models/training_config.py:23
+    rank: 8, // scripts/python/lora_training/models/training_config.py:22
+    alpha: 16, // scripts/python/lora_training/models/training_config.py:23
     dropout: 0.05, // scripts/python/lora_training/models/training_config.py:24
-    learningRate: 2e-4, // scripts/python/lora_training/models/training_config.py:20
+    learningRate: 2e-5, // scripts/python/lora_training/models/training_config.py:20
     batchSize: 1,
-    gradientAccumulationSteps: 8,
+    gradientAccumulationSteps: 1,
     numEpochs: 1,
     fp16: false,
     optimizer: "adamw_torch",
