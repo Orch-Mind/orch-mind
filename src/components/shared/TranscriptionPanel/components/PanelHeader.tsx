@@ -45,11 +45,14 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
     <div className="orchos-header-glass flex justify-between items-center mb-4 h-14 px-4">
       {/* Logo e Título */}
       <h3 className="orchos-title font-bold text-xl tracking-wider flex items-center ml-2 orchos-header-gradient-text">
-        <span className="mr-2 text-base">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="10" r="8" stroke="#00F0FF" strokeWidth="1.5" />
-            <circle cx="10" cy="10" r="3" fill="#8F00FF" />
-          </svg>
+        <span className="mr-3 text-base">
+          <img 
+            src="/orch-mind-logo-transparent.png" 
+            alt="Orch-Mind" 
+            width="28" 
+            height="28" 
+            className="orch-mind-icon-enhanced"
+          />
         </span>
         {t('header.title')}
       </h3>
@@ -63,24 +66,15 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         <button
           title={t('header.importNeuralData')}
           onClick={onShowImportModal}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10"
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10 orbitron-font"
         >
-          <svg
+          <img 
+            src="/import.png" 
+            alt="Import Neural Data"
             width="18"
             height="18"
-            viewBox="0 0 20 20"
-            fill="none"
-            aria-hidden="true"
-          >
-            <circle cx="10" cy="10" r="8" stroke="#00F0FF" strokeWidth="1.5" />
-            <path
-              d="M10 6v5m0 0l2.5-2.5M10 11l-2.5-2.5"
-              stroke="#8F00FF"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+            className="filter brightness-110"
+          />
           {t('header.importNeuralData')}
         </button>
 

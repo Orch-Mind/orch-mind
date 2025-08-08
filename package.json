@@ -152,7 +152,7 @@
           ]
         }
       ],
-      "icon": "assets/icons/win-modern/icon.ico",
+      "icon": "assets/icons/win-circular-clean/icon.ico",
       "artifactName": "${productName}-Windows-${version}.${ext}",
       "executableName": "Orch-Mind",
       "legalTrademarks": "Orch-Mind",
