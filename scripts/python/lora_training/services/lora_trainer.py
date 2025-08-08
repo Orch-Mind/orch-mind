@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import json
+import psutil
 from typing import List, Dict, Any, Optional
 
 # Disable wandb completely to avoid login issues
@@ -506,6 +507,31 @@ class LoRATrainer(ILoRATrainer):
             try:
                 print("💾 Loading model with ULTRA AGGRESSIVE memory optimization...")
                 
+                # Windows-specific memory pre-checks with intelligent optimization
+                if is_windows:
+                    available_ram = psutil.virtual_memory().available / 1024**3  # GB
+                    total_ram = psutil.virtual_memory().total / 1024**3  # GB
+                    
+                    print(f"🪟 Windows Memory Check:")
+                    print(f"   • Available RAM: {available_ram:.1f} GB / {total_ram:.1f} GB")
+                    
+                    # If available RAM is less than 8GB, use extremely conservative settings
+                    if available_ram < 8:
+                        print("⚠️  Low available RAM detected - using EMERGENCY memory mode")
+                        # Force CPU with minimal memory footprint
+                        hw_config.device_type = "cpu"
+                        hw_config.device_map = "cpu"
+                        hw_config.torch_dtype = "float32"
+                        hw_config.load_in_8bit = False
+                        model_dtype = torch.float32
+                        
+                        # Windows emergency memory settings
+                        os.environ["OMP_NUM_THREADS"] = "1"  # Single thread to minimize memory
+                        os.environ["MKL_NUM_THREADS"] = "1"
+                        os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+                        
+                        print("🚨 Emergency CPU mode activated for Windows low-memory system")
+                
                 # Prepare model loading arguments
                 model_kwargs = {
                     "torch_dtype": model_dtype,
@@ -513,12 +539,30 @@ class LoRATrainer(ILoRATrainer):
                     "trust_remote_code": True,
                     "load_in_8bit": hw_config.load_in_8bit,
                     "low_cpu_mem_usage": True,  # Force enable
-                    "attn_implementation": "eager",  # Use memory-efficient attention
                 }
                 
-                # Only add use_cache for non-MPS devices (MPS doesn't support this parameter)
-                if hw_config.device_type != "mps":
-                    model_kwargs["use_cache"] = False  # Disable cache to save memory
+                # Windows-specific optimizations
+                if is_windows:
+                    model_kwargs.update({
+                        "attn_implementation": "eager",  # Use memory-efficient attention
+                        "torch_dtype": torch.float32,   # Force float32 on Windows to reduce memory
+                        "device_map": "cpu",             # Force CPU to avoid GPU memory issues
+                        "load_in_8bit": False,           # Disable quantization that might cause issues
+                    })
+                    print("🪟 Applied Windows-specific model loading optimizations")
+                else:
+                    model_kwargs["attn_implementation"] = "eager"
+                
+                # Note: use_cache parameter removed for Gemma3 compatibility
+                # Gemma3ForConditionalGeneration doesn't accept use_cache in constructor
+                
+                # Windows: Force garbage collection before model loading
+                if is_windows:
+                    print("🪟 Pre-loading memory cleanup...")
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        torch.cuda.synchronize()
                 
                 model = AutoModelForCausalLM.from_pretrained(
                     config.hf_model_name,

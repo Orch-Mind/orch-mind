@@ -590,7 +590,7 @@
     "confirmation": {
       "message": "Digite um nome personalizado para seu modelo implantado:"
     },
-    "deleteConfirmation": "Tem certeza que deseja excluir o adaptador \"{adapterId}\"?",
+    "deleteConfirmation": "Tem certeza que deseja excluir o adaptador \"{{adapterId}}\"?",
     "adapters": {
       "title": "Adaptadores LoRA",
       "actions": {

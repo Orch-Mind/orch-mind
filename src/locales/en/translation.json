@@ -590,7 +590,7 @@
     "confirmation": {
       "message": "Enter a custom name for your deployed model:"
     },
-    "deleteConfirmation": "Are you sure you want to delete adapter \"{adapterId}\"?",
+    "deleteConfirmation": "Are you sure you want to delete adapter \"{{adapterId}}\"?",
     "adapters": {
       "title": "LoRA Adapters",
       "actions": {
