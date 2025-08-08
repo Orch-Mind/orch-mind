@@ -3,10 +3,13 @@
 // Single responsibility: Handle training progress, status, and execution
 
 import { useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { TrainingRequest, TrainingResult } from "../types";
 import { usePersistedTrainingState } from "./usePersistedTrainingState";
 
 export const useTrainingProgress = () => {
+  const { t } = useTranslation();
+  
   // Use persistent training state hook
   const {
     isTraining,
@@ -97,7 +100,7 @@ export const useTrainingProgress = () => {
         if (result?.success) {
           setProgress(100);
           setStatus(
-            `✅ Training completed! Model: ${expectedModelName}`
+            `✅ ${t('training.trainingCompleted')} ${expectedModelName}`
           );
           setResult(result);
           onSuccess(result);

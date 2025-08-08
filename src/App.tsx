@@ -3,6 +3,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   DeepgramProvider,
   MicrophoneProvider,
@@ -140,6 +142,28 @@ export default function App() {
       </QueryClientProvider>
       {/* Global model download checker overlay */}
       <StartupDependencyChecker />
+      {/* React-toastify container for non-blocking notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={true}
+        newestOnTop={true}
+        closeOnClick={true}
+        pauseOnFocusLoss={false}
+        draggable={false}
+        pauseOnHover={true}
+        theme="dark"
+        limit={2}
+        toastStyle={{
+          background: '#1a1a2e',
+          color: '#E3F6FF',
+          borderRadius: '8px',
+          border: '1px solid #00F0FF',
+          fontSize: '14px',
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '500'
+        }}
+      />
     </div>
   );
 }

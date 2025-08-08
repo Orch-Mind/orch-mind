@@ -369,7 +369,7 @@ async function createWindow(): Promise<void> {
     titleBarOverlay: false,
     autoHideMenuBar: true,
     useContentSize: true,
-    resizable: false,
+    resizable: true,
     movable: true,
     minimizable: true,
     maximizable: true,

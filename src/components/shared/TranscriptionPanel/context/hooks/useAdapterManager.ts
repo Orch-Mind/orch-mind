@@ -154,15 +154,8 @@ export const useAdapterManager = ({
                   // Try different naming variations
                   const namingVariations = [
                     adapterName,
-                    `${adapterName}_adapter`,
-                    adapterName.replace(/_adapter$/, ""),
-                    adapterName.replace(/_adapter$/, "") + "_adapter",
-                    // Handle underscore to hyphen conversion
                     adapterName.replace(/_/g, "-"),
-                    adapterName.replace(/_/g, "-") + "_adapter",
-                    adapterName.replace(/_adapter$/, "").replace(/_/g, "-"),
-                    adapterName.replace(/_adapter$/, "").replace(/_/g, "-") +
-                      "_adapter",
+                    adapterName.replace(/-/g, "_"),
                   ];
 
                   for (const variation of namingVariations) {

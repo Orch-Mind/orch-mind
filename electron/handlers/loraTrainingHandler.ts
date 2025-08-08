@@ -439,42 +439,23 @@ export function setupLoRATrainingHandlers(): void {
         console.log(`[IPC] Registry dir: ${registryDir}`);
 
         // Clean adapter name - remove _adapter suffix if present for directory search
-        const cleanAdapterName = adapterName.replace(/_adapter$/, "");
+        const cleanAdapterName = adapterName;
 
         // Try multiple possible adapter directory names
         const possibleAdapterDirs = [
-          path.join(weightsDir, `${adapterName}_adapter`),
           path.join(weightsDir, adapterName),
-          path.join(weightsDir, `${cleanAdapterName}_adapter`),
           path.join(weightsDir, cleanAdapterName),
           // Handle underscore to hyphen conversion
-          path.join(
-            weightsDir,
-            `${cleanAdapterName.replace(/_/g, "-")}_adapter`
-          ),
           path.join(weightsDir, cleanAdapterName.replace(/_/g, "-")),
-          // Handle full name underscore to hyphen conversion
           path.join(weightsDir, adapterName.replace(/_/g, "-")),
-          path.join(weightsDir, `${adapterName.replace(/_/g, "-")}_adapter`),
         ];
 
         // Try multiple possible registry file names
         const possibleRegistryFiles = [
-          path.join(registryDir, `${adapterName}_adapter.json`),
           path.join(registryDir, `${adapterName}.json`),
-          path.join(registryDir, `${cleanAdapterName}_adapter.json`),
           path.join(registryDir, `${cleanAdapterName}.json`),
           // Handle underscore to hyphen conversion
-          path.join(
-            registryDir,
-            `${cleanAdapterName.replace(/_/g, "-")}_adapter.json`
-          ),
           path.join(registryDir, `${cleanAdapterName.replace(/_/g, "-")}.json`),
-          // Handle full name underscore to hyphen conversion
-          path.join(
-            registryDir,
-            `${adapterName.replace(/_/g, "-")}_adapter.json`
-          ),
           path.join(registryDir, `${adapterName.replace(/_/g, "-")}.json`),
         ];
 

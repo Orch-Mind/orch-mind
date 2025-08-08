@@ -123,42 +123,34 @@ export const usePersistedTrainingState = () => {
   }, [store]);
 
   const updateTrainingState = useCallback((updates: Partial<TrainingStateInfo>) => {
-    console.log(`[PersistedTrainingState] Updating training state:`, updates);
     store.updateTrainingState(updates);
   }, [store]);
 
   const setIsTraining = useCallback((isTraining: boolean) => {
-    console.log(`[PersistedTrainingState] Setting isTraining: ${isTraining}`);
     store.setIsTraining(isTraining);
   }, [store]);
 
   const setProgress = useCallback((progress: number) => {
-    console.log(`[PersistedTrainingState] Setting progress: ${progress}%`);
     store.setProgress(progress);
   }, [store]);
 
   const setStatus = useCallback((status: string) => {
-    console.log(`[PersistedTrainingState] Setting status: ${status}`);
     store.setStatus(status);
   }, [store]);
 
   const setStartTime = useCallback((startTime: number | null) => {
-    console.log(`[PersistedTrainingState] Setting start time: ${startTime}`);
     store.setStartTime(startTime);
   }, [store]);
 
   const setEstimatedTime = useCallback((estimatedTime: string) => {
-    console.log(`[PersistedTrainingState] Setting estimated time: ${estimatedTime}`);
     store.setEstimatedTime(estimatedTime);
   }, [store]);
 
   const setResult = useCallback((result: TrainingResult | null) => {
-    console.log(`[PersistedTrainingState] Setting result:`, result);
     store.setResult(result);
   }, [store]);
 
   const resetTrainingState = useCallback(() => {
-    console.log(`[PersistedTrainingState] Resetting training state`);
     store.resetTrainingState();
   }, [store]);
 

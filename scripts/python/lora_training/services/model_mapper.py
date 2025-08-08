@@ -50,7 +50,7 @@ class ModelMapper(IModelMapper):
             return "unsloth/gemma-3-4b-it"
         else:
             print(f"⚠️ Unknown model {ollama_model}, using gemma3n as fallback")
-            return "unsloth/gemma-3n-E4B-it"
+            return "unsloth/gemma-3-4b-it"
     
     def is_unsloth_model(self, ollama_model: str) -> bool:
         """Check if a model is from Unsloth (requires deployment before adapter training)."""

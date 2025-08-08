@@ -3,6 +3,7 @@
 // Single responsibility: Handle all training-related modals
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import type { ModalState, TrainingDetails } from "../types";
 
 interface TrainingModalsProps {
@@ -68,7 +69,10 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
   adapterName,
   trainingDetails,
   onClose,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center">
     <div className="bg-gray-900 border border-cyan-400/30 rounded-lg p-6 max-w-md mx-4">
       <div className="text-center">
@@ -89,26 +93,26 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          LoRA Adapter Created!
+          {t("training.successModal.title", "LoRA Adapter Created!")}
         </h3>
         <p className="text-gray-300 mb-4">
-          Your LoRA adapter{" "}
+          {t("training.successModal.description", "Your LoRA adapter")}{" "}
           <span className="text-cyan-400 font-mono text-sm">{adapterName}</span>{" "}
-          has been created successfully.
+          {t("training.successModal.descriptionEnd", "has been created successfully.")}
         </p>
 
         {trainingDetails && (
           <div className="mb-4 p-3 bg-gray-800/50 rounded-lg text-sm">
             <div className="text-gray-300">
               <div className="flex justify-between">
-                <span>Training Examples:</span>
+                <span>{t("training.successModal.trainingExamples", "Training Examples:")}</span>
                 <span className="text-cyan-400">
                   {trainingDetails.trainingExamples}
                 </span>
               </div>
               {trainingDetails.trainingDuration && (
                 <div className="flex justify-between">
-                  <span>Duration:</span>
+                  <span>{t("training.successModal.duration", "Duration:")}</span>
                   <span className="text-cyan-400">
                     {Math.round(trainingDetails.trainingDuration / 1000)}s
                   </span>
@@ -119,8 +123,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         )}
 
         <p className="text-sm text-gray-400 mb-6">
-          The adapter is ready to be enabled/disabled from the LoRA Adapters
-          panel.
+          {t("training.successModal.readyMessage", "The adapter is ready to be enabled/disabled from the LoRA Adapters panel.")}
         </p>
 
         <div className="flex justify-center">
@@ -128,13 +131,14 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
             onClick={onClose}
             className="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
           >
-            Continue
+            {t("training.successModal.continue", "Continue")}
           </button>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Reset Modal Component (SRP)
 interface ResetModalProps {
@@ -142,7 +146,10 @@ interface ResetModalProps {
   onClose: () => void;
 }
 
-const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
+const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center">
     <div className="bg-gray-900 border border-red-400/30 rounded-lg p-6 max-w-md mx-4">
       <div className="text-center">
@@ -163,23 +170,22 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          Delete All LoRA Adapters?
+          {t("training.resetModal.title", "Delete All LoRA Adapters?")}
         </h3>
         <p className="text-gray-300 mb-4">
-          This will permanently delete all your LoRA adapters. Your
-          conversations will be preserved.
+          {t("training.resetModal.description", "This will permanently delete all your LoRA adapters. Your conversations will be preserved.")}
         </p>
 
         <div className="mb-4 p-3 bg-red-900/20 rounded-lg text-sm text-red-200">
-          <p className="font-medium mb-1">This action will:</p>
+          <p className="font-medium mb-1">{t("training.resetModal.actionWillLabel", "This action will:")}</p>
           <ul className="text-left space-y-1">
-            <li>• Delete all LoRA adapters from localStorage</li>
-            <li>• Clear training status history</li>
+            <li>• {t("training.resetModal.deleteAdapters", "Delete all LoRA adapters from localStorage")}</li>
+            <li>• {t("training.resetModal.clearHistory", "Clear training status history")}</li>
             <li>
-              • <strong>PRESERVE</strong> all conversations and chat history
+              • <strong>{t("training.resetModal.preserve", "PRESERVE")}</strong> {t("training.resetModal.preserveConversations", "all conversations and chat history")}
             </li>
             <li>
-              • <strong>NOT</strong> delete actual adapter files from disk
+              • <strong>{t("training.resetModal.notDelete", "NOT")}</strong> {t("training.resetModal.notDeleteFiles", "delete actual adapter files from disk")}
             </li>
           </ul>
         </div>
@@ -189,19 +195,20 @@ const ResetModal: React.FC<ResetModalProps> = ({ onConfirm, onClose }) => (
             onClick={onClose}
             className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
-            Cancel
+            {t("training.resetModal.cancel", "Cancel")}
           </button>
           <button
             onClick={onConfirm}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
           >
-            Delete Adapters
+            {t("training.resetModal.deleteAdaptersButton", "Delete Adapters")}
           </button>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Delete Adapter Modal Component (SRP)
 interface DeleteAdapterModalProps {
@@ -216,7 +223,10 @@ const DeleteAdapterModal: React.FC<DeleteAdapterModalProps> = ({
   isDeleting,
   onConfirm,
   onClose,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center">
     <div className="bg-gray-900 border border-red-400/30 rounded-lg p-6 max-w-md mx-4">
       <div className="text-center">
@@ -237,19 +247,19 @@ const DeleteAdapterModal: React.FC<DeleteAdapterModalProps> = ({
         </div>
 
         <h3 className="text-xl font-semibold text-white mb-2">
-          Delete LoRA Adapter?
+          {t("training.deleteModal.title", "Delete LoRA Adapter?")}
         </h3>
         <p className="text-gray-300 mb-4">
-          Are you sure you want to delete the LoRA adapter{" "}
+          {t("training.deleteModal.description", "Are you sure you want to delete the LoRA adapter")}{" "}
           <span className="text-red-400 font-mono text-sm">{adapterId}</span>?
         </p>
 
         <div className="mb-4 p-3 bg-red-900/20 rounded-lg text-sm text-red-200">
-          <p className="font-medium mb-1">This action will:</p>
+          <p className="font-medium mb-1">{t("training.deleteModal.actionWillLabel", "This action will:")}</p>
           <ul className="text-left space-y-1">
-            <li>• Permanently delete the adapter files</li>
-            <li>• Remove the adapter from your adapters list</li>
-            <li>• Disable the adapter if currently enabled</li>
+            <li>• {t("training.deleteModal.deleteFiles", "Permanently delete the adapter files")}</li>
+            <li>• {t("training.deleteModal.removeFromList", "Remove the adapter from your adapters list")}</li>
+            <li>• {t("training.deleteModal.disableAdapter", "Disable the adapter if currently enabled")}</li>
           </ul>
         </div>
 
@@ -258,17 +268,18 @@ const DeleteAdapterModal: React.FC<DeleteAdapterModalProps> = ({
             onClick={onClose}
             className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
-            Cancel
+            {t("training.deleteModal.cancel", "Cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={isDeleting}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50"
           >
-            {isDeleting ? "Deleting..." : "Delete Adapter"}
+            {isDeleting ? t("training.deleteModal.deleting", "Deleting...") : t("training.deleteModal.deleteButton", "Delete Adapter")}
           </button>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};

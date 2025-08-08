@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import "./ShareSettings/styles.css";
 
@@ -31,7 +31,14 @@ const ShareSettings: React.FC = () => {
     incomingAdapters,
     toggleAdapterSharing,
     clearIncomingAdapters,
+    loadLocalAdapters,
   } = useP2PContext();
+
+  // Load adapters automatically on mount - same pattern as Deploy tab
+  useEffect(() => {
+    console.log("🔄 [SHARESETS] ShareSettings mounted, loading adapters automatically...");
+    loadLocalAdapters();
+  }, []);
 
   // SRP: Handler focado apenas em desconexão
   const handleDisconnect = async () => {

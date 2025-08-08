@@ -5,6 +5,7 @@ Hardware detection and optimization service for LoRA training
 
 import platform
 import sys
+import os
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 
@@ -27,7 +28,27 @@ class HardwareDetector:
     """Detects hardware capabilities and provides optimal training configuration."""
     
     def __init__(self):
+        # Enable MPS fallback for better compatibility
+        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
         self.hardware_info = self._detect_hardware()
+        
+    def validate_mps_compatibility(self) -> bool:
+        """Validate MPS compatibility and setup."""
+        try:
+            import torch
+            if not torch.backends.mps.is_available():
+                return False
+                
+            # Test MPS device
+            device = torch.device("mps")
+            x = torch.ones(1, device=device)
+            if x.device.type != "mps":
+                return False
+                
+            return True
+        except Exception as e:
+            print(f"⚠️ MPS validation failed: {str(e)}")
+            return False
     
     def _detect_hardware(self) -> Dict[str, Any]:
         """Detect available hardware and capabilities."""
@@ -65,50 +86,54 @@ class HardwareDetector:
         
         # Apple Silicon MPS optimization
         if self.hardware_info["mps_available"] and self.hardware_info["platform"] == "Darwin":
+            print("✅ Apple Silicon (MPS) detected. Applying optimizations.")
             return self._get_mps_config(model_name)
         
         # CUDA optimization
         elif self.hardware_info["cuda_available"]:
+            print("✅ NVIDIA CUDA GPU detected. Applying optimizations.")
             return self._get_cuda_config(model_name)
         
         # CPU fallback
         else:
+            print("⚠️ No GPU detected. Falling back to CPU.")
             return self._get_cpu_config(model_name)
     
     def _get_mps_config(self, model_name: str) -> HardwareConfig:
-        """Optimized configuration for Apple Silicon MPS."""
+        """Ultra-optimized configuration for Apple Silicon MPS with aggressive memory savings."""
         # Special handling for Gemma models on MPS
         model_name_lower = model_name.lower()
         if "gemma" in model_name_lower and self.hardware_info["mps_available"]:
-            print("\n💾 Gemma model detected - MINIMUM MEMORY MODE for MPS")
-            print("   • Aggressive quantization (Q4_K_M/Q4_K_S simulation)")
+            print("\n💾 Gemma model detected - ULTRA MINIMUM MEMORY MODE for MPS")
+            print("   • Ultra aggressive quantization simulation")
             print("   • Maximum memory optimization")
-            print("   • Reduced batch size for minimal memory footprint")
+            print("   • Minimal memory footprint configuration")
             
-            # Return Gemma-specific MPS configuration with minimal memory usage
+            # Return Gemma-specific MPS configuration with ultra minimal memory usage
             return HardwareConfig(
                 device_type="mps",
                 device_map="mps",
                 torch_dtype="float16",  # Use float16 to save memory
                 load_in_8bit=False,     # Don't use 8-bit (not supported on MPS)
                 use_fp16_trainer=False, # MPS handles dtype at model level
-                gradient_checkpointing=False,  # DISABLED - causes gradient flow issues with Gemma
+                gradient_checkpointing=True,  # ENABLED for maximum memory savings
                 low_cpu_mem_usage=True,
                 dataloader_num_workers=0,  # Single worker for stability
                 dataloader_pin_memory=False  # Not needed for MPS
             )
         
-        # Default MPS config for other models
+        # ULTRA AGGRESSIVE memory config for all other models on MPS
+        print("💾 Using ULTRA AGGRESSIVE memory optimization for MPS")
         return HardwareConfig(
             device_type="mps",
-            torch_dtype="float16",
-            use_fp16_trainer=False,
-            device_map=None,
+            torch_dtype="float16",  # float16 for memory efficiency
+            use_fp16_trainer=False, # Disable to avoid memory overhead
+            device_map="mps", # Ensure model is on MPS
             low_cpu_mem_usage=True,
-            load_in_8bit=False,
-            gradient_checkpointing=False,
-            dataloader_pin_memory=False,
-            dataloader_num_workers=0
+            load_in_8bit=False, # Not supported on MPS
+            gradient_checkpointing=True, # Essential for memory saving
+            dataloader_pin_memory=False, # Disable to save memory
+            dataloader_num_workers=0 # Single worker to minimize memory overhead
         )
     
     def _get_cuda_config(self, model_name: str) -> HardwareConfig:
@@ -230,17 +255,10 @@ class HardwareDetector:
         """Get recommended batch size based on hardware."""
         config = self.get_optimal_config(model_name)
         
-        # Special handling for Gemma models
-        if "gemma" in model_name.lower() and config.device_type == "mps":
-            return 1  # Always use batch size 1 for Gemma on MPS
-        
-        # For other cases, use heuristics based on device type
-        if config.device_type == "cuda" and config.load_in_8bit:
-            return max(1, base_batch_size // 2)  # Half batch size for 8-bit
-        elif config.device_type == "cpu":
-            return max(1, base_batch_size // 2)  # Half batch size for CPU
-        else:
-            return base_batch_size  # Use default batch size
+        # Force batch size 1 for all configurations to optimize MPS performance
+        # This helps with memory efficiency and reduces MPS fallback issues
+        print(f"🎯 Forcing batch_size=1 for optimal MPS performance (was {base_batch_size})")
+        return 1
     
     def validate_mps_compatibility(self) -> bool:
         """Validate MPS compatibility and warn about potential issues."""

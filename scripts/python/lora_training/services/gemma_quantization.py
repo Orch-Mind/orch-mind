@@ -48,7 +48,8 @@ class GemmaMinimalMemoryQuantization:
             # to avoid conflicts with use_cache
             "fp16": True,
             "fp16_backend": "auto",
-            "optim": "adamw_torch_fused",  # More memory efficient
+            # Use adamw_torch for MPS compatibility (adamw_torch_fused not supported on MPS)
+            "optim": "adamw_torch" if self.device_type == "mps" else "adamw_torch_fused",
             
             # Aggressive gradient clipping  
             "max_grad_norm": self.gradient_clip_value,
@@ -235,4 +236,4 @@ def apply_gemma_minimal_memory_mode(model: nn.Module, tokenizer, training_args: 
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     
-    return model, training_args 
+    return model, training_args

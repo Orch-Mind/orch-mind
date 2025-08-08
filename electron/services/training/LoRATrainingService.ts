@@ -403,6 +403,8 @@ export class LoRATrainingService {
           trainingExamples: this.countTrainingExamples(trainingData),
           modelName: expectedModelName, // Expected name when enabled
           trainingDuration: trainingDuration,
+          adapterId: params.outputName, // Add adapterId to ensure modal shows
+          baseModel: params.baseModel,
         },
       };
     } catch (error) {
@@ -902,10 +904,10 @@ EXIT CODE: ${execError.code || "N/A"}`;
     // Apply modifiers
     let steps = baseSteps;
 
-    // LoRA rank modifier (we use r=16)
+    // LoRA rank modifier (we use r=8)
     steps = Math.round(steps * 1.0); // Standard rank
 
-    // Learning rate modifier (we use 3e-4 standard)
+    // Learning rate modifier (we use 2e-5 standard)
     steps = Math.round(steps * 1.0); // Standard LR
 
     // Task complexity modifier (medium complexity for conversations)
@@ -1361,7 +1363,7 @@ For Linux:
           );
           try {
             await execAsync(
-              `"${pipPath}" install psutil torch transformers numpy huggingface-hub pillow timm`
+              `"${pipPath}" install psutil torch transformers numpy pillow timm`
             );
             console.log(
               `[LoRA] ✅ Successfully installed essential packages without version constraints`
@@ -1378,7 +1380,7 @@ For Linux:
         );
         try {
           await execAsync(
-            `"${pipPath}" install psutil torch transformers numpy huggingface-hub pillow timm`
+            `"${pipPath}" install psutil torch transformers numpy pillow timm`
           );
           console.log(`[LoRA] ✅ Successfully installed essential packages`);
         } catch (error) {

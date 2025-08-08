@@ -271,8 +271,8 @@ export const generateOutputName = (baseModel?: string): string => {
     // Extract base model name and sanitize it
     const baseModelClean = baseModel.replace(":latest", "").replace(":", "-");
     const sanitizedBase = sanitizeModelName(baseModelClean);
-    // CRITICAL FIX: Use hyphens to match Python backend naming convention
-    // Backend saves as "gemma3-adapter-1752070042207_adapter"
+    // Use hyphens to match Python backend naming convention
+    // Backend saves as "gemma3-adapter-1752070042207"
     return `${sanitizedBase}-adapter-${timestamp}`;
   }
 

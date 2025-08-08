@@ -114,7 +114,7 @@ export function testAdapterPathResolution() {
   console.log("📍 Electron dev path:", `${devProjectRoot}/lora_adapters`);
 
   // Test specific adapter name that was failing
-  const testAdapterName = "gemma3-adapter-1752080790629_adapter";
+  const testAdapterName = "gemma3-adapter-1752080790629";
 
   const pythonPaths = [
     `${userDataDir}/lora_adapters/weights/${testAdapterName}`,
@@ -319,8 +319,8 @@ export async function testE2EProductionErrors() {
       userDataDir = "~/.local/share/orch-mind";
     }
 
-    const failingAdapterName = "gemma3-adapter-1752080790629_adapter";
-    const productionAdapterPath = `${userDataDir}/lora_adapters/weights/${failingAdapterName}`;
+    const failingAdapterName = "gemma3-adapter-1752080790629";
+  const productionAdapterPath = `${userDataDir}/lora_adapters/weights/${failingAdapterName}`;
 
     console.log(`  📁 Production path: ${productionAdapterPath}`);
     console.log(`  🎯 Target adapter: ${failingAdapterName}`);

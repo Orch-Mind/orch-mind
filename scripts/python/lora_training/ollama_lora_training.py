@@ -77,9 +77,9 @@ def train_lora_adapter(hf_model_name, training_data, output_dir, max_steps):
             output_dir=output_dir,
             max_steps=max_steps,
             batch_size=1,
-            learning_rate=2e-4,
-            lora_rank=16,
-            lora_alpha=32,
+            learning_rate=2e-5,
+            lora_rank=8,
+            lora_alpha=16,
             lora_dropout=0.05,
         )
         
@@ -189,36 +189,43 @@ def main():
     parser.add_argument("--data", required=True, help="Path to training data file")
     parser.add_argument("--base-model", required=True, help="Base model name")
     parser.add_argument("--output", required=True, help="Output adapter name")
-    parser.add_argument("--max-steps", type=int, default=100, help="Maximum training steps")
+    parser.add_argument("--max-steps", type=int, default=50, help="Maximum training steps (reduced for memory)")
+    parser.add_argument("--max-seq-length", type=int, default=256, help="Maximum sequence length (optimized for memory)")
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
-    parser.add_argument("--learning-rate", type=float, default=2e-4, help="Learning rate")
-    parser.add_argument("--lora-rank", type=int, default=16, help="LoRA rank")
-    parser.add_argument("--lora-alpha", type=int, default=32, help="LoRA alpha")
-    parser.add_argument("--lora-dropout", type=float, default=0.1, help="LoRA dropout")
-    parser.add_argument("--warmup-steps", type=int, default=10, help="Warmup steps")
-    parser.add_argument("--logging-steps", type=int, default=10, help="Logging steps")
-    parser.add_argument("--save-steps", type=int, default=50, help="Save steps")
-    parser.add_argument("--num-epochs", type=int, default=3, help="Number of epochs")
-    parser.add_argument("--gradient-accumulation-steps", type=int, default=1, help="Gradient accumulation steps")
-    parser.add_argument("--fp16", action="store_true", default=False, help="Use fp16")
+    parser.add_argument("--learning-rate", type=float, default=2e-5, help="Learning rate")
+    # ULTRA MEMORY OPTIMIZED DEFAULTS
+    parser.add_argument("--lora-rank", type=int, default=8, help="LoRA rank (optimized for memory)")
+    parser.add_argument("--lora-alpha", type=int, default=16, help="LoRA alpha (optimized for memory)")
+    parser.add_argument("--lora-dropout", type=float, default=0.1, help="LoRA dropout (optimized for memory)")
+    parser.add_argument("--warmup-steps", type=int, default=5, help="Warmup steps (reduced for memory)")
+    parser.add_argument("--logging-steps", type=int, default=5, help="Logging steps (reduced for memory)")
+    parser.add_argument("--save-steps", type=int, default=25, help="Save steps (reduced for memory)")
+    parser.add_argument("--num-epochs", type=int, default=1, help="Number of epochs (optimized for memory)")
+    parser.add_argument("--gradient-accumulation-steps", type=int, default=16, help="Gradient accumulation steps (increased for memory)")
+    parser.add_argument("--fp16", action="store_true", default=True, help="Use fp16 (enabled by default for memory)")
     parser.add_argument("--optim", default="adamw_torch", help="Optimizer")
     parser.add_argument("--weight-decay", type=float, default=0.01, help="Weight decay")
     parser.add_argument("--lr-scheduler-type", default="cosine", help="Learning rate scheduler type")
     
     args = parser.parse_args()
     
-    print("🚀 Real LoRA Training for Orch-Mind")
+    print("🚀 Real LoRA Training for Orch-Mind - ULTRA MEMORY OPTIMIZED")
     print("📊 Configuration:")
     print(f"   • Ollama Model: {args.base_model}")
     print(f"   • Data: {args.data}")
     print(f"   • Output: {args.output}")
-    print(f"   • Max Steps: {args.max_steps}")
+    print(f"   • Max Steps: {args.max_steps} (memory optimized)")
+    print(f"   • Max Seq Length: {args.max_seq_length} (memory optimized)")
     print(f"   • Batch Size: {args.batch_size}")
+    print(f"   • Gradient Accumulation: {args.gradient_accumulation_steps} (memory optimized)")
     print(f"   • Learning Rate: {args.learning_rate}")
-    print(f"   • LoRA Rank: {args.lora_rank}")
-    print(f"   • LoRA Alpha: {args.lora_alpha}")
+    print(f"   • LoRA Rank: {args.lora_rank} (memory optimized)")
+    print(f"   • LoRA Alpha: {args.lora_alpha} (memory optimized)")
+    print(f"   • LoRA Dropout: {args.lora_dropout} (memory optimized)")
+    print(f"   • FP16: {args.fp16} (memory optimized)")
+    print(f"   • Num Epochs: {args.num_epochs} (memory optimized)")
     
-    # Create training configuration
+    # Create training configuration with ULTRA MEMORY OPTIMIZATION
     config = TrainingConfig(
         base_model=args.base_model,
         output_name=args.output,
@@ -240,6 +247,7 @@ def main():
         optim=args.optim,
         weight_decay=args.weight_decay,
         lr_scheduler_type=args.lr_scheduler_type,
+        max_seq_length=args.max_seq_length,  # MEMORY OPTIMIZATION
         target_modules=None  # Will use default
     )
     
@@ -262,4 +270,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

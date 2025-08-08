@@ -69,18 +69,32 @@ def arithmetic_mean_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Di
             param_names = param_names.intersection(set(adapter.keys()))
     
     merged_weights = {}
+    skipped_params = []
     
     for param_name in param_names:
-        # Stack all adapter weights for this parameter
+        # Get all adapter weights for this parameter
         param_tensors = [adapter[param_name] for adapter in adapters_weights]
         
-        # Calculate arithmetic mean
-        merged_param = torch.stack(param_tensors, dim=0).mean(dim=0)
-        merged_weights[param_name] = merged_param
+        # Check if all tensors have the same shape
+        first_shape = param_tensors[0].shape
+        compatible = all(tensor.shape == first_shape for tensor in param_tensors)
         
-        print(f"[INFO] Merged parameter: {param_name} (shape: {merged_param.shape})")
+        if compatible:
+            # Calculate arithmetic mean
+            merged_param = torch.stack(param_tensors, dim=0).mean(dim=0)
+            merged_weights[param_name] = merged_param
+            print(f"[INFO] Merged parameter: {param_name} (shape: {merged_param.shape})")
+        else:
+            # Log shape mismatch and skip parameter
+            shapes_info = [f"{i}:{tensor.shape}" for i, tensor in enumerate(param_tensors)]
+            print(f"[WARNING] Shape mismatch for {param_name}: {', '.join(shapes_info)}")
+            print(f"[SKIP] Skipping incompatible parameter: {param_name}")
+            skipped_params.append(param_name)
     
-    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using arithmetic mean")
+    if skipped_params:
+        print(f"[WARNING] Skipped {len(skipped_params)} incompatible parameters: {skipped_params}")
+    
+    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using arithmetic mean (skipped {len(skipped_params)})")
     return merged_weights
 
 def weighted_average_merge(
@@ -103,25 +117,37 @@ def weighted_average_merge(
         param_names = param_names.intersection(set(adapter.keys()))
     
     merged_weights = {}
+    skipped_params = []
     
     for param_name in param_names:
-        # Weighted sum of parameters
-        weighted_sum = None
-        for adapter, weight in zip(adapters_weights, normalized_weights):
-            param_tensor = adapter[param_name] * weight
-            if weighted_sum is None:
-                weighted_sum = param_tensor
-            else:
-                weighted_sum += param_tensor
+        param_tensors = [adapter[param_name] for adapter in adapters_weights]
         
-        merged_weights[param_name] = weighted_sum
-        print(f"[INFO] Merged parameter: {param_name} (shape: {weighted_sum.shape})")
+        # Check if all tensors have the same shape
+        first_shape = param_tensors[0].shape
+        compatible = all(tensor.shape == first_shape for tensor in param_tensors)
+        
+        if compatible:
+            # Apply weighted average
+            weighted_sum = sum(
+                tensor * weight for tensor, weight in zip(param_tensors, normalized_weights)
+            )
+            merged_weights[param_name] = weighted_sum
+            print(f"[INFO] Merged parameter: {param_name} (shape: {weighted_sum.shape})")
+        else:
+            # Log shape mismatch and skip parameter
+            shapes_info = [f"{i}:{tensor.shape}" for i, tensor in enumerate(param_tensors)]
+            print(f"[WARNING] Shape mismatch for {param_name}: {', '.join(shapes_info)}")
+            print(f"[SKIP] Skipping incompatible parameter: {param_name}")
+            skipped_params.append(param_name)
     
-    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using weighted average")
+    if skipped_params:
+        print(f"[WARNING] Skipped {len(skipped_params)} incompatible parameters: {skipped_params}")
+    
+    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using weighted average (skipped {len(skipped_params)})")
     return merged_weights
 
 def svd_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-    """Merge adapters using SVD-based low-rank approximation."""
+    """Merge adapters using SVD-based low-rank approximation with fallback to arithmetic mean."""
     print("[MERGE] Performing SVD-based merge...")
     
     param_names = set(adapters_weights[0].keys())
@@ -129,36 +155,70 @@ def svd_merge(adapters_weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torc
         param_names = param_names.intersection(set(adapter.keys()))
     
     merged_weights = {}
+    svd_failures = 0
     
     for param_name in param_names:
         # Stack parameter matrices
         param_matrices = [adapter[param_name] for adapter in adapters_weights]
         
+        # Check if all tensors have the same shape
+        first_shape = param_matrices[0].shape
+        compatible = all(tensor.shape == first_shape for tensor in param_matrices)
+        
+        if not compatible:
+            # Log shape mismatch and skip parameter
+            shapes_info = [f"{i}:{tensor.shape}" for i, tensor in enumerate(param_matrices)]
+            print(f"[WARNING] Shape mismatch for {param_name}: {', '.join(shapes_info)}")
+            print(f"[SKIP] Skipping incompatible parameter: {param_name}")
+            continue
+        
         # For LoRA, we typically have A and B matrices
         if len(param_matrices[0].shape) == 2:  # Matrix parameter
-            # Concatenate along first dimension and apply SVD
-            concatenated = torch.cat(param_matrices, dim=0)
-            
-            # SVD decomposition
-            U, S, V = torch.svd(concatenated)
-            
-            # Keep top-k singular values (rank preservation)
-            k = min(16, min(concatenated.shape))  # Typical LoRA rank
-            merged_param = U[:, :k] @ torch.diag(S[:k]) @ V[:, :k].T
-            
-            # Resize back to original shape
-            original_shape = param_matrices[0].shape
-            if merged_param.shape[0] > original_shape[0]:
-                merged_param = merged_param[:original_shape[0], :]
-            
-            merged_weights[param_name] = merged_param
+            try:
+                # Concatenate along first dimension and apply SVD
+                concatenated = torch.cat(param_matrices, dim=0)
+                
+                # Use torch.linalg.svd which is more robust than torch.svd
+                U, S, Vh = torch.linalg.svd(concatenated, full_matrices=False)
+                
+                # Keep top-k singular values (rank preservation)
+                k = min(8, min(concatenated.shape))  # Typical LoRA rank
+                
+                # Ensure we don't exceed available singular values
+                k = min(k, len(S))
+                
+                # Check for numerical stability
+                if k > 0 and S[0] > 1e-10:  # Avoid near-zero singular values
+                    merged_param = U[:, :k] @ torch.diag(S[:k]) @ Vh[:k, :]
+                    
+                    # Resize back to original shape
+                    original_shape = param_matrices[0].shape
+                    if merged_param.shape[0] > original_shape[0]:
+                        merged_param = merged_param[:original_shape[0], :]
+                    
+                    merged_weights[param_name] = merged_param
+                    print(f"[INFO] SVD merged parameter: {param_name} (rank: {k})")
+                else:
+                    # Fallback to arithmetic mean for ill-conditioned matrices
+                    print(f"[WARNING] SVD failed for {param_name} (ill-conditioned), using arithmetic mean")
+                    merged_weights[param_name] = torch.stack(param_matrices, dim=0).mean(dim=0)
+                    svd_failures += 1
+                    
+            except (torch.linalg.LinAlgError, RuntimeError) as e:
+                # Fallback to arithmetic mean when SVD fails
+                print(f"[WARNING] SVD failed for {param_name}: {e}")
+                print(f"[INFO] Falling back to arithmetic mean for {param_name}")
+                merged_weights[param_name] = torch.stack(param_matrices, dim=0).mean(dim=0)
+                svd_failures += 1
         else:
             # For non-matrix parameters, use simple average
             merged_weights[param_name] = torch.stack(param_matrices, dim=0).mean(dim=0)
-        
-        print(f"[INFO] SVD merged parameter: {param_name}")
+            print(f"[INFO] Averaged parameter: {param_name} (non-matrix)")
     
-    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using SVD")
+    if svd_failures > 0:
+        print(f"[WARNING] SVD failed for {svd_failures} parameters, used arithmetic mean fallback")
+    
+    print(f"[SUCCESS] Merged {len(merged_weights)} parameters using SVD (with {svd_failures} fallbacks)")
     return merged_weights
 
 def main():
@@ -274,6 +334,7 @@ def main():
     except Exception as e:
         print(f"\n[ERROR] Error during merging: {e}")
         import traceback
+        import sys
         traceback.print_exc()
         sys.exit(1)
 

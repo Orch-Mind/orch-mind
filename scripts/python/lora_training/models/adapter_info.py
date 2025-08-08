@@ -32,7 +32,7 @@ class AdapterInfo:
         """Create a new adapter info instance."""
         return cls(
             adapter_id=adapter_id,
-            adapter_name=f"{adapter_id}_adapter",
+            adapter_name=adapter_id,  # Use original adapter_id without suffix
             base_model=base_model,
             hf_model=hf_model,
             adapter_path=adapter_path,
@@ -89,4 +89,4 @@ class AdapterInfo:
             persistent=data.get("persistent", True),
             last_enabled=data.get("last_enabled"),
             last_disabled=data.get("last_disabled")
-        ) 
+        )
