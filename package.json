@@ -316,6 +316,7 @@
     "react-i18next": "^15.6.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.6.0",
+    "react-toastify": "^11.0.5",
     "react-window": "^1.8.11",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
