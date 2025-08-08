@@ -47,8 +47,26 @@ body, .orchos-card, .orchos-btn, .orchos-text, input, textarea, select {
   color: var(--orchos-primary);
 }
 
+.orch-mind-icon {
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.3));
+}
+
+.orch-mind-icon-enhanced {
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.4)) drop-shadow(0 0 12px rgba(0, 240, 255, 0.2));
+  transition: all 0.3s ease;
+}
+
+.orch-mind-icon-enhanced:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)) drop-shadow(0 0 16px rgba(0, 240, 255, 0.3));
+  transform: scale(1.05);
+}
+
 
 /* Orbitron font imported via HTML head */
+
+.orbitron-font {
+  font-family: 'Orbitron', Arial, sans-serif;
+}
 
 :root {
   /* Cognição Quântica Theme */

@@ -15,8 +15,8 @@ export const LanguageSwitcher: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'pt', name: 'Português', flag: '🇧🇷' },
+    { code: 'en', name: 'English', flag: '/flag-usa.png' },
+    { code: 'pt', name: 'Português', flag: '/flag-brazil.png' },
   ];
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
@@ -48,7 +48,11 @@ export const LanguageSwitcher: React.FC = () => {
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-gradient-to-r from-slate-800/50 to-gray-800/50 text-gray-300 hover:text-cyan-300 border border-gray-600/50 hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10"
         title="Select language"
       >
-        <span className="text-base">{currentLanguage.flag}</span>
+        <img 
+          src={currentLanguage.flag} 
+          alt={`${currentLanguage.name} flag`}
+          className="w-5 h-5 rounded-sm object-cover"
+        />
         <span className="hidden sm:inline">{currentLanguage.name}</span>
         <ChevronDown 
           className={`w-4 h-4 transition-transform duration-200 ${
@@ -71,7 +75,11 @@ export const LanguageSwitcher: React.FC = () => {
               }`}
               title={`Switch to ${language.name}`}
             >
-              <span className="text-base">{language.flag}</span>
+              <img 
+                src={language.flag} 
+                alt={`${language.name} flag`}
+                className="w-5 h-5 rounded-sm object-cover"
+              />
               <span>{language.name}</span>
               {i18n.language === language.code && (
                 <span className="ml-auto text-cyan-400 text-xs">✓</span>
