@@ -19,7 +19,14 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
 }) => {
   const { t } = useTranslation();
   const handleQuantumProcessingChange = (enabled: boolean) => {
-    setQuantumProcessing(enabled);
+    console.log("🔄 [COMPONENT] handleQuantumProcessingChange called with:", enabled);
+    
+    // Se desativando Orch-OS E matrix está ativada, força desabilitar matrix ANTES de atualizar processamento
+    if (!enabled && quantumVisualization) {
+      console.log("🔄 [COMPONENT] Force disabling matrix visualization FIRST - calling handleQuantumVisualizationChange(false)");
+      handleQuantumVisualizationChange(false);
+    }
+    
     // Auto-save the setting immediately
     setTimeout(() => {
       if (typeof window !== "undefined" && window.electronAPI) {
@@ -27,6 +34,7 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
         console.log(
           enabled ? t('beta.quantumProcessing.console.enabled') : t('beta.quantumProcessing.console.disabled')
         );
+        setQuantumProcessing(enabled);
       }
     }, 100);
   };
@@ -94,47 +102,49 @@ const BetaSettings: React.FC<BetaSettingsProps> = ({
         </div>
       </div>
 
-      {/* Quantum Visualization Section - Compacto */}
-      <div className="bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-lg p-3 border border-cyan-400/20">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h4 className="text-sm font-medium text-white mb-1">
-              {t('beta.quantumVisualization.title')}
-            </h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              {t('beta.quantumVisualization.description')}
-            </p>
-          </div>
-
-          <div className="ml-3">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={quantumVisualization}
-                onChange={(e) =>
-                  handleQuantumVisualizationChange(e.target.checked)
-                }
-                className="sr-only peer"
-                aria-label={t('beta.quantumVisualization.ariaLabel')}
-              />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cyan-300 dark:peer-focus:ring-cyan-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-cyan-600"></div>
-            </label>
-          </div>
-        </div>
-
-        {/* Info Notice - Compacto */}
-        <div className="mt-2 p-2 bg-blue-900/30 border border-blue-400/30 rounded">
-          <div className="flex items-start space-x-1.5">
-            <span className="text-blue-400 text-xs">ℹ️</span>
-            <div className="text-[10px] text-blue-300">
-              <p className="font-medium">{t('beta.quantumVisualization.info.title')}</p>
-              <p className="mt-0.5 leading-tight">
-                {t('beta.quantumVisualization.info.description')}
+      {/* Quantum Visualization Section - Only visible when Orch-OS is enabled */}
+      {quantumProcessing && (
+        <div className="bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-lg p-3 border border-cyan-400/20">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-white mb-1">
+                {t('beta.quantumVisualization.title')}
+              </h4>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                {t('beta.quantumVisualization.description')}
               </p>
+            </div>
+
+            <div className="ml-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={quantumVisualization}
+                  onChange={(e) =>
+                    handleQuantumVisualizationChange(e.target.checked)
+                  }
+                  className="sr-only peer"
+                  aria-label={t('beta.quantumVisualization.ariaLabel')}
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cyan-300 dark:peer-focus:ring-cyan-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-cyan-600"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* Info Notice - Compacto */}
+          <div className="mt-2 p-2 bg-blue-900/30 border border-blue-400/30 rounded">
+            <div className="flex items-start space-x-1.5">
+              <span className="text-blue-400 text-xs">ℹ️</span>
+              <div className="text-[10px] text-blue-300">
+                <p className="font-medium">{t('beta.quantumVisualization.info.title')}</p>
+                <p className="mt-0.5 leading-tight">
+                  {t('beta.quantumVisualization.info.description')}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Additional Info - Compacto */}
       <div className="bg-slate-800/50 rounded-lg p-2.5 border border-slate-600/30">
