@@ -1321,6 +1321,7 @@ For Linux:
         "psutil",
         "torch",
         "transformers",
+        "huggingface_hub",
         "pillow",
         "timm",
       ];
@@ -1363,7 +1364,7 @@ For Linux:
           );
           try {
             await execAsync(
-              `"${pipPath}" install psutil torch transformers numpy huggingface-hub pillow timm`
+              `"${pipPath}" install psutil torch transformers numpy huggingface_hub pillow timm`
             );
             console.log(
               `[LoRA] ✅ Successfully installed essential packages without version constraints`
@@ -1380,7 +1381,7 @@ For Linux:
         );
         try {
           await execAsync(
-            `"${pipPath}" install psutil torch transformers numpy huggingface-hub pillow timm`
+            `"${pipPath}" install psutil torch transformers numpy huggingface_hub pillow timm`
           );
           console.log(`[LoRA] ✅ Successfully installed essential packages`);
         } catch (error) {

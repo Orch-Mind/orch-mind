@@ -139,6 +139,7 @@ def check_and_install_dependencies():
         ('datasets', 'datasets'),
         ('accelerate', 'accelerate'),
         ('peft>=0.7.0', 'peft'),
+        ('huggingface_hub>=0.16.0', 'huggingface_hub'),
         ('trl', 'trl'),
     ]
     
@@ -367,4 +368,4 @@ if __name__ == "__main__":
         sys.exit(1)
     except Exception as e:
         log(f"Erro inesperado: {e}", Colors.RED)
-        sys.exit(1) 
+        sys.exit(1)

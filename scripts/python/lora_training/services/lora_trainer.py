@@ -153,7 +153,7 @@ class LoRATrainer(ILoRATrainer):
         """Validate that required dependencies are available."""
         required_packages = [
             "torch", "transformers", "peft", "datasets", 
-            "accelerate", "safetensors", "numpy", "tqdm"
+            "accelerate", "safetensors", "numpy", "tqdm", "huggingface_hub"
         ]
         
         missing_deps = []

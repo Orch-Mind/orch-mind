@@ -5,6 +5,7 @@ peft
 datasets
 accelerate
 bitsandbytes
+huggingface_hub
 safetensors
 numpy
 tqdm

@@ -76,7 +76,7 @@ class UnslothDeploymentService:
     def _check_dependencies(self) -> bool:
         """Check if required dependencies are available."""
         required_packages = [
-            "torch", "transformers", "safetensors", "accelerate"
+            "torch", "transformers", "safetensors", "accelerate", "huggingface_hub"
         ]
         
         missing = []
@@ -375,4 +375,4 @@ PARAMETER repeat_penalty 1.1
             
         except Exception as e:
             print(f"❌ Failed to create Ollama base model: {e}")
-            return False 
+            return False
