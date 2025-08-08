@@ -76,7 +76,7 @@ class UnslothDeploymentService:
     def _check_dependencies(self) -> bool:
         """Check if required dependencies are available."""
         required_packages = [
-            "torch", "transformers", "safetensors", "accelerate", "huggingface_hub"
+            "torch", "transformers", "safetensors", "accelerate"
         ]
         
         missing = []

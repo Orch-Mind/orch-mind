@@ -139,7 +139,6 @@ def check_and_install_dependencies():
         ('datasets', 'datasets'),
         ('accelerate', 'accelerate'),
         ('peft>=0.7.0', 'peft'),
-        ('huggingface_hub>=0.16.0', 'huggingface_hub'),
         ('trl', 'trl'),
     ]
     

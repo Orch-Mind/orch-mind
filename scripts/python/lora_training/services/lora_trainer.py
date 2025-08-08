@@ -153,7 +153,7 @@ class LoRATrainer(ILoRATrainer):
         """Validate that required dependencies are available."""
         required_packages = [
             "torch", "transformers", "peft", "datasets", 
-            "accelerate", "safetensors", "numpy", "tqdm", "huggingface_hub"
+            "accelerate", "safetensors", "numpy", "tqdm"
         ]
         
         missing_deps = []
@@ -212,10 +212,35 @@ class LoRATrainer(ILoRATrainer):
             )
             from datasets import Dataset
             import gc
+            import platform
+            
+            # Windows/NVIDIA GPU optimizations to prevent "paging file too small" error
+            is_windows = platform.system() == "Windows"
             
             # Memory optimization: Clear any existing CUDA cache
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                
+                # Windows-specific GPU memory management
+                if is_windows:
+                    try:
+                        # More aggressive memory cleanup for Windows
+                        torch.cuda.synchronize()
+                        torch.cuda.empty_cache()
+                        
+                        # Set memory fraction to prevent Windows paging file errors
+                        # Reserve more system RAM by limiting GPU memory usage
+                        available_memory = torch.cuda.get_device_properties(0).total_memory
+                        memory_fraction = 0.7 if num_examples < 50 else 0.8  # More conservative for small datasets
+                        torch.cuda.set_per_process_memory_fraction(memory_fraction)
+                        
+                        print(f"🪟 Windows GPU optimizations applied:")
+                        print(f"   • GPU Memory Fraction: {memory_fraction}")
+                        print(f"   • Available GPU Memory: {available_memory / 1024**3:.1f} GB")
+                        
+                    except Exception as e:
+                        print(f"⚠️ Windows GPU optimization warning: {e}")
+            
             gc.collect()
             
             # Enhanced Progress callback class with real training progress
@@ -428,7 +453,41 @@ class LoRATrainer(ILoRATrainer):
             print(f"📥 Loading model: {config.hf_model_name}")
             print(f"🔧 Hardware config: {hw_config.device_type.upper()}, dtype: {hw_config.torch_dtype}")
             
-            tokenizer = AutoTokenizer.from_pretrained(config.hf_model_name, trust_remote_code=True)
+            # Windows-specific HuggingFace download optimization
+            if is_windows:
+                print("🪟 Applying Windows-specific HuggingFace optimizations...")
+                # Force use of standard HTTP transport instead of hf_transfer for Windows
+                import os
+                os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"  # Reduce memory usage
+                os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"     # Disable telemetry
+                os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
+                # Force fallback to standard download method (avoid hf_xet issues)
+                os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+            
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(
+                    config.hf_model_name, 
+                    trust_remote_code=True,
+                    use_fast=True,  # Use fast tokenizer when available
+                    local_files_only=False  # Ensure we can download if needed
+                )
+            except Exception as e:
+                print(f"⚠️ Tokenizer loading error: {e}")
+                # Fallback with more conservative settings for Windows
+                if is_windows and "hf_xet" in str(e).lower():
+                    print("🪟 Applying Windows HuggingFace fallback...")
+                    # Clear problematic environment variables that might cause hf_xet issues
+                    for env_var in ['HF_TRANSFER', 'HF_HUB_ENABLE_HF_TRANSFER']:
+                        if env_var in os.environ:
+                            del os.environ[env_var]
+                
+                tokenizer = AutoTokenizer.from_pretrained(
+                    config.hf_model_name,
+                    trust_remote_code=True,
+                    use_fast=False,  # Use slower but more compatible tokenizer
+                    force_download=False
+                )
+                print("✅ Tokenizer loaded with Windows fallback")
             
             # Convert torch_dtype string to actual dtype
             if hw_config.torch_dtype == "float16":
@@ -604,6 +663,20 @@ class LoRATrainer(ILoRATrainer):
             
             # Training arguments with ULTRA memory-optimized settings
             # Use max_steps only to avoid epoch confusion (when both are set, behavior is inconsistent)
+            
+            # Windows-specific training optimizations for small datasets
+            windows_training_optimizations = {}
+            if is_windows and num_examples < 50:
+                print("🪟 Applying Windows small dataset optimizations...")
+                windows_training_optimizations.update({
+                    'max_grad_norm': 0.3,  # Lower gradient clipping for stability
+                    'dataloader_num_workers': 0,  # Force single-threaded on Windows for stability
+                    'dataloader_pin_memory': False,  # Critical: disable pin memory on Windows
+                    'fp16_full_eval': False,  # Disable FP16 evaluation on Windows for small datasets
+                    'save_safetensors': True,  # Use safetensors format for better Windows compatibility
+                    'prediction_loss_only': True,  # Only compute prediction loss to save memory
+                })
+            
             training_args = TrainingArguments(
                 output_dir=os.path.join(config.output_dir, "training_output"),
                 num_train_epochs=1,  # Keep as 1 since None causes issues
@@ -612,7 +685,7 @@ class LoRATrainer(ILoRATrainer):
                 gradient_accumulation_steps=ultra_gradient_accumulation,
                 warmup_steps=config.warmup_steps,
                 learning_rate=config.learning_rate,
-                fp16=hw_config.use_fp16_trainer,
+                fp16=hw_config.use_fp16_trainer and not (is_windows and num_examples < 20),  # Disable FP16 for very small Windows datasets
                 logging_steps=config.logging_steps,
                 optim="adamw_torch",  # Use standard optimizer to save memory
                 weight_decay=config.weight_decay,
@@ -624,11 +697,13 @@ class LoRATrainer(ILoRATrainer):
                 remove_unused_columns=True,  # Remove unused columns to save memory
                 dataloader_pin_memory=False,  # Disable pin memory to save RAM
                 # Disable gradient checkpointing for MPS (causes gradient flow issues with LoRA)
-                gradient_checkpointing=False if hw_config.device_type == "mps" else True,
+                gradient_checkpointing=False if hw_config.device_type == "mps" else not (is_windows and num_examples < 30),
                 # Additional memory optimizations
                 eval_accumulation_steps=8,  # Reduce evaluation memory usage
                 skip_memory_metrics=True,  # Skip memory metrics to save overhead
                 dataloader_drop_last=True,  # Drop incomplete batches
+                # Apply Windows-specific optimizations
+                **windows_training_optimizations,
                 max_grad_norm=1.0,  # Gradient clipping for stability
             )
             

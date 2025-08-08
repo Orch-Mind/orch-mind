@@ -6,7 +6,7 @@ required_packages = [
     "datasets>=2.15.0",
     "accelerate>=0.25.0",
     "bitsandbytes>=0.41.0",
-    "huggingface_hub>=0.16.0",
+
     "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git",
     "psutil>=5.9.0",  # For memory monitoring
 ]
