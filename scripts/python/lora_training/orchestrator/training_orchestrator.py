@@ -349,231 +349,129 @@ class TrainingOrchestrator:
         
         return adapter_path
     
+    def _deploy_adapter_using_convert_script(self, config: Any, hf_model_name: str, adapter_path: str, deployed_model_name: str) -> Optional[str]:
+        """Deploy adapter using the same convert_lora_to_gguf.py script as the Deploy tab."""
+        print(f"\n🔗 ADAPTER DEPLOYMENT USING DEPLOY TAB SCRIPT")
+        print(f"   • Adapter Path: {adapter_path}")
+        print(f"   • Base Model: {deployed_model_name}")
+        print(f"   • Output Model: {config.output_name}")
+        print(f"   • Using same script as Deploy tab for consistency")
+        
+        try:
+            import subprocess
+            import sys
+            
+            # Get the path to the convert script (same script used by Deploy tab)
+            current_file = os.path.abspath(__file__)
+            print(f"🔍 Current file: {current_file}")
+            
+            # From: /Users/.../orch-mind/scripts/python/lora_training/orchestrator/training_orchestrator.py
+            # We need to go up to the orch-mind root directory
+            # Try different approaches to find the project root
+            convert_script_path = None
+            
+            # Method 1: Try using get_project_root utility
+            try:
+                from scripts.python.lora_training.utils import get_project_root
+                project_root = get_project_root()
+                test_path = os.path.join(project_root, "scripts", "python", "lora_training", "convert_lora_to_gguf.py")
+                print(f"🔍 Testing path (get_project_root): {test_path}")
+                if os.path.exists(test_path):
+                    convert_script_path = test_path
+                    print(f"✅ Found via get_project_root: {convert_script_path}")
+            except Exception as e:
+                print(f"⚠️ get_project_root failed: {e}")
+            
+            # Method 2: Calculate from current file path
+            if not convert_script_path:
+                # Go up directories until we find 'scripts' folder
+                current_dir = os.path.dirname(current_file)
+                for _ in range(10):  # Safety limit
+                    parent_dir = os.path.dirname(current_dir)
+                    if parent_dir == current_dir:  # Reached filesystem root
+                        break
+                    
+                    test_path = os.path.join(parent_dir, "scripts", "python", "lora_training", "convert_lora_to_gguf.py")
+                    print(f"🔍 Testing path (traversal): {test_path}")
+                    if os.path.exists(test_path):
+                        convert_script_path = test_path
+                        project_root = parent_dir
+                        print(f"✅ Found via traversal: {convert_script_path}")
+                        break
+                    current_dir = parent_dir
+            
+            # Method 3: Absolute path based on known structure
+            if not convert_script_path:
+                expected_path = "/Users/guilhermeferraribrescia/orch-mind/scripts/python/lora_training/convert_lora_to_gguf.py"
+                print(f"🔍 Testing expected path: {expected_path}")
+                if os.path.exists(expected_path):
+                    convert_script_path = expected_path
+                    project_root = "/Users/guilhermeferraribrescia/orch-mind"
+                    print(f"✅ Found via expected path: {convert_script_path}")
+            
+            if not convert_script_path:
+                print(f"❌ Convert script not found in any location")
+                return None
+            
+            print(f"📜 Using convert script: {convert_script_path}")
+            
+            # Extract adapter ID from path (same logic as Deploy tab)
+            adapter_id = os.path.basename(adapter_path)
+            
+            # Build command exactly like Deploy tab does
+            deploy_command = [
+                sys.executable,
+                convert_script_path,
+                "--adapter-id", adapter_id,
+                "--base-model", deployed_model_name,
+                "--output-model", config.output_name
+            ]
+            
+            print(f"🚀 Executing deployment command:")
+            print(f"   Command: {' '.join(deploy_command)}")
+            
+            # Execute the same script that Deploy tab uses
+            result = subprocess.run(
+                deploy_command,
+                capture_output=True,
+                text=True,
+                timeout=300,  # 5 minutes timeout
+                cwd=project_root if 'project_root' in locals() else os.path.dirname(convert_script_path)
+            )
+            
+            if result.returncode == 0:
+                print(f"✅ Deployment script succeeded!")
+                print(f"   Output: {result.stdout}")
+                if result.stderr:
+                    print(f"   Warnings: {result.stderr}")
+                
+                # Return the output model name
+                return config.output_name
+            else:
+                print(f"❌ Deployment script failed!")
+                print(f"   Return code: {result.returncode}")
+                print(f"   stdout: {result.stdout}")
+                print(f"   stderr: {result.stderr}")
+                return None
+                
+        except subprocess.TimeoutExpired:
+            print(f"❌ Deployment script timed out")
+            return None
+        except Exception as e:
+            print(f"❌ Error calling deployment script: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
     def _merge_and_deploy_if_unsloth(self, config: Any, hf_model_name: str, adapter_path: str, deployed_model_name: str) -> Optional[str]:
-        """Merge LoRA adapter with base model and deploy to Ollama with memory optimization."""
-        print(f"\n🔗 UNSLOTH MERGE & DEPLOY PROCESS")
-        print(f"   • HuggingFace Model: {hf_model_name}")
+        """Deploy adapter using the same approach as the Deploy tab for consistency."""
+        print(f"\n🔗 ADAPTER DEPLOYMENT PROCESS")
+        print(f"   • Strategy: Using same script as Deploy tab")
         print(f"   • Adapter Path: {adapter_path}")
         print(f"   • Base Model: {deployed_model_name}")
         
-        # Check if this is a Unsloth model
-        if not self.model_mapper.is_unsloth_model(config.base_model):
-            print(f"✅ Standard model - no merge needed, using: {deployed_model_name}")
-            return deployed_model_name
-        
-        # Memory check before merge
-        self.memory_monitor.monitor_training_phase("before merge process")
-        
-        # Create temporary directory for merge process
-        import tempfile
-        temp_dir = tempfile.mkdtemp(prefix="unsloth_merge_")
-        
-        try:
-            self.progress_reporter.report_progress(96, 100, "Merging LoRA adapter with base model")
-            
-            # Import required libraries
-            import torch
-            from transformers import AutoTokenizer, AutoModelForCausalLM
-            from peft import PeftModel
-            import gc
-            
-            try:
-                print(f"🔄 Loading base model for merge: {hf_model_name}")
-                
-                # Memory check before loading model
-                self.memory_monitor.monitor_training_phase("before loading base model")
-                
-                # Load tokenizer first (lightweight)
-                tokenizer = AutoTokenizer.from_pretrained(hf_model_name, trust_remote_code=True)
-                
-                # Load base model with memory optimization
-                print("   • Loading base model with memory optimization...")
-                base_model = AutoModelForCausalLM.from_pretrained(
-                    hf_model_name,
-                    torch_dtype=torch.float16,  # Use float16 to save memory
-                    device_map="auto" if torch.cuda.is_available() else "cpu",
-                    trust_remote_code=True,
-                    load_in_8bit=False,
-                    low_cpu_mem_usage=True,  # Enable low memory usage
-                )
-                
-                # Memory check after loading base model
-                self.memory_monitor.monitor_training_phase("after loading base model")
-                
-                print(f"🔗 Loading LoRA adapter: {adapter_path}")
-                
-                # Load LoRA adapter
-                model_with_adapter = PeftModel.from_pretrained(base_model, adapter_path)
-                
-                # Clear base model from memory before merge
-                del base_model
-                torch.cuda.empty_cache() if torch.cuda.is_available() else None
-                gc.collect()
-                
-                # Memory check after loading adapter
-                self.memory_monitor.monitor_training_phase("after loading adapter")
-                
-                print(f"💾 Merging adapter and saving to temporary directory")
-                
-                # Merge adapter with base model
-                merged_model = model_with_adapter.merge_and_unload()
-                
-                # Clear adapter model from memory
-                del model_with_adapter
-                torch.cuda.empty_cache() if torch.cuda.is_available() else None
-                gc.collect()
-                
-                # Memory check after merge
-                self.memory_monitor.monitor_training_phase("after merge operation")
-                
-                # Save merged model with memory optimization and proper tokenizer handling
-                print(f"   • Saving merged model with complete tokenizer files...")
-                
-                # Save the merged model
-                try:
-                    # Save model with safe serialization disabled to avoid shared tensor issues
-                    merged_model.save_pretrained(
-                        temp_dir, 
-                        safe_serialization=False,  # Disable to avoid shared tensor issues
-                        max_shard_size="2GB"
-                    )
-                    print(f"   ✓ Model weights saved")
-                except Exception as e:
-                    print(f"   ⚠️ Error saving model: {e}")
-                    return None
-                
-                # Save tokenizer with all required files
-                try:
-                    tokenizer.save_pretrained(temp_dir)
-                    print(f"   ✓ Standard tokenizer files saved")
-                except Exception as e:
-                    print(f"   ⚠️ Error saving tokenizer: {e}")
-                    return None
-                
-                # CRITICAL: For Gemma models, ensure tokenizer.model file is copied
-                # This file is essential for GGUF conversion
-                model_name_lower = hf_model_name.lower()
-                if "gemma" in model_name_lower:
-                    print(f"   • Gemma model detected - ensuring tokenizer.model is available...")
-                    
-                    # Try to copy tokenizer.model from the original model cache
-                    try:
-                        import shutil
-                        from transformers.utils import cached_file
-                        
-                        # Find the tokenizer.model in the original model
-                        try:
-                            tokenizer_model_path = cached_file(
-                                hf_model_name, 
-                                "tokenizer.model", 
-                                cache_dir=None,  # Use default cache
-                                force_download=False,
-                                resume_download=True
-                            )
-                            
-                            if tokenizer_model_path and os.path.exists(tokenizer_model_path):
-                                target_tokenizer_model = os.path.join(temp_dir, "tokenizer.model")
-                                shutil.copy2(tokenizer_model_path, target_tokenizer_model)
-                                print(f"   ✓ tokenizer.model copied from cache: {tokenizer_model_path}")
-                            else:
-                                print(f"   ⚠️ tokenizer.model not found in cache")
-                                
-                        except Exception as cache_e:
-                            print(f"   ⚠️ Could not find tokenizer.model in cache: {cache_e}")
-                            
-                            # Alternative: try to download directly from HF
-                            try:
-                                print(f"   • Attempting direct download of tokenizer.model...")
-                                tokenizer_fresh = AutoTokenizer.from_pretrained(
-                                    hf_model_name, 
-                                    trust_remote_code=True,
-                                    force_download=True,
-                                    local_files_only=False
-                                )
-                                tokenizer_fresh.save_pretrained(temp_dir, legacy_format=True)
-                                print(f"   ✓ tokenizer.model downloaded and saved")
-                                
-                            except Exception as download_e:
-                                print(f"   ⚠️ Direct download failed: {download_e}")
-                                
-                                # Final fallback: check if we can continue without it
-                                print(f"   ⚠️ tokenizer.model not available - conversion may fail")
-                                print(f"   💡 This may still work if GGUF converter can use tokenizer.json instead")
-                    
-                    except Exception as e:
-                        print(f"   ⚠️ Error ensuring tokenizer.model: {e}")
-                
-                # Verify that essential tokenizer files exist
-                essential_files = ['tokenizer.json', 'tokenizer_config.json']
-                optional_files = ['tokenizer.model', 'special_tokens_map.json']
-                
-                print(f"   • Verifying tokenizer files...")
-                for file_name in essential_files:
-                    file_path = os.path.join(temp_dir, file_name)
-                    if os.path.exists(file_path):
-                        print(f"   ✓ {file_name} present")
-                    else:
-                        print(f"   ❌ {file_name} missing (essential)")
-                        
-                for file_name in optional_files:
-                    file_path = os.path.join(temp_dir, file_name)
-                    if os.path.exists(file_path):
-                        print(f"   ✓ {file_name} present")
-                    else:
-                        print(f"   ⚠️ {file_name} missing (may be needed for GGUF)")
-                
-                # Clear merged model from memory before GGUF conversion
-                del merged_model
-                torch.cuda.empty_cache() if torch.cuda.is_available() else None
-                gc.collect()
-                
-                # Memory check after saving
-                self.memory_monitor.monitor_training_phase("after saving merged model")
-                
-                print(f"   • Memory cleared after merge")
-                
-                self.progress_reporter.report_progress(98, 100, "Converting merged model to GGUF")
-                
-                # Convert merged model to GGUF with memory optimization
-                gguf_path = self._convert_merged_to_gguf_optimized(temp_dir, hf_model_name)
-                if not gguf_path:
-                    return None
-                
-                # Memory check after GGUF conversion
-                self.memory_monitor.monitor_training_phase("after GGUF conversion")
-                
-                # Create final model name
-                final_model_name = f"{config.output_name}"
-                
-                self.progress_reporter.report_progress(99, 100, "Deploying final model to Ollama")
-                
-                # Deploy final model to Ollama
-                success = self._deploy_final_model_to_ollama(gguf_path, final_model_name, config, hf_model_name)
-                
-                if success:
-                    print(f"✅ Final model deployed: {final_model_name}")
-                    print(f"💡 This model contains the base model + LoRA adapter merged")
-                    return final_model_name
-                else:
-                    return None
-                    
-            except Exception as e:
-                print(f"❌ Error during merge and deploy: {e}")
-                import traceback
-                traceback.print_exc()
-                return None
-                
-        finally:
-            # Clean up temporary directory
-            print(f"🧹 Cleaned up temporary directory")
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            
-            # Final memory cleanup
-            torch.cuda.empty_cache() if torch.cuda.is_available() else None
-            gc.collect()
-            
-            # Memory check after cleanup
-            self.memory_monitor.monitor_training_phase("after merge cleanup")
+        # Use the same convert script that the Deploy tab uses
+        return self._deploy_adapter_using_convert_script(config, hf_model_name, adapter_path, deployed_model_name)
     
     def _convert_merged_to_gguf_optimized(self, model_path: str, hf_model_name: str) -> Optional[str]:
         """Convert merged model to GGUF format with memory optimization and dependency validation."""

@@ -312,6 +312,8 @@ def deploy_lora_adapter(
         
         # Try different possible adapter locations (same as main pipeline)
         possible_adapter_paths = [
+            # Direct location where training pipeline saves adapters
+            os.path.join(project_root, "lora_adapters", adapter_id),
             # Registry structure
             os.path.join(project_root, "lora_adapters", "registry", adapter_id),
             # Weights structure
