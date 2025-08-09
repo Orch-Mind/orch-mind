@@ -3,6 +3,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+// Import dos ícones das bandeiras
+import flagBrazil from '../../assets/icons/flag-brazil.png';
+import flagUSA from '../../assets/icons/flag-usa.png';
 import { ChevronDown } from 'lucide-react';
 
 /**
@@ -15,8 +18,8 @@ export const LanguageSwitcher: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const languages = [
-    { code: 'en', name: 'English', flag: '/flag-usa.png' },
-    { code: 'pt', name: 'Português', flag: '/flag-brazil.png' },
+    { code: 'en', name: 'English', flag: flagUSA },
+    { code: 'pt', name: 'Português', flag: flagBrazil },
   ];
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];

@@ -235,8 +235,9 @@
       "downloadProgress": "Download Progress",
       "starting": "Starting...",
       "preparingDownload": "Preparing download...",
-      "storage": "Storage:",
-      "storagePlaceholder": "Storage path...",
+      "selecting": "Selecting...",
+      "storage": "Storage Path",
+      "storagePlaceholder": "Select directory for DuckDB storage",
       "browse": "Browse",
       "checkingDependencies": "Checking if Ollama and Python are installed",
       "dependenciesNotFound": "Dependencies Not Found",
@@ -590,7 +591,7 @@
     "confirmation": {
       "message": "Enter a custom name for your deployed model:"
     },
-    "deleteConfirmation": "Are you sure you want to delete adapter \"{adapterId}\"?",
+    "deleteConfirmation": "Are you sure you want to delete adapter \"{{adapterId}}\"?",
     "adapters": {
       "title": "LoRA Adapters",
       "actions": {

@@ -8,6 +8,9 @@ import LanguageSwitcher from "../../LanguageSwitcher";
 import styles from "./PanelHeader.module.css";
 import QuantumSettingsIcon from "./QuantumSettingsIcon";
 import WifiStatusConnection from "./WifiStatusConnection";
+// Import dos ícones
+import orchMindLogo from "../../../../assets/icons/orch-mind-logo-transparent.png";
+import importIcon from "../../../../assets/icons/import.png";
 
 /**
  * Interface cortical para o cabeçalho do painel de transcrição
@@ -47,7 +50,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
       <h3 className="orchos-title font-bold text-xl tracking-wider flex items-center ml-2 orchos-header-gradient-text">
         <span className="mr-3 text-base">
           <img 
-            src="/orch-mind-logo-transparent.png" 
+            src={orchMindLogo} 
             alt="Orch-Mind" 
             width="28" 
             height="28" 
@@ -69,7 +72,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           className="flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-base bg-gradient-to-r from-cyan-400/20 via-blue-700/20 to-purple-600/20 shadow-lg hover:shadow-cyan-400/30 hover:scale-105 transition-all duration-200 border border-cyan-400/30 hover:border-cyan-400/60 backdrop-blur text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/60 h-10 orbitron-font"
         >
           <img 
-            src="/import.png" 
+            src={importIcon} 
             alt="Import Neural Data"
             width="18"
             height="18"
