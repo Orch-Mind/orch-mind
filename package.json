@@ -223,13 +223,6 @@
     ],
     "extraResources": [
       {
-        "from": ".env",
-        "to": ".env",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
         "from": "scripts/python",
         "to": "scripts/python",
         "filter": [
