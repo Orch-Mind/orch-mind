@@ -60,6 +60,8 @@
       "node_modules/hyperswarm/**/*",
       "node_modules/hypercore-crypto/**/*",
       "!**/.git/**",
+      "!**/.env",
+      "!**/.env.*",
       "!**/llama.cpp/**",
       "!**/venv/**",
       "!**/training_venv/**",

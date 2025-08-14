@@ -414,6 +414,7 @@
     "notConnected": "Not connected to P2P network",
     "notConnectedDescription": "Connect to a P2P network to discover adapters",
     "connected": "Connected to",
+    "connectedTo": "Connected to",
     "globalRoom": "Global",
     "privateRoom": "Room",
     "adaptersAvailable": "adapter(s) available for download",
