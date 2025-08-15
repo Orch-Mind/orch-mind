@@ -47,6 +47,48 @@ export class LoRATrainingService {
   constructor() {
     this.trainingDir = path.join(app.getPath("userData"), "lora-training");
     this.tempDir = path.join(app.getPath("userData"), "temp");
+
+    // Ensure PATH includes Python locations (pyenv, Homebrew) for child processes
+    try {
+      const isMacOS = process.platform === "darwin";
+      const isLinux = process.platform === "linux";
+      const homeDir = process.env.HOME || "";
+
+      const additionalPaths: string[] = [];
+
+      // pyenv (macOS/Linux)
+      if (homeDir) {
+        additionalPaths.push(`${homeDir}/.pyenv/bin`);
+        additionalPaths.push(`${homeDir}/.pyenv/shims`);
+      }
+
+      // Homebrew (macOS)
+      if (isMacOS) {
+        additionalPaths.push("/opt/homebrew/bin");
+        additionalPaths.push("/opt/homebrew/sbin");
+        additionalPaths.push("/usr/local/bin");
+        additionalPaths.push("/usr/local/sbin");
+        // Homebrew Python shims
+        additionalPaths.push("/opt/homebrew/opt/python/libexec/bin");
+        additionalPaths.push("/usr/local/opt/python/libexec/bin");
+        if (homeDir) {
+          additionalPaths.push(`${homeDir}/homebrew/bin`);
+        }
+      }
+
+      const currentPath = process.env.PATH || "";
+      const missing = additionalPaths.filter(
+        (p) => p && !currentPath.split(":").includes(p)
+      );
+      if (missing.length > 0) {
+        process.env.PATH = `${missing.join(":")}:${currentPath}`;
+        console.log(
+          `[LoRA] Enhanced PATH for training: ${process.env.PATH}`
+        );
+      }
+    } catch (e) {
+      console.warn("[LoRA] Failed to enhance PATH for training processes:", e);
+    }
   }
 
   private extractBaseModel(modelName: string): string {

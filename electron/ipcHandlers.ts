@@ -6,16 +6,16 @@
 import { dialog, ipcMain } from "electron";
 import type { ProgressInfo } from "../src/electron/chatgpt-import";
 import { importChatGPTHistoryHandler } from "../src/electron/chatgpt-import";
+import i18n from "../src/i18n";
 import { DuckDBHelper } from "./DuckDBHelper";
 import { detectHardware } from "./HardwareDetector";
 import { IIpcHandlerDeps } from "./main";
 import {
-  DependencyInstaller,
-  DependencyStatus,
-  InstallProgress,
+    DependencyInstaller,
+    DependencyStatus,
+    InstallProgress,
 } from "./services/DependencyInstaller";
 import { OllamaClient } from "./services/OllamaClient";
-import i18n from "../src/i18n";
 
 const t = i18n.t.bind(i18n);
 
@@ -1124,7 +1124,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   // Get manual installation instructions
   ipcMain.handle(
     "get-install-instructions",
-    async (event, dependency: "ollama") => {
+    async (event, dependency: "ollama" | "python") => {
       try {
         console.log(
           `📝 [IPC] Getting ${dependency} installation instructions...`

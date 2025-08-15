@@ -31,12 +31,16 @@ interface StartupDependencyCheckerState {
 // Helper function to detect Homebrew lock errors
 const isHomebrewLockError = (errorMessage: string): boolean => {
   return errorMessage.includes('brew install') && 
-         (errorMessage.includes('has already locked') || 
-          errorMessage.includes('process has already locked') ||
-          errorMessage.includes('Cellar/ollama') ||
-          errorMessage.includes('.tar.gz.incomplete') ||
-          errorMessage.includes('downloads/') ||
-          errorMessage.includes('Please wait for it to finish'));
+         (
+           errorMessage.includes('has already locked') || 
+           errorMessage.includes('process has already locked') ||
+           errorMessage.includes('Cellar/ollama') ||
+           errorMessage.includes('Cellar/python') ||
+           errorMessage.includes('Cellar/python@') ||
+           errorMessage.includes('.tar.gz.incomplete') ||
+           errorMessage.includes('downloads/') ||
+           errorMessage.includes('Please wait for it to finish')
+         );
 };
 
 export const StartupDependencyChecker: React.FC = () => {

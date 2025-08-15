@@ -45,10 +45,12 @@ export class MacOSInstaller extends BasePlatformInstaller {
 3. Launch Ollama from Applications
 Alternative: Run 'brew install ollama' in Terminal`,
       python: `Manual installation for macOS:
-1. Download from https://www.python.org/downloads/macos/
-2. Run the installer package
-3. Follow the installation wizard
-Alternative: Run 'brew install python@3.11' in Terminal`,
+1. Preferred (exact version):
+   • Install Homebrew: https://brew.sh/
+   • Install pyenv: brew install pyenv
+   • Install Python 3.11.9: pyenv install 3.11.9 && pyenv global 3.11.9
+2. Alternative (may not pin patch): brew install python@3.11
+3. Or download official 3.11.9 .pkg: https://www.python.org/downloads/release/python-3119/`,
       homebrew: `Manual installation for Homebrew:
 1. Open Terminal
 2. Run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -306,17 +308,41 @@ Alternative: Run 'brew install python@3.11' in Terminal`,
   ): Promise<void> {
     this.progressReporter.reportDownloading(
       "python",
-      "Installing Python for macOS (user-scope)..."
+      "Installing Python 3.11.9 for macOS (no admin required)..."
     );
 
-    onProgress?.("🐍 Installing Python in user directory...");
+    onProgress?.("🐍 Target version: Python 3.11.9");
 
-    // Try Homebrew first (existing or new installation)
+    // 1) Ensure Homebrew is available
+    await this.ensureHomebrew(onProgress);
+
+    // Helper to verify exact version
+    const verifyPythonVersion = async (): Promise<boolean> => {
+      const candidates = [
+        "/opt/homebrew/opt/python@3.11/bin/python3.11",
+        "/usr/local/opt/python@3.11/bin/python3.11",
+        "python3",
+        "python",
+      ];
+      for (const bin of candidates) {
+        try {
+          const { stdout, stderr } = await this.commandExecutor.execute(`${bin} --version`);
+          const out = `${stdout} ${stderr}`;
+          if (/Python\s+3\.11\.9\b/.test(out)) {
+            onProgress?.(`✅ Detected Python 3.11.9 at: ${bin}`);
+            return true;
+          }
+        } catch {
+          // try next candidate
+        }
+      }
+      return false;
+    };
+
+    // 2) Try Homebrew python@3.11 first
     try {
-      await this.ensureHomebrew(onProgress);
-      
-      onProgress?.("🍺 Installing Python via Homebrew...");
-      const success = await this.tryPackageManagers("python", [
+      onProgress?.("🍺 Installing python@3.11 via Homebrew...");
+      const brewSuccess = await this.tryPackageManagers("python", [
         {
           name: "Homebrew",
           checkCommand: "brew",
@@ -324,31 +350,83 @@ Alternative: Run 'brew install python@3.11' in Terminal`,
         },
       ]);
 
-      if (success) {
-        onProgress?.("✅ Python installed via Homebrew!");
+      if (brewSuccess) {
+        onProgress?.("🔍 Verifying installed version (expecting 3.11.9)...");
+        // Allow a brief moment for PATH/linking
+        try { await this.commandExecutor.execute("hash -r || true"); } catch {}
+        if (await verifyPythonVersion()) {
+          return;
+        } else {
+          onProgress?.("⚠️ Homebrew provided python@3.11 but not 3.11.9. Falling back to pyenv for exact patch.");
+        }
+      }
+    } catch (error) {
+      onProgress?.("⚠️ Homebrew python@3.11 installation failed, attempting pyenv...");
+      console.log("Homebrew python@3.11 installation failed:", error);
+    }
+
+    // 3) Install exact version with pyenv
+    try {
+      onProgress?.("🍺 Installing pyenv via Homebrew...");
+      await this.tryPackageManagers("pyenv", [
+        {
+          name: "Homebrew",
+          checkCommand: "brew",
+          installCommand: "brew install pyenv",
+        },
+      ]);
+
+      onProgress?.("📦 Installing Python 3.11.9 via pyenv (this can take several minutes)...");
+      await this.executeWithProgress("pyenv install -s 3.11.9", "python", onProgress);
+      onProgress?.("🔧 Setting Python 3.11.9 as global via pyenv...");
+      await this.commandExecutor.execute("pyenv global 3.11.9");
+      try { await this.commandExecutor.execute("pyenv rehash"); } catch {}
+
+      // Verify exact version
+      onProgress?.("🔍 Verifying pyenv Python version...");
+      if (await verifyPythonVersion()) {
+        onProgress?.("✅ Python 3.11.9 installed via pyenv!");
+        return;
+      } else {
+        // Try direct path
+        try {
+          const { stdout: rootOut } = await this.commandExecutor.execute("pyenv root");
+          const pyenvRoot = rootOut.trim();
+          const direct = `${pyenvRoot}/versions/3.11.9/bin/python3`;
+          const { stdout, stderr } = await this.commandExecutor.execute(`${direct} --version`);
+          if (/Python\s+3\.11\.9\b/.test(`${stdout} ${stderr}`)) {
+            onProgress?.("✅ Python 3.11.9 installed and verified (pyenv direct path)!");
+            return;
+          }
+        } catch {}
+      }
+    } catch (error) {
+      onProgress?.("⚠️ pyenv installation path failed, trying official .pkg...");
+      console.log("pyenv path failed:", error);
+    }
+
+    // 4) Final fallback: official .pkg for 3.11.9
+    try {
+      onProgress?.("⬇️ Downloading Python 3.11.9 official installer (.pkg)...");
+      const downloadCommand = `curl -L -o /tmp/python-3.11.9.pkg https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg`;
+      await this.executeWithProgress(downloadCommand, "python", onProgress);
+
+      onProgress?.("📦 Installing Python 3.11.9 (may require admin privileges)...");
+      // Note: -target / may require admin; we attempt without sudo and report any failure
+      const installCommand = `installer -pkg /tmp/python-3.11.9.pkg -target /`;
+      await this.executeWithProgress(installCommand, "python", onProgress);
+
+      onProgress?.("🔍 Verifying installed version from official package...");
+      if (await verifyPythonVersion()) {
+        onProgress?.("✅ Python 3.11.9 installed via official package!");
         return;
       }
     } catch (error) {
-      onProgress?.("⚠️ Homebrew installation failed, trying direct download...");
-      console.log("Homebrew Python installation failed:", error);
+      console.log("Official .pkg installation failed or not verified:", error);
     }
 
-    // Fallback: Direct download and installation (like Windows approach)
-    try {
-      onProgress?.("⬇️ Downloading Python installer for macOS...");
-      const downloadCommand = `curl -o /tmp/python-installer.pkg https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg`;
-      await this.executeWithProgress(downloadCommand, "python", onProgress);
-      
-      onProgress?.("📦 Installing Python for current user...");
-      // Install Python package for current user
-      const installCommand = `installer -pkg /tmp/python-installer.pkg -target CurrentUserHomeDirectory`;
-      await this.executeWithProgress(installCommand, "python", onProgress);
-      
-      onProgress?.("✅ Python installed successfully!");
-    } catch (error) {
-      throw new Error(
-        "Failed to install Python automatically. Please download and install manually from https://www.python.org/downloads/"
-      );
-    }
+    throw new Error(
+      "Failed to install Python 3.11.9 automatically. Please use pyenv (brew install pyenv; pyenv install 3.11.9; pyenv global 3.11.9) or install the official 3.11.9 .pkg."
+    );
   }
 }

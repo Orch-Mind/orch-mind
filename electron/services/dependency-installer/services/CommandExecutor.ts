@@ -157,13 +157,19 @@ export class CommandExecutor implements ICommandExecutor {
     // For macOS/Linux, ensure we have the full PATH including Homebrew
     const env = { ...process.env };
     if (this.platform === "darwin") {
-      // Add common Homebrew paths to PATH
+      // Add common Homebrew and Python paths to PATH
+      const homeDir = process.env.HOME || "";
       const brewPaths = [
-        "/opt/homebrew/bin", // Apple Silicon
+        "/opt/homebrew/bin", // Apple Silicon Homebrew
         "/opt/homebrew/sbin",
-        "/usr/local/bin", // Intel Mac
+        "/usr/local/bin", // Intel Mac Homebrew
         "/usr/local/sbin",
-      ];
+        "/opt/homebrew/opt/python/libexec/bin", // Brew Python shims (AS)
+        "/usr/local/opt/python/libexec/bin", // Brew Python shims (Intel)
+        homeDir ? `${homeDir}/homebrew/bin` : "", // User-scoped Homebrew (no sudo)
+        homeDir ? `${homeDir}/.pyenv/bin` : "", // pyenv
+        homeDir ? `${homeDir}/.pyenv/shims` : "", // pyenv shims
+      ].filter(Boolean) as string[];
 
       const currentPath = env.PATH || "";
       const additionalPaths = brewPaths.filter(

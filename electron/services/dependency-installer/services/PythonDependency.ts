@@ -2,9 +2,9 @@
 // Copyright (c) 2025 Guilherme Ferrari Brescia
 
 import {
-  DependencyStatus,
-  ICommandExecutor,
-  IInstallableDependency,
+    DependencyStatus,
+    ICommandExecutor,
+    IInstallableDependency,
 } from "../interfaces/IDependency";
 import { IPlatformInstaller } from "../interfaces/IPlatformInstaller";
 
@@ -37,8 +37,7 @@ export class PythonDependency implements IInstallableDependency {
       ];
 
       let version: string | undefined;
-      let stdout = "";
-      let lastError: any = null;
+      let detectedByExistence = false;
 
       for (const cmd of versionCommands) {
         try {
@@ -48,25 +47,22 @@ export class PythonDependency implements IInstallableDependency {
             stdout: result.stdout,
             stderr: result.stderr
           });
-          
-          stdout = result.stdout;
-          version = this.parseVersion(stdout);
+
+          // Some Python builds print version to stderr
+          version = this.parseVersion(result.stdout) || this.parseVersion(result.stderr);
           
           if (version) {
             console.log(`✅ [PythonDependency] Version found: ${version}`);
             break;
-          } else {
-            console.log(`⚠️ [PythonDependency] Could not parse version from: ${stdout}`);
           }
         } catch (cmdError) {
           console.log(`❌ [PythonDependency] Command failed: ${cmd}`, cmdError);
-          lastError = cmdError;
         }
       }
 
       // If no version found, just check if command exists
       if (!version) {
-        console.log('🐍 [PythonDependency] No version found, checking command existence...');
+        console.log('🐍 [PythonDependency] No version parsed, checking command existence...');
         
         const python3Exists = await this.commandExecutor.checkCommand("python3");
         const pythonExists = await this.commandExecutor.checkCommand("python");
@@ -76,17 +72,14 @@ export class PythonDependency implements IInstallableDependency {
           pythonExists
         });
         
-        const exists = python3Exists || pythonExists;
-        
-        if (!exists) {
+        detectedByExistence = python3Exists || pythonExists;
+        if (!detectedByExistence) {
           console.log('❌ [PythonDependency] No Python commands found in PATH');
-          return {
-            installed: false,
-          };
+          return { installed: false };
         }
       }
 
-      const isInstalled = !!version;
+      const isInstalled = !!version || detectedByExistence;
       const pythonPath = isInstalled ? await this.getPythonPath() : undefined;
       
       console.log(`🎯 [PythonDependency] Final result:`, {
@@ -97,7 +90,7 @@ export class PythonDependency implements IInstallableDependency {
 
       return {
         installed: isInstalled,
-        version: version,
+        version,
         path: pythonPath,
       };
     } catch (error) {
